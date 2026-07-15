@@ -13,10 +13,19 @@ return new class extends Migration
     {
         // Tabel legacy ini tidak punya primary key asli (cuma index biasa),
         // jadi kita tambahkan id auto-increment supaya bisa dipakai Eloquent.
+        // Schema::table('aman_customer_reguler', function (Blueprint $table) {
+        //     $table->id()->first();
+        //     $table->string('KdCust', 6)->nullable()->unique()->after('id');
+        // });
+        if (Schema::hasTable('aman_customer_reguler')) {
         Schema::table('aman_customer_reguler', function (Blueprint $table) {
             $table->id()->first();
             $table->string('KdCust', 6)->nullable()->unique()->after('id');
         });
+    }
+
+
+
 
         Schema::table('z_produk_NamaProduk_INDOOR_CEK', function (Blueprint $table) {
             $table->id()->first();
