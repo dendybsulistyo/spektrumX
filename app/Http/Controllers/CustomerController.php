@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreCustomerRequest;
 use App\Models\Customer;
 use App\Models\CustomerLimit;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -57,6 +58,35 @@ class CustomerController extends Controller
         $this->syncLimit($customer, $data);
 
         return redirect()->route('customers.index')->with('status', 'Customer berhasil diperbarui.');
+    }
+
+    /**
+     * Sarankan kode customer berdasarkan nama, mengikuti pola kode lama
+     * (3 huruf awal nama + nomor urut, misal "Rio Spektrum" -> RIO001),
+     * dan pastikan tidak bentrok dengan kode yang sudah ada.
+     */
+    public function suggestCode(Request $request): JsonResponse
+    {
+        $name = (string) $request->query('name', '');
+        $letters = strtoupper(preg_replace('/[^A-Za-z]/', '', $name) ?? '');
+        $prefix = substr(str_pad($letters !== '' ? $letters : 'CST', 3, 'X'), 0, 3);
+
+        $digitLength = max(1, 6 - strlen($prefix));
+
+        $lastNumber = Customer::where('KdCust', 'like', $prefix.'%')
+            ->pluck('KdCust')
+            ->map(fn ($code) => (int) substr($code, strlen($prefix)))
+            ->max();
+
+        $next = ($lastNumber ?? 0) + 1;
+        $code = $prefix.str_pad((string) $next, $digitLength, '0', STR_PAD_LEFT);
+
+        while (Customer::where('KdCust', $code)->exists()) {
+            $next++;
+            $code = $prefix.str_pad((string) $next, $digitLength, '0', STR_PAD_LEFT);
+        }
+
+        return response()->json(['code' => $code]);
     }
 
     public function destroy(Customer $customer): RedirectResponse

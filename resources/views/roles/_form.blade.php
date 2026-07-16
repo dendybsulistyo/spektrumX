@@ -3,7 +3,7 @@
 <div class="grid grid-cols-2 gap-4">
     <div>
         <x-input-label for="name" value="Kode Role (unik, tanpa spasi)" />
-        <x-text-input id="name" name="name" type="text" class="mt-1 block w-full font-mono"
+        <x-text-input id="name" name="name" type="text" class="mt-1 block w-full"
             value="{{ old('name', $role?->name) }}" maxlength="50" placeholder="kasir" required autofocus />
         <x-input-error :messages="$errors->get('name')" class="mt-1" />
     </div>
@@ -32,7 +32,7 @@
                                    {{ in_array($key, $selected) ? 'checked' : '' }}
                                    class="rounded border-gray-300 text-gray-900 focus:ring-gray-900">
                             <span class="text-sm text-gray-700">{{ $description }}</span>
-                            <span class="text-xs text-gray-400 font-mono">({{ $key }})</span>
+                            <span class="text-xs text-gray-400">({{ $key }})</span>
                         </label>
                     @endforeach
                 </div>

@@ -3,7 +3,7 @@
 <div class="grid grid-cols-2 gap-4">
     <div>
         <x-input-label for="KdProd" value="Kode Produk" />
-        <x-text-input id="KdProd" name="KdProd" type="text" class="mt-1 block w-full font-mono"
+        <x-text-input id="KdProd" name="KdProd" type="text" class="mt-1 block w-full"
             value="{{ old('KdProd', $produk?->KdProd) }}" maxlength="4" required autofocus />
         <x-input-error :messages="$errors->get('KdProd')" class="mt-1" />
     </div>
@@ -14,6 +14,18 @@
             value="{{ old('NoUrut', $produk?->NoUrut) }}" required />
         <x-input-error :messages="$errors->get('NoUrut')" class="mt-1" />
     </div>
+</div>
+
+<div>
+    <x-input-label for="KdDivs" value="Kategori" />
+    <select id="KdDivs" name="KdDivs"
+            class="mt-1 block w-full rounded-md border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500">
+        <option value="">-- Belum ada kategori --</option>
+        @foreach ($kategoriList as $k)
+            <option value="{{ $k->KdDivs }}" @selected(old('KdDivs', $produk?->KdDivs) === $k->KdDivs)>{{ $k->NmDivs }}</option>
+        @endforeach
+    </select>
+    <x-input-error :messages="$errors->get('KdDivs')" class="mt-1" />
 </div>
 
 <div>

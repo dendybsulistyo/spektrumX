@@ -5,8 +5,15 @@
 
 <div>
     <x-input-label for="KdCust" value="Kode Customer" />
-    <x-text-input id="KdCust" name="KdCust" type="text" class="mt-1 block w-full font-mono"
-        value="{{ old('KdCust', $customer?->KdCust) }}" maxlength="6" required autofocus />
+    <div class="mt-1 flex gap-2">
+        <x-text-input id="KdCust" name="KdCust" type="text" class="block w-full"
+            value="{{ old('KdCust', $customer?->KdCust) }}" maxlength="6" required autofocus />
+        <button type="button" id="btn-suggest-code"
+                class="shrink-0 px-3 py-2 bg-blue-600 text-white text-xs font-semibold rounded-md hover:bg-blue-700 disabled:opacity-60 whitespace-nowrap">
+            Buat Otomatis
+        </button>
+    </div>
+    <p class="text-xs text-gray-400 mt-1">Isi nama customer dulu, lalu klik "Buat Otomatis" supaya kode tidak bentrok.</p>
     <x-input-error :messages="$errors->get('KdCust')" class="mt-1" />
 </div>
 
@@ -16,6 +23,29 @@
         value="{{ old('NmCust', $customer?->NmCust) }}" maxlength="50" required />
     <x-input-error :messages="$errors->get('NmCust')" class="mt-1" />
 </div>
+
+<script>
+    document.getElementById('btn-suggest-code')?.addEventListener('click', async function () {
+        const name = document.getElementById('NmCust').value.trim();
+        if (!name) {
+            alert('Isi nama customer dulu.');
+            return;
+        }
+
+        const btn = this;
+        btn.disabled = true;
+        btn.textContent = 'Memuat...';
+
+        try {
+            const res = await fetch(`{{ route('customers.suggest-code') }}?name=${encodeURIComponent(name)}`);
+            const data = await res.json();
+            document.getElementById('KdCust').value = data.code;
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Buat Otomatis';
+        }
+    });
+</script>
 
 <div>
     <x-input-label for="Alamat" value="Alamat" />

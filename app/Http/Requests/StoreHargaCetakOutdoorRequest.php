@@ -6,7 +6,7 @@ use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
-class StoreProdukRequest extends FormRequest
+class StoreHargaCetakOutdoorRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -23,21 +23,15 @@ class StoreProdukRequest extends FormRequest
      */
     public function rules(): array
     {
-        $produk = $this->route('produk');
+        $harga = $this->route('harga_cetak_outdoor');
 
         return [
-            'KdProd' => [
+            'KdCtk' => [
                 'required', 'string', 'max:4',
-                Rule::unique('z_produk_NamaProduk_INDOOR_CEK', 'KdProd')->ignore($produk?->id),
+                Rule::unique('hcetak_outdoor', 'KdCtk')->ignore($harga?->KdCtk, 'KdCtk'),
             ],
-            'KdDivs' => ['nullable', 'string', 'exists:aman_divisi_Master_Produk_Indoor,KdDivs'],
-            'NmProd' => ['required', 'string', 'max:30'],
-            'NoUrut' => ['required', 'integer', 'min:0'],
             'HargaStd' => ['required', 'numeric', 'min:0'],
             'HargaMin' => ['required', 'numeric', 'min:0'],
-            'Satuan' => ['required', 'string', 'max:8'],
-            'isPjLb' => ['nullable', 'boolean'],
-            'isHPilih' => ['nullable', 'boolean'],
         ];
     }
 
@@ -49,12 +43,9 @@ class StoreProdukRequest extends FormRequest
     public function attributes(): array
     {
         return [
-            'KdProd' => 'kode produk',
-            'NmProd' => 'nama produk',
-            'NoUrut' => 'nomor urut',
+            'KdCtk' => 'kode cetak',
             'HargaStd' => 'harga standar',
             'HargaMin' => 'harga minimum',
-            'Satuan' => 'satuan',
         ];
     }
 }

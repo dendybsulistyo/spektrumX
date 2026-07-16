@@ -22,6 +22,10 @@ class Role extends Model
             'produk.view' => 'Lihat data produk',
             'produk.manage' => 'Tambah/ubah/hapus produk',
         ],
+        'Kategori Produk' => [
+            'kategori.view' => 'Lihat kategori produk',
+            'kategori.manage' => 'Tambah/ubah/hapus kategori produk',
+        ],
         'Operator' => [
             'operators.view' => 'Lihat data operator',
             'operators.manage' => 'Tambah/ubah/hapus operator',
@@ -33,6 +37,22 @@ class Role extends Model
         'Order Indoor' => [
             'order-indoor.view' => 'Lihat order',
             'order-indoor.manage' => 'Buat/ubah/hapus order',
+        ],
+        'Order Outdoor' => [
+            'order-outdoor.view' => 'Lihat order outdoor',
+            'order-outdoor.manage' => 'Buat/ubah/hapus order outdoor',
+        ],
+        'Bahan Outdoor' => [
+            'bahan-outdoor.view' => 'Lihat bahan outdoor',
+            'bahan-outdoor.manage' => 'Tambah/ubah/hapus bahan outdoor',
+        ],
+        'Kategori Bahan Outdoor' => [
+            'kategori-bahan-outdoor.view' => 'Lihat kategori bahan outdoor',
+            'kategori-bahan-outdoor.manage' => 'Tambah/ubah/hapus kategori bahan outdoor',
+        ],
+        'Harga Cetak Outdoor' => [
+            'harga-cetak-outdoor.view' => 'Lihat harga cetak outdoor',
+            'harga-cetak-outdoor.manage' => 'Tambah/ubah/hapus harga cetak outdoor',
         ],
         'Pengaturan' => [
             'roles.manage' => 'Kelola role & user',

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Produk extends Model
 {
@@ -17,6 +18,7 @@ class Produk extends Model
      */
     protected $fillable = [
         'KdProd',
+        'KdDivs',
         'NmProd',
         'NoUrut',
         'HargaStd',
@@ -34,5 +36,10 @@ class Produk extends Model
             'isPjLb' => 'boolean',
             'isHPilih' => 'boolean',
         ];
+    }
+
+    public function kategori(): BelongsTo
+    {
+        return $this->belongsTo(Kategori::class, 'KdDivs', 'KdDivs');
     }
 }

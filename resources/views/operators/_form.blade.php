@@ -2,7 +2,7 @@
 
 <div>
     <x-input-label for="KdOpr" value="Kode Operator" />
-    <x-text-input id="KdOpr" name="KdOpr" type="text" class="mt-1 block w-full font-mono"
+    <x-text-input id="KdOpr" name="KdOpr" type="text" class="mt-1 block w-full"
         value="{{ old('KdOpr', $operator?->KdOpr) }}" maxlength="4" required autofocus />
     <x-input-error :messages="$errors->get('KdOpr')" class="mt-1" />
 </div>

@@ -1,0 +1,51 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+class OrderOutdoorDetail extends Model
+{
+    protected $table = 'order_outdoor_detail';
+
+    /**
+     * The attributes that are mass assignable.
+     *
+     * @var list<string>
+     */
+    protected $fillable = [
+        'order_outdoor_id',
+        'BrsOrder',
+        'NmFile',
+        'Panjang',
+        'Lebar',
+        'Qty',
+        'KdCtk',
+        'KdBrgs',
+        'Fins',
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'Panjang' => 'float',
+            'Lebar' => 'float',
+        ];
+    }
+
+    public function order(): BelongsTo
+    {
+        return $this->belongsTo(OrderOutdoor::class, 'order_outdoor_id');
+    }
+
+    public function hargaCetak(): BelongsTo
+    {
+        return $this->belongsTo(HargaCetakOutdoor::class, 'KdCtk', 'KdCtk');
+    }
+
+    public function bahan(): BelongsTo
+    {
+        return $this->belongsTo(BahanOutdoor::class, 'KdBrgs', 'KdBrgs');
+    }
+}

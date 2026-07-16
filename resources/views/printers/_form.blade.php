@@ -3,7 +3,7 @@
 <div class="grid grid-cols-2 gap-4">
     <div>
         <x-input-label for="KdPrn" value="Kode Printer" />
-        <x-text-input id="KdPrn" name="KdPrn" type="text" class="mt-1 block w-full font-mono"
+        <x-text-input id="KdPrn" name="KdPrn" type="text" class="mt-1 block w-full"
             value="{{ old('KdPrn', $printer?->KdPrn) }}" maxlength="2" required autofocus />
         <x-input-error :messages="$errors->get('KdPrn')" class="mt-1" />
     </div>
