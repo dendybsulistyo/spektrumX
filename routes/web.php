@@ -1,13 +1,22 @@
 <?php
 
 use App\Http\Controllers\BahanOutdoorController;
+use App\Http\Controllers\ChatController;
 use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\HargaArtworkController;
 use App\Http\Controllers\HargaCetakOutdoorController;
+use App\Http\Controllers\InvoiceController;
+use App\Http\Controllers\KasirController;
 use App\Http\Controllers\KategoriBahanOutdoorController;
 use App\Http\Controllers\KategoriController;
 use App\Http\Controllers\OperatorController;
+use App\Http\Controllers\OrderCetakController;
+use App\Http\Controllers\OrderDesainController;
 use App\Http\Controllers\OrderIndoorController;
 use App\Http\Controllers\OrderOutdoorController;
+use App\Http\Controllers\OrderQcController;
+use App\Http\Controllers\PengambilanController;
 use App\Http\Controllers\PrinterController;
 use App\Http\Controllers\ProdukController;
 use App\Http\Controllers\ProfileController;
@@ -19,9 +28,7 @@ Route::get('/', function () {
     return redirect()->route('dashboard');
 });
 
-Route::get('/dashboard', function () {
-    return view('dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+Route::get('/dashboard', [DashboardController::class, 'index'])->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -41,6 +48,13 @@ Route::middleware('auth')->group(function () {
     });
     Route::middleware('permission:produk.manage')->group(function () {
         Route::resource('produk', ProdukController::class)->only(['create', 'store', 'update', 'destroy'])->names('produk');
+    });
+
+    Route::middleware('permission:harga-artwork.view')->group(function () {
+        Route::resource('harga-artwork', HargaArtworkController::class)->only(['index', 'edit'])->names('harga-artwork');
+    });
+    Route::middleware('permission:harga-artwork.manage')->group(function () {
+        Route::resource('harga-artwork', HargaArtworkController::class)->only(['create', 'store', 'update', 'destroy'])->names('harga-artwork');
     });
 
     Route::middleware('permission:kategori.view')->group(function () {
@@ -90,6 +104,7 @@ Route::middleware('auth')->group(function () {
     });
     Route::middleware('permission:harga-cetak-outdoor.manage')->group(function () {
         Route::resource('harga-cetak-outdoor', HargaCetakOutdoorController::class)->only(['create', 'store', 'update', 'destroy'])->names('harga-cetak-outdoor');
+        Route::post('/harga-cetak-outdoor-matrix', [HargaCetakOutdoorController::class, 'updateMatrix'])->name('harga-cetak-outdoor.update-matrix');
     });
 
     Route::middleware('permission:order-outdoor.view')->group(function () {
@@ -97,6 +112,50 @@ Route::middleware('auth')->group(function () {
     });
     Route::middleware('permission:order-outdoor.manage')->group(function () {
         Route::resource('order-outdoor', OrderOutdoorController::class)->only(['create', 'store', 'update', 'destroy'])->names('order-outdoor');
+    });
+
+    Route::middleware('permission:kasir.view')->group(function () {
+        Route::get('/kasir', [KasirController::class, 'index'])->name('kasir.index');
+        Route::get('/kasir/{type}/{id}', [KasirController::class, 'show'])->name('kasir.show');
+        Route::get('/invoice/{type}/{id}', [InvoiceController::class, 'show'])->name('invoice.show');
+    });
+    Route::middleware('permission:kasir.manage')->group(function () {
+        Route::post('/kasir/{type}/{id}/bayar', [KasirController::class, 'bayar'])->name('kasir.bayar');
+    });
+
+    Route::middleware('permission:order-desain.view')->group(function () {
+        Route::get('/order-desain', [OrderDesainController::class, 'index'])->name('order-desain.index');
+    });
+    Route::middleware('permission:order-desain.manage')->group(function () {
+        Route::post('/order-desain/{type}/{id}', [OrderDesainController::class, 'update'])->name('order-desain.update');
+    });
+
+    Route::middleware('permission:order-cetak.view')->group(function () {
+        Route::get('/order-cetak', [OrderCetakController::class, 'index'])->name('order-cetak.index');
+    });
+    Route::middleware('permission:order-cetak.manage')->group(function () {
+        Route::post('/order-cetak/{type}/{id}', [OrderCetakController::class, 'update'])->name('order-cetak.update');
+    });
+
+    Route::middleware('permission:order-qc.view')->group(function () {
+        Route::get('/order-qc', [OrderQcController::class, 'index'])->name('order-qc.index');
+    });
+    Route::middleware('permission:order-qc.manage')->group(function () {
+        Route::post('/order-qc/{type}/{id}', [OrderQcController::class, 'update'])->name('order-qc.update');
+    });
+
+    Route::middleware('permission:pengambilan.view')->group(function () {
+        Route::get('/pengambilan', [PengambilanController::class, 'index'])->name('pengambilan.index');
+    });
+    Route::middleware('permission:pengambilan.manage')->group(function () {
+        Route::post('/pengambilan/{type}/{id}', [PengambilanController::class, 'serahkan'])->name('pengambilan.serahkan');
+    });
+
+    Route::prefix('chat')->name('chat.')->group(function () {
+        Route::get('/', [ChatController::class, 'index'])->name('index');
+        Route::get('/unread-count', [ChatController::class, 'unreadCount'])->name('unread-count');
+        Route::get('/{user}', [ChatController::class, 'show'])->name('show');
+        Route::post('/{user}', [ChatController::class, 'store'])->name('store');
     });
 
     Route::middleware('permission:roles.manage')->group(function () {

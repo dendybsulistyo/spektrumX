@@ -1,6 +1,6 @@
 <x-app-layout>
     <x-slot name="header">
-        <div class="flex items-center justify-between">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <h2 class="font-semibold text-xl text-gray-800">Data Bahan Outdoor</h2>
             <a href="{{ route('bahan-outdoor.create') }}"
                class="inline-flex items-center px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-md hover:bg-gray-700">
@@ -29,7 +29,8 @@
             </form>
         </div>
 
-        <table class="w-full text-sm">
+        <div class="overflow-x-auto">
+        <table class="w-full text-sm min-w-[640px]">
             <thead class="bg-gray-50 text-left text-xs uppercase text-gray-500">
                 <tr>
                     <th class="px-4 py-3 w-12">No</th>
@@ -67,6 +68,7 @@
                 @endforelse
             </tbody>
         </table>
+        </div>
 
         <div class="p-4">
             {{ $bahanOutdoor->links() }}

@@ -9,6 +9,7 @@ use App\Models\HargaCetakOutdoor;
 use App\Models\OrderOutdoor;
 use App\Models\OrderOutdoorDetail;
 use App\Models\Operator;
+use App\Services\OrderPricingService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -16,6 +17,8 @@ use Illuminate\View\View;
 
 class OrderOutdoorController extends Controller
 {
+    public function __construct(private readonly OrderPricingService $pricingService) {}
+
     public function index(Request $request): View
     {
         $orders = OrderOutdoor::query()
@@ -36,7 +39,7 @@ class OrderOutdoorController extends Controller
     public function create(): View
     {
         return view('order-outdoor.create', [
-            'customers' => Customer::orderBy('NmCust')->get(),
+            'customers' => Customer::whereRaw("TRIM(KdCust) != ''")->orderBy('NmCust')->get(),
             'operators' => Operator::orderBy('NmOpr')->get(),
             'hargaCetakList' => HargaCetakOutdoor::orderBy('KdCtk')->get(),
             'bahanList' => BahanOutdoor::orderBy('NoUrut')->get(),
@@ -56,9 +59,13 @@ class OrderOutdoorController extends Controller
                 'KdCust' => $data['KdCust'],
                 'KdOpr' => $data['KdOpr'],
                 'Cetak' => false,
+                'status' => 'baru',
+                'status_bayar' => 'belum_bayar',
             ]);
 
             $this->saveItems($order, $data['items']);
+
+            $order->update(['total' => $this->pricingService->totalOutdoor($order->fresh())]);
         });
 
         return redirect()->route('order-outdoor.index')->with('status', 'Order outdoor berhasil dibuat.');
@@ -69,7 +76,7 @@ class OrderOutdoorController extends Controller
         return view('order-outdoor.edit', [
             'order' => $orderOutdoor,
             'items' => $orderOutdoor->items,
-            'customers' => Customer::orderBy('NmCust')->get(),
+            'customers' => Customer::whereRaw("TRIM(KdCust) != ''")->orderBy('NmCust')->get(),
             'operators' => Operator::orderBy('NmOpr')->get(),
             'hargaCetakList' => HargaCetakOutdoor::orderBy('KdCtk')->get(),
             'bahanList' => BahanOutdoor::orderBy('NoUrut')->get(),
@@ -90,6 +97,8 @@ class OrderOutdoorController extends Controller
             $orderOutdoor->items()->delete();
 
             $this->saveItems($orderOutdoor, $data['items']);
+
+            $orderOutdoor->update(['total' => $this->pricingService->totalOutdoor($orderOutdoor->fresh())]);
         });
 
         return redirect()->route('order-outdoor.index')->with('status', 'Order outdoor berhasil diperbarui.');

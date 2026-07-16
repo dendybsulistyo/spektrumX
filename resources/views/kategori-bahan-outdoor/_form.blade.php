@@ -1,6 +1,6 @@
 @php $kategoriBahanOutdoor = $kategoriBahanOutdoor ?? null; @endphp
 
-<div class="grid grid-cols-2 gap-4">
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
     <div>
         <x-input-label for="KdGrup" value="Kode Grup" />
         <x-text-input id="KdGrup" name="KdGrup" type="text" class="mt-1 block w-full"

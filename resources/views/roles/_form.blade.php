@@ -1,6 +1,6 @@
 @php $role = $role ?? null; @endphp
 
-<div class="grid grid-cols-2 gap-4">
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
     <div>
         <x-input-label for="name" value="Kode Role (unik, tanpa spasi)" />
         <x-text-input id="name" name="name" type="text" class="mt-1 block w-full"

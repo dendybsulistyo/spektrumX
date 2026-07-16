@@ -11,7 +11,10 @@ class KategoriController extends Controller
 {
     public function index(): View
     {
-        $kategori = Kategori::withCount('produk')->orderBy('NoUrut')->paginate(20);
+        $kategori = Kategori::withCount('produk')
+            ->with(['produk' => fn ($q) => $q->orderBy('NoUrut')])
+            ->orderBy('NoUrut')
+            ->paginate(20);
 
         return view('kategori.index', compact('kategori'));
     }

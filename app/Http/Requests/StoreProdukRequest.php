@@ -17,6 +17,18 @@ class StoreProdukRequest extends FormRequest
     }
 
     /**
+     * Unchecked checkboxes send nothing at all — normalize to 0/1 here since
+     * isPjLb/isHPilih are NOT NULL columns with no default.
+     */
+    protected function prepareForValidation(): void
+    {
+        $this->merge([
+            'isPjLb' => $this->boolean('isPjLb'),
+            'isHPilih' => $this->boolean('isHPilih'),
+        ]);
+    }
+
+    /**
      * Get the validation rules that apply to the request.
      *
      * @return array<string, ValidationRule|array<mixed>|string>

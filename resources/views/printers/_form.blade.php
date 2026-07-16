@@ -1,6 +1,6 @@
 @php $printer = $printer ?? null; @endphp
 
-<div class="grid grid-cols-2 gap-4">
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
     <div>
         <x-input-label for="KdPrn" value="Kode Printer" />
         <x-text-input id="KdPrn" name="KdPrn" type="text" class="mt-1 block w-full"

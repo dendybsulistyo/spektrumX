@@ -33,16 +33,29 @@
         @endphp
     </head>
     <body class="font-sans antialiased bg-gray-50">
-        <div class="flex min-h-screen">
+        <div class="flex min-h-screen" x-data="{ sidebarOpen: false }">
+
+            <!-- Mobile overlay -->
+            <div x-show="sidebarOpen" x-cloak @click="sidebarOpen = false"
+                 class="fixed inset-0 bg-gray-900/50 z-30 lg:hidden"></div>
 
             <!-- Sidebar -->
-            <aside class="fixed left-0 top-0 h-screen w-60 bg-white border-r border-gray-200 flex flex-col z-40">
-                <div class="h-16 px-4 border-b border-gray-200 flex items-center gap-2">
-                    <div class="w-7 h-7 rounded-md bg-indigo-600 flex items-center justify-center text-white text-xs font-bold">S</div>
-                    <div>
-                        <h1 class="text-sm font-bold text-gray-900 leading-none">{{ config('app.name', 'SpektrumX') }}</h1>
-                        <p class="text-[10px] text-gray-400 mt-0.5">Admin Percetakan</p>
+            <aside
+                 class="fixed left-0 top-0 h-screen w-60 bg-white border-r border-gray-200 flex flex-col z-40 transform transition-transform duration-200 ease-in-out -translate-x-full lg:translate-x-0"
+                 :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'">
+                <div class="h-16 px-4 border-b border-gray-200 flex items-center justify-between gap-2">
+                    <div class="flex items-center gap-2 min-w-0">
+                        <div class="w-7 h-7 rounded-md bg-indigo-600 flex items-center justify-center text-white text-xs font-bold shrink-0">S</div>
+                        <div class="min-w-0">
+                            <h1 class="text-sm font-bold text-gray-900 leading-none truncate">{{ config('app.name', 'SpektrumX') }}</h1>
+                            <p class="text-[10px] text-gray-400 mt-0.5">Admin Percetakan</p>
+                        </div>
                     </div>
+                    <button @click="sidebarOpen = false" class="lg:hidden shrink-0 text-gray-400 hover:text-gray-600">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
                 </div>
 
                 @php
@@ -51,14 +64,14 @@
                     $iconClass = fn (bool $active) => 'w-[18px] h-[18px] shrink-0 '.($active ? 'text-indigo-600' : 'text-gray-400');
                 @endphp
 
-                <nav class="flex-1 px-2.5 py-3 space-y-0.5 overflow-y-auto text-[13px]">
+                <nav class="flex-1 px-2.5 py-3 space-y-0.5 overflow-y-auto text-[13px]" @click="sidebarOpen = false">
                     @php $active = request()->routeIs('dashboard'); @endphp
                     <a href="{{ route('dashboard') }}" class="{{ $navClass($active) }}">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="{{ $iconClass($active) }}">{!! $navIcon('dashboard') !!}</svg>
                         Dashboard
                     </a>
 
-                    @if (Auth::user()->hasPermission('customers.view') || Auth::user()->hasPermission('produk.view') || Auth::user()->hasPermission('operators.view') || Auth::user()->hasPermission('printers.view') || Auth::user()->hasPermission('bahan-outdoor.view') || Auth::user()->hasPermission('kategori-bahan-outdoor.view') || Auth::user()->hasPermission('harga-cetak-outdoor.view'))
+                    @if (Auth::user()->hasPermission('customers.view') || Auth::user()->hasPermission('produk.view') || Auth::user()->hasPermission('harga-artwork.view') || Auth::user()->hasPermission('operators.view') || Auth::user()->hasPermission('printers.view') || Auth::user()->hasPermission('bahan-outdoor.view') || Auth::user()->hasPermission('kategori-bahan-outdoor.view') || Auth::user()->hasPermission('harga-cetak-outdoor.view'))
                         <p class="px-2.5 pt-4 pb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">Master Data</p>
                     @endif
 
@@ -82,7 +95,15 @@
                         @php $active = request()->routeIs('kategori.*'); @endphp
                         <a href="{{ route('kategori.index') }}" class="{{ $navClass($active) }}">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="{{ $iconClass($active) }}">{!! $navIcon('tag') !!}</svg>
-                            Kategori Produk
+                            Harga Indoor
+                        </a>
+                    @endcan
+
+                    @can('harga-artwork.view')
+                        @php $active = request()->routeIs('harga-artwork.*'); @endphp
+                        <a href="{{ route('harga-artwork.index') }}" class="{{ $navClass($active) }}">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="{{ $iconClass($active) }}">{!! $navIcon('cube') !!}</svg>
+                            Harga Artwork
                         </a>
                     @endcan
 
@@ -106,7 +127,7 @@
                         @php $active = request()->routeIs('bahan-outdoor.*'); @endphp
                         <a href="{{ route('bahan-outdoor.index') }}" class="{{ $navClass($active) }}">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="{{ $iconClass($active) }}">{!! $navIcon('archive') !!}</svg>
-                            Bahan Outdoor
+                            Grup Bahan Outdoor
                         </a>
                     @endcan
 
@@ -114,7 +135,7 @@
                         @php $active = request()->routeIs('kategori-bahan-outdoor.*'); @endphp
                         <a href="{{ route('kategori-bahan-outdoor.index') }}" class="{{ $navClass($active) }}">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="{{ $iconClass($active) }}">{!! $navIcon('tag') !!}</svg>
-                            Kategori Bahan Outdoor
+                            Bahan Outdoor
                         </a>
                     @endcan
 
@@ -122,7 +143,7 @@
                         @php $active = request()->routeIs('harga-cetak-outdoor.*'); @endphp
                         <a href="{{ route('harga-cetak-outdoor.index') }}" class="{{ $navClass($active) }}">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="{{ $iconClass($active) }}">{!! $navIcon('banknotes') !!}</svg>
-                            Harga Cetak Outdoor
+                            Harga Outdoor
                         </a>
                     @endcan
 
@@ -146,6 +167,50 @@
                         </a>
                     @endcan
 
+                    @if (Auth::user()->hasPermission('kasir.view') || Auth::user()->hasPermission('order-desain.view') || Auth::user()->hasPermission('order-cetak.view') || Auth::user()->hasPermission('order-qc.view') || Auth::user()->hasPermission('pengambilan.view'))
+                        <p class="px-2.5 pt-4 pb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">Dashboard Operator</p>
+                    @endif
+
+                    @can('kasir.view')
+                        @php $active = request()->routeIs('kasir.*'); @endphp
+                        <a href="{{ route('kasir.index') }}" class="{{ $navClass($active) }}">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="{{ $iconClass($active) }}">{!! $navIcon('banknotes') !!}</svg>
+                            Kasir
+                        </a>
+                    @endcan
+
+                    @can('order-desain.view')
+                        @php $active = request()->routeIs('order-desain.*'); @endphp
+                        <a href="{{ route('order-desain.index') }}" class="{{ $navClass($active) }}">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="{{ $iconClass($active) }}">{!! $navIcon('document') !!}</svg>
+                            Antrian Desain
+                        </a>
+                    @endcan
+
+                    @can('order-cetak.view')
+                        @php $active = request()->routeIs('order-cetak.*'); @endphp
+                        <a href="{{ route('order-cetak.index') }}" class="{{ $navClass($active) }}">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="{{ $iconClass($active) }}">{!! $navIcon('printer') !!}</svg>
+                            Antrian Cetak
+                        </a>
+                    @endcan
+
+                    @can('order-qc.view')
+                        @php $active = request()->routeIs('order-qc.*'); @endphp
+                        <a href="{{ route('order-qc.index') }}" class="{{ $navClass($active) }}">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="{{ $iconClass($active) }}">{!! $navIcon('shield') !!}</svg>
+                            Antrian QC
+                        </a>
+                    @endcan
+
+                    @can('pengambilan.view')
+                        @php $active = request()->routeIs('pengambilan.*'); @endphp
+                        <a href="{{ route('pengambilan.index') }}" class="{{ $navClass($active) }}">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="{{ $iconClass($active) }}">{!! $navIcon('archive') !!}</svg>
+                            Pengambilan Barang
+                        </a>
+                    @endcan
+
                     @can('roles.manage')
                         <p class="px-2.5 pt-4 pb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">Pengaturan</p>
 
@@ -165,17 +230,25 @@
             </aside>
 
             <!-- Main content -->
-            <div class="flex-1 ml-60">
-                <header class="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6">
-                    <div class="min-w-0 flex-1">
-                        @isset($header)
-                            {{ $header }}
-                        @endisset
+            <div class="flex-1 min-w-0 lg:ml-60">
+                <header class="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 sm:px-6 gap-3">
+                    <div class="flex items-center gap-3 min-w-0 flex-1">
+                        <button @click="sidebarOpen = true" class="lg:hidden shrink-0 text-gray-500 hover:text-gray-700">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+                            </svg>
+                        </button>
+
+                        <div class="min-w-0 flex-1">
+                            @isset($header)
+                                {{ $header }}
+                            @endisset
+                        </div>
                     </div>
 
-                    <div x-data="{ open: false }" class="relative shrink-0 ml-4">
+                    <div x-data="{ open: false }" class="relative shrink-0">
                         <button @click="open = !open" @click.outside="open = false" class="flex items-center gap-2.5">
-                            <div class="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs font-semibold">
+                            <div class="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs font-semibold shrink-0">
                                 {{ collect(explode(' ', Auth::user()->name))->map(fn ($w) => mb_substr($w, 0, 1))->take(2)->implode('') }}
                             </div>
                             <div class="text-left leading-tight hidden sm:block">
@@ -197,7 +270,7 @@
                     </div>
                 </header>
 
-                <main class="p-6">
+                <main class="p-4 sm:p-6">
                     @if (session('status'))
                         <div class="mb-4 rounded-md bg-green-50 text-green-700 px-4 py-3 text-sm">
                             {{ session('status') }}
@@ -214,5 +287,7 @@
                 </main>
             </div>
         </div>
+
+        @include('partials.chat-widget')
     </body>
 </html>

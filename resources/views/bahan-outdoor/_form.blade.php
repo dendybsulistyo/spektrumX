@@ -1,6 +1,6 @@
 @php $bahanOutdoor = $bahanOutdoor ?? null; @endphp
 
-<div class="grid grid-cols-2 gap-4">
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
     <div>
         <x-input-label for="KdBrgs" value="Kode Bahan" />
         <x-text-input id="KdBrgs" name="KdBrgs" type="text" class="mt-1 block w-full"
@@ -35,7 +35,7 @@
     <x-input-error :messages="$errors->get('NmBrgs')" class="mt-1" />
 </div>
 
-<div class="grid grid-cols-2 gap-4">
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
     <div>
         <x-input-label for="Keters" value="Keterangan" />
         <x-text-input id="Keters" name="Keters" type="text" class="mt-1 block w-full"

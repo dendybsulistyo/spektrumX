@@ -8,6 +8,7 @@ use App\Models\OrderIndoor;
 use App\Models\OrderIndoorDetail;
 use App\Models\Operator;
 use App\Models\Produk;
+use App\Services\OrderPricingService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -15,6 +16,8 @@ use Illuminate\View\View;
 
 class OrderIndoorController extends Controller
 {
+    public function __construct(private readonly OrderPricingService $pricingService) {}
+
     public function index(Request $request): View
     {
         $orders = OrderIndoor::query()
@@ -35,7 +38,7 @@ class OrderIndoorController extends Controller
     public function create(): View
     {
         return view('order-indoor.create', [
-            'customers' => Customer::orderBy('NmCust')->get(),
+            'customers' => Customer::whereRaw("TRIM(KdCust) != ''")->orderBy('NmCust')->get(),
             'operators' => Operator::orderBy('NmOpr')->get(),
             'produkList' => Produk::orderBy('NoUrut')->get(),
         ]);
@@ -54,9 +57,14 @@ class OrderIndoorController extends Controller
                 'KdCust' => $data['KdCust'],
                 'KdOpr' => $data['KdOpr'],
                 'Cetak' => 0,
+                'status' => 'baru',
+                'status_bayar' => 'belum_bayar',
+                'created_at' => now(),
             ]);
 
             $this->saveItems($order, $data['items']);
+
+            $order->update(['total' => $this->pricingService->totalIndoor($order)]);
         });
 
         return redirect()->route('order-indoor.index')->with('status', 'Order berhasil dibuat.');
@@ -69,7 +77,7 @@ class OrderIndoorController extends Controller
         return view('order-indoor.edit', [
             'order' => $orderIndoor,
             'items' => $items,
-            'customers' => Customer::orderBy('NmCust')->get(),
+            'customers' => Customer::whereRaw("TRIM(KdCust) != ''")->orderBy('NmCust')->get(),
             'operators' => Operator::orderBy('NmOpr')->get(),
             'produkList' => Produk::orderBy('NoUrut')->get(),
         ]);
@@ -89,6 +97,8 @@ class OrderIndoorController extends Controller
             OrderIndoorDetail::where('BrsOrder', 'like', $orderIndoor->NoOrder.'%')->delete();
 
             $this->saveItems($orderIndoor, $data['items']);
+
+            $orderIndoor->update(['total' => $this->pricingService->totalIndoor($orderIndoor)]);
         });
 
         return redirect()->route('order-indoor.index')->with('status', 'Order berhasil diperbarui.');

@@ -22,9 +22,13 @@ class Role extends Model
             'produk.view' => 'Lihat data produk',
             'produk.manage' => 'Tambah/ubah/hapus produk',
         ],
-        'Kategori Produk' => [
-            'kategori.view' => 'Lihat kategori produk',
-            'kategori.manage' => 'Tambah/ubah/hapus kategori produk',
+        'Harga Artwork' => [
+            'harga-artwork.view' => 'Lihat harga artwork',
+            'harga-artwork.manage' => 'Tambah/ubah/hapus harga artwork',
+        ],
+        'Daftar Harga Indoor' => [
+            'kategori.view' => 'Lihat daftar harga indoor',
+            'kategori.manage' => 'Tambah/ubah/hapus daftar harga indoor',
         ],
         'Operator' => [
             'operators.view' => 'Lihat data operator',
@@ -41,6 +45,26 @@ class Role extends Model
         'Order Outdoor' => [
             'order-outdoor.view' => 'Lihat order outdoor',
             'order-outdoor.manage' => 'Buat/ubah/hapus order outdoor',
+        ],
+        'Kasir' => [
+            'kasir.view' => 'Lihat antrian kasir',
+            'kasir.manage' => 'Proses pembayaran order',
+        ],
+        'Operator Desain' => [
+            'order-desain.view' => 'Lihat antrian desain',
+            'order-desain.manage' => 'Update status desain',
+        ],
+        'Operator Cetak' => [
+            'order-cetak.view' => 'Lihat antrian cetak',
+            'order-cetak.manage' => 'Update status cetak',
+        ],
+        'Operator QC' => [
+            'order-qc.view' => 'Lihat antrian QC',
+            'order-qc.manage' => 'Update status QC',
+        ],
+        'Pengambilan Barang' => [
+            'pengambilan.view' => 'Lihat daftar pengambilan barang',
+            'pengambilan.manage' => 'Konfirmasi serah terima barang',
         ],
         'Bahan Outdoor' => [
             'bahan-outdoor.view' => 'Lihat bahan outdoor',

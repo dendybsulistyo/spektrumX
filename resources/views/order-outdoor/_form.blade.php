@@ -10,7 +10,7 @@
 
 <div x-data="{ items: {{ old('items') ? json_encode(old('items')) : $initialItems->toJson() }} }">
 
-    <div class="grid grid-cols-3 gap-4 mb-6">
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         <div>
             <x-input-label for="TglOrder" value="Tanggal Order" />
             <x-text-input id="TglOrder" name="TglOrder" type="date" class="mt-1 block w-full"
@@ -55,28 +55,28 @@
         </div>
 
         <template x-for="(item, index) in items" :key="index">
-            <div class="grid grid-cols-12 gap-2 items-start mb-3 p-3 bg-gray-50 rounded-md">
-                <div class="col-span-3">
+            <div class="grid grid-cols-2 sm:grid-cols-12 gap-2 items-start mb-3 p-3 bg-gray-50 rounded-md">
+                <div class="col-span-2 sm:col-span-3">
                     <label class="block text-xs text-gray-500 mb-1">Nama File / Desain</label>
                     <input type="text" :name="`items[${index}][NmFile]`" x-model="item.NmFile" required
                            class="w-full rounded-md border-gray-300 text-sm">
                 </div>
-                <div class="col-span-2">
+                <div class="sm:col-span-2">
                     <label class="block text-xs text-gray-500 mb-1">Panjang (cm)</label>
                     <input type="number" step="0.01" :name="`items[${index}][Panjang]`" x-model="item.Panjang" required
                            class="w-full rounded-md border-gray-300 text-sm">
                 </div>
-                <div class="col-span-2">
+                <div class="sm:col-span-2">
                     <label class="block text-xs text-gray-500 mb-1">Lebar (cm)</label>
                     <input type="number" step="0.01" :name="`items[${index}][Lebar]`" x-model="item.Lebar" required
                            class="w-full rounded-md border-gray-300 text-sm">
                 </div>
-                <div class="col-span-1">
+                <div class="sm:col-span-1">
                     <label class="block text-xs text-gray-500 mb-1">Qty</label>
                     <input type="number" :name="`items[${index}][Qty]`" x-model="item.Qty" min="1" required
                            class="w-full rounded-md border-gray-300 text-sm">
                 </div>
-                <div class="col-span-2">
+                <div class="sm:col-span-2">
                     <label class="block text-xs text-gray-500 mb-1">Kode Cetak</label>
                     <select :name="`items[${index}][KdCtk]`" x-model="item.KdCtk" class="w-full rounded-md border-gray-300 text-sm">
                         <option value="">-- Opsional --</option>
@@ -85,7 +85,7 @@
                         @endforeach
                     </select>
                 </div>
-                <div class="col-span-2">
+                <div class="sm:col-span-2">
                     <label class="block text-xs text-gray-500 mb-1">Bahan</label>
                     <select :name="`items[${index}][KdBrgs]`" x-model="item.KdBrgs" class="w-full rounded-md border-gray-300 text-sm">
                         <option value="">-- Opsional --</option>
@@ -94,12 +94,12 @@
                         @endforeach
                     </select>
                 </div>
-                <div class="col-span-11">
+                <div class="col-span-2 sm:col-span-11">
                     <label class="block text-xs text-gray-500 mb-1">Catatan Finishing</label>
                     <input type="text" :name="`items[${index}][Fins]`" x-model="item.Fins" placeholder="misal: SB, laminasi doff, dll"
                            class="w-full rounded-md border-gray-300 text-sm">
                 </div>
-                <div class="col-span-1 flex items-end h-full pt-5">
+                <div class="col-span-2 sm:col-span-1 flex sm:items-end h-full pt-1 sm:pt-5">
                     <button type="button" @click="items.length > 1 && items.splice(index, 1)"
                             class="text-red-600 text-xs hover:underline">Hapus</button>
                 </div>

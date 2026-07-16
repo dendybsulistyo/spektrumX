@@ -1,6 +1,6 @@
 <x-app-layout>
     <x-slot name="header">
-        <div class="flex items-center justify-between">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <h2 class="font-semibold text-xl text-gray-800">User</h2>
             <a href="{{ route('users.create') }}"
                class="inline-flex items-center px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-md hover:bg-gray-700">
@@ -10,9 +10,11 @@
     </x-slot>
 
     <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
-        <table class="w-full text-sm">
+        <div class="overflow-x-auto">
+        <table class="w-full text-sm min-w-[640px]">
             <thead class="bg-gray-50 text-left text-xs uppercase text-gray-500">
                 <tr>
+                    <th class="px-4 py-3 w-12">No</th>
                     <th class="px-4 py-3">Nama</th>
                     <th class="px-4 py-3">Email</th>
                     <th class="px-4 py-3">Role</th>
@@ -22,6 +24,7 @@
             <tbody class="divide-y">
                 @forelse ($users as $user)
                     <tr>
+                        <td class="px-4 py-3 text-gray-400">{{ $users->firstItem() + $loop->index }}</td>
                         <td class="px-4 py-3 font-semibold text-gray-900">{{ $user->name }}</td>
                         <td class="px-4 py-3 text-gray-600">{{ $user->email }}</td>
                         <td class="px-4 py-3">
@@ -45,11 +48,12 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="4" class="px-4 py-8 text-center text-gray-400">Belum ada user.</td>
+                        <td colspan="5" class="px-4 py-8 text-center text-gray-400">Belum ada user.</td>
                     </tr>
                 @endforelse
             </tbody>
         </table>
+        </div>
 
         <div class="p-4">
             {{ $users->links() }}
