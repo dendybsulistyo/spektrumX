@@ -28,7 +28,7 @@ class StoreOperatorRequest extends FormRequest
         return [
             'KdOpr' => [
                 'required', 'string', 'max:4',
-                Rule::unique('aman_editor', 'KdOpr')->ignore($operator?->KdOpr, 'KdOpr'),
+                Rule::unique('operators', 'KdOpr')->ignore($operator?->KdOpr, 'KdOpr'),
             ],
             'NmOpr' => ['required', 'string', 'max:50'],
             'Status' => ['nullable', 'boolean'],

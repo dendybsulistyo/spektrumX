@@ -45,7 +45,7 @@
             </select>
             <x-input-error :messages="$errors->get('KdOpr')" class="mt-1" />
             @if ($operators->isEmpty())
-                <p class="text-xs text-amber-600 mt-1">Belum ada data operator di tabel aman_editor.</p>
+                <p class="text-xs text-amber-600 mt-1">Belum ada data operator di tabel operators.</p>
             @endif
         </div>
     </div>

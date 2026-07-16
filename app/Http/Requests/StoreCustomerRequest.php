@@ -28,7 +28,7 @@ class StoreCustomerRequest extends FormRequest
         return [
             'KdCust' => [
                 'required', 'string', 'max:6',
-                Rule::unique('aman_customer_reguler', 'KdCust')->ignore($customer?->id),
+                Rule::unique('customers', 'KdCust')->ignore($customer?->id),
             ],
             'NmCust' => ['required', 'string', 'max:50'],
             'Alamat' => ['required', 'string', 'max:60'],

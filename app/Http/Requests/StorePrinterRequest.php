@@ -28,7 +28,7 @@ class StorePrinterRequest extends FormRequest
         return [
             'KdPrn' => [
                 'required', 'string', 'max:2',
-                Rule::unique('aman_printer', 'KdPrn')->ignore($printer?->id),
+                Rule::unique('printers', 'KdPrn')->ignore($printer?->id),
             ],
             'NmPrn' => ['required', 'string', 'max:20'],
             'NoUrut' => ['required', 'integer', 'min:0'],

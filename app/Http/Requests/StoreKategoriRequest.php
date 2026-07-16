@@ -28,7 +28,7 @@ class StoreKategoriRequest extends FormRequest
         return [
             'KdDivs' => [
                 'required', 'string', 'max:2',
-                Rule::unique('aman_divisi_Master_Produk_Indoor', 'KdDivs')->ignore($kategori?->id),
+                Rule::unique('kategori_produk_indoor', 'KdDivs')->ignore($kategori?->id),
             ],
             'NmDivs' => ['required', 'string', 'max:19'],
             'NoUrut' => ['required', 'integer', 'min:0'],

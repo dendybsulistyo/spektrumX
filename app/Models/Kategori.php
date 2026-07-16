@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Kategori extends Model
 {
-    protected $table = 'aman_divisi_Master_Produk_Indoor';
+    protected $table = 'kategori_produk_indoor';
 
     public $timestamps = false;
 

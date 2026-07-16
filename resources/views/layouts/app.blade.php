@@ -107,6 +107,14 @@
                         </a>
                     @endcan
 
+                    @can('harga-cetak-outdoor.view')
+                        @php $active = request()->routeIs('harga-cetak-outdoor.*'); @endphp
+                        <a href="{{ route('harga-cetak-outdoor.index') }}" class="{{ $navClass($active) }}">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="{{ $iconClass($active) }}">{!! $navIcon('banknotes') !!}</svg>
+                            Harga Outdoor
+                        </a>
+                    @endcan
+
                     @can('operators.view')
                         @php $active = request()->routeIs('operators.*'); @endphp
                         <a href="{{ route('operators.index') }}" class="{{ $navClass($active) }}">
@@ -139,13 +147,7 @@
                         </a>
                     @endcan
 
-                    @can('harga-cetak-outdoor.view')
-                        @php $active = request()->routeIs('harga-cetak-outdoor.*'); @endphp
-                        <a href="{{ route('harga-cetak-outdoor.index') }}" class="{{ $navClass($active) }}">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="{{ $iconClass($active) }}">{!! $navIcon('banknotes') !!}</svg>
-                            Harga Outdoor
-                        </a>
-                    @endcan
+                    
 
                     @if (Auth::user()->hasPermission('order-indoor.view') || Auth::user()->hasPermission('order-outdoor.view'))
                         <p class="px-2.5 pt-4 pb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">Transaksi</p>

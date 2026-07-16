@@ -40,9 +40,9 @@ class StoreProdukRequest extends FormRequest
         return [
             'KdProd' => [
                 'required', 'string', 'max:4',
-                Rule::unique('z_produk_NamaProduk_INDOOR_CEK', 'KdProd')->ignore($produk?->id),
+                Rule::unique('produk_indoor', 'KdProd')->ignore($produk?->id),
             ],
-            'KdDivs' => ['nullable', 'string', 'exists:aman_divisi_Master_Produk_Indoor,KdDivs'],
+            'KdDivs' => ['nullable', 'string', 'exists:kategori_produk_indoor,KdDivs'],
             'NmProd' => ['required', 'string', 'max:30'],
             'NoUrut' => ['required', 'integer', 'min:0'],
             'HargaStd' => ['required', 'numeric', 'min:0'],

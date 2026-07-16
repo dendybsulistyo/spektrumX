@@ -19,7 +19,7 @@ class BackfillCustomerCodes extends Command
      *
      * @var string
      */
-    protected $description = 'Rekonstruksi KdCust di aman_customer_reguler dengan mencocokkan nama dari tabel order lama';
+    protected $description = 'Rekonstruksi KdCust di customers dengan mencocokkan nama dari tabel order lama';
 
     /**
      * Execute the console command.
@@ -49,13 +49,13 @@ class BackfillCustomerCodes extends Command
 
         $this->info('Mengecek nama customer master yang unik...');
 
-        $masterNameCounts = DB::table('aman_customer_reguler')
+        $masterNameCounts = DB::table('customers')
             ->select('NmCust')
             ->get()
             ->groupBy(fn ($row) => mb_strtoupper(trim($row->NmCust)))
             ->map->count();
 
-        $usedCodes = DB::table('aman_customer_reguler')
+        $usedCodes = DB::table('customers')
             ->whereNotNull('KdCust')
             ->pluck('KdCust')
             ->flip();
@@ -65,7 +65,7 @@ class BackfillCustomerCodes extends Command
         $skippedNoMatch = 0;
         $skippedCodeCollision = 0;
 
-        DB::table('aman_customer_reguler')
+        DB::table('customers')
             ->whereNull('KdCust')
             ->orderBy('id')
             ->chunkById(1000, function ($rows) use (
@@ -99,7 +99,7 @@ class BackfillCustomerCodes extends Command
                     $updated++;
 
                     if (! $dryRun) {
-                        DB::table('aman_customer_reguler')->where('id', $row->id)->update(['KdCust' => $code]);
+                        DB::table('customers')->where('id', $row->id)->update(['KdCust' => $code]);
                     }
                 }
             });

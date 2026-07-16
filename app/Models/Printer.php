@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Printer extends Model
 {
-    protected $table = 'aman_printer';
+    protected $table = 'printers';
 
     public $timestamps = false;
 
