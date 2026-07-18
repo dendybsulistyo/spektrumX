@@ -54,6 +54,7 @@ class RoleSeeder extends Seeder
                 'customers.view', 'produk.view', 'kategori.view', 'harga-artwork.view', 'operators.view', 'printers.view', 'order-indoor.view',
                 'bahan-outdoor.view', 'kategori-bahan-outdoor.view', 'harga-cetak-outdoor.view', 'order-outdoor.view',
                 'kasir.view', 'order-desain.view', 'order-cetak.view', 'order-qc.view', 'pengambilan.view', 'data-warehouse.view',
+                'jasa-potong.manage',
             ],
         ]);
     }

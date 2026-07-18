@@ -1,8 +1,11 @@
 @php
     $order = $order ?? null;
     $initialItems = isset($items) && $items->isNotEmpty()
-        ? $items->map(fn ($i) => ['KdProd' => $i->KdProd, 'Judul' => $i->Judul, 'Panjang' => $i->Panjang, 'Lebar' => $i->Lebar, 'Qty' => $i->Qty])->values()
-        : collect([['KdProd' => '', 'Judul' => '', 'Panjang' => '', 'Lebar' => '', 'Qty' => 1]]);
+        ? $items->map(fn ($i) => [
+            'KdProd' => $i->KdProd, 'Judul' => $i->Judul, 'Panjang' => $i->Panjang, 'Lebar' => $i->Lebar, 'Qty' => $i->Qty,
+            'PisauTurun' => $i->PisauTurun, 'JumlahKertas' => $i->JumlahKertas, 'TebalKertas' => $i->TebalKertas,
+        ])->values()
+        : collect([['KdProd' => '', 'Judul' => '', 'Panjang' => '', 'Lebar' => '', 'Qty' => 1, 'PisauTurun' => null, 'JumlahKertas' => null, 'TebalKertas' => null]]);
     $selectedCustomerLabel = $selectedCustomer ? "{$selectedCustomer->NmCust} ({$selectedCustomer->KdCust})" : '';
     $submitLabel = $order ? 'Simpan Perubahan' : 'Simpan Order';
 @endphp
@@ -10,14 +13,22 @@
 <div x-data="{
         items: {{ old('items') ? json_encode(old('items')) : $initialItems->toJson() }},
         produkMap: @js($produkList->mapWithKeys(fn ($p) => [$p->KdProd => [
+            'NmProd' => $p->NmProd,
             'HargaStd' => $p->HargaStd,
             'HargaMin' => $p->HargaMin,
             'isPjLb' => $p->isPjLb,
             'Satuan' => $p->Satuan,
         ]])),
+        produkOptions: @js($produkList->map(fn ($p) => ['KdProd' => $p->KdProd, 'NmProd' => $p->NmProd])),
+        nilaiX: {{ (float) $nilaiX }},
+        potongModalIndex: null,
         needsDimension(kdProd) {
             const p = this.produkMap[kdProd];
             return p ? [2, 3].includes(p.isPjLb) : false;
+        },
+        isJasaPotong(kdProd) {
+            const p = this.produkMap[kdProd];
+            return p ? p.isPjLb === 4 : false;
         },
         dimensionUnit(kdProd) {
             const p = this.produkMap[kdProd];
@@ -28,14 +39,36 @@
                 item.Panjang = 0;
                 item.Lebar = 0;
             }
+            if (this.isJasaPotong(item.KdProd)) {
+                this.potongModalIndex = this.items.indexOf(item);
+            } else {
+                item.PisauTurun = null;
+                item.JumlahKertas = null;
+                item.TebalKertas = null;
+            }
+        },
+        potongTotal(item) {
+            const p = Number(item.PisauTurun) || 0;
+            const q = Number(item.JumlahKertas) || 0;
+            const tb = Number(item.TebalKertas) || 0;
+            return ((p * q * tb) / 10) + this.nilaiX;
+        },
+        syncPotongQty(index) {
+            const item = this.items[index];
+            item.Qty = Math.round(this.potongTotal(item));
         },
         lineTotal(item) {
             const p = this.produkMap[item.KdProd];
             if (!p) return 0;
             const qty = Number(item.Qty) || 0;
-            const raw = p.isPjLb === 2
-                ? p.HargaStd * (Number(item.Panjang) || 0) * (Number(item.Lebar) || 0) * qty
-                : p.HargaStd * qty;
+            let raw;
+            if (p.isPjLb === 4) {
+                raw = this.potongTotal(item);
+            } else if (p.isPjLb === 2) {
+                raw = p.HargaStd * (Number(item.Panjang) || 0) * (Number(item.Lebar) || 0) * qty;
+            } else {
+                raw = p.HargaStd * qty;
+            }
             return Math.max(raw, p.HargaMin || 0);
         },
         get grandTotal() {
@@ -106,38 +139,92 @@
 
         <template x-for="(item, index) in items" :key="index">
             <div class="grid grid-cols-2 sm:grid-cols-12 gap-2 items-start mb-1 p-3 bg-gray-50 rounded-md">
-                <div class="col-span-2 sm:col-span-3">
+                <div class="col-span-2 sm:col-span-3 relative"
+                     x-data="{
+                        query: produkMap[item.KdProd] ? `${produkMap[item.KdProd].NmProd} (${item.KdProd})` : '',
+                        open: false,
+                        get results() {
+                            const q = this.query.trim().toLowerCase();
+                            if (q === '') return produkOptions.slice(0, 30);
+                            return produkOptions.filter(p =>
+                                p.NmProd.toLowerCase().includes(q) || p.KdProd.toLowerCase().includes(q)
+                            ).slice(0, 30);
+                        },
+                        select(p) {
+                            item.KdProd = p.KdProd;
+                            this.query = `${p.NmProd} (${p.KdProd})`;
+                            this.open = false;
+                            onProdukChange(item);
+                        },
+                     }"
+                     @click.outside="open = false">
                     <label class="block text-xs text-gray-500 mb-1">Produk</label>
-                    <select :name="`items[${index}][KdProd]`" x-model="item.KdProd" @change="onProdukChange(item)" required
-                            class="w-full rounded-md border-gray-300 text-sm">
-                        <option value="">-- Pilih --</option>
-                        @foreach ($produkList as $p)
-                            <option value="{{ $p->KdProd }}">{{ $p->NmProd }}</option>
-                        @endforeach
-                    </select>
+                    <input type="text" x-model="query" @focus="open = true" @input="open = true"
+                           autocomplete="off" placeholder="Cari produk..."
+                           class="w-full rounded-md border-gray-300 text-sm">
+                    <input type="hidden" :name="`items[${index}][KdProd]`" :value="item.KdProd" required>
+
+                    <div x-show="open && results.length > 0" x-cloak
+                         class="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                        <template x-for="p in results" :key="p.KdProd">
+                            <button type="button" @click="select(p)"
+                                    class="block w-full text-left px-3 py-2 text-sm hover:bg-gray-100">
+                                <span x-text="p.NmProd"></span> <span class="text-gray-400" x-text="'(' + p.KdProd + ')'"></span>
+                            </button>
+                        </template>
+                    </div>
+                    <p class="text-xs text-gray-400 mt-1" x-show="open && query.length > 0 && results.length === 0">
+                        Produk tidak ditemukan.
+                    </p>
                 </div>
                 <div class="col-span-2 sm:col-span-3">
                     <label class="block text-xs text-gray-500 mb-1">Judul</label>
                     <input type="text" :name="`items[${index}][Judul]`" x-model="item.Judul" maxlength="30" required
                            class="w-full rounded-md border-gray-300 text-sm">
                 </div>
-                <div class="sm:col-span-2">
-                    <label class="block text-xs text-gray-500 mb-1">Panjang <span x-text="dimensionUnit(item.KdProd)"></span></label>
-                    <input type="number" step="0.01" :name="`items[${index}][Panjang]`" x-model="item.Panjang"
-                           :readonly="!needsDimension(item.KdProd)" :required="needsDimension(item.KdProd)"
-                           :class="!needsDimension(item.KdProd) && 'bg-gray-100 text-gray-400'"
-                           class="w-full rounded-md border-gray-300 text-sm">
-                </div>
-                <div class="sm:col-span-2">
-                    <label class="block text-xs text-gray-500 mb-1">Lebar <span x-text="dimensionUnit(item.KdProd)"></span></label>
-                    <input type="number" step="0.01" :name="`items[${index}][Lebar]`" x-model="item.Lebar"
-                           :readonly="!needsDimension(item.KdProd)" :required="needsDimension(item.KdProd)"
-                           :class="!needsDimension(item.KdProd) && 'bg-gray-100 text-gray-400'"
-                           class="w-full rounded-md border-gray-300 text-sm">
-                </div>
+                <template x-if="!isJasaPotong(item.KdProd)">
+                    <div class="sm:col-span-2">
+                        <label class="block text-xs text-gray-500 mb-1">Panjang <span x-text="dimensionUnit(item.KdProd)"></span></label>
+                        <input type="number" step="0.01" :name="`items[${index}][Panjang]`" x-model="item.Panjang"
+                               :readonly="!needsDimension(item.KdProd)" :required="needsDimension(item.KdProd)"
+                               :class="!needsDimension(item.KdProd) && 'bg-gray-100 text-gray-400'"
+                               class="w-full rounded-md border-gray-300 text-sm">
+                    </div>
+                </template>
+                <template x-if="!isJasaPotong(item.KdProd)">
+                    <div class="sm:col-span-2">
+                        <label class="block text-xs text-gray-500 mb-1">Lebar <span x-text="dimensionUnit(item.KdProd)"></span></label>
+                        <input type="number" step="0.01" :name="`items[${index}][Lebar]`" x-model="item.Lebar"
+                               :readonly="!needsDimension(item.KdProd)" :required="needsDimension(item.KdProd)"
+                               :class="!needsDimension(item.KdProd) && 'bg-gray-100 text-gray-400'"
+                               class="w-full rounded-md border-gray-300 text-sm">
+                    </div>
+                </template>
+                <template x-if="isJasaPotong(item.KdProd)">
+                    <div class="sm:col-span-4">
+                        <label class="block text-xs text-gray-500 mb-1">Data Jasa Potong</label>
+                        <button type="button" @click="potongModalIndex = index"
+                                class="w-full px-3 py-1.5 text-sm rounded-md border border-gray-300 hover:bg-gray-100 text-left">
+                            <template x-if="item.PisauTurun && item.JumlahKertas && item.TebalKertas">
+                                <span class="text-gray-700">
+                                    P:<span x-text="item.PisauTurun"></span> Q:<span x-text="item.JumlahKertas"></span> TB:<span x-text="item.TebalKertas"></span>
+                                </span>
+                            </template>
+                            <template x-if="!(item.PisauTurun && item.JumlahKertas && item.TebalKertas)">
+                                <span class="text-gray-400">Isi data potong…</span>
+                            </template>
+                        </button>
+                        <input type="hidden" :name="`items[${index}][PisauTurun]`" :value="item.PisauTurun">
+                        <input type="hidden" :name="`items[${index}][JumlahKertas]`" :value="item.JumlahKertas">
+                        <input type="hidden" :name="`items[${index}][TebalKertas]`" :value="item.TebalKertas">
+                        <input type="hidden" :name="`items[${index}][Panjang]`" value="0">
+                        <input type="hidden" :name="`items[${index}][Lebar]`" value="0">
+                    </div>
+                </template>
                 <div class="sm:col-span-1">
                     <label class="block text-xs text-gray-500 mb-1">Qty</label>
                     <input type="number" :name="`items[${index}][Qty]`" x-model="item.Qty" min="1" required
+                           :readonly="isJasaPotong(item.KdProd)" :class="isJasaPotong(item.KdProd) && 'bg-gray-100 text-gray-400'"
                            class="w-full rounded-md border-gray-300 text-sm">
                 </div>
                 <div class="col-span-2 sm:col-span-1 flex sm:items-end h-full pt-1 sm:pt-5">
@@ -170,9 +257,61 @@
         <a href="{{ route('order-indoor.index') }}" class="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-md hover:bg-red-700">
             Batal
         </a>
-        <button type="button" @click="items.push({ KdProd: '', Judul: '', Panjang: '', Lebar: '', Qty: 1 })"
+        <button type="button" @click="items.push({ KdProd: '', Judul: '', Panjang: '', Lebar: '', Qty: 1, PisauTurun: null, JumlahKertas: null, TebalKertas: null })"
                 class="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700">
             + Tambah Item
         </button>
+    </div>
+
+    {{-- Modal: data Jasa Potong --}}
+    <div x-show="potongModalIndex !== null" x-cloak @keydown.escape.window="potongModalIndex = null"
+         class="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div @click="potongModalIndex = null" class="absolute inset-0 bg-gray-900/50"></div>
+
+        <template x-if="potongModalIndex !== null">
+            <div class="relative bg-white rounded-lg shadow-lg w-full max-w-md" @click.stop>
+                <div class="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
+                    <h3 class="font-semibold text-gray-900">Data Jasa Potong</h3>
+                    <button type="button" @click="potongModalIndex = null" class="text-gray-400 hover:text-gray-600">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="p-5 space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Pisau Turun</label>
+                        <input type="number" min="0" x-model.number="items[potongModalIndex].PisauTurun"
+                               @input="syncPotongQty(potongModalIndex)"
+                               class="mt-1 block w-full rounded-md border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Jumlah Kertas</label>
+                        <input type="number" min="0" x-model.number="items[potongModalIndex].JumlahKertas"
+                               @input="syncPotongQty(potongModalIndex)"
+                               class="mt-1 block w-full rounded-md border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Tebal Kertas</label>
+                        <input type="number" min="0" x-model.number="items[potongModalIndex].TebalKertas"
+                               @input="syncPotongQty(potongModalIndex)"
+                               class="mt-1 block w-full rounded-md border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500">
+                    </div>
+
+                    <div class="pt-3 border-t text-sm text-gray-600">
+                        <p class="font-mono text-xs text-gray-400 mb-1">((P × Q × TB) / 10) + X</p>
+                        Ongkos: <span class="font-semibold text-gray-900" x-text="'Rp ' + potongTotal(items[potongModalIndex]).toLocaleString('id-ID')"></span>
+                    </div>
+
+                    <div class="pt-2">
+                        <button type="button" @click="potongModalIndex = null"
+                                class="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-md hover:bg-gray-700">
+                            Selesai
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </template>
     </div>
 </div>

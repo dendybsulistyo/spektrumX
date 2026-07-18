@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\HargaCetakOutdoor;
+use App\Models\KonfigurasiJasaPotong;
 use App\Models\OrderIndoor;
 use App\Models\OrderOutdoor;
 use App\Models\Produk;
@@ -16,11 +17,29 @@ class OrderPricingService
      * form labels the fields accordingly. Only isPjLb === Produk::PJLB_AREA
      * (2) is priced by area — see Produk::isAreaPriced().
      *
+     * isPjLb === Produk::PJLB_QTY_ALT (4, "Jasa Potong") uses a completely
+     * separate formula that bypasses HargaStd entirely:
+     * Ongkos = ((PisauTurun × JumlahKertas × TebalKertas) / 10) + X, where X
+     * is the shop-wide constant in konfigurasi_jasa_potong.
+     *
      * HargaMin is a floor on the line total (not per unit), matching the
      * common "minimum order charge" convention for print jobs.
      */
-    public function lineTotalIndoor(Produk $produk, float $panjang, float $lebar, int $qty): float
-    {
+    public function lineTotalIndoor(
+        Produk $produk,
+        float $panjang,
+        float $lebar,
+        int $qty,
+        ?int $pisauTurun = null,
+        ?int $jumlahKertas = null,
+        ?int $tebalKertas = null,
+    ): float {
+        if ($produk->isPjLb === Produk::PJLB_QTY_ALT && $pisauTurun !== null && $jumlahKertas !== null && $tebalKertas !== null) {
+            $raw = (($pisauTurun * $jumlahKertas * $tebalKertas) / 10) + KonfigurasiJasaPotong::current()->nilai_x;
+
+            return max($raw, $produk->HargaMin);
+        }
+
         $raw = $produk->isAreaPriced()
             ? $produk->HargaStd * $panjang * $lebar * $qty
             : $produk->HargaStd * $qty;
@@ -45,7 +64,12 @@ class OrderPricingService
         return $order->detailItems()->sum(function ($item) {
             $produk = Produk::where('KdProd', $item->KdProd)->first();
 
-            return $produk ? $this->lineTotalIndoor($produk, $item->Panjang, $item->Lebar, $item->Qty) : 0;
+            return $produk
+                ? $this->lineTotalIndoor(
+                    $produk, $item->Panjang, $item->Lebar, $item->Qty,
+                    $item->PisauTurun, $item->JumlahKertas, $item->TebalKertas,
+                )
+                : 0;
         });
     }
 

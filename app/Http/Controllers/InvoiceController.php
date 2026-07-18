@@ -23,7 +23,12 @@ class InvoiceController extends Controller
         $items = $rawItems->map(function ($item) use ($type) {
             if ($type === 'indoor') {
                 $produk = Produk::where('KdProd', $item->KdProd)->first();
-                $subtotal = $produk ? $this->pricingService->lineTotalIndoor($produk, $item->Panjang, $item->Lebar, $item->Qty) : 0;
+                $subtotal = $produk
+                    ? $this->pricingService->lineTotalIndoor(
+                        $produk, $item->Panjang, $item->Lebar, $item->Qty,
+                        $item->PisauTurun, $item->JumlahKertas, $item->TebalKertas,
+                    )
+                    : 0;
                 $name = $item->Judul;
             } else {
                 $harga = $item->hargaCetak;

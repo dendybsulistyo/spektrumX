@@ -232,9 +232,11 @@
                         </a>
                     @endcan
 
-                    @can('roles.manage')
+                    @if (Auth::user()->hasPermission('roles.manage') || Auth::user()->hasPermission('jasa-potong.manage'))
                         <p class="px-2.5 pt-4 pb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">Pengaturan</p>
+                    @endif
 
+                    @can('roles.manage')
                         @php $active = request()->routeIs('roles.*'); @endphp
                         <a href="{{ route('roles.index') }}" class="{{ $navClass($active) }}">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="{{ $iconClass($active) }}">{!! $navIcon('shield') !!}</svg>
@@ -245,6 +247,14 @@
                         <a href="{{ route('users.index') }}" class="{{ $navClass($active) }}">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="{{ $iconClass($active) }}">{!! $navIcon('user') !!}</svg>
                             User
+                        </a>
+                    @endcan
+
+                    @can('jasa-potong.manage')
+                        @php $active = request()->routeIs('jasa-potong.*'); @endphp
+                        <a href="{{ route('jasa-potong.edit') }}" class="{{ $navClass($active) }}">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="{{ $iconClass($active) }}">{!! $navIcon('banknotes') !!}</svg>
+                            Jasa Potong
                         </a>
                     @endcan
                 </nav>

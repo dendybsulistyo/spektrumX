@@ -84,6 +84,9 @@ class Role extends Model
         'Data Warehouse' => [
             'data-warehouse.view' => 'Lihat dashboard data warehouse',
         ],
+        'Jasa Potong' => [
+            'jasa-potong.manage' => 'Kelola nilai X (biaya tetap) Jasa Potong',
+        ],
     ];
 
     /**

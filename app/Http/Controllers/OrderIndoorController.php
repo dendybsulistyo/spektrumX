@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreOrderIndoorRequest;
 use App\Models\Customer;
+use App\Models\KonfigurasiJasaPotong;
 use App\Models\OrderIndoor;
 use App\Models\OrderIndoorDetail;
 use App\Models\Produk;
@@ -39,6 +40,7 @@ class OrderIndoorController extends Controller
         return view('order-indoor.create', [
             'selectedCustomer' => old('KdCust') ? Customer::where('KdCust', old('KdCust'))->first() : null,
             'produkList' => Produk::orderBy('NoUrut')->get(),
+            'nilaiX' => KonfigurasiJasaPotong::current()->nilai_x,
         ]);
     }
 
@@ -76,6 +78,7 @@ class OrderIndoorController extends Controller
             'items' => $items,
             'selectedCustomer' => $orderIndoor->customer,
             'produkList' => Produk::orderBy('NoUrut')->get(),
+            'nilaiX' => KonfigurasiJasaPotong::current()->nilai_x,
         ]);
     }
 
@@ -129,6 +132,9 @@ class OrderIndoorController extends Controller
                 'Lebar' => $item['Lebar'],
                 'Qty' => $item['Qty'],
                 'KdStat' => 0,
+                'PisauTurun' => $item['PisauTurun'] ?? null,
+                'JumlahKertas' => $item['JumlahKertas'] ?? null,
+                'TebalKertas' => $item['TebalKertas'] ?? null,
             ]);
         }
     }

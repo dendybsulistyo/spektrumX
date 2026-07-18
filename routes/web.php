@@ -8,6 +8,7 @@ use App\Http\Controllers\DataWarehouseController;
 use App\Http\Controllers\DetailIndoorController;
 use App\Http\Controllers\HargaArtworkController;
 use App\Http\Controllers\HargaCetakOutdoorController;
+use App\Http\Controllers\JasaPotongController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\KasirController;
 use App\Http\Controllers\KategoriBahanOutdoorController;
@@ -170,6 +171,11 @@ Route::middleware('auth')->group(function () {
     Route::middleware('permission:roles.manage')->group(function () {
         Route::resource('roles', RoleController::class)->except('show');
         Route::resource('users', UserController::class)->except('show');
+    });
+
+    Route::middleware('permission:jasa-potong.manage')->group(function () {
+        Route::get('/jasa-potong', [JasaPotongController::class, 'edit'])->name('jasa-potong.edit');
+        Route::put('/jasa-potong', [JasaPotongController::class, 'update'])->name('jasa-potong.update');
     });
 });
 

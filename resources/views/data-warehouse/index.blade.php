@@ -227,5 +227,151 @@
                 </table>
             @endif
         </div>
+
+        {{-- Aktivitas customer: VIP vs Non-VIP --}}
+        <div class="bg-white rounded-lg border border-gray-200 p-5">
+            <h3 class="text-sm font-semibold text-gray-700 mb-1">Aktivitas Customer — VIP vs Non-VIP</h3>
+            <p class="text-xs text-gray-400 mb-4">
+                "Aktif" = ada transaksi antara {{ \Illuminate\Support\Carbon::parse($activityWindow['start'])->translatedFormat('d M Y') }}
+                – {{ \Illuminate\Support\Carbon::parse($activityWindow['end'])->translatedFormat('d M Y') }}.
+                Rentang mengikuti transaksi terakhir yang tersedia.
+            </p>
+
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                <div class="p-4 rounded-md border border-gray-200">
+                    <p class="text-xs text-gray-500">Non-VIP Aktif</p>
+                    <p class="text-xl font-bold text-gray-900 mt-1">{{ $fmtNum($activitySummary->non_vip_aktif) }}</p>
+                </div>
+                <div class="p-4 rounded-md border border-gray-200">
+                    <p class="text-xs text-gray-500">Non-VIP Tidak Aktif</p>
+                    <p class="text-xl font-bold text-gray-900 mt-1">{{ $fmtNum($activitySummary->non_vip_tidak_aktif) }}</p>
+                </div>
+                <div class="p-4 rounded-md border border-gray-200" style="background-color:#cde2fb0d;">
+                    <p class="text-xs text-gray-500">VIP Aktif</p>
+                    <p class="text-xl font-bold" style="color:#2a78d6;">{{ $fmtNum($activitySummary->vip_aktif) }}</p>
+                </div>
+                <div class="p-4 rounded-md border border-gray-200">
+                    <p class="text-xs text-gray-500">VIP Tidak Aktif</p>
+                    <p class="text-xl font-bold text-gray-900 mt-1">{{ $fmtNum($activitySummary->vip_tidak_aktif) }}</p>
+                </div>
+            </div>
+
+            <div x-data="{ filter: 'semua' }">
+                <div class="flex items-center justify-between mb-3">
+                    <h4 class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Daftar Customer VIP ({{ $fmtNum($vipCustomers->count()) }})</h4>
+                    <div class="flex gap-1 text-xs">
+                        <button type="button" @click="filter = 'semua'" :class="filter === 'semua' ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600'" class="px-2.5 py-1 rounded-md">Semua</button>
+                        <button type="button" @click="filter = 'aktif'" :class="filter === 'aktif' ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600'" class="px-2.5 py-1 rounded-md">Aktif</button>
+                        <button type="button" @click="filter = 'tidak_aktif'" :class="filter === 'tidak_aktif' ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600'" class="px-2.5 py-1 rounded-md">Tidak Aktif</button>
+                    </div>
+                </div>
+                <div class="max-h-96 overflow-y-auto overflow-x-auto">
+                    <table class="w-full text-sm" style="min-width: 360px; table-layout: fixed;">
+                        <colgroup>
+                            <col>
+                            <col style="width: 110px;">
+                        </colgroup>
+                        <thead class="text-left text-xs uppercase text-gray-400 sticky top-0 bg-white">
+                            <tr>
+                                <th class="pb-2">Customer</th>
+                                <th class="pb-2 text-right">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100">
+                            @forelse ($vipCustomers as $c)
+                                <tr x-show="filter === 'semua' || filter === '{{ $c->aktif ? 'aktif' : 'tidak_aktif' }}'">
+                                    <td class="py-2 pr-4 text-gray-800 font-medium truncate max-w-0">
+                                        <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wide mr-1.5" style="background-color:#fff7ed;color:#9a3412;">VIP</span>
+                                        {{ $c->NmCust }} <span class="text-gray-400 font-normal">({{ $c->KdCust }})</span>
+                                    </td>
+                                    <td class="py-2 pl-2 text-right whitespace-nowrap">
+                                        @if ($c->aktif)
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium" style="background-color:#cde2fb;color:#184f95;">Aktif</span>
+                                        @else
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500">Tidak Aktif</span>
+                                        @endif
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr><td colspan="2" class="py-4 text-center text-gray-400">Belum ada customer VIP.</td></tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        {{-- Daftar customer Non-VIP --}}
+        <div class="bg-white rounded-lg border border-gray-200 p-5">
+            <div class="flex items-center justify-between mb-1">
+                <h3 class="text-sm font-semibold text-gray-700">Daftar Customer Non-VIP ({{ $fmtNum($nonVipCustomers->total()) }})</h3>
+            </div>
+            <p class="text-xs text-gray-400 mb-4">
+                Status aktif memakai rentang yang sama: {{ \Illuminate\Support\Carbon::parse($activityWindow['start'])->translatedFormat('d M Y') }}
+                – {{ \Illuminate\Support\Carbon::parse($activityWindow['end'])->translatedFormat('d M Y') }}.
+            </p>
+
+            <form method="GET" class="flex flex-wrap items-end gap-3 mb-4">
+                @if ($from)<input type="hidden" name="from" value="{{ $from }}">@endif
+                @if ($to)<input type="hidden" name="to" value="{{ $to }}">@endif
+                <div class="flex-1 min-w-[200px]">
+                    <label class="block text-xs text-gray-500 mb-1">Cari Nama / Kode Customer</label>
+                    <input type="text" name="cust_search" value="{{ $custSearch }}"
+                           placeholder="Cari..." class="w-full rounded-md border-gray-300 text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-500 mb-1">Status</label>
+                    <select name="cust_status" class="rounded-md border-gray-300 text-sm">
+                        <option value="semua" @selected($custStatus === 'semua')>Semua</option>
+                        <option value="aktif" @selected($custStatus === 'aktif')>Aktif</option>
+                        <option value="tidak_aktif" @selected($custStatus === 'tidak_aktif')>Tidak Aktif</option>
+                    </select>
+                </div>
+                <button type="submit" class="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-md hover:bg-gray-700">
+                    Cari
+                </button>
+                @if ($custSearch || $custStatus !== 'semua')
+                    <a href="{{ route('data-warehouse.index', array_filter(['from' => $from, 'to' => $to])) }}"
+                       class="px-4 py-2 text-sm text-gray-500 hover:underline">Reset</a>
+                @endif
+            </form>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm" style="min-width: 360px; table-layout: fixed;">
+                    <colgroup>
+                        <col>
+                        <col style="width: 110px;">
+                    </colgroup>
+                    <thead class="text-left text-xs uppercase text-gray-400">
+                        <tr>
+                            <th class="pb-2">Customer</th>
+                            <th class="pb-2 text-right">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        @forelse ($nonVipCustomers as $c)
+                            <tr>
+                                <td class="py-2 pr-4 text-gray-800 font-medium truncate max-w-0">
+                                    {{ $c->NmCust }} <span class="text-gray-400 font-normal">({{ $c->KdCust }})</span>
+                                </td>
+                                <td class="py-2 pl-2 text-right whitespace-nowrap">
+                                    @if ($c->aktif)
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium" style="background-color:#cde2fb;color:#184f95;">Aktif</span>
+                                    @else
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500">Tidak Aktif</span>
+                                    @endif
+                                </td>
+                            </tr>
+                        @empty
+                            <tr><td colspan="2" class="py-4 text-center text-gray-400">Tidak ada customer yang cocok.</td></tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="mt-4">
+                {{ $nonVipCustomers->links() }}
+            </div>
+        </div>
     </div>
 </x-app-layout>

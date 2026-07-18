@@ -24,6 +24,9 @@ class OrderIndoorDetail extends Model
         'Lebar',
         'Qty',
         'KdStat',
+        'PisauTurun',
+        'JumlahKertas',
+        'TebalKertas',
     ];
 
     protected function casts(): array
@@ -31,6 +34,9 @@ class OrderIndoorDetail extends Model
         return [
             'Panjang' => 'float',
             'Lebar' => 'float',
+            'PisauTurun' => 'integer',
+            'JumlahKertas' => 'integer',
+            'TebalKertas' => 'integer',
         ];
     }
 }
