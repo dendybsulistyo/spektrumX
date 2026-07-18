@@ -105,6 +105,17 @@
                 open: false,
                 activeIndex: -1,
                 searchTimer: null,
+                quickAddOpen: false,
+                quickAddForm: { NmCust: '', Telp: '', Alamat: '', Kota: '' },
+                quickAddSaving: false,
+                quickAddErrors: {},
+                get displayResults() {
+                    const list = this.results.slice();
+                    if (this.query.trim().length > 0) {
+                        list.push({ __new: true, NmCust: this.query.trim() });
+                    }
+                    return list;
+                },
                 search() {
                     this.selectedKdCust = '';
                     this.activeIndex = -1;
@@ -116,19 +127,69 @@
                     }, 250);
                 },
                 select(c) {
+                    if (c.__new) {
+                        this.openQuickAdd(c.NmCust);
+                        return;
+                    }
                     this.selectedKdCust = c.KdCust;
                     this.query = `${c.NmCust} (${c.KdCust})`;
                     this.open = false;
                     this.activeIndex = -1;
                 },
                 move(delta) {
-                    if (!this.open || this.results.length === 0) return;
-                    this.activeIndex = (this.activeIndex + delta + this.results.length) % this.results.length;
-                    this.$nextTick(() => this.$el.querySelector(`[data-cust-idx='${this.activeIndex}']`)?.scrollIntoView({ block: 'nearest' }));
+                    if (!this.open || this.displayResults.length === 0) return;
+                    this.activeIndex = (this.activeIndex + delta + this.displayResults.length) % this.displayResults.length;
+                    this.$nextTick(() => {
+                        const list = document.getElementById('cust-search-list');
+                        const active = document.getElementById('cust-search-item-' + this.activeIndex);
+                        if (!list || !active) return;
+                        const listRect = list.getBoundingClientRect();
+                        const itemRect = active.getBoundingClientRect();
+                        if (itemRect.top < listRect.top) {
+                            list.scrollTop -= (listRect.top - itemRect.top);
+                        } else if (itemRect.bottom > listRect.bottom) {
+                            list.scrollTop += (itemRect.bottom - listRect.bottom);
+                        }
+                    });
                 },
                 chooseActive() {
-                    if (this.activeIndex >= 0 && this.results[this.activeIndex]) {
-                        this.select(this.results[this.activeIndex]);
+                    if (this.activeIndex >= 0 && this.displayResults[this.activeIndex]) {
+                        this.select(this.displayResults[this.activeIndex]);
+                    }
+                },
+                openQuickAdd(name) {
+                    this.quickAddForm = { NmCust: name, Telp: '', Alamat: '', Kota: '' };
+                    this.quickAddErrors = {};
+                    this.quickAddOpen = true;
+                    this.open = false;
+                },
+                async submitQuickAdd() {
+                    this.quickAddSaving = true;
+                    this.quickAddErrors = {};
+                    try {
+                        const res = await fetch('/customers-quick-create', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
+                            },
+                            body: JSON.stringify(this.quickAddForm),
+                        });
+                        if (res.status === 422) {
+                            const data = await res.json();
+                            this.quickAddErrors = data.errors || {};
+                            this.quickAddSaving = false;
+                            return;
+                        }
+                        if (!res.ok) throw new Error('Gagal menyimpan');
+                        const customer = await res.json();
+                        this.quickAddOpen = false;
+                        this.select(customer);
+                    } catch (e) {
+                        alert('Gagal menambah customer baru.');
+                    } finally {
+                        this.quickAddSaving = false;
                     }
                 },
              }"
@@ -141,25 +202,87 @@
                    class="mt-1 block w-full rounded-md border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500">
             <input type="hidden" name="KdCust" :value="selectedKdCust">
 
-            <div x-show="open && results.length > 0" x-cloak
+            <div x-show="open && displayResults.length > 0" x-cloak id="cust-search-list"
                  class="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto">
-                <template x-for="(c, i) in results" :key="c.KdCust">
-                    <button type="button" @click="select(c)" @mouseenter="activeIndex = i" :data-cust-idx="i"
+                <template x-for="(c, i) in displayResults" :key="c.__new ? '__new' : c.KdCust">
+                    <button type="button" @click="select(c)" @mouseenter="activeIndex = i" :id="'cust-search-item-' + i"
                             :class="i === activeIndex ? 'bg-gray-100' : ''"
                             class="block w-full text-left px-3 py-2 text-sm hover:bg-gray-100">
-                        <span x-text="c.NmCust"></span> <span class="text-gray-400" x-text="'(' + c.KdCust + ')'"></span>
-                        <template x-if="c.Telp">
-                            <span class="block text-xs text-gray-400" x-text="c.Telp"></span>
+                        <template x-if="!c.__new">
+                            <div>
+                                <span x-text="c.NmCust"></span> <span class="text-gray-400" x-text="'(' + c.KdCust + ')'"></span>
+                                <template x-if="c.Telp">
+                                    <span class="block text-xs text-gray-400" x-text="c.Telp"></span>
+                                </template>
+                            </div>
+                        </template>
+                        <template x-if="c.__new">
+                            <div class="text-green-700 font-medium">
+                                + Tambah customer baru: <span x-text="c.NmCust"></span>
+                            </div>
                         </template>
                     </button>
                 </template>
             </div>
-            <p class="text-xs text-gray-400 mt-1" x-show="open && query.length > 0 && results.length === 0">
-                Customer tidak ditemukan.
-            </p>
 
             <div x-show="!selectedKdCust">
                 <x-input-error :messages="$errors->get('KdCust')" class="mt-1" />
+            </div>
+
+            {{-- Modal: tambah customer baru cepat --}}
+            <div x-show="quickAddOpen" x-cloak @keydown.escape.window="quickAddOpen = false"
+                 class="fixed inset-0 z-50 flex items-center justify-center p-4">
+                <div @click="quickAddOpen = false" class="absolute inset-0 bg-gray-900/50"></div>
+
+                <div class="relative bg-white rounded-lg shadow-lg w-full max-w-md" @click.stop>
+                    <div class="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
+                        <h3 class="font-semibold text-gray-900">Tambah Customer Baru</h3>
+                        <button type="button" @click="quickAddOpen = false" class="text-gray-400 hover:text-gray-600">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    <form @submit.prevent="submitQuickAdd()" class="p-6 space-y-6">
+                        <p class="text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded-md px-3 py-2.5 leading-relaxed">
+                            Kode customer dibuat otomatis. Detail lain bisa dilengkapi nanti di menu Customer.
+                        </p>
+                        <div class="space-y-5">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Nama</label>
+                                <input type="text" x-model="quickAddForm.NmCust" required autofocus
+                                       class="block w-full rounded-md border-gray-300 text-sm px-3 py-2.5 focus:border-indigo-500 focus:ring-indigo-500">
+                                <p class="mt-1.5 text-xs text-red-600" x-show="quickAddErrors.NmCust" x-text="quickAddErrors.NmCust?.[0]"></p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Telepon</label>
+                                <input type="text" x-model="quickAddForm.Telp" required
+                                       class="block w-full rounded-md border-gray-300 text-sm px-3 py-2.5 focus:border-indigo-500 focus:ring-indigo-500">
+                                <p class="mt-1.5 text-xs text-red-600" x-show="quickAddErrors.Telp" x-text="quickAddErrors.Telp?.[0]"></p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Alamat <span class="text-gray-400 font-normal">(opsional)</span></label>
+                                <input type="text" x-model="quickAddForm.Alamat"
+                                       class="block w-full rounded-md border-gray-300 text-sm px-3 py-2.5 focus:border-indigo-500 focus:ring-indigo-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Kota <span class="text-gray-400 font-normal">(opsional)</span></label>
+                                <input type="text" x-model="quickAddForm.Kota"
+                                       class="block w-full rounded-md border-gray-300 text-sm px-3 py-2.5 focus:border-indigo-500 focus:ring-indigo-500">
+                            </div>
+                        </div>
+
+                        <div class="pt-5 flex gap-3 border-t border-gray-200">
+                            <button type="submit" :disabled="quickAddSaving"
+                                    class="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-md hover:bg-gray-700 disabled:opacity-50">
+                                <span x-show="!quickAddSaving">Simpan &amp; Pilih</span>
+                                <span x-show="quickAddSaving">Menyimpan...</span>
+                            </button>
+                            <button type="button" @click="quickAddOpen = false" class="px-4 py-2 text-sm text-gray-600 hover:underline">Batal</button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
@@ -175,6 +298,7 @@
                      x-data="{
                         query: produkMap[item.KdProd] ? `${produkMap[item.KdProd].NmProd} (${item.KdProd})` : '',
                         open: false,
+                        activeIndex: -1,
                         get results() {
                             const q = this.query.trim().toLowerCase();
                             if (q === '') return produkOptions.slice(0, 30);
@@ -186,20 +310,45 @@
                             item.KdProd = p.KdProd;
                             this.query = `${p.NmProd} (${p.KdProd})`;
                             this.open = false;
+                            this.activeIndex = -1;
                             onProdukChange(item);
+                        },
+                        move(delta) {
+                            if (!this.open || this.results.length === 0) return;
+                            this.activeIndex = (this.activeIndex + delta + this.results.length) % this.results.length;
+                            this.$nextTick(() => {
+                                const list = document.getElementById('prod-search-list-' + index);
+                                const active = document.getElementById('prod-search-item-' + index + '-' + this.activeIndex);
+                                if (!list || !active) return;
+                                const listRect = list.getBoundingClientRect();
+                                const itemRect = active.getBoundingClientRect();
+                                if (itemRect.top < listRect.top) {
+                                    list.scrollTop -= (listRect.top - itemRect.top);
+                                } else if (itemRect.bottom > listRect.bottom) {
+                                    list.scrollTop += (itemRect.bottom - listRect.bottom);
+                                }
+                            });
+                        },
+                        chooseActive() {
+                            if (this.activeIndex >= 0 && this.results[this.activeIndex]) {
+                                this.select(this.results[this.activeIndex]);
+                            }
                         },
                      }"
                      @click.outside="open = false">
                     <label class="block text-xs text-gray-500 mb-1">Produk</label>
-                    <input type="text" x-model="query" @focus="open = true" @input="open = true"
+                    <input type="text" x-model="query" @focus="open = true" @input="open = true; activeIndex = -1"
+                           @keydown.down.prevent="move(1)" @keydown.up.prevent="move(-1)"
+                           @keydown.enter.prevent="chooseActive()" @keydown.escape="open = false"
                            autocomplete="off" placeholder="Cari produk..." data-produk-search
                            class="w-full rounded-md border-gray-300 text-sm">
                     <input type="hidden" :name="`items[${index}][KdProd]`" :value="item.KdProd" required>
 
-                    <div x-show="open && results.length > 0" x-cloak
+                    <div x-show="open && results.length > 0" x-cloak :id="'prod-search-list-' + index"
                          class="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto">
-                        <template x-for="p in results" :key="p.KdProd">
-                            <button type="button" @click="select(p)"
+                        <template x-for="(p, i) in results" :key="p.KdProd">
+                            <button type="button" @click="select(p)" @mouseenter="activeIndex = i" :id="'prod-search-item-' + index + '-' + i"
+                                    :class="i === activeIndex ? 'bg-gray-100' : ''"
                                     class="block w-full text-left px-3 py-2 text-sm hover:bg-gray-100">
                                 <span x-text="p.NmProd"></span> <span class="text-gray-400" x-text="'(' + p.KdProd + ')'"></span>
                             </button>

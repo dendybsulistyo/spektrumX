@@ -67,7 +67,43 @@ class CustomerController extends Controller
      */
     public function suggestCode(Request $request): JsonResponse
     {
-        $name = (string) $request->query('name', '');
+        return response()->json(['code' => $this->generateCode((string) $request->query('name', ''))]);
+    }
+
+    /**
+     * Minimal customer creation used from the order form's "+ Tambah
+     * customer baru" flow — no permission gate beyond auth (front-desk
+     * staff taking orders usually don't have customers.manage), only
+     * Nama/Telp required, and KdCust is auto-generated rather than typed,
+     * so it doesn't interrupt the keyboard-driven order flow.
+     */
+    public function quickCreate(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'NmCust' => ['required', 'string', 'max:50'],
+            'Telp' => ['required', 'string', 'max:40'],
+            'Alamat' => ['nullable', 'string', 'max:60'],
+            'Kota' => ['nullable', 'string', 'max:25'],
+        ], [], ['NmCust' => 'nama customer', 'Telp' => 'telepon']);
+
+        $customer = Customer::create([
+            'KdCust' => $this->generateCode($data['NmCust']),
+            'NmCust' => $data['NmCust'],
+            'Telp' => $data['Telp'],
+            'Alamat' => $data['Alamat'] ?? '',
+            'Kota' => $data['Kota'] ?? '',
+        ]);
+
+        return response()->json($customer->only(['KdCust', 'NmCust', 'Telp']));
+    }
+
+    /**
+     * Sarankan kode customer berdasarkan nama, mengikuti pola kode lama
+     * (3 huruf awal nama + nomor urut, misal "Rio Spektrum" -> RIO001),
+     * dan pastikan tidak bentrok dengan kode yang sudah ada.
+     */
+    private function generateCode(string $name): string
+    {
         $letters = strtoupper(preg_replace('/[^A-Za-z]/', '', $name) ?? '');
         $prefix = substr(str_pad($letters !== '' ? $letters : 'CST', 3, 'X'), 0, 3);
 
@@ -86,7 +122,7 @@ class CustomerController extends Controller
             $code = $prefix.str_pad((string) $next, $digitLength, '0', STR_PAD_LEFT);
         }
 
-        return response()->json(['code' => $code]);
+        return $code;
     }
 
     /**

@@ -39,6 +39,7 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     Route::get('/customers-search', [CustomerController::class, 'search'])->name('customers.search');
+    Route::post('/customers-quick-create', [CustomerController::class, 'quickCreate'])->name('customers.quick-create');
 
     Route::middleware('permission:data-warehouse.view')->group(function () {
         Route::get('/data-warehouse', [DataWarehouseController::class, 'index'])->name('data-warehouse.index');
