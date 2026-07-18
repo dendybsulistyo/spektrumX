@@ -58,7 +58,7 @@
                             @if ($item->isPjLb)
                                 <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-blue-50 text-blue-700 mr-1">Pakai P×L</span>
                             @endif
-                            @if ($item->isHPilih)
+                            @if ($item->isHPilih === 1)
                                 <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-purple-50 text-purple-700">Harga Bertingkat</span>
                             @endif
                         </td>

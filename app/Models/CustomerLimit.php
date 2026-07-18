@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class CustomerLimit extends Model
 {
-    protected $table = 'limitp_';
+    protected $table = 'customer_limits';
 
     protected $primaryKey = 'KdCust';
 

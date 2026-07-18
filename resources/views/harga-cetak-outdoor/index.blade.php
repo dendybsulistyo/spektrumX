@@ -3,7 +3,7 @@
         <h2 class="font-semibold text-xl text-gray-800">Harga Outdoor</h2>
     </x-slot>
 
-    <form method="POST" action="{{ route('harga-cetak-outdoor.update-matrix') }}">
+    <form method="POST" action="{{ route('harga-cetak-outdoor.update-matrix') }}" novalidate>
         @csrf
 
         <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
@@ -18,13 +18,11 @@
                             @endforeach
                         </tr>
                     </thead>
-                    <tbody class="divide-y">
+                    <tbody class="divide-y divide-gray-200">
                         @forelse ($bahanList as $bahan)
                             <tr>
-                                <td class="px-4 py-3 text-gray-900 font-medium whitespace-nowrap">{{ $bahan->NmBhn }}</td>
-                                <td class="px-2 py-3 text-center">
-                                    <span class="inline-flex items-center justify-center w-9 h-6 rounded-md bg-red-600 text-white text-xs font-semibold">{{ $bahan->NoCetak }}</span>
-                                </td>
+                                <td class="px-4 py-3 bg-gray-900 text-white font-medium whitespace-nowrap">{{ $bahan->NmBhn }}</td>
+                                <td class="px-2 py-3 text-center bg-red-600 text-white font-semibold">{{ $bahan->NoCetak }}</td>
                                 @foreach ($printers as $printer)
                                     @php
                                         $kdCtk = $printer->KdPrn.$bahan->NoCetak;

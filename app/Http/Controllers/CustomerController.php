@@ -89,6 +89,29 @@ class CustomerController extends Controller
         return response()->json(['code' => $code]);
     }
 
+    /**
+     * Lightweight autocomplete search for order forms — avoids loading all
+     * ~18k customers into a <select> (was causing noticeable page lag).
+     */
+    public function search(Request $request): JsonResponse
+    {
+        $q = (string) $request->query('q', '');
+
+        $customers = Customer::query()
+            ->whereRaw("TRIM(KdCust) != ''")
+            ->when($q !== '', function ($query) use ($q) {
+                $query->where(function ($sub) use ($q) {
+                    $sub->where('NmCust', 'like', "%{$q}%")
+                        ->orWhere('KdCust', 'like', "%{$q}%");
+                });
+            })
+            ->orderBy('NmCust')
+            ->limit(20)
+            ->get(['KdCust', 'NmCust']);
+
+        return response()->json($customers);
+    }
+
     public function destroy(Customer $customer): RedirectResponse
     {
         CustomerLimit::where('KdCust', $customer->KdCust)->delete();

@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class BahanOutdoor extends Model
 {
-    protected $table = 'gd_Master_Barang_Outdoor';
+    protected $table = 'bahan_outdoor';
 
     public $timestamps = false;
 

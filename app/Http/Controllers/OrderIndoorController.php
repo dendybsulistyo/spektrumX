@@ -6,7 +6,6 @@ use App\Http\Requests\StoreOrderIndoorRequest;
 use App\Models\Customer;
 use App\Models\OrderIndoor;
 use App\Models\OrderIndoorDetail;
-use App\Models\Operator;
 use App\Models\Produk;
 use App\Services\OrderPricingService;
 use Illuminate\Http\RedirectResponse;
@@ -38,8 +37,7 @@ class OrderIndoorController extends Controller
     public function create(): View
     {
         return view('order-indoor.create', [
-            'customers' => Customer::whereRaw("TRIM(KdCust) != ''")->orderBy('NmCust')->get(),
-            'operators' => Operator::orderBy('NmOpr')->get(),
+            'selectedCustomer' => old('KdCust') ? Customer::where('KdCust', old('KdCust'))->first() : null,
             'produkList' => Produk::orderBy('NoUrut')->get(),
         ]);
     }
@@ -55,7 +53,6 @@ class OrderIndoorController extends Controller
                 'TglOrder' => $data['TglOrder'],
                 'NoOrder' => $noOrder,
                 'KdCust' => $data['KdCust'],
-                'KdOpr' => $data['KdOpr'],
                 'Cetak' => 0,
                 'status' => 'baru',
                 'status_bayar' => 'belum_bayar',
@@ -77,8 +74,7 @@ class OrderIndoorController extends Controller
         return view('order-indoor.edit', [
             'order' => $orderIndoor,
             'items' => $items,
-            'customers' => Customer::whereRaw("TRIM(KdCust) != ''")->orderBy('NmCust')->get(),
-            'operators' => Operator::orderBy('NmOpr')->get(),
+            'selectedCustomer' => $orderIndoor->customer,
             'produkList' => Produk::orderBy('NoUrut')->get(),
         ]);
     }
@@ -91,7 +87,6 @@ class OrderIndoorController extends Controller
             $orderIndoor->update([
                 'TglOrder' => $data['TglOrder'],
                 'KdCust' => $data['KdCust'],
-                'KdOpr' => $data['KdOpr'],
             ]);
 
             OrderIndoorDetail::where('BrsOrder', 'like', $orderIndoor->NoOrder.'%')->delete();

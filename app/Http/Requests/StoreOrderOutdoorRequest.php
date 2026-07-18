@@ -32,8 +32,8 @@ class StoreOrderOutdoorRequest extends FormRequest
             'items.*.Panjang' => ['required', 'numeric', 'min:0'],
             'items.*.Lebar' => ['required', 'numeric', 'min:0'],
             'items.*.Qty' => ['required', 'integer', 'min:1'],
-            'items.*.KdCtk' => ['nullable', 'string', 'exists:hcetak_outdoor,KdCtk'],
-            'items.*.KdBrgs' => ['nullable', 'string', 'exists:gd_Master_Barang_Outdoor,KdBrgs'],
+            'items.*.KdCtk' => ['nullable', 'string', 'exists:harga_cetak_outdoor,KdCtk'],
+            'items.*.KdBrgs' => ['nullable', 'string', 'exists:bahan_outdoor,KdBrgs'],
             'items.*.Fins' => ['nullable', 'string', 'max:100'],
         ];
     }

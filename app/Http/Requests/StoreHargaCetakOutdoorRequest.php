@@ -28,7 +28,7 @@ class StoreHargaCetakOutdoorRequest extends FormRequest
         return [
             'KdCtk' => [
                 'required', 'string', 'max:4',
-                Rule::unique('hcetak_outdoor', 'KdCtk')->ignore($harga?->KdCtk, 'KdCtk'),
+                Rule::unique('harga_cetak_outdoor', 'KdCtk')->ignore($harga?->KdCtk, 'KdCtk'),
             ],
             'HargaStd' => ['required', 'numeric', 'min:0'],
             'HargaMin' => ['required', 'numeric', 'min:0'],

@@ -10,27 +10,28 @@ use App\Models\Produk;
 class OrderPricingService
 {
     /**
-     * Indoor Panjang/Lebar are entered in meters (per the order form labels);
-     * no unit conversion is applied.
+     * Indoor Panjang/Lebar are entered in whatever unit the product's Satuan
+     * implies (e.g. "sqcm" → centimeters, "sqm" → meters) — HargaStd is
+     * priced per that same unit, so no conversion is applied here; the order
+     * form labels the fields accordingly. Only isPjLb === Produk::PJLB_AREA
+     * (2) is priced by area — see Produk::isAreaPriced().
      *
-     * isPjLb is cast to boolean on the model, but the underlying legacy column
-     * actually stores codes 1-4 (never 0), so every row casts to true. Per
-     * business confirmation, only the raw value 1 means "priced by area" —
-     * read the raw (uncast) value here rather than $produk->isPjLb.
+     * HargaMin is a floor on the line total (not per unit), matching the
+     * common "minimum order charge" convention for print jobs.
      */
     public function lineTotalIndoor(Produk $produk, float $panjang, float $lebar, int $qty): float
     {
-        $isAreaBased = (int) $produk->getRawOriginal('isPjLb') === 1;
-
-        return $isAreaBased
+        $raw = $produk->isAreaPriced()
             ? $produk->HargaStd * $panjang * $lebar * $qty
             : $produk->HargaStd * $qty;
+
+        return max($raw, $produk->HargaMin);
     }
 
     /**
      * Outdoor Panjang/Lebar are entered in centimeters (per the order form labels).
      * HargaStd is assumed to be a price per square meter — confirm against real
-     * pricing once this feature is live, since hcetak_outdoor has no explicit flag.
+     * pricing once this feature is live, since harga_cetak_outdoor has no explicit flag.
      */
     public function lineTotalOutdoor(HargaCetakOutdoor $harga, float $panjangCm, float $lebarCm, int $qty): float
     {

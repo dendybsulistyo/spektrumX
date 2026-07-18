@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class OrderIndoorDetail extends Model
 {
-    protected $table = 'indd_order_indoor_Seting_SPEK';
+    protected $table = 'order_indoor_detail';
 
     public $timestamps = false;
 

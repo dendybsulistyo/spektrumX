@@ -13,7 +13,7 @@ use Illuminate\View\View;
 class HargaCetakOutdoorController extends Controller
 {
     /**
-     * KdCtk on hcetak_outdoor is composed of KdPrn (2 chars) + NoCetak (2 chars),
+     * KdCtk on harga_cetak_outdoor is composed of KdPrn (2 chars) + NoCetak (2 chars),
      * e.g. printer "01" + bahan NoCetak "01" = KdCtk "0101". This renders that
      * flat list as a Printer x Bahan price matrix.
      */

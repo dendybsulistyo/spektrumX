@@ -6,7 +6,7 @@ use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
-class StoreProdukRequest extends FormRequest
+class StoreKategoriProdukRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -18,8 +18,7 @@ class StoreProdukRequest extends FormRequest
 
     /**
      * isHPilih comes from a checkbox (unchecked sends nothing at all) and is
-     * normalized to its legacy code: 1 = Ya, 2 = Tidak. isPjLb is a select
-     * with 4 legacy codes (1-4, see Produk::PJLB_LABELS) and is sent as-is.
+     * normalized to its legacy code: 1 = Ya, 2 = Tidak.
      */
     protected function prepareForValidation(): void
     {
@@ -35,14 +34,17 @@ class StoreProdukRequest extends FormRequest
      */
     public function rules(): array
     {
-        $produk = $this->route('produk');
-
         return [
-            'KdProd' => [
-                'required', 'string', 'max:4',
-                Rule::unique('produk_indoor', 'KdProd')->ignore($produk?->id),
+            'kategori_mode' => ['required', Rule::in(['existing', 'new'])],
+            'KdDivs' => ['required_if:kategori_mode,existing', 'nullable', 'string', 'exists:kategori_produk_indoor,KdDivs'],
+            'new_KdDivs' => [
+                'required_if:kategori_mode,new', 'nullable', 'string', 'max:2',
+                Rule::unique('kategori_produk_indoor', 'KdDivs'),
             ],
-            'KdDivs' => ['nullable', 'string', 'exists:kategori_produk_indoor,KdDivs'],
+            'new_NmDivs' => ['required_if:kategori_mode,new', 'nullable', 'string', 'max:19'],
+            'KategoriNoUrut' => ['required_if:kategori_mode,new', 'nullable', 'integer', 'min:0'],
+
+            'KdProd' => ['required', 'string', 'max:4', Rule::unique('produk_indoor', 'KdProd')],
             'NmProd' => ['required', 'string', 'max:30'],
             'NoUrut' => ['required', 'integer', 'min:0'],
             'HargaStd' => ['required', 'numeric', 'min:0'],
@@ -50,10 +52,6 @@ class StoreProdukRequest extends FormRequest
             'Satuan' => ['required', 'string', 'max:8'],
             'isPjLb' => ['required', 'integer', 'in:1,2,3,4'],
             'isHPilih' => ['required', 'integer', 'in:1,2'],
-            'bertingkat' => ['nullable', 'array'],
-            'bertingkat.*.BatasA' => ['required', 'integer', 'min:0'],
-            'bertingkat.*.BatasZ' => ['nullable', 'integer', 'min:0'],
-            'bertingkat.*.Harga' => ['required', 'numeric', 'min:0'],
         ];
     }
 
@@ -65,9 +63,13 @@ class StoreProdukRequest extends FormRequest
     public function attributes(): array
     {
         return [
+            'KdDivs' => 'kategori',
+            'new_KdDivs' => 'kode kategori baru',
+            'new_NmDivs' => 'nama kategori baru',
+            'KategoriNoUrut' => 'nomor urut kategori',
             'KdProd' => 'kode produk',
             'NmProd' => 'nama produk',
-            'NoUrut' => 'nomor urut',
+            'NoUrut' => 'nomor urut produk',
             'HargaStd' => 'harga standar',
             'HargaMin' => 'harga minimum',
             'Satuan' => 'satuan',

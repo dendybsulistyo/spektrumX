@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class BahanCetakOutdoor extends Model
 {
-    protected $table = 'aman_bahan_1_NamaBahan_dan_Nomor_Urut';
+    protected $table = 'bahan_cetak_outdoor';
 
     protected $primaryKey = 'NoUrut';
 

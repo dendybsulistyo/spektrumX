@@ -1,7 +1,8 @@
 <div x-data="chatWidget()" x-init="init()">
-    <!-- Floating button -->
-    <button @click="togglePanel()"
-            class="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-indigo-600 text-white shadow-lg flex items-center justify-center hover:bg-indigo-700">
+    <!-- Floating button (draggable) -->
+    <button @pointerdown="startDrag($event)"
+            :style="`right:${pos.x}px; bottom:${pos.y}px;`"
+            class="fixed z-50 w-14 h-14 rounded-full bg-indigo-600 text-white shadow-lg flex items-center justify-center hover:bg-indigo-700 touch-none select-none cursor-grab active:cursor-grabbing">
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
             <path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" />
         </svg>
@@ -10,9 +11,12 @@
               class="absolute -top-1 -right-1 min-w-[20px] h-5 px-1 rounded-full bg-red-600 text-white text-xs font-semibold flex items-center justify-center"></span>
     </button>
 
-    <!-- Panel -->
-    <div x-show="panelOpen" x-cloak
-         class="fixed bottom-24 right-6 w-80 h-[28rem] bg-white rounded-lg shadow-xl border border-gray-200 flex flex-col z-50">
+    <!-- Panel (outer div only toggles visibility; inner div only handles position —
+         keeping x-show and :style on separate elements so Alpine's reactive style
+         rewrite on drag never clobbers the display:none that x-show relies on) -->
+    <div x-show="panelOpen" x-cloak>
+    <div :style="`right:${pos.x}px; bottom:${pos.y + 64}px;`"
+         class="fixed w-80 h-[28rem] bg-white rounded-lg shadow-xl border border-gray-200 flex flex-col z-50">
 
         <!-- List view -->
         <template x-if="view === 'list'">
@@ -78,6 +82,7 @@
             </div>
         </template>
     </div>
+    </div>
 </div>
 
 <script>
@@ -95,9 +100,53 @@
             pollList: null,
             pollConvo: null,
 
+            pos: { x: 24, y: 24 },
+            dragging: false,
+            dragMoved: false,
+            dragStart: { mouseX: 0, mouseY: 0, x: 0, y: 0 },
+
             init() {
+                const saved = localStorage.getItem('chatWidgetPos');
+                if (saved) {
+                    try { this.pos = JSON.parse(saved); } catch (e) {}
+                }
                 this.fetchUnread();
                 this.pollUnread = setInterval(() => this.fetchUnread(), 5000);
+            },
+
+            startDrag(e) {
+                this.dragging = true;
+                this.dragMoved = false;
+                this.dragStart = { mouseX: e.clientX, mouseY: e.clientY, x: this.pos.x, y: this.pos.y };
+
+                const onMove = (ev) => {
+                    const dx = ev.clientX - this.dragStart.mouseX;
+                    const dy = ev.clientY - this.dragStart.mouseY;
+                    if (Math.abs(dx) > 4 || Math.abs(dy) > 4) this.dragMoved = true;
+
+                    let newX = this.dragStart.x - dx;
+                    let newY = this.dragStart.y - dy;
+                    newX = Math.min(Math.max(newX, 8), window.innerWidth - 64);
+                    newY = Math.min(Math.max(newY, 8), window.innerHeight - 64);
+                    this.pos = { x: newX, y: newY };
+                };
+
+                const onUp = () => {
+                    this.dragging = false;
+                    window.removeEventListener('pointermove', onMove);
+                    window.removeEventListener('pointerup', onUp);
+                    localStorage.setItem('chatWidgetPos', JSON.stringify(this.pos));
+
+                    // Decide open/close ourselves — don't rely on the browser's
+                    // native 'click' event, since it fires after mouseup
+                    // regardless of how far the pointer moved in between.
+                    if (!this.dragMoved) {
+                        this.togglePanel();
+                    }
+                };
+
+                window.addEventListener('pointermove', onMove);
+                window.addEventListener('pointerup', onUp);
             },
 
             togglePanel() {

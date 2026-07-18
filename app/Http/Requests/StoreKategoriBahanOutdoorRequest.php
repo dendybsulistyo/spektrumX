@@ -28,7 +28,7 @@ class StoreKategoriBahanOutdoorRequest extends FormRequest
         return [
             'KdGrup' => [
                 'required', 'string', 'max:3',
-                Rule::unique('aman_gd_grup_Bahan', 'KdGrup')->ignore($kategori?->id),
+                Rule::unique('kategori_bahan_outdoor', 'KdGrup')->ignore($kategori?->id),
             ],
             'NmGrup' => ['required', 'string', 'max:50'],
             'NoUrut' => ['required', 'integer', 'min:0'],

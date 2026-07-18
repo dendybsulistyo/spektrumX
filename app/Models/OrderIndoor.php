@@ -8,7 +8,7 @@ use Illuminate\Support\Collection;
 
 class OrderIndoor extends Model
 {
-    protected $table = 'indm';
+    protected $table = 'order_indoor';
 
     public $timestamps = false;
 
@@ -21,7 +21,6 @@ class OrderIndoor extends Model
         'TglOrder',
         'NoOrder',
         'KdCust',
-        'KdOpr',
         'Cetak',
         'total',
         'status_bayar',

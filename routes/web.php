@@ -4,6 +4,8 @@ use App\Http\Controllers\BahanOutdoorController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DataWarehouseController;
+use App\Http\Controllers\DetailIndoorController;
 use App\Http\Controllers\HargaArtworkController;
 use App\Http\Controllers\HargaCetakOutdoorController;
 use App\Http\Controllers\InvoiceController;
@@ -35,6 +37,12 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
+    Route::get('/customers-search', [CustomerController::class, 'search'])->name('customers.search');
+
+    Route::middleware('permission:data-warehouse.view')->group(function () {
+        Route::get('/data-warehouse', [DataWarehouseController::class, 'index'])->name('data-warehouse.index');
+    });
+
     Route::middleware('permission:customers.view')->group(function () {
         Route::resource('customers', CustomerController::class)->only(['index', 'edit'])->names('customers');
     });
@@ -45,6 +53,7 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware('permission:produk.view')->group(function () {
         Route::resource('produk', ProdukController::class)->only(['index', 'edit'])->names('produk');
+        Route::get('/detail-indoor', [DetailIndoorController::class, 'index'])->name('detail-indoor.index');
     });
     Route::middleware('permission:produk.manage')->group(function () {
         Route::resource('produk', ProdukController::class)->only(['create', 'store', 'update', 'destroy'])->names('produk');

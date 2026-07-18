@@ -33,35 +33,34 @@
         <table class="w-full text-sm min-w-[640px]">
             <thead class="bg-gray-50 text-left text-xs uppercase text-gray-500">
                 <tr>
-                    <th class="px-4 py-3 w-12">No</th>
+                    <th class="px-4 py-3 w-16">No. Urut</th>
                     <th class="px-4 py-3">Kode</th>
-                    <th class="px-4 py-3">Nama Produk</th>
-                    <th class="px-4 py-3">Kategori</th>
+                    <th class="px-4 py-3">Divisi</th>
+                    <th class="px-4 py-3">Produk</th>
+                    <th class="px-4 py-3 text-right">Harga Std</th>
+                    <th class="px-4 py-3 text-right">Harga Min</th>
                     <th class="px-4 py-3">Satuan</th>
-                    <th class="px-4 py-3 text-right">Harga Standar</th>
-                    <th class="px-4 py-3 text-right">Harga Minimum</th>
-                    <th class="px-4 py-3">Catatan</th>
+                    <th class="px-4 py-3 text-center">Pj x Lebar</th>
+                    <th class="px-4 py-3 text-center">Pil Harga</th>
                     <th class="px-4 py-3 text-right">Aksi</th>
                 </tr>
             </thead>
             <tbody class="divide-y">
                 @forelse ($produk as $item)
                     <tr>
-                        <td class="px-4 py-3 text-gray-400">{{ $produk->firstItem() + $loop->index }}</td>
+                        <td class="px-4 py-3 text-gray-400">{{ $item->NoUrut }}</td>
                         <td class="px-4 py-3">{{ $item->KdProd }}</td>
-                        <td class="px-4 py-3 font-semibold text-gray-900">{{ $item->NmProd }}</td>
                         <td class="px-4 py-3 text-gray-600">{{ $item->kategori?->NmDivs ?? '-' }}</td>
+                        <td class="px-4 py-3 font-semibold text-gray-900">{{ $item->NmProd }}</td>
+                        <td class="px-4 py-3 text-right text-gray-600">{{ number_format($item->HargaStd, 0, ',', '.') }}</td>
+                        <td class="px-4 py-3 text-right text-gray-600">{{ number_format($item->HargaMin, 0, ',', '.') }}</td>
                         <td class="px-4 py-3 text-gray-600">{{ $item->Satuan }}</td>
-                        <td class="px-4 py-3 text-right text-gray-600">Rp {{ number_format($item->HargaStd, 0, ',', '.') }}</td>
-                        <td class="px-4 py-3 text-right text-gray-600">Rp {{ number_format($item->HargaMin, 0, ',', '.') }}</td>
-                        <td class="px-4 py-3">
-                            @if ($item->isPjLb)
-                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-blue-50 text-blue-700 mr-1">Pakai P×L</span>
-                            @endif
-                            @if ($item->isHPilih)
-                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-purple-50 text-purple-700">Harga Bertingkat</span>
-                            @endif
+                        <td class="px-4 py-3 text-center">
+                            <span class="inline-flex items-center justify-center min-w-[1.5rem] h-6 px-1.5 rounded-full text-xs font-semibold whitespace-nowrap"
+                                  style="{{ $item->pjLbBadgeStyle() }}"
+                                  title="{{ $item->pjLbLabel() }}">{{ $item->pjLbBadgeText() }}</span>
                         </td>
+                        <td class="px-4 py-3 text-center text-gray-600">{{ $item->isHPilih === 1 ? 'Ya' : 'Tidak' }}</td>
                         <td class="px-4 py-3 text-right">
                             <a href="{{ route('produk.edit', $item) }}" class="inline-flex items-center text-blue-600 hover:text-blue-800" title="Edit"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125" /></svg></a>
                             <form method="POST" action="{{ route('produk.destroy', $item) }}" class="inline"
@@ -74,7 +73,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="9" class="px-4 py-8 text-center text-gray-400">Belum ada data produk.</td>
+                        <td colspan="10" class="px-4 py-8 text-center text-gray-400">Belum ada data produk.</td>
                     </tr>
                 @endforelse
             </tbody>

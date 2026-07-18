@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class KategoriBahanOutdoor extends Model
 {
-    protected $table = 'aman_gd_grup_Bahan';
+    protected $table = 'kategori_bahan_outdoor';
 
     public $timestamps = false;
 

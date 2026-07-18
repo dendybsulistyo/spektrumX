@@ -17,14 +17,15 @@ class StoreHargaArtworkRequest extends FormRequest
     }
 
     /**
-     * Unchecked checkboxes send nothing at all — normalize to 0/1 here since
-     * isPjLb/isHPilih are NOT NULL columns with no default.
+     * Unchecked checkboxes send nothing at all — normalize here since these
+     * are NOT NULL columns with no default. isHPilih is a legacy code
+     * column (1 = Ya, 2 = Tidak), not a 0/1 boolean like isPjLb.
      */
     protected function prepareForValidation(): void
     {
         $this->merge([
             'isPjLb' => $this->boolean('isPjLb'),
-            'isHPilih' => $this->boolean('isHPilih'),
+            'isHPilih' => $this->boolean('isHPilih') ? 1 : 2,
         ]);
     }
 
@@ -49,7 +50,7 @@ class StoreHargaArtworkRequest extends FormRequest
             'HargaMin' => ['required', 'numeric', 'min:0'],
             'Satuan' => ['required', 'string', 'max:8'],
             'isPjLb' => ['nullable', 'boolean'],
-            'isHPilih' => ['nullable', 'boolean'],
+            'isHPilih' => ['required', 'integer', 'in:1,2'],
         ];
     }
 

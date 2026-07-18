@@ -27,6 +27,7 @@
                     'truck' => '<path stroke-linecap="round" stroke-linejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.25h5.457c.9 0 1.65.673 1.763 1.565l.318 2.55m-7.538-4.116V6.75m0 0V4.875c0-.621-.504-1.125-1.125-1.125H10.5m3.75 3H14.25" />',
                     'shield' => '<path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />',
                     'user' => '<path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />',
+                    'chart-bar' => '<path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />',
                 ];
                 return $icons[$name] ?? $icons['tag'];
             };
@@ -87,17 +88,25 @@
                         @php $active = request()->routeIs('produk.*'); @endphp
                         <a href="{{ route('produk.index') }}" class="{{ $navClass($active) }}">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="{{ $iconClass($active) }}">{!! $navIcon('cube') !!}</svg>
-                            Produk
+                            Produk Indoor
                         </a>
                     @endcan
 
-                    @can('kategori.view')
+                    @can('produk.view')
+                        @php $active = request()->routeIs('detail-indoor.*'); @endphp
+                        <a href="{{ route('detail-indoor.index') }}" class="{{ $navClass($active) }}">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="{{ $iconClass($active) }}">{!! $navIcon('tag') !!}</svg>
+                            Harga Indoor
+                        </a>
+                    @endcan
+
+                    {{-- @can('kategori.view')
                         @php $active = request()->routeIs('kategori.*'); @endphp
                         <a href="{{ route('kategori.index') }}" class="{{ $navClass($active) }}">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="{{ $iconClass($active) }}">{!! $navIcon('tag') !!}</svg>
                             Harga Indoor
                         </a>
-                    @endcan
+                    @endcan --}}
 
                     @can('harga-artwork.view')
                         @php $active = request()->routeIs('harga-artwork.*'); @endphp
@@ -115,7 +124,24 @@
                         </a>
                     @endcan
 
-                    @can('operators.view')
+
+                    @can('bahan-outdoor.view')
+                        @php $active = request()->routeIs('bahan-outdoor.*'); @endphp
+                        <a href="{{ route('bahan-outdoor.index') }}" class="{{ $navClass($active) }}">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="{{ $iconClass($active) }}">{!! $navIcon('archive') !!}</svg>
+                            Bahan Outdoor
+                        </a>
+                    @endcan
+
+                    @can('kategori-bahan-outdoor.view')
+                        @php $active = request()->routeIs('kategori-bahan-outdoor.*'); @endphp
+                        <a href="{{ route('kategori-bahan-outdoor.index') }}" class="{{ $navClass($active) }}">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="{{ $iconClass($active) }}">{!! $navIcon('tag') !!}</svg>
+                            Kategori Outdoor
+                        </a>
+                    @endcan
+
+                     @can('operators.view')
                         @php $active = request()->routeIs('operators.*'); @endphp
                         <a href="{{ route('operators.index') }}" class="{{ $navClass($active) }}">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="{{ $iconClass($active) }}">{!! $navIcon('user-circle') !!}</svg>
@@ -130,24 +156,6 @@
                             Printer
                         </a>
                     @endcan
-
-                    @can('bahan-outdoor.view')
-                        @php $active = request()->routeIs('bahan-outdoor.*'); @endphp
-                        <a href="{{ route('bahan-outdoor.index') }}" class="{{ $navClass($active) }}">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="{{ $iconClass($active) }}">{!! $navIcon('archive') !!}</svg>
-                            Grup Bahan Outdoor
-                        </a>
-                    @endcan
-
-                    @can('kategori-bahan-outdoor.view')
-                        @php $active = request()->routeIs('kategori-bahan-outdoor.*'); @endphp
-                        <a href="{{ route('kategori-bahan-outdoor.index') }}" class="{{ $navClass($active) }}">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="{{ $iconClass($active) }}">{!! $navIcon('tag') !!}</svg>
-                            Bahan Outdoor
-                        </a>
-                    @endcan
-
-                    
 
                     @if (Auth::user()->hasPermission('order-indoor.view') || Auth::user()->hasPermission('order-outdoor.view'))
                         <p class="px-2.5 pt-4 pb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">Transaksi</p>
@@ -168,6 +176,7 @@
                             Order Outdoor
                         </a>
                     @endcan
+
 
                     @if (Auth::user()->hasPermission('kasir.view') || Auth::user()->hasPermission('order-desain.view') || Auth::user()->hasPermission('order-cetak.view') || Auth::user()->hasPermission('order-qc.view') || Auth::user()->hasPermission('pengambilan.view'))
                         <p class="px-2.5 pt-4 pb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">Dashboard Operator</p>
@@ -210,6 +219,16 @@
                         <a href="{{ route('pengambilan.index') }}" class="{{ $navClass($active) }}">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="{{ $iconClass($active) }}">{!! $navIcon('archive') !!}</svg>
                             Pengambilan Barang
+                        </a>
+                    @endcan
+
+                    @can('data-warehouse.view')
+                        <p class="px-2.5 pt-4 pb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">Analitik</p>
+
+                        @php $active = request()->routeIs('data-warehouse.*'); @endphp
+                        <a href="{{ route('data-warehouse.index') }}" class="{{ $navClass($active) }}">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="{{ $iconClass($active) }}">{!! $navIcon('chart-bar') !!}</svg>
+                            Data Warehouse
                         </a>
                     @endcan
 

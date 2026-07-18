@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class HargaCetakOutdoor extends Model
 {
-    protected $table = 'hcetak_outdoor';
+    protected $table = 'harga_cetak_outdoor';
 
     protected $primaryKey = 'KdCtk';
 

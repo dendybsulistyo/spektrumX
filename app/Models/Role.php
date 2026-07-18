@@ -81,6 +81,9 @@ class Role extends Model
         'Pengaturan' => [
             'roles.manage' => 'Kelola role & user',
         ],
+        'Data Warehouse' => [
+            'data-warehouse.view' => 'Lihat dashboard data warehouse',
+        ],
     ];
 
     /**

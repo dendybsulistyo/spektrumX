@@ -25,7 +25,6 @@ class StoreOrderIndoorRequest extends FormRequest
         return [
             'TglOrder' => ['required', 'date'],
             'KdCust' => ['required', 'string', 'exists:customers,KdCust'],
-            'KdOpr' => ['required', 'string', 'exists:operators,KdOpr'],
 
             'items' => ['required', 'array', 'min:1'],
             'items.*.KdProd' => ['required', 'string', 'exists:produk_indoor,KdProd'],
@@ -46,7 +45,6 @@ class StoreOrderIndoorRequest extends FormRequest
         return [
             'TglOrder' => 'tanggal order',
             'KdCust' => 'customer',
-            'KdOpr' => 'operator',
             'items.*.KdProd' => 'produk',
             'items.*.Judul' => 'judul',
             'items.*.Panjang' => 'panjang',

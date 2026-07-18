@@ -26,13 +26,16 @@ class HargaArtwork extends Model
         'isHPilih',
     ];
 
+    /**
+     * isHPilih is a legacy code column: 1 = Ya, 2 = Tidak (not a 0/1 boolean).
+     */
     protected function casts(): array
     {
         return [
             'HargaStd' => 'float',
             'HargaMin' => 'float',
             'isPjLb' => 'boolean',
-            'isHPilih' => 'boolean',
+            'isHPilih' => 'integer',
         ];
     }
 

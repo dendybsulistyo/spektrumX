@@ -28,9 +28,9 @@ class StoreBahanOutdoorRequest extends FormRequest
         return [
             'KdBrgs' => [
                 'required', 'string', 'max:8',
-                Rule::unique('gd_Master_Barang_Outdoor', 'KdBrgs')->ignore($bahan?->id),
+                Rule::unique('bahan_outdoor', 'KdBrgs')->ignore($bahan?->id),
             ],
-            'KdGrup' => ['nullable', 'string', 'exists:aman_gd_grup_Bahan,KdGrup'],
+            'KdGrup' => ['nullable', 'string', 'exists:kategori_bahan_outdoor,KdGrup'],
             'NmBrgs' => ['required', 'string', 'max:50'],
             'Keters' => ['required', 'string', 'max:30'],
             'Satuan' => ['required', 'string', 'max:10'],

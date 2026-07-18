@@ -65,7 +65,7 @@
         <span class="text-sm text-gray-700">Harga dihitung dari Panjang × Lebar (produk cetak per meter)</span>
     </label>
     <label class="flex items-center gap-2">
-        <input type="checkbox" name="isHPilih" value="1" {{ old('isHPilih', $hargaArtwork?->isHPilih) ? 'checked' : '' }}
+        <input type="checkbox" name="isHPilih" value="1" {{ old('isHPilih', $hargaArtwork?->isHPilih) == 1 ? 'checked' : '' }}
                class="rounded border-gray-300 text-gray-900 focus:ring-gray-900">
         <span class="text-sm text-gray-700">Pakai harga bertingkat sesuai jumlah qty</span>
     </label>
