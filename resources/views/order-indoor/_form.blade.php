@@ -74,6 +74,19 @@
         get grandTotal() {
             return this.items.reduce((sum, item) => sum + this.lineTotal(item), 0);
         },
+        addItem() {
+            this.items.push({ KdProd: '', Judul: '', Panjang: '', Lebar: '', Qty: 1, PisauTurun: null, JumlahKertas: null, TebalKertas: null });
+            this.$nextTick(() => {
+                const inputs = document.querySelectorAll('[data-produk-search]');
+                inputs[inputs.length - 1]?.focus();
+            });
+        },
+        onDeleteTab(event, index) {
+            if (!event.shiftKey && index === this.items.length - 1) {
+                event.preventDefault();
+                this.addItem();
+            }
+        },
     }">
 
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
@@ -90,9 +103,11 @@
                 selectedKdCust: @js(old('KdCust', $selectedCustomer?->KdCust ?? '')),
                 results: [],
                 open: false,
+                activeIndex: -1,
                 searchTimer: null,
                 search() {
                     this.selectedKdCust = '';
+                    this.activeIndex = -1;
                     clearTimeout(this.searchTimer);
                     this.searchTimer = setTimeout(async () => {
                         const res = await fetch(`/customers-search?q=${encodeURIComponent(this.query)}`);
@@ -104,21 +119,38 @@
                     this.selectedKdCust = c.KdCust;
                     this.query = `${c.NmCust} (${c.KdCust})`;
                     this.open = false;
+                    this.activeIndex = -1;
+                },
+                move(delta) {
+                    if (!this.open || this.results.length === 0) return;
+                    this.activeIndex = (this.activeIndex + delta + this.results.length) % this.results.length;
+                    this.$nextTick(() => this.$el.querySelector(`[data-cust-idx='${this.activeIndex}']`)?.scrollIntoView({ block: 'nearest' }));
+                },
+                chooseActive() {
+                    if (this.activeIndex >= 0 && this.results[this.activeIndex]) {
+                        this.select(this.results[this.activeIndex]);
+                    }
                 },
              }"
              @click.outside="open = false">
             <x-input-label for="KdCustSearch" value="Customer" />
             <input type="text" id="KdCustSearch" x-model="query" @input="search()" @focus="search()"
+                   @keydown.down.prevent="move(1)" @keydown.up.prevent="move(-1)"
+                   @keydown.enter.prevent="chooseActive()" @keydown.escape="open = false"
                    autocomplete="off" placeholder="Cari nama atau kode customer..."
                    class="mt-1 block w-full rounded-md border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500">
             <input type="hidden" name="KdCust" :value="selectedKdCust">
 
             <div x-show="open && results.length > 0" x-cloak
                  class="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto">
-                <template x-for="c in results" :key="c.KdCust">
-                    <button type="button" @click="select(c)"
+                <template x-for="(c, i) in results" :key="c.KdCust">
+                    <button type="button" @click="select(c)" @mouseenter="activeIndex = i" :data-cust-idx="i"
+                            :class="i === activeIndex ? 'bg-gray-100' : ''"
                             class="block w-full text-left px-3 py-2 text-sm hover:bg-gray-100">
                         <span x-text="c.NmCust"></span> <span class="text-gray-400" x-text="'(' + c.KdCust + ')'"></span>
+                        <template x-if="c.Telp">
+                            <span class="block text-xs text-gray-400" x-text="c.Telp"></span>
+                        </template>
                     </button>
                 </template>
             </div>
@@ -160,7 +192,7 @@
                      @click.outside="open = false">
                     <label class="block text-xs text-gray-500 mb-1">Produk</label>
                     <input type="text" x-model="query" @focus="open = true" @input="open = true"
-                           autocomplete="off" placeholder="Cari produk..."
+                           autocomplete="off" placeholder="Cari produk..." data-produk-search
                            class="w-full rounded-md border-gray-300 text-sm">
                     <input type="hidden" :name="`items[${index}][KdProd]`" :value="item.KdProd" required>
 
@@ -229,6 +261,7 @@
                 </div>
                 <div class="col-span-2 sm:col-span-1 flex sm:items-end h-full pt-1 sm:pt-5">
                     <button type="button" @click="items.length > 1 && items.splice(index, 1)"
+                            @keydown.tab="onDeleteTab($event, index)"
                             class="inline-flex items-center text-red-600 hover:text-red-800" title="Hapus">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
@@ -257,7 +290,7 @@
         <a href="{{ route('order-indoor.index') }}" class="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-md hover:bg-red-700">
             Batal
         </a>
-        <button type="button" @click="items.push({ KdProd: '', Judul: '', Panjang: '', Lebar: '', Qty: 1, PisauTurun: null, JumlahKertas: null, TebalKertas: null })"
+        <button type="button" @click="addItem()"
                 class="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700">
             + Tambah Item
         </button>

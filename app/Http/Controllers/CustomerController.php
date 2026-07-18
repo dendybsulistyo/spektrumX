@@ -107,7 +107,7 @@ class CustomerController extends Controller
             })
             ->orderBy('NmCust')
             ->limit(20)
-            ->get(['KdCust', 'NmCust']);
+            ->get(['KdCust', 'NmCust', 'Telp']);
 
         return response()->json($customers);
     }
