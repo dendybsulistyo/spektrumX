@@ -20,7 +20,7 @@ class RoleSeeder extends Seeder
         Role::updateOrCreate(['name' => 'kasir'], [
             'label' => 'Kasir',
             'permissions' => [
-                'customers.view', 'produk.view', 'kategori.view', 'order-indoor.view', 'order-outdoor.view',
+                'customers.view', 'produk.view', 'kategori.view', 'order-indoor.view', 'order-outdoor.view', 'order-artwork.view',
                 'kasir.view', 'kasir.manage', 'pengambilan.view', 'pengambilan.manage',
             ],
         ]);
@@ -30,29 +30,30 @@ class RoleSeeder extends Seeder
             'permissions' => [
                 'customers.view', 'produk.view', 'kategori.view', 'harga-artwork.view', 'order-indoor.view', 'order-indoor.manage',
                 'bahan-outdoor.view', 'harga-cetak-outdoor.view', 'order-outdoor.view', 'order-outdoor.manage',
+                'order-artwork.view', 'order-artwork.manage',
             ],
         ]);
 
         Role::updateOrCreate(['name' => 'operator-desain'], [
             'label' => 'Operator Desain',
-            'permissions' => ['order-indoor.view', 'order-outdoor.view', 'order-desain.view', 'order-desain.manage'],
+            'permissions' => ['order-indoor.view', 'order-outdoor.view', 'order-artwork.view', 'order-desain.view', 'order-desain.manage'],
         ]);
 
         Role::updateOrCreate(['name' => 'operator-cetak'], [
             'label' => 'Operator Cetak',
-            'permissions' => ['order-indoor.view', 'order-outdoor.view', 'order-cetak.view', 'order-cetak.manage'],
+            'permissions' => ['order-indoor.view', 'order-outdoor.view', 'order-artwork.view', 'order-cetak.view', 'order-cetak.manage'],
         ]);
 
         Role::updateOrCreate(['name' => 'operator-qc'], [
             'label' => 'Operator QC',
-            'permissions' => ['order-indoor.view', 'order-outdoor.view', 'order-qc.view', 'order-qc.manage'],
+            'permissions' => ['order-indoor.view', 'order-outdoor.view', 'order-artwork.view', 'order-qc.view', 'order-qc.manage'],
         ]);
 
         Role::updateOrCreate(['name' => 'owner'], [
             'label' => 'Owner',
             'permissions' => [
                 'customers.view', 'produk.view', 'kategori.view', 'harga-artwork.view', 'operators.view', 'printers.view', 'order-indoor.view',
-                'bahan-outdoor.view', 'kategori-bahan-outdoor.view', 'harga-cetak-outdoor.view', 'order-outdoor.view',
+                'bahan-outdoor.view', 'kategori-bahan-outdoor.view', 'harga-cetak-outdoor.view', 'order-outdoor.view', 'order-artwork.view',
                 'kasir.view', 'order-desain.view', 'order-cetak.view', 'order-qc.view', 'pengambilan.view', 'data-warehouse.view',
                 'jasa-potong.manage',
             ],

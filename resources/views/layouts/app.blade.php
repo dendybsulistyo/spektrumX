@@ -157,7 +157,7 @@
                         </a>
                     @endcan
 
-                    @if (Auth::user()->hasPermission('order-indoor.view') || Auth::user()->hasPermission('order-outdoor.view'))
+                    @if (Auth::user()->hasPermission('order-indoor.view') || Auth::user()->hasPermission('order-outdoor.view') || Auth::user()->hasPermission('order-artwork.view'))
                         <p class="px-2.5 pt-4 pb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">Transaksi</p>
                     @endif
 
@@ -174,6 +174,14 @@
                         <a href="{{ route('order-outdoor.index') }}" class="{{ $navClass($active) }}">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="{{ $iconClass($active) }}">{!! $navIcon('truck') !!}</svg>
                             Order Outdoor
+                        </a>
+                    @endcan
+
+                    @can('order-artwork.view')
+                        @php $active = request()->routeIs('order-artwork.*'); @endphp
+                        <a href="{{ route('order-artwork.index') }}" class="{{ $navClass($active) }}">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="{{ $iconClass($active) }}">{!! $navIcon('tag') !!}</svg>
+                            Order Artwork
                         </a>
                     @endcan
 

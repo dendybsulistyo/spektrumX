@@ -4,10 +4,10 @@
     </x-slot>
 
     <div class="bg-white rounded-lg shadow-sm p-6">
-        <form method="POST" action="{{ route('order-outdoor.update', $order) }}">
+        <form method="POST" action="{{ route('order-artwork.update', $order) }}">
             @csrf
             @method('PUT')
-            @include('order-outdoor._form')
+            @include('order-artwork._form')
         </form>
     </div>
 </x-app-layout>

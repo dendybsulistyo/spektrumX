@@ -2,8 +2,10 @@
 
 namespace App\Services;
 
+use App\Models\HargaArtwork;
 use App\Models\HargaCetakOutdoor;
 use App\Models\KonfigurasiJasaPotong;
+use App\Models\OrderArtwork;
 use App\Models\OrderIndoor;
 use App\Models\OrderOutdoor;
 use App\Models\Produk;
@@ -79,6 +81,29 @@ class OrderPricingService
             $harga = $item->hargaCetak;
 
             return $harga ? $this->lineTotalOutdoor($harga, $item->Panjang, $item->Lebar, $item->Qty) : 0;
+        });
+    }
+
+    /**
+     * Artwork pricing follows the same isPjLb convention as Indoor (1 =
+     * Qty×Harga, 2 = P×L×Qty×Harga) but never uses the Jasa Potong formula —
+     * that's indoor-specific. HargaMin floors the line total, same convention.
+     */
+    public function lineTotalArtwork(HargaArtwork $harga, float $panjang, float $lebar, int $qty): float
+    {
+        $raw = $harga->isAreaPriced()
+            ? $harga->HargaStd * $panjang * $lebar * $qty
+            : $harga->HargaStd * $qty;
+
+        return max($raw, $harga->HargaMin);
+    }
+
+    public function totalArtwork(OrderArtwork $order): float
+    {
+        return $order->items->sum(function ($item) {
+            $harga = HargaArtwork::where('KdProd', $item->KdProd)->first();
+
+            return $harga ? $this->lineTotalArtwork($harga, $item->Panjang, $item->Lebar, $item->Qty) : 0;
         });
     }
 }

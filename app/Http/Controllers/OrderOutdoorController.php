@@ -39,7 +39,7 @@ class OrderOutdoorController extends Controller
     public function create(): View
     {
         return view('order-outdoor.create', [
-            'customers' => Customer::whereRaw("TRIM(KdCust) != ''")->orderBy('NmCust')->get(),
+            'selectedCustomer' => old('KdCust') ? Customer::where('KdCust', old('KdCust'))->first() : null,
             'operators' => Operator::orderBy('NmOpr')->get(),
             'hargaCetakList' => HargaCetakOutdoor::orderBy('KdCtk')->get(),
             'bahanList' => BahanOutdoor::orderBy('NoUrut')->get(),
@@ -76,7 +76,7 @@ class OrderOutdoorController extends Controller
         return view('order-outdoor.edit', [
             'order' => $orderOutdoor,
             'items' => $orderOutdoor->items,
-            'customers' => Customer::whereRaw("TRIM(KdCust) != ''")->orderBy('NmCust')->get(),
+            'selectedCustomer' => $orderOutdoor->customer,
             'operators' => Operator::orderBy('NmOpr')->get(),
             'hargaCetakList' => HargaCetakOutdoor::orderBy('KdCtk')->get(),
             'bahanList' => BahanOutdoor::orderBy('NoUrut')->get(),

@@ -14,6 +14,7 @@ use App\Http\Controllers\KasirController;
 use App\Http\Controllers\KategoriBahanOutdoorController;
 use App\Http\Controllers\KategoriController;
 use App\Http\Controllers\OperatorController;
+use App\Http\Controllers\OrderArtworkController;
 use App\Http\Controllers\OrderCetakController;
 use App\Http\Controllers\OrderDesainController;
 use App\Http\Controllers\OrderIndoorController;
@@ -94,6 +95,13 @@ Route::middleware('auth')->group(function () {
     });
     Route::middleware('permission:order-indoor.manage')->group(function () {
         Route::resource('order-indoor', OrderIndoorController::class)->only(['create', 'store', 'update', 'destroy'])->names('order-indoor');
+    });
+
+    Route::middleware('permission:order-artwork.view')->group(function () {
+        Route::resource('order-artwork', OrderArtworkController::class)->only(['index', 'edit'])->names('order-artwork');
+    });
+    Route::middleware('permission:order-artwork.manage')->group(function () {
+        Route::resource('order-artwork', OrderArtworkController::class)->only(['create', 'store', 'update', 'destroy'])->names('order-artwork');
     });
 
     Route::middleware('permission:kategori-bahan-outdoor.view')->group(function () {

@@ -46,6 +46,10 @@ class Role extends Model
             'order-outdoor.view' => 'Lihat order outdoor',
             'order-outdoor.manage' => 'Buat/ubah/hapus order outdoor',
         ],
+        'Order Artwork' => [
+            'order-artwork.view' => 'Lihat order artwork',
+            'order-artwork.manage' => 'Buat/ubah/hapus order artwork',
+        ],
         'Kasir' => [
             'kasir.view' => 'Lihat antrian kasir',
             'kasir.manage' => 'Proses pembayaran order',

@@ -10,6 +10,16 @@ class HargaArtwork extends Model
     protected $table = 'harga_artwork';
 
     /**
+     * isPjLb codes, same convention as Produk (produk_indoor): determines how
+     * an order line for this product is priced and whether Panjang/Lebar are
+     * collected on the order form. Only codes 1 and 2 occur in harga_artwork
+     * data — the Jasa Potong (4) formula is indoor-specific and doesn't apply here.
+     */
+    public const PJLB_QTY = 1;
+
+    public const PJLB_AREA = 2;
+
+    /**
      * The attributes that are mass assignable.
      *
      * @var list<string>
@@ -27,14 +37,15 @@ class HargaArtwork extends Model
     ];
 
     /**
-     * isHPilih is a legacy code column: 1 = Ya, 2 = Tidak (not a 0/1 boolean).
+     * isPjLb and isHPilih are legacy code columns, not 0/1 booleans — see
+     * PJLB_QTY/PJLB_AREA above. isHPilih: 1 = Ya, 2 = Tidak.
      */
     protected function casts(): array
     {
         return [
             'HargaStd' => 'float',
             'HargaMin' => 'float',
-            'isPjLb' => 'boolean',
+            'isPjLb' => 'integer',
             'isHPilih' => 'integer',
         ];
     }
@@ -42,5 +53,22 @@ class HargaArtwork extends Model
     public function kategori(): BelongsTo
     {
         return $this->belongsTo(Kategori::class, 'KdDivs', 'KdDivs');
+    }
+
+    /**
+     * Whether an order line for this product is priced by area (P × L × Qty)
+     * rather than by quantity alone.
+     */
+    public function isAreaPriced(): bool
+    {
+        return $this->isPjLb === self::PJLB_AREA;
+    }
+
+    /**
+     * Whether the order form should collect Panjang/Lebar for this product.
+     */
+    public function needsDimensionInput(): bool
+    {
+        return $this->isPjLb === self::PJLB_AREA;
     }
 }
