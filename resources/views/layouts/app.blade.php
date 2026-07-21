@@ -108,19 +108,20 @@
                         </a>
                     @endcan --}}
 
-                    @can('harga-artwork.view')
-                        @php $active = request()->routeIs('harga-artwork.*'); @endphp
-                        <a href="{{ route('harga-artwork.index') }}" class="{{ $navClass($active) }}">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="{{ $iconClass($active) }}">{!! $navIcon('cube') !!}</svg>
-                            Harga Artwork
-                        </a>
-                    @endcan
 
                     @can('harga-cetak-outdoor.view')
                         @php $active = request()->routeIs('harga-cetak-outdoor.*'); @endphp
                         <a href="{{ route('harga-cetak-outdoor.index') }}" class="{{ $navClass($active) }}">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="{{ $iconClass($active) }}">{!! $navIcon('banknotes') !!}</svg>
                             Harga Outdoor
+                        </a>
+                    @endcan
+
+                      @can('harga-artwork.view')
+                        @php $active = request()->routeIs('harga-artwork.*'); @endphp
+                        <a href="{{ route('harga-artwork.index') }}" class="{{ $navClass($active) }}">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="{{ $iconClass($active) }}">{!! $navIcon('cube') !!}</svg>
+                            Harga Artwork 
                         </a>
                     @endcan
 
