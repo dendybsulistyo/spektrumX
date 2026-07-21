@@ -25,7 +25,6 @@ class StoreOrderOutdoorRequest extends FormRequest
         return [
             'TglOrder' => ['required', 'date'],
             'KdCust' => ['required', 'string', 'exists:customers,KdCust'],
-            'KdOpr' => ['required', 'string', 'exists:operators,KdOpr'],
 
             'items' => ['required', 'array', 'min:1'],
             'items.*.NmFile' => ['required', 'string', 'max:50'],
@@ -48,7 +47,6 @@ class StoreOrderOutdoorRequest extends FormRequest
         return [
             'TglOrder' => 'tanggal order',
             'KdCust' => 'customer',
-            'KdOpr' => 'operator',
             'items.*.NmFile' => 'nama file',
             'items.*.Panjang' => 'panjang',
             'items.*.Lebar' => 'lebar',

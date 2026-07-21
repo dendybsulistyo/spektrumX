@@ -26,7 +26,7 @@
         },
     }">
 
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
         <div>
             <x-input-label for="TglOrder" value="Tanggal Order" />
             <x-text-input id="TglOrder" name="TglOrder" type="date" class="mt-1 block w-full"
@@ -223,20 +223,6 @@
                     </form>
                 </div>
             </div>
-        </div>
-
-        <div>
-            <x-input-label for="KdOpr" value="Operator" />
-            <select id="KdOpr" name="KdOpr" required
-                    class="mt-1 block w-full rounded-md border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500">
-                <option value="">-- Pilih Operator --</option>
-                @foreach ($operators as $o)
-                    <option value="{{ $o->KdOpr }}" @selected(old('KdOpr', $order?->KdOpr) === $o->KdOpr)>
-                        {{ $o->NmOpr }}
-                    </option>
-                @endforeach
-            </select>
-            <x-input-error :messages="$errors->get('KdOpr')" class="mt-1" />
         </div>
     </div>
 

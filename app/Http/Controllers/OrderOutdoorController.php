@@ -8,7 +8,6 @@ use App\Models\Customer;
 use App\Models\HargaCetakOutdoor;
 use App\Models\OrderOutdoor;
 use App\Models\OrderOutdoorDetail;
-use App\Models\Operator;
 use App\Services\OrderPricingService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -40,7 +39,6 @@ class OrderOutdoorController extends Controller
     {
         return view('order-outdoor.create', [
             'selectedCustomer' => old('KdCust') ? Customer::where('KdCust', old('KdCust'))->first() : null,
-            'operators' => Operator::orderBy('NmOpr')->get(),
             'hargaCetakList' => HargaCetakOutdoor::orderBy('KdCtk')->get(),
             'bahanList' => BahanOutdoor::orderBy('NoUrut')->get(),
         ]);
@@ -57,7 +55,6 @@ class OrderOutdoorController extends Controller
                 'TglOrder' => $data['TglOrder'],
                 'NoOrder' => $noOrder,
                 'KdCust' => $data['KdCust'],
-                'KdOpr' => $data['KdOpr'],
                 'Cetak' => false,
                 'status' => 'baru',
                 'status_bayar' => 'belum_bayar',
@@ -77,7 +74,6 @@ class OrderOutdoorController extends Controller
             'order' => $orderOutdoor,
             'items' => $orderOutdoor->items,
             'selectedCustomer' => $orderOutdoor->customer,
-            'operators' => Operator::orderBy('NmOpr')->get(),
             'hargaCetakList' => HargaCetakOutdoor::orderBy('KdCtk')->get(),
             'bahanList' => BahanOutdoor::orderBy('NoUrut')->get(),
         ]);
@@ -91,7 +87,6 @@ class OrderOutdoorController extends Controller
             $orderOutdoor->update([
                 'TglOrder' => $data['TglOrder'],
                 'KdCust' => $data['KdCust'],
-                'KdOpr' => $data['KdOpr'],
             ]);
 
             $orderOutdoor->items()->delete();
