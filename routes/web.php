@@ -1,11 +1,13 @@
 <?php
 
+use App\Http\Controllers\BahanCetakOutdoorController;
 use App\Http\Controllers\BahanOutdoorController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DataWarehouseController;
 use App\Http\Controllers\DetailIndoorController;
+use App\Http\Controllers\FileMonitorController;
 use App\Http\Controllers\HargaArtworkController;
 use App\Http\Controllers\HargaCetakOutdoorController;
 use App\Http\Controllers\JasaPotongController;
@@ -13,6 +15,7 @@ use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\KasirController;
 use App\Http\Controllers\KategoriBahanOutdoorController;
 use App\Http\Controllers\KategoriController;
+use App\Http\Controllers\KategoriProdukIndoorController;
 use App\Http\Controllers\OperatorController;
 use App\Http\Controllers\OrderArtworkController;
 use App\Http\Controllers\OrderCetakController;
@@ -22,6 +25,7 @@ use App\Http\Controllers\OrderOutdoorController;
 use App\Http\Controllers\OrderQcController;
 use App\Http\Controllers\PengambilanController;
 use App\Http\Controllers\PrinterController;
+use App\Http\Controllers\PrinterOutdoorController;
 use App\Http\Controllers\ProdukController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RoleController;
@@ -90,6 +94,20 @@ Route::middleware('auth')->group(function () {
         Route::resource('printers', PrinterController::class)->only(['create', 'store', 'update', 'destroy'])->names('printers');
     });
 
+    Route::middleware('permission:printer-outdoor.view')->group(function () {
+        Route::resource('printer-outdoor', PrinterOutdoorController::class)->only(['index', 'edit'])->names('printer-outdoor');
+    });
+    Route::middleware('permission:printer-outdoor.manage')->group(function () {
+        Route::resource('printer-outdoor', PrinterOutdoorController::class)->only(['create', 'store', 'update', 'destroy'])->names('printer-outdoor');
+    });
+
+    Route::middleware('permission:bahan-cetak-outdoor.view')->group(function () {
+        Route::resource('bahan-cetak-outdoor', BahanCetakOutdoorController::class)->only(['index', 'edit'])->names('bahan-cetak-outdoor');
+    });
+    Route::middleware('permission:bahan-cetak-outdoor.manage')->group(function () {
+        Route::resource('bahan-cetak-outdoor', BahanCetakOutdoorController::class)->only(['create', 'store', 'update', 'destroy'])->names('bahan-cetak-outdoor');
+    });
+
     Route::middleware('permission:order-indoor.view')->group(function () {
         Route::resource('order-indoor', OrderIndoorController::class)->only(['index', 'edit'])->names('order-indoor');
     });
@@ -109,6 +127,13 @@ Route::middleware('auth')->group(function () {
     });
     Route::middleware('permission:kategori-bahan-outdoor.manage')->group(function () {
         Route::resource('kategori-bahan-outdoor', KategoriBahanOutdoorController::class)->only(['create', 'store', 'update', 'destroy'])->names('kategori-bahan-outdoor');
+    });
+
+    Route::middleware('permission:kategori-produk-indoor.view')->group(function () {
+        Route::resource('kategori-produk-indoor', KategoriProdukIndoorController::class)->only(['index', 'edit'])->names('kategori-produk-indoor');
+    });
+    Route::middleware('permission:kategori-produk-indoor.manage')->group(function () {
+        Route::resource('kategori-produk-indoor', KategoriProdukIndoorController::class)->only(['create', 'store', 'update', 'destroy'])->names('kategori-produk-indoor');
     });
 
     Route::middleware('permission:bahan-outdoor.view')->group(function () {
@@ -132,6 +157,17 @@ Route::middleware('auth')->group(function () {
     Route::middleware('permission:order-outdoor.manage')->group(function () {
         Route::resource('order-outdoor', OrderOutdoorController::class)->only(['create', 'store', 'update', 'destroy'])->names('order-outdoor');
     });
+    Route::middleware('permission:order-cetak.manage')->group(function () {
+        Route::post('/order-outdoor/{orderOutdoor}/request-cancel', [OrderOutdoorController::class, 'requestCancel'])->name('order-outdoor.request-cancel');
+    });
+    Route::middleware('permission:order-outdoor.approve-cancel')->group(function () {
+        Route::post('/order-outdoor/{orderOutdoor}/approve-cancel', [OrderOutdoorController::class, 'approveCancel'])->name('order-outdoor.approve-cancel');
+        Route::post('/order-outdoor/{orderOutdoor}/reject-cancel', [OrderOutdoorController::class, 'rejectCancel'])->name('order-outdoor.reject-cancel');
+    });
+
+    Route::middleware('permission:file-monitor.view')->group(function () {
+        Route::get('/file', [FileMonitorController::class, 'index'])->name('file.index');
+    });
 
     Route::middleware('permission:kasir.view')->group(function () {
         Route::get('/kasir', [KasirController::class, 'index'])->name('kasir.index');
@@ -140,6 +176,7 @@ Route::middleware('auth')->group(function () {
     });
     Route::middleware('permission:kasir.manage')->group(function () {
         Route::post('/kasir/{type}/{id}/bayar', [KasirController::class, 'bayar'])->name('kasir.bayar');
+        Route::post('/kasir/{type}/{id}/lunasi', [KasirController::class, 'lunasi'])->name('kasir.lunasi');
     });
 
     Route::middleware('permission:order-desain.view')->group(function () {

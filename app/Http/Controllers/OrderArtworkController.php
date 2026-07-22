@@ -53,6 +53,7 @@ class OrderArtworkController extends Controller
                 'TglOrder' => $data['TglOrder'],
                 'NoOrder' => $noOrder,
                 'KdCust' => $data['KdCust'],
+                'created_by' => auth()->id(),
                 'Cetak' => false,
                 'status' => 'baru',
                 'status_bayar' => 'belum_bayar',

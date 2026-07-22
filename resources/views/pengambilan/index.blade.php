@@ -13,10 +13,14 @@
                     class="px-4 py-3 border-b-2 font-medium">
                 Outdoor ({{ $outdoorOrders->count() }})
             </button>
+            <button @click="tab = 'artwork'" :class="tab === 'artwork' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500'"
+                    class="px-4 py-3 border-b-2 font-medium">
+                Artwork ({{ $artworkOrders->count() }})
+            </button>
         </div>
 
-        @foreach (['indoor' => $indoorOrders, 'outdoor' => $outdoorOrders] as $tabKey => $orders)
-            <div x-show="tab === '{{ $tabKey }}'" @if($tabKey==='outdoor') x-cloak @endif class="overflow-x-auto">
+        @foreach (['indoor' => $indoorOrders, 'outdoor' => $outdoorOrders, 'artwork' => $artworkOrders] as $tabKey => $orders)
+            <div x-show="tab === '{{ $tabKey }}'" @if($tabKey!=='indoor') x-cloak @endif class="overflow-x-auto">
                 <table class="w-full text-sm min-w-[640px]">
                     <thead class="bg-gray-50 text-left text-xs uppercase text-gray-500">
                         <tr>
@@ -38,6 +42,10 @@
                                 <td class="px-4 py-3">
                                     @if ($order->status_bayar === 'lunas')
                                         <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800">Lunas</span>
+                                    @elseif ($order->status_bayar === 'dp')
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">
+                                            Sisa DP Rp {{ number_format($order->jumlah_piutang, 0, ',', '.') }}
+                                        </span>
                                     @else
                                         <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">
                                             Hutang Rp {{ number_format($order->jumlah_piutang, 0, ',', '.') }}
@@ -45,14 +53,20 @@
                                     @endif
                                 </td>
                                 <td class="px-4 py-3 text-right">
-                                    <form method="POST" action="{{ route('pengambilan.serahkan', ['type' => $tabKey, 'id' => $order->id]) }}"
-                                          onsubmit="return confirm('Konfirmasi barang order {{ $order->NoOrder }} sudah diserahkan ke customer?')">
-                                        @csrf
-                                        <button type="submit"
-                                                class="inline-flex items-center px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-md hover:bg-blue-700">
-                                            Serahkan Barang
-                                        </button>
-                                    </form>
+                                    @if ($order->status_bayar === 'dp' && (float) $order->jumlah_piutang > 0)
+                                        <span class="inline-flex items-center px-3 py-1.5 bg-gray-100 text-gray-400 text-xs font-semibold rounded-md" title="Lunasi sisa DP dulu lewat halaman Bayar">
+                                            Lunasi DP Dulu
+                                        </span>
+                                    @else
+                                        <form method="POST" action="{{ route('pengambilan.serahkan', ['type' => $tabKey, 'id' => $order->id]) }}"
+                                              onsubmit="return confirm('Konfirmasi barang order {{ $order->NoOrder }} sudah diserahkan ke customer?')">
+                                            @csrf
+                                            <button type="submit"
+                                                    class="inline-flex items-center px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-md hover:bg-blue-700">
+                                                Serahkan Barang
+                                            </button>
+                                        </form>
+                                    @endif
                                 </td>
                             </tr>
                         @empty

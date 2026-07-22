@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\OrderArtwork;
 use App\Models\OrderIndoor;
 use App\Models\OrderOutdoor;
 use App\Models\OrderStatusNote;
@@ -21,12 +22,19 @@ class PengambilanController extends Controller
         $outdoorOrders = OrderOutdoor::query()->with('customer')->where('status', 'siap_diambil')
             ->orderByDesc('TglOrder')->orderByDesc('NoOrder')->get();
 
-        return view('pengambilan.index', compact('indoorOrders', 'outdoorOrders'));
+        $artworkOrders = OrderArtwork::query()->with('customer')->where('status', 'siap_diambil')
+            ->orderByDesc('TglOrder')->orderByDesc('NoOrder')->get();
+
+        return view('pengambilan.index', compact('indoorOrders', 'outdoorOrders', 'artworkOrders'));
     }
 
     public function serahkan(string $type, int $id): RedirectResponse
     {
         $order = $this->resolveOrder($type, $id);
+
+        if ($order->status_bayar === 'dp' && (float) $order->jumlah_piutang > 0) {
+            return back()->with('error', 'Order ini masih ada sisa DP Rp '.number_format($order->jumlah_piutang, 0, ',', '.').' yang belum dilunasi. Lunasi dulu lewat halaman Bayar.');
+        }
 
         $order->update([
             'status' => 'selesai',

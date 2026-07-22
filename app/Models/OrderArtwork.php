@@ -19,6 +19,7 @@ class OrderArtwork extends Model
         'NoOrder',
         'TglOrder',
         'KdCust',
+        'created_by',
         'Cetak',
         'total',
         'status_bayar',
@@ -81,5 +82,10 @@ class OrderArtwork extends Model
     public function qcBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'qc_by');
+    }
+
+    public function createdBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
     }
 }

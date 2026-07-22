@@ -52,9 +52,9 @@ class RoleSeeder extends Seeder
         Role::updateOrCreate(['name' => 'owner'], [
             'label' => 'Owner',
             'permissions' => [
-                'customers.view', 'produk.view', 'kategori.view', 'harga-artwork.view', 'operators.view', 'printers.view', 'order-indoor.view',
-                'bahan-outdoor.view', 'kategori-bahan-outdoor.view', 'harga-cetak-outdoor.view', 'order-outdoor.view', 'order-artwork.view',
-                'kasir.view', 'order-desain.view', 'order-cetak.view', 'order-qc.view', 'pengambilan.view', 'data-warehouse.view',
+                'customers.view', 'produk.view', 'kategori-produk-indoor.view', 'kategori.view', 'harga-artwork.view', 'operators.view', 'printers.view', 'order-indoor.view',
+                'bahan-outdoor.view', 'kategori-bahan-outdoor.view', 'harga-cetak-outdoor.view', 'printer-outdoor.view', 'bahan-cetak-outdoor.view', 'order-outdoor.view', 'order-artwork.view',
+                'file-monitor.view', 'kasir.view', 'order-desain.view', 'order-cetak.view', 'order-qc.view', 'pengambilan.view', 'data-warehouse.view',
                 'jasa-potong.manage',
             ],
         ]);

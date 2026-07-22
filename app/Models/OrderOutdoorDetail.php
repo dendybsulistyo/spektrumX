@@ -18,12 +18,13 @@ class OrderOutdoorDetail extends Model
         'order_outdoor_id',
         'BrsOrder',
         'NmFile',
+        'file_path',
         'Panjang',
         'Lebar',
         'Qty',
         'KdCtk',
-        'KdBrgs',
-        'Fins',
+        'ada_finishing',
+        'jenis_finishing',
     ];
 
     protected function casts(): array
@@ -31,6 +32,7 @@ class OrderOutdoorDetail extends Model
         return [
             'Panjang' => 'float',
             'Lebar' => 'float',
+            'ada_finishing' => 'boolean',
         ];
     }
 
@@ -42,10 +44,5 @@ class OrderOutdoorDetail extends Model
     public function hargaCetak(): BelongsTo
     {
         return $this->belongsTo(HargaCetakOutdoor::class, 'KdCtk', 'KdCtk');
-    }
-
-    public function bahan(): BelongsTo
-    {
-        return $this->belongsTo(BahanOutdoor::class, 'KdBrgs', 'KdBrgs');
     }
 }

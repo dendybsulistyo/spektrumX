@@ -3,6 +3,9 @@
         <h2 class="font-semibold text-xl text-gray-800">Bayar Order {{ $order->NoOrder }}</h2>
     </x-slot>
 
+    <div x-data="{ invoiceModalOpen: false, autoPrintPending: {{ session('autoPrintInvoice') ? 'true' : 'false' }} }"
+         x-init="if (autoPrintPending) { invoiceModalOpen = true }"
+         @keydown.escape.window="invoiceModalOpen = false">
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div class="lg:col-span-2 bg-white rounded-lg border border-gray-200 overflow-hidden">
             <div class="p-4 border-b border-gray-200">
@@ -47,28 +50,64 @@
             </div>
         </div>
 
-        <div class="bg-white rounded-lg border border-gray-200 p-4">
-            <form method="POST" action="{{ route('kasir.bayar', ['type' => $type, 'id' => $order->id]) }}" class="space-y-4">
+        <div class="bg-white rounded-lg border border-gray-200 p-4"
+             x-data="{
+                metode: '{{ old('metode_bayar', 'tunai') }}',
+                jumlahDp: '{{ old('jumlah_dp') }}',
+                dpMin: {{ (int) ceil(($order->total ?? 0) * 0.5) }},
+                dpMax: {{ max((int) ($order->total ?? 0) - 1, 0) }},
+                get dpError() {
+                    if (this.metode !== 'dp' || this.jumlahDp === '') return '';
+                    const val = Number(this.jumlahDp);
+                    if (val < this.dpMin) return `Jumlah DP minimal Rp ${this.dpMin.toLocaleString('id-ID')}.`;
+                    if (val > this.dpMax) return `Jumlah DP tidak boleh melebihi Rp ${this.dpMax.toLocaleString('id-ID')}.`;
+                    return '';
+                }
+             }">
+            <form method="POST" action="{{ route('kasir.bayar', ['type' => $type, 'id' => $order->id]) }}"
+                  class="space-y-4" novalidate
+                  @submit="if (dpError) { $event.preventDefault(); }">
                 @csrf
 
                 <div>
                     <x-input-label value="Metode Pembayaran" />
                     <div class="mt-2 space-y-2">
                         <label class="flex items-center gap-2">
-                            <input type="radio" name="metode_bayar" value="tunai" checked class="text-gray-900 focus:ring-gray-900">
+                            <input type="radio" name="metode_bayar" value="tunai" x-model="metode" class="text-gray-900 focus:ring-gray-900">
                             <span class="text-sm text-gray-700">Tunai (Lunas)</span>
                         </label>
                         <label class="flex items-center gap-2">
-                            <input type="radio" name="metode_bayar" value="hutang"
+                            <input type="radio" name="metode_bayar" value="hutang" x-model="metode"
                                    {{ $order->customer?->isVip ? '' : 'disabled' }}
                                    class="text-gray-900 focus:ring-gray-900">
                             <span class="text-sm text-gray-700 {{ $order->customer?->isVip ? '' : 'text-gray-400' }}">
                                 Hutang (khusus VIP){{ $order->customer?->isVip ? '' : ' — customer bukan VIP' }}
                             </span>
                         </label>
+                        @if ($type === 'outdoor')
+                            <label class="flex items-center gap-2">
+                                <input type="radio" name="metode_bayar" value="dp" x-model="metode" class="text-gray-900 focus:ring-gray-900">
+                                <span class="text-sm text-gray-700">DP (minimal 50%)</span>
+                            </label>
+                        @endif
                     </div>
                     <x-input-error :messages="$errors->get('metode_bayar')" class="mt-1" />
                 </div>
+
+                @if ($type === 'outdoor')
+                    <div x-show="metode === 'dp'" x-cloak>
+                        <x-input-label for="jumlah_dp" value="Jumlah DP" />
+                        <x-text-input id="jumlah_dp" name="jumlah_dp" type="number" step="100"
+                                      x-model="jumlahDp"
+                                      class="mt-1 block w-full" />
+                        <p class="text-xs text-gray-500 mt-1">
+                            Minimal Rp {{ number_format(($order->total ?? 0) * 0.5, 0, ',', '.') }} (50% dari total Rp {{ number_format($order->total ?? 0, 0, ',', '.') }})
+                        </p>
+                        <x-input-error :messages="$errors->get('jumlah_dp')" class="mt-1" />
+                    </div>
+                @endif
+
+                <p x-show="dpError" x-cloak x-text="dpError" class="text-sm text-red-600"></p>
 
                 <div>
                     <x-input-label for="catatan" value="Catatan (opsional)" />
@@ -81,11 +120,44 @@
                     Proses Pembayaran
                 </button>
 
-                <a href="{{ route('invoice.show', ['type' => $type, 'id' => $order->id]) }}" target="_blank"
-                   class="block text-center text-sm text-gray-500 hover:underline">
+                <button type="button" @click="invoiceModalOpen = true"
+                        class="block w-full text-center text-sm text-gray-500 hover:underline">
                     Lihat / Cetak Invoice
-                </a>
+                </button>
             </form>
         </div>
+    </div>
+
+    <div x-show="invoiceModalOpen" x-cloak
+         class="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div @click="invoiceModalOpen = false" class="absolute inset-0 bg-gray-900/50"></div>
+
+        <div class="relative bg-white rounded-lg shadow-lg flex flex-col" style="width:95vw; max-width:1100px; height:94vh;">
+            <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+                <h3 class="font-semibold text-gray-900">Invoice {{ $order->NoOrder }}</h3>
+                <div class="flex items-center gap-2">
+                    <button type="button" @click="$refs.invoiceFrame.contentWindow.focus(); $refs.invoiceFrame.contentWindow.print()"
+                            class="inline-flex items-center px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-md hover:bg-blue-700">
+                        Cetak
+                    </button>
+                    <button type="button" @click="$refs.invoiceFrame.contentDocument.title = '{{ $order->NoOrder }}'; $refs.invoiceFrame.contentWindow.focus(); $refs.invoiceFrame.contentWindow.print()"
+                            class="inline-flex items-center px-3 py-1.5 bg-gray-100 text-gray-700 text-xs font-semibold rounded-md hover:bg-gray-200">
+                        PDF
+                    </button>
+                    <button type="button" @click="invoiceModalOpen = false"
+                            class="inline-flex items-center px-2 py-1.5 text-gray-400 hover:text-gray-600 text-lg leading-none">
+                        &times;
+                    </button>
+                </div>
+            </div>
+            <div class="flex-1 overflow-hidden">
+                <iframe x-ref="invoiceFrame"
+                        x-show="invoiceModalOpen"
+                        :src="invoiceModalOpen ? '{{ route('invoice.show', ['type' => $type, 'id' => $order->id]) }}' : ''"
+                        @load="if (autoPrintPending) { autoPrintPending = false; $refs.invoiceFrame.contentWindow.focus(); $refs.invoiceFrame.contentWindow.print(); }"
+                        class="w-full h-full border-0"></iframe>
+            </div>
+        </div>
+    </div>
     </div>
 </x-app-layout>

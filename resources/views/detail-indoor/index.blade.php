@@ -1,6 +1,6 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800">Detail Indoor</h2>
+        <h2 class="font-semibold text-xl text-gray-800">Data Bahan Indoor</h2>
     </x-slot>
 
     <div class="bg-white rounded-lg border border-gray-200 overflow-hidden"

@@ -3,16 +3,31 @@
     $initialItems = isset($items) && $items->isNotEmpty()
         ? $items->map(fn ($i) => [
             'NmFile' => $i->NmFile, 'Panjang' => $i->Panjang, 'Lebar' => $i->Lebar,
-            'Qty' => $i->Qty, 'KdCtk' => $i->KdCtk, 'KdBrgs' => $i->KdBrgs, 'Fins' => $i->Fins,
+            'Qty' => $i->Qty, 'KdCtk' => $i->KdCtk,
+            'KdPrn' => $i->KdCtk ? substr($i->KdCtk, 0, 2) : '',
+            'NoCetak' => $i->KdCtk ? substr($i->KdCtk, 2, 2) : '',
+            'ada_finishing' => $i->ada_finishing === null ? '' : ($i->ada_finishing ? 'ya' : 'tidak'),
+            'jenis_finishing' => $i->jenis_finishing,
+            'existing_file_path' => $i->file_path,
+            'existing_file_url' => $i->file_path ? \Illuminate\Support\Facades\Storage::disk('public')->url($i->file_path) : null,
         ])->values()
-        : collect([['NmFile' => '', 'Panjang' => '', 'Lebar' => '', 'Qty' => 1, 'KdCtk' => '', 'KdBrgs' => '', 'Fins' => '']]);
+        : collect([['NmFile' => '', 'Panjang' => '', 'Lebar' => '', 'Qty' => 1, 'KdCtk' => '', 'KdPrn' => '', 'NoCetak' => '', 'ada_finishing' => '', 'jenis_finishing' => '', 'existing_file_path' => null, 'existing_file_url' => null]]);
     $selectedCustomerLabel = $selectedCustomer ? "{$selectedCustomer->NmCust} ({$selectedCustomer->KdCust})" : '';
+    $hargaMap = $hargaCetakList->keyBy('KdCtk')->map(fn ($h) => ['std' => (float) $h->HargaStd, 'min' => (float) $h->HargaMin]);
 @endphp
 
 <div x-data="{
         items: {{ old('items') ? json_encode(old('items')) : $initialItems->toJson() }},
+        hargaMap: {{ $hargaMap->toJson() }},
+        hargaFor(item) {
+            const kdCtk = (item.KdPrn || '') + (item.NoCetak || '');
+            return this.hargaMap[kdCtk] ?? null;
+        },
+        syncKdCtk(item) {
+            item.KdCtk = (item.KdPrn && item.NoCetak) ? (item.KdPrn + item.NoCetak) : '';
+        },
         addItem() {
-            this.items.push({ NmFile: '', Panjang: '', Lebar: '', Qty: 1, KdCtk: '', KdBrgs: '', Fins: '' });
+            this.items.push({ NmFile: '', Panjang: '', Lebar: '', Qty: 1, KdCtk: '', KdPrn: '', NoCetak: '', ada_finishing: '', jenis_finishing: '', existing_file_path: null, existing_file_url: null });
             this.$nextTick(() => {
                 const inputs = document.querySelectorAll('[data-item-search]');
                 inputs[inputs.length - 1]?.focus();
@@ -25,6 +40,17 @@
             }
         },
     }">
+
+    @if ($errors->any())
+        <div class="mb-4 p-3 bg-red-50 border border-red-200 rounded-md text-sm text-red-700">
+            <p class="font-semibold mb-1">Order gagal disimpan, periksa kembali:</p>
+            <ul class="list-disc list-inside space-y-0.5">
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
 
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
         <div>
@@ -181,20 +207,20 @@
                         </button>
                     </div>
 
-                    <form @submit.prevent="submitQuickAdd()" style="padding: 24px; display: flex; flex-direction: column; gap: 20px;">
+                    <div @keydown.enter.prevent="submitQuickAdd()" style="padding: 24px; display: flex; flex-direction: column; gap: 20px;">
                         <p class="text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded-md leading-relaxed" style="padding: 10px 12px;">
                             Kode customer dibuat otomatis. Detail lain bisa dilengkapi di menu Customer.
                         </p>
                         <div style="padding: 10px 10px;">
                             <label class="block text-sm font-medium text-gray-700" style="margin-bottom: 8px;">Nama</label>
-                            <input type="text" x-model="quickAddForm.NmCust" required autofocus
+                            <input type="text" x-model="quickAddForm.NmCust" autofocus
                                    class="block w-full rounded-md border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500"
                                    style="padding: 10px 12px;">
                             <p class="text-xs text-red-600" style="margin-top: 6px;" x-show="quickAddErrors.NmCust" x-text="quickAddErrors.NmCust?.[0]"></p>
                         </div>
                         <div style="padding: 10px 10px;">
                             <label class="block text-sm font-medium text-gray-700" style="margin-bottom: 8px;">Telepon</label>
-                            <input type="text" x-model="quickAddForm.Telp" required
+                            <input type="text" x-model="quickAddForm.Telp"
                                    class="block w-full rounded-md border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500"
                                    style="padding: 10px 12px;">
                             <p class="text-xs text-red-600" style="margin-top: 6px;" x-show="quickAddErrors.Telp" x-text="quickAddErrors.Telp?.[0]"></p>
@@ -213,14 +239,14 @@
                         </div>
 
                         <div class="flex gap-3 border-t border-gray-200" style="padding:10px 10px" >
-                            <button type="submit" :disabled="quickAddSaving"
+                            <button type="button" :disabled="quickAddSaving" @click="submitQuickAdd()"
                                     class="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-md hover:bg-gray-700 disabled:opacity-50">
                                 <span x-show="!quickAddSaving">Simpan &amp; Pilih</span>
                                 <span x-show="quickAddSaving">Menyimpan...</span>
                             </button>
                             <button type="button" @click="quickAddOpen = false" class="px-4 py-2 text-sm text-gray-600 hover:underline">Batal</button>
                         </div>
-                    </form>
+                    </div>
                 </div>
             </div>
         </div>
@@ -232,49 +258,80 @@
         </div>
 
         <template x-for="(item, index) in items" :key="index">
-            <div class="grid grid-cols-2 sm:grid-cols-12 gap-2 items-start mb-3 p-3 bg-gray-50 rounded-md">
-                <div class="col-span-2 sm:col-span-3">
-                    <label class="block text-xs text-gray-500 mb-1">Nama File / Desain</label>
-                    <input type="text" :name="`items[${index}][NmFile]`" x-model="item.NmFile" required
-                           data-item-search
-                           class="w-full rounded-md border-gray-300 text-sm">
+            <div class="mb-3 p-3 bg-gray-50 rounded-md">
+                <div class="flex flex-wrap gap-2 items-start mb-2">
+                    <div class="w-40">
+                        <label class="block text-xs text-gray-500 mb-1">Nama File / Desain</label>
+                        <input type="text" :name="`items[${index}][NmFile]`" x-model="item.NmFile" required
+                               data-item-search
+                               class="w-full rounded-md border-gray-300 text-sm">
+                    </div>
+                    <div class="w-20">
+                        <label class="block text-xs text-gray-500 mb-1">Panjang (cm)</label>
+                        <input type="number" step="0.01" :name="`items[${index}][Panjang]`" x-model="item.Panjang" required
+                               class="w-full rounded-md border-gray-300 text-sm">
+                    </div>
+                    <div class="w-20">
+                        <label class="block text-xs text-gray-500 mb-1">Lebar (cm)</label>
+                        <input type="number" step="0.01" :name="`items[${index}][Lebar]`" x-model="item.Lebar" required
+                               class="w-full rounded-md border-gray-300 text-sm">
+                    </div>
+                    <div class="w-16">
+                        <label class="block text-xs text-gray-500 mb-1">Qty</label>
+                        <input type="number" :name="`items[${index}][Qty]`" x-model="item.Qty" min="1" required
+                               class="w-full rounded-md border-gray-300 text-sm">
+                    </div>
+                    <div class="flex-1 min-w-[180px]">
+                        <label class="block text-xs text-gray-500 mb-1">Upload File Desain</label>
+                        <input type="file" :name="`items[${index}][file]`"
+                               accept=".pdf,.ai,.cdr,.eps,.psd,.jpg,.jpeg,.png,.tif,.tiff,.zip"
+                               class="w-full rounded-md border-gray-300 text-sm file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:bg-gray-200 file:text-xs">
+                        <input type="hidden" :name="`items[${index}][existing_file_path]`" :value="item.existing_file_path">
+                        <template x-if="item.existing_file_url">
+                            <a :href="item.existing_file_url" target="_blank" class="text-xs text-indigo-600 hover:underline mt-1 inline-block">
+                                Lihat file saat ini
+                            </a>
+                        </template>
+                    </div>
                 </div>
+                <div class="grid grid-cols-2 sm:grid-cols-12 gap-2 items-start">
                 <div class="sm:col-span-2">
-                    <label class="block text-xs text-gray-500 mb-1">Panjang (cm)</label>
-                    <input type="number" step="0.01" :name="`items[${index}][Panjang]`" x-model="item.Panjang" required
-                           class="w-full rounded-md border-gray-300 text-sm">
-                </div>
-                <div class="sm:col-span-2">
-                    <label class="block text-xs text-gray-500 mb-1">Lebar (cm)</label>
-                    <input type="number" step="0.01" :name="`items[${index}][Lebar]`" x-model="item.Lebar" required
-                           class="w-full rounded-md border-gray-300 text-sm">
-                </div>
-                <div class="sm:col-span-1">
-                    <label class="block text-xs text-gray-500 mb-1">Qty</label>
-                    <input type="number" :name="`items[${index}][Qty]`" x-model="item.Qty" min="1" required
-                           class="w-full rounded-md border-gray-300 text-sm">
-                </div>
-                <div class="sm:col-span-2">
-                    <label class="block text-xs text-gray-500 mb-1">Kode Cetak</label>
-                    <select :name="`items[${index}][KdCtk]`" x-model="item.KdCtk" class="w-full rounded-md border-gray-300 text-sm">
-                        <option value="">-- Opsional --</option>
-                        @foreach ($hargaCetakList as $h)
-                            <option value="{{ $h->KdCtk }}">{{ $h->KdCtk }} (Rp {{ number_format($h->HargaStd, 0, ',', '.') }})</option>
+                    <label class="block text-xs text-gray-500 mb-1">Printer Outdoor</label>
+                    <select :name="`items[${index}][KdPrn]`" x-model="item.KdPrn" @change="syncKdCtk(item)" class="w-full rounded-md border-gray-300 text-sm">
+                        <option value="">-- Pilih Printer --</option>
+                        @foreach ($printerOutdoorList as $p)
+                            <option value="{{ $p->KdPrn }}">{{ $p->NmPrn }}</option>
                         @endforeach
                     </select>
                 </div>
                 <div class="sm:col-span-2">
-                    <label class="block text-xs text-gray-500 mb-1">Bahan</label>
-                    <select :name="`items[${index}][KdBrgs]`" x-model="item.KdBrgs" class="w-full rounded-md border-gray-300 text-sm">
-                        <option value="">-- Opsional --</option>
-                        @foreach ($bahanList as $b)
-                            <option value="{{ $b->KdBrgs }}">{{ $b->NmBrgs }}</option>
+                    <label class="block text-xs text-gray-500 mb-1">Bahan Cetak (Harga)</label>
+                    <select :name="`items[${index}][NoCetak]`" x-model="item.NoCetak" @change="syncKdCtk(item)" class="w-full rounded-md border-gray-300 text-sm">
+                        <option value="">-- Pilih Bahan --</option>
+                        @foreach ($bahanCetakOutdoorList as $bc)
+                            <option value="{{ $bc->NoCetak }}">{{ $bc->NmBhn }}</option>
                         @endforeach
                     </select>
+                    <input type="hidden" :name="`items[${index}][KdCtk]`" :value="item.KdCtk">
+                    <template x-if="item.KdPrn && item.NoCetak">
+                        <p class="text-xs mt-1" :class="hargaFor(item) ? 'text-green-700' : 'text-red-600'">
+                            <span x-show="hargaFor(item)" x-text="'Rp ' + (hargaFor(item)?.std ?? 0).toLocaleString('id-ID')"></span>
+                            <span x-show="!hargaFor(item)">Harga belum diatur untuk kombinasi ini</span>
+                        </p>
+                    </template>
                 </div>
-                <div class="col-span-2 sm:col-span-11">
-                    <label class="block text-xs text-gray-500 mb-1">Catatan Finishing</label>
-                    <input type="text" :name="`items[${index}][Fins]`" x-model="item.Fins" placeholder="misal: SB, laminasi doff, dll"
+                <div class="sm:col-span-2">
+                    <label class="block text-xs text-gray-500 mb-1">Ada Finishing?</label>
+                    <select :name="`items[${index}][ada_finishing]`" x-model="item.ada_finishing" class="w-full rounded-md border-gray-300 text-sm">
+                        <option value="">-- Pilih --</option>
+                        <option value="ya">Ya</option>
+                        <option value="tidak">Tidak</option>
+                    </select>
+                </div>
+                <div class="sm:col-span-2">
+                    <label class="block text-xs text-gray-500 mb-1">Jenis Finishing</label>
+                    <input type="text" :name="`items[${index}][jenis_finishing]`" x-model="item.jenis_finishing"
+                           placeholder="misal: laminasi doff" maxlength="50"
                            class="w-full rounded-md border-gray-300 text-sm">
                 </div>
                 <div class="col-span-2 sm:col-span-1 flex justify-end sm:justify-start sm:items-end h-full pt-1 sm:pt-5">
@@ -285,6 +342,7 @@
                             <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
                         </svg>
                     </button>
+                </div>
                 </div>
             </div>
         </template>

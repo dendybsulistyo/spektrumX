@@ -55,6 +55,7 @@ class OrderIndoorController extends Controller
                 'TglOrder' => $data['TglOrder'],
                 'NoOrder' => $noOrder,
                 'KdCust' => $data['KdCust'],
+                'created_by' => auth()->id(),
                 'Cetak' => 0,
                 'status' => 'baru',
                 'status_bayar' => 'belum_bayar',

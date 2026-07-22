@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\OrderArtwork;
 use App\Models\OrderIndoor;
 use App\Models\OrderOutdoor;
 use App\Models\OrderStatusNote;
@@ -22,7 +23,10 @@ class OrderDesainController extends Controller
         $outdoorOrders = OrderOutdoor::query()->with('customer')->where('status', 'desain')
             ->orderByDesc('TglOrder')->orderByDesc('NoOrder')->get();
 
-        return view('order-desain.index', compact('indoorOrders', 'outdoorOrders'));
+        $artworkOrders = OrderArtwork::query()->with('customer')->where('status', 'desain')
+            ->orderByDesc('TglOrder')->orderByDesc('NoOrder')->get();
+
+        return view('order-desain.index', compact('indoorOrders', 'outdoorOrders', 'artworkOrders'));
     }
 
     public function update(Request $request, string $type, int $id): RedirectResponse

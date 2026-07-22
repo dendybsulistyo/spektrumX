@@ -21,6 +21,7 @@ class OrderIndoor extends Model
         'TglOrder',
         'NoOrder',
         'KdCust',
+        'created_by',
         'Cetak',
         'total',
         'status_bayar',
@@ -58,6 +59,11 @@ class OrderIndoor extends Model
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class, 'KdCust', 'KdCust');
+    }
+
+    public function createdBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
     }
 
     public function kasir(): BelongsTo

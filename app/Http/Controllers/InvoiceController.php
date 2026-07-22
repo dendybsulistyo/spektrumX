@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\HargaArtwork;
 use App\Models\Produk;
 use App\Services\OrderPricingService;
 use App\Support\ResolvesOrderType;
@@ -18,23 +19,45 @@ class InvoiceController extends Controller
         $order = $this->resolveOrder($type, $id);
         $order->load('customer', 'kasir');
 
-        $rawItems = $type === 'indoor' ? $order->detailItems() : $order->items()->with('hargaCetak')->get();
+        $rawItems = match ($type) {
+            'indoor' => $order->detailItems(),
+            'outdoor' => $order->items()->with('hargaCetak')->get(),
+            'artwork' => $order->items,
+            default => abort(404),
+        };
 
         $items = $rawItems->map(function ($item) use ($type) {
-            if ($type === 'indoor') {
-                $produk = Produk::where('KdProd', $item->KdProd)->first();
-                $subtotal = $produk
-                    ? $this->pricingService->lineTotalIndoor(
-                        $produk, $item->Panjang, $item->Lebar, $item->Qty,
-                        $item->PisauTurun, $item->JumlahKertas, $item->TebalKertas,
-                    )
-                    : 0;
-                $name = $item->Judul;
-            } else {
-                $harga = $item->hargaCetak;
-                $subtotal = $harga ? $this->pricingService->lineTotalOutdoor($harga, $item->Panjang, $item->Lebar, $item->Qty) : 0;
-                $name = $item->NmFile;
-            }
+            [$name, $subtotal] = match ($type) {
+                'indoor' => (function () use ($item) {
+                    $produk = Produk::where('KdProd', $item->KdProd)->first();
+
+                    return [
+                        $item->Judul,
+                        $produk
+                            ? $this->pricingService->lineTotalIndoor(
+                                $produk, $item->Panjang, $item->Lebar, $item->Qty,
+                                $item->PisauTurun, $item->JumlahKertas, $item->TebalKertas,
+                            )
+                            : 0,
+                    ];
+                })(),
+                'outdoor' => (function () use ($item) {
+                    $harga = $item->hargaCetak;
+
+                    return [
+                        $item->NmFile,
+                        $harga ? $this->pricingService->lineTotalOutdoor($harga, $item->Panjang, $item->Lebar, $item->Qty) : 0,
+                    ];
+                })(),
+                'artwork' => (function () use ($item) {
+                    $harga = HargaArtwork::where('KdProd', $item->KdProd)->first();
+
+                    return [
+                        $item->Judul,
+                        $harga ? $this->pricingService->lineTotalArtwork($harga, $item->Panjang, $item->Lebar, $item->Qty) : 0,
+                    ];
+                })(),
+            };
 
             return (object) [
                 'name' => $name,

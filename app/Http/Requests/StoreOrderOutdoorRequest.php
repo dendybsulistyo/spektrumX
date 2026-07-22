@@ -28,12 +28,14 @@ class StoreOrderOutdoorRequest extends FormRequest
 
             'items' => ['required', 'array', 'min:1'],
             'items.*.NmFile' => ['required', 'string', 'max:50'],
+            'items.*.file' => ['nullable', 'file', 'max:51200', 'mimes:pdf,ai,cdr,eps,psd,jpg,jpeg,png,tif,tiff,zip'],
+            'items.*.existing_file_path' => ['nullable', 'string'],
             'items.*.Panjang' => ['required', 'numeric', 'min:0'],
             'items.*.Lebar' => ['required', 'numeric', 'min:0'],
             'items.*.Qty' => ['required', 'integer', 'min:1'],
             'items.*.KdCtk' => ['nullable', 'string', 'exists:harga_cetak_outdoor,KdCtk'],
-            'items.*.KdBrgs' => ['nullable', 'string', 'exists:bahan_outdoor,KdBrgs'],
-            'items.*.Fins' => ['nullable', 'string', 'max:100'],
+            'items.*.ada_finishing' => ['nullable', 'in:ya,tidak'],
+            'items.*.jenis_finishing' => ['nullable', 'string', 'max:50'],
         ];
     }
 
@@ -48,12 +50,25 @@ class StoreOrderOutdoorRequest extends FormRequest
             'TglOrder' => 'tanggal order',
             'KdCust' => 'customer',
             'items.*.NmFile' => 'nama file',
+            'items.*.file' => 'file desain',
             'items.*.Panjang' => 'panjang',
             'items.*.Lebar' => 'lebar',
             'items.*.Qty' => 'qty',
-            'items.*.KdCtk' => 'kode cetak',
-            'items.*.KdBrgs' => 'bahan',
-            'items.*.Fins' => 'finishing',
+            'items.*.KdCtk' => 'printer & bahan cetak',
+            'items.*.ada_finishing' => 'ada finishing',
+            'items.*.jenis_finishing' => 'jenis finishing',
+        ];
+    }
+
+    /**
+     * Get custom messages for validator errors.
+     *
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'items.*.KdCtk.exists' => 'Kombinasi printer & bahan cetak yang dipilih belum punya harga — atur dulu di Standar Harga, atau pilih kombinasi lain.',
         ];
     }
 }

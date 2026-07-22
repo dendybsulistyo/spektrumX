@@ -15,10 +15,14 @@
                         class="px-4 py-3 border-b-2 font-medium">
                     Outdoor ({{ $outdoorOrders->count() }})
                 </button>
+                <button @click="tab = 'artwork'" :class="tab === 'artwork' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500'"
+                        class="px-4 py-3 border-b-2 font-medium">
+                    Artwork ({{ $artworkOrders->count() }})
+                </button>
             </div>
 
-            @foreach (['indoor' => $indoorOrders, 'outdoor' => $outdoorOrders] as $tabKey => $orders)
-                <div x-show="tab === '{{ $tabKey }}'" @if($tabKey==='outdoor') x-cloak @endif class="overflow-x-auto">
+            @foreach (['indoor' => $indoorOrders, 'outdoor' => $outdoorOrders, 'artwork' => $artworkOrders] as $tabKey => $orders)
+                <div x-show="tab === '{{ $tabKey }}'" @if($tabKey!=='indoor') x-cloak @endif class="overflow-x-auto">
                     <table class="w-full text-sm min-w-[560px]">
                         <thead class="bg-gray-50 text-left text-xs uppercase text-gray-500">
                             <tr>

@@ -20,6 +20,7 @@ class OrderOutdoor extends Model
         'TglOrder',
         'KdCust',
         'KdOpr',
+        'created_by',
         'Cetak',
         'total',
         'status_bayar',
@@ -36,6 +37,11 @@ class OrderOutdoor extends Model
         'qc_by',
         'qc_at',
         'diambil_at',
+        'cancel_requested_at',
+        'cancel_requested_by',
+        'cancel_reason',
+        'cancel_approved_at',
+        'cancel_approved_by',
     ];
 
     protected function casts(): array
@@ -51,6 +57,8 @@ class OrderOutdoor extends Model
             'cetak_at' => 'datetime',
             'qc_at' => 'datetime',
             'diambil_at' => 'datetime',
+            'cancel_requested_at' => 'datetime',
+            'cancel_approved_at' => 'datetime',
         ];
     }
 
@@ -82,5 +90,20 @@ class OrderOutdoor extends Model
     public function qcBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'qc_by');
+    }
+
+    public function createdBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function cancelRequestedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'cancel_requested_by');
+    }
+
+    public function cancelApprovedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'cancel_approved_by');
     }
 }

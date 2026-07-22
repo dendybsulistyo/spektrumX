@@ -22,7 +22,11 @@ class Role extends Model
             'produk.view' => 'Lihat data produk',
             'produk.manage' => 'Tambah/ubah/hapus produk',
         ],
-        'Harga Artwork' => [
+        'Kategori Produk Indoor' => [
+            'kategori-produk-indoor.view' => 'Lihat data divisi indoor',
+            'kategori-produk-indoor.manage' => 'Tambah/ubah/hapus divisi indoor',
+        ],
+        'Bahan Artwork' => [
             'harga-artwork.view' => 'Lihat harga artwork',
             'harga-artwork.manage' => 'Tambah/ubah/hapus harga artwork',
         ],
@@ -38,6 +42,14 @@ class Role extends Model
             'printers.view' => 'Lihat data printer',
             'printers.manage' => 'Tambah/ubah/hapus printer',
         ],
+        'Printer Outdoor' => [
+            'printer-outdoor.view' => 'Lihat data printer outdoor',
+            'printer-outdoor.manage' => 'Tambah/ubah/hapus printer outdoor',
+        ],
+        'Bahan Cetak Outdoor' => [
+            'bahan-cetak-outdoor.view' => 'Lihat data bahan cetak outdoor',
+            'bahan-cetak-outdoor.manage' => 'Tambah/ubah/hapus bahan cetak outdoor',
+        ],
         'Order Indoor' => [
             'order-indoor.view' => 'Lihat order',
             'order-indoor.manage' => 'Buat/ubah/hapus order',
@@ -45,10 +57,14 @@ class Role extends Model
         'Order Outdoor' => [
             'order-outdoor.view' => 'Lihat order outdoor',
             'order-outdoor.manage' => 'Buat/ubah/hapus order outdoor',
+            'order-outdoor.approve-cancel' => 'Setujui/tolak pengajuan pembatalan order outdoor',
         ],
         'Order Artwork' => [
             'order-artwork.view' => 'Lihat order artwork',
             'order-artwork.manage' => 'Buat/ubah/hapus order artwork',
+        ],
+        'File Monitor' => [
+            'file-monitor.view' => 'Lihat monitoring file masuk (order indoor/outdoor/artwork)',
         ],
         'Kasir' => [
             'kasir.view' => 'Lihat antrian kasir',

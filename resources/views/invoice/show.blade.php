@@ -39,6 +39,10 @@
         .badge-lunas { background: #d1fae5; color: #065f46; }
         .badge-hutang { background: #fef3c7; color: #92400e; }
         .badge-belum { background: #fee2e2; color: #991b1b; }
+        .badge-dp { background: #dbeafe; color: #1e40af; }
+        .dp-summary { margin-top: 16px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px 16px; }
+        .dp-summary .row { display: flex; justify-content: space-between; padding: 2px 0; }
+        .dp-summary .row.sisa { font-weight: 700; color: #991b1b; }
         table { width: 100%; border-collapse: collapse; margin-top: 24px; }
         th, td { text-align: left; padding: 10px 8px; }
         thead th { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: #9ca3af; border-bottom: 2px solid #e5e7eb; }
@@ -69,8 +73,12 @@
         [$badgeClass, $badgeLabel, $statusNote] = match ($order->status_bayar) {
             'lunas' => ['badge-lunas', 'Lunas', 'Dibayar tunai di kasir.'],
             'hutang' => ['badge-hutang', 'Hutang', 'Piutang berjalan — belum lunas.'],
+            'dp' => ['badge-dp', 'DP (Belum Lunas)', 'Sudah bayar uang muka — sisa dibayar sebelum pengambilan.'],
             default => ['badge-belum', 'Belum Bayar', 'Menunggu pembayaran di kasir.'],
         };
+
+        $jumlahPiutang = (float) ($order->jumlah_piutang ?? 0);
+        $jumlahDpDibayar = ($order->total ?? 0) - $jumlahPiutang;
     @endphp
 
     <div class="card">
@@ -128,6 +136,19 @@
             </tbody>
         </table>
 
+        @if ($order->status_bayar === 'dp')
+            <div class="dp-summary">
+                <div class="row">
+                    <span class="muted">Uang Muka (DP) Dibayar</span>
+                    <span>Rp {{ number_format($jumlahDpDibayar, 0, ',', '.') }}</span>
+                </div>
+                <div class="row sisa">
+                    <span>Sisa yang Harus Dilunasi</span>
+                    <span>Rp {{ number_format($jumlahPiutang, 0, ',', '.') }}</span>
+                </div>
+            </div>
+        @endif
+
         @if ($order->kasir)
             <div class="signature">
                 <span class="line">{{ $order->kasir->name }}</span>
@@ -139,9 +160,15 @@
         </div>
     </div>
 
-    <div class="actions no-print">
+    <div class="actions no-print" id="standaloneActions">
         <a href="javascript:history.back()" class="link-back">← Kembali</a>
         <button class="btn btn-primary" onclick="window.print()">Print Invoice</button>
     </div>
+
+    <script>
+        if (window.self !== window.top) {
+            document.getElementById('standaloneActions').style.display = 'none';
+        }
+    </script>
 </body>
 </html>

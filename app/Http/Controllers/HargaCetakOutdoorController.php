@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreHargaCetakOutdoorRequest;
 use App\Models\BahanCetakOutdoor;
 use App\Models\HargaCetakOutdoor;
-use App\Models\Printer;
+use App\Models\PrinterOutdoor;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -15,11 +15,11 @@ class HargaCetakOutdoorController extends Controller
     /**
      * KdCtk on harga_cetak_outdoor is composed of KdPrn (2 chars) + NoCetak (2 chars),
      * e.g. printer "01" + bahan NoCetak "01" = KdCtk "0101". This renders that
-     * flat list as a Printer x Bahan price matrix.
+     * flat list as a Printer Outdoor x Bahan price matrix.
      */
     public function index(): View
     {
-        $printers = Printer::orderBy('NoUrut')->get();
+        $printers = PrinterOutdoor::orderBy('NoUrut')->get();
         $bahanList = BahanCetakOutdoor::orderBy('NoUrut')->get();
         $prices = HargaCetakOutdoor::all()->keyBy('KdCtk');
 
@@ -30,14 +30,17 @@ class HargaCetakOutdoorController extends Controller
     {
         $data = $request->validate([
             'harga' => ['required', 'array'],
-            'harga.*.*' => ['nullable', 'numeric', 'min:0'],
+            'harga.*.*.std' => ['nullable', 'numeric', 'min:0'],
+            'harga.*.*.min' => ['nullable', 'numeric', 'min:0'],
         ]);
 
         foreach ($data['harga'] as $noCetak => $perPrinter) {
-            foreach ($perPrinter as $kdPrn => $harga) {
+            foreach ($perPrinter as $kdPrn => $pair) {
                 $kdCtk = $kdPrn.$noCetak;
+                $std = $pair['std'] ?? null;
+                $min = $pair['min'] ?? null;
 
-                if ($harga === null || $harga === '') {
+                if (($std === null || $std === '') && ($min === null || $min === '')) {
                     HargaCetakOutdoor::where('KdCtk', $kdCtk)->delete();
 
                     continue;
@@ -45,7 +48,7 @@ class HargaCetakOutdoorController extends Controller
 
                 HargaCetakOutdoor::updateOrCreate(
                     ['KdCtk' => $kdCtk],
-                    ['HargaStd' => $harga, 'HargaMin' => $harga]
+                    ['HargaStd' => $std ?? $min, 'HargaMin' => $min ?? $std]
                 );
             }
         }
