@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# Runs automatically after every `git pull` / `git merge` on any machine that
+# has `git config core.hooksPath deploy/githooks` set (VPS deploy target).
+# Keeps compiled frontend assets and view cache in sync with the code that
+# was just pulled, so the site never serves a stale sidebar/CSS bundle again.
+set -e
+cd "$(git rev-parse --show-toplevel)"
+
+echo "[post-merge] Installing PHP dependencies..."
+composer install --no-interaction --prefer-dist
+
+echo "[post-merge] Installing JS dependencies & building assets..."
+npm ci
+npm run build
+
+echo "[post-merge] Clearing compiled view cache..."
+php artisan view:clear
+
+echo "[post-merge] Done — assets and views are up to date."

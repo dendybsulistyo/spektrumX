@@ -18,6 +18,7 @@ use App\Http\Controllers\KategoriController;
 use App\Http\Controllers\KategoriProdukIndoorController;
 use App\Http\Controllers\OperatorController;
 use App\Http\Controllers\OrderArtworkController;
+use App\Http\Controllers\ReportController;
 use App\Http\Controllers\OrderCetakController;
 use App\Http\Controllers\OrderDesainController;
 use App\Http\Controllers\OrderIndoorController;
@@ -52,6 +53,7 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware('permission:customers.view')->group(function () {
         Route::resource('customers', CustomerController::class)->only(['index', 'edit'])->names('customers');
+        Route::get('/customers-aktif', [CustomerController::class, 'aktif'])->name('customers.aktif');
     });
     Route::middleware('permission:customers.manage')->group(function () {
         Route::resource('customers', CustomerController::class)->only(['create', 'store', 'update', 'destroy'])->names('customers');
@@ -222,6 +224,10 @@ Route::middleware('auth')->group(function () {
     Route::middleware('permission:jasa-potong.manage')->group(function () {
         Route::get('/jasa-potong', [JasaPotongController::class, 'edit'])->name('jasa-potong.edit');
         Route::put('/jasa-potong', [JasaPotongController::class, 'update'])->name('jasa-potong.update');
+    });
+
+    Route::middleware('permission:harga-cetak-outdoor.view')->group(function () {
+        Route::get('/report/price-list-outdoor', [ReportController::class, 'priceListOutdoor'])->name('report.price-list-outdoor');
     });
 });
 

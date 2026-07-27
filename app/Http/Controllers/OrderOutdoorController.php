@@ -14,7 +14,6 @@ use App\Services\OrderPricingService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 class OrderOutdoorController extends Controller
@@ -206,26 +205,10 @@ class OrderOutdoorController extends Controller
             $seq = str_pad((string) ($index + 1), 2, '0', STR_PAD_LEFT);
             $brsOrder = $order->NoOrder.$seq;
 
-            // Update deletes and recreates all detail rows on every save, so
-            // an item that isn't re-uploading a file needs its previous
-            // file_path carried forward via the hidden existing_file_path
-            // field — otherwise the reference would be lost even though the
-            // physical file on disk is untouched.
-            $filePath = $item['existing_file_path'] ?? null;
-
-            if (! empty($item['file']) && $item['file'] instanceof \Illuminate\Http\UploadedFile) {
-                if ($filePath) {
-                    Storage::disk('public')->delete($filePath);
-                }
-
-                $filePath = $item['file']->store('order-outdoor-files', 'public');
-            }
-
             OrderOutdoorDetail::create([
                 'order_outdoor_id' => $order->id,
                 'BrsOrder' => $brsOrder,
                 'NmFile' => $item['NmFile'],
-                'file_path' => $filePath,
                 'Panjang' => $item['Panjang'],
                 'Lebar' => $item['Lebar'],
                 'Qty' => $item['Qty'],

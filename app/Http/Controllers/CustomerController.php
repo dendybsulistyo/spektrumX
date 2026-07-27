@@ -8,6 +8,7 @@ use App\Models\CustomerLimit;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class CustomerController extends Controller
@@ -26,6 +27,37 @@ class CustomerController extends Controller
             ->withQueryString();
 
         return view('customers.index', compact('customers'));
+    }
+
+    /**
+     * Semua customer diurutkan berdasar tanggal transaksi terbaru
+     * (order paling baru dari gabungan order Indoor/Outdoor/Artwork).
+     * Customer yang belum pernah order muncul paling bawah.
+     */
+    public function aktif(Request $request): View
+    {
+        $transaksi = DB::table('order_indoor')->select('KdCust', 'TglOrder')
+            ->unionAll(DB::table('order_outdoor')->select('KdCust', 'TglOrder'))
+            ->unionAll(DB::table('order_artwork')->select('KdCust', 'TglOrder'));
+
+        $lastTransaksi = DB::query()->fromSub($transaksi, 'trx')
+            ->select('KdCust', DB::raw('MAX(TglOrder) as tanggal_transaksi'))
+            ->groupBy('KdCust');
+
+        $customers = Customer::query()
+            ->leftJoinSub($lastTransaksi, 'lt', 'lt.KdCust', '=', 'customers.KdCust')
+            ->select('customers.*', 'lt.tanggal_transaksi')
+            ->with('limit')
+            ->when($request->filled('search'), function ($q) use ($request) {
+                $search = $request->string('search');
+                $q->where('customers.NmCust', 'like', "%{$search}%")
+                    ->orWhere('customers.KdCust', 'like', "%{$search}%");
+            })
+            ->orderByRaw('lt.tanggal_transaksi IS NULL, lt.tanggal_transaksi DESC')
+            ->paginate(15)
+            ->withQueryString();
+
+        return view('customers.aktif', compact('customers'));
     }
 
     public function create(): View

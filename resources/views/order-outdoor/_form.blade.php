@@ -8,10 +8,8 @@
             'NoCetak' => $i->KdCtk ? substr($i->KdCtk, 2, 2) : '',
             'ada_finishing' => $i->ada_finishing === null ? '' : ($i->ada_finishing ? 'ya' : 'tidak'),
             'jenis_finishing' => $i->jenis_finishing,
-            'existing_file_path' => $i->file_path,
-            'existing_file_url' => $i->file_path ? \Illuminate\Support\Facades\Storage::disk('public')->url($i->file_path) : null,
         ])->values()
-        : collect([['NmFile' => '', 'Panjang' => '', 'Lebar' => '', 'Qty' => 1, 'KdCtk' => '', 'KdPrn' => '', 'NoCetak' => '', 'ada_finishing' => '', 'jenis_finishing' => '', 'existing_file_path' => null, 'existing_file_url' => null]]);
+        : collect([['NmFile' => '', 'Panjang' => '', 'Lebar' => '', 'Qty' => 1, 'KdCtk' => '', 'KdPrn' => '', 'NoCetak' => '', 'ada_finishing' => '', 'jenis_finishing' => '']]);
     $selectedCustomerLabel = $selectedCustomer ? "{$selectedCustomer->NmCust} ({$selectedCustomer->KdCust})" : '';
     $hargaMap = $hargaCetakList->keyBy('KdCtk')->map(fn ($h) => ['std' => (float) $h->HargaStd, 'min' => (float) $h->HargaMin]);
 @endphp
@@ -19,15 +17,26 @@
 <div x-data="{
         items: {{ old('items') ? json_encode(old('items')) : $initialItems->toJson() }},
         hargaMap: {{ $hargaMap->toJson() }},
+        bahanOptions: {{ $bahanCetakOutdoorList->map(fn ($bc) => ['NoCetak' => $bc->NoCetak, 'NmBhn' => $bc->NmBhn])->values()->toJson() }},
         hargaFor(item) {
             const kdCtk = (item.KdPrn || '') + (item.NoCetak || '');
             return this.hargaMap[kdCtk] ?? null;
+        },
+        bahanFor(kdPrn) {
+            if (!kdPrn) return [];
+            return this.bahanOptions.filter(b => this.hargaMap[kdPrn + b.NoCetak]);
+        },
+        onPrinterChange(item) {
+            if (!this.bahanFor(item.KdPrn).some(b => b.NoCetak === item.NoCetak)) {
+                item.NoCetak = '';
+            }
+            this.syncKdCtk(item);
         },
         syncKdCtk(item) {
             item.KdCtk = (item.KdPrn && item.NoCetak) ? (item.KdPrn + item.NoCetak) : '';
         },
         addItem() {
-            this.items.push({ NmFile: '', Panjang: '', Lebar: '', Qty: 1, KdCtk: '', KdPrn: '', NoCetak: '', ada_finishing: '', jenis_finishing: '', existing_file_path: null, existing_file_url: null });
+            this.items.push({ NmFile: '', Panjang: '', Lebar: '', Qty: 1, KdCtk: '', KdPrn: '', NoCetak: '', ada_finishing: '', jenis_finishing: '' });
             this.$nextTick(() => {
                 const inputs = document.querySelectorAll('[data-item-search]');
                 inputs[inputs.length - 1]?.focus();
@@ -259,59 +268,50 @@
 
         <template x-for="(item, index) in items" :key="index">
             <div class="mb-3 p-3 bg-gray-50 rounded-md">
-                <div class="flex flex-wrap gap-2 items-start mb-2">
-                    <div class="w-40">
-                        <label class="block text-xs text-gray-500 mb-1">Nama File / Desain</label>
-                        <input type="text" :name="`items[${index}][NmFile]`" x-model="item.NmFile" required
-                               data-item-search
-                               class="w-full rounded-md border-gray-300 text-sm">
-                    </div>
-                    <div class="w-20">
-                        <label class="block text-xs text-gray-500 mb-1">Panjang (cm)</label>
-                        <input type="number" step="0.01" :name="`items[${index}][Panjang]`" x-model="item.Panjang" required
-                               class="w-full rounded-md border-gray-300 text-sm">
-                    </div>
-                    <div class="w-20">
-                        <label class="block text-xs text-gray-500 mb-1">Lebar (cm)</label>
-                        <input type="number" step="0.01" :name="`items[${index}][Lebar]`" x-model="item.Lebar" required
-                               class="w-full rounded-md border-gray-300 text-sm">
-                    </div>
-                    <div class="w-16">
-                        <label class="block text-xs text-gray-500 mb-1">Qty</label>
-                        <input type="number" :name="`items[${index}][Qty]`" x-model="item.Qty" min="1" required
-                               class="w-full rounded-md border-gray-300 text-sm">
-                    </div>
-                    <div class="flex-1 min-w-[180px]">
-                        <label class="block text-xs text-gray-500 mb-1">Upload File Desain</label>
-                        <input type="file" :name="`items[${index}][file]`"
-                               accept=".pdf,.ai,.cdr,.eps,.psd,.jpg,.jpeg,.png,.tif,.tiff,.zip"
-                               class="w-full rounded-md border-gray-300 text-sm file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:bg-gray-200 file:text-xs">
-                        <input type="hidden" :name="`items[${index}][existing_file_path]`" :value="item.existing_file_path">
-                        <template x-if="item.existing_file_url">
-                            <a :href="item.existing_file_url" target="_blank" class="text-xs text-indigo-600 hover:underline mt-1 inline-block">
-                                Lihat file saat ini
-                            </a>
-                        </template>
-                    </div>
-                </div>
                 <div class="grid grid-cols-2 sm:grid-cols-12 gap-2 items-start">
-                <div class="sm:col-span-2">
+                <div class="col-span-2 sm:col-span-2">
+                    <label class="block text-xs text-gray-500 mb-1">Nama File / Desain</label>
+                    <input type="text" :name="`items[${index}][NmFile]`" x-model="item.NmFile" required
+                           data-item-search
+                           class="w-full rounded-md border-gray-300 text-sm">
+                </div>
+                <div class="sm:col-span-1">
+                    <label class="block text-xs text-gray-500 mb-1">Panjang (cm)</label>
+                    <input type="number" step="0.01" :name="`items[${index}][Panjang]`" x-model="item.Panjang" required
+                           class="w-full rounded-md border-gray-300 text-sm">
+                </div>
+                <div class="sm:col-span-1">
+                    <label class="block text-xs text-gray-500 mb-1">Lebar (cm)</label>
+                    <input type="number" step="0.01" :name="`items[${index}][Lebar]`" x-model="item.Lebar" required
+                           class="w-full rounded-md border-gray-300 text-sm">
+                </div>
+                <div class="sm:col-span-1">
+                    <label class="block text-xs text-gray-500 mb-1">Qty</label>
+                    <input type="number" :name="`items[${index}][Qty]`" x-model="item.Qty" min="1" required
+                           class="w-full rounded-md border-gray-300 text-sm">
+                </div>
+                <div class="col-span-2 sm:col-span-2">
                     <label class="block text-xs text-gray-500 mb-1">Printer Outdoor</label>
-                    <select :name="`items[${index}][KdPrn]`" x-model="item.KdPrn" @change="syncKdCtk(item)" class="w-full rounded-md border-gray-300 text-sm">
+                    <select :name="`items[${index}][KdPrn]`" x-model="item.KdPrn" @change="onPrinterChange(item)" class="w-full rounded-md border-gray-300 text-sm">
                         <option value="">-- Pilih Printer --</option>
                         @foreach ($printerOutdoorList as $p)
                             <option value="{{ $p->KdPrn }}">{{ $p->NmPrn }}</option>
                         @endforeach
                     </select>
                 </div>
-                <div class="sm:col-span-2">
+                <div class="col-span-2 sm:col-span-2">
                     <label class="block text-xs text-gray-500 mb-1">Bahan Cetak (Harga)</label>
-                    <select :name="`items[${index}][NoCetak]`" x-model="item.NoCetak" @change="syncKdCtk(item)" class="w-full rounded-md border-gray-300 text-sm">
+                    <select :name="`items[${index}][NoCetak]`" x-model="item.NoCetak" @change="syncKdCtk(item)"
+                            :disabled="!item.KdPrn" :class="!item.KdPrn && 'bg-gray-100 text-gray-400'"
+                            class="w-full rounded-md border-gray-300 text-sm">
                         <option value="">-- Pilih Bahan --</option>
-                        @foreach ($bahanCetakOutdoorList as $bc)
-                            <option value="{{ $bc->NoCetak }}">{{ $bc->NmBhn }}</option>
-                        @endforeach
+                        <template x-for="b in bahanFor(item.KdPrn)" :key="b.NoCetak">
+                            <option :value="b.NoCetak" x-text="b.NmBhn"></option>
+                        </template>
                     </select>
+                    <p class="text-xs text-gray-400 mt-1" x-show="item.KdPrn && bahanFor(item.KdPrn).length === 0">
+                        Belum ada bahan dengan harga untuk printer ini.
+                    </p>
                     <input type="hidden" :name="`items[${index}][KdCtk]`" :value="item.KdCtk">
                     <template x-if="item.KdPrn && item.NoCetak">
                         <p class="text-xs mt-1" :class="hargaFor(item) ? 'text-green-700' : 'text-red-600'">
@@ -320,15 +320,15 @@
                         </p>
                     </template>
                 </div>
-                <div class="sm:col-span-2">
-                    <label class="block text-xs text-gray-500 mb-1">Ada Finishing?</label>
+                <div class="sm:col-span-1">
+                    <label class="block text-xs text-gray-500 mb-1">Proof</label>
                     <select :name="`items[${index}][ada_finishing]`" x-model="item.ada_finishing" class="w-full rounded-md border-gray-300 text-sm">
                         <option value="">-- Pilih --</option>
                         <option value="ya">Ya</option>
                         <option value="tidak">Tidak</option>
                     </select>
                 </div>
-                <div class="sm:col-span-2">
+                <div class="sm:col-span-1">
                     <label class="block text-xs text-gray-500 mb-1">Jenis Finishing</label>
                     <input type="text" :name="`items[${index}][jenis_finishing]`" x-model="item.jenis_finishing"
                            placeholder="misal: laminasi doff" maxlength="50"

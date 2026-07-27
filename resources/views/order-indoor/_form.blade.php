@@ -244,20 +244,20 @@
                         </button>
                     </div>
 
-                    <form @submit.prevent="submitQuickAdd()" style="padding: 24px; display: flex; flex-direction: column; gap: 20px;">
+                    <div style="padding: 24px; display: flex; flex-direction: column; gap: 20px;">
                         <p class="text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded-md leading-relaxed" style="padding: 10px 12px;">
                             Kode customer dibuat otomatis. Detail lain bisa dilengkapi di menu Customer.
                         </p>
                         <div style="padding: 10px 10px;">
                             <label class="block text-sm font-medium text-gray-700" style="margin-bottom: 8px;">Nama</label>
-                            <input type="text" x-model="quickAddForm.NmCust" required autofocus
+                            <input type="text" x-model="quickAddForm.NmCust" autofocus
                                    class="block w-full rounded-md border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500"
                                    style="padding: 10px 12px;">
                             <p class="text-xs text-red-600" style="margin-top: 6px;" x-show="quickAddErrors.NmCust" x-text="quickAddErrors.NmCust?.[0]"></p>
                         </div>
                        <div style="padding: 10px 10px;">
                             <label class="block text-sm font-medium text-gray-700" style="margin-bottom: 8px;">Telepon</label>
-                            <input type="text" x-model="quickAddForm.Telp" required
+                            <input type="text" x-model="quickAddForm.Telp"
                                    class="block w-full rounded-md border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500"
                                    style="padding: 10px 12px;">
                             <p class="text-xs text-red-600" style="margin-top: 6px;" x-show="quickAddErrors.Telp" x-text="quickAddErrors.Telp?.[0]"></p>
@@ -276,14 +276,14 @@
                         </div>
 
                         <div class="flex gap-3 border-t border-gray-200" style="padding:10px 10px" >
-                            <button type="submit" :disabled="quickAddSaving"
+                            <button type="button" @click="submitQuickAdd()" :disabled="quickAddSaving"
                                     class="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-md hover:bg-gray-700 disabled:opacity-50">
                                 <span x-show="!quickAddSaving">Simpan &amp; Pilih</span>
                                 <span x-show="quickAddSaving">Menyimpan...</span>
                             </button>
                             <button type="button" @click="quickAddOpen = false" class="px-4 py-2 text-sm text-gray-600 hover:underline">Batal</button>
                         </div>
-                    </form>
+                    </div>
                 </div>
             </div>
         </div>

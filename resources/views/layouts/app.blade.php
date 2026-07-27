@@ -79,10 +79,15 @@
                     @endif
 
                     @can('customers.view')
-                        @php $active = request()->routeIs('customers.*'); @endphp
+                        @php $active = request()->routeIs('customers.index') || request()->routeIs('customers.edit'); @endphp
                         <a href="{{ route('customers.index') }}" class="{{ $navClass($active) }}">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="{{ $iconClass($active) }}">{!! $navIcon('users') !!}</svg>
                             Customer
+                        </a>
+                        @php $active = request()->routeIs('customers.aktif'); @endphp
+                        <a href="{{ route('customers.aktif') }}" class="{{ $navClass($active) }}">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="{{ $iconClass($active) }}">{!! $navIcon('users') !!}</svg>
+                            Customer Aktif
                         </a>
                     @endcan
 
@@ -160,14 +165,6 @@
                             Harga Indoor
                         </a>
                     @endcan --}}
-
-                    @can('operators.view')
-                        @php $active = request()->routeIs('operators.*'); @endphp
-                        <a href="{{ route('operators.index') }}" class="{{ $navClass($active) }}">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="{{ $iconClass($active) }}">{!! $navIcon('user-circle') !!}</svg>
-                            Operator
-                        </a>
-                    @endcan
 
                     @can('printers.view')
                         @php $active = request()->routeIs('printers.*'); @endphp

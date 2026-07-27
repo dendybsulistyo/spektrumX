@@ -28,8 +28,6 @@ class StoreOrderOutdoorRequest extends FormRequest
 
             'items' => ['required', 'array', 'min:1'],
             'items.*.NmFile' => ['required', 'string', 'max:50'],
-            'items.*.file' => ['nullable', 'file', 'max:51200', 'mimes:pdf,ai,cdr,eps,psd,jpg,jpeg,png,tif,tiff,zip'],
-            'items.*.existing_file_path' => ['nullable', 'string'],
             'items.*.Panjang' => ['required', 'numeric', 'min:0'],
             'items.*.Lebar' => ['required', 'numeric', 'min:0'],
             'items.*.Qty' => ['required', 'integer', 'min:1'],
@@ -50,7 +48,6 @@ class StoreOrderOutdoorRequest extends FormRequest
             'TglOrder' => 'tanggal order',
             'KdCust' => 'customer',
             'items.*.NmFile' => 'nama file',
-            'items.*.file' => 'file desain',
             'items.*.Panjang' => 'panjang',
             'items.*.Lebar' => 'lebar',
             'items.*.Qty' => 'qty',
