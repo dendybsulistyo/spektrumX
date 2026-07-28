@@ -19,7 +19,8 @@
             'isPjLb' => $p->isPjLb,
             'Satuan' => $p->Satuan,
         ]])),
-        produkOptions: @js($produkList->map(fn ($p) => ['KdProd' => $p->KdProd, 'NmProd' => $p->NmProd])),
+        produkOptions: @js($produkList->map(fn ($p) => ['KdProd' => $p->KdProd, 'NmProd' => $p->NmProd, 'KdDivs' => $p->KdDivs])),
+        kategoriList: @js($kategoriList->map(fn ($k) => ['KdDivs' => $k->KdDivs, 'NmDivs' => $k->NmDivs])),
         nilaiX: {{ (float) $nilaiX }},
         potongModalIndex: null,
         needsDimension(kdProd) {
@@ -301,12 +302,27 @@
                         query: produkMap[item.KdProd] ? `${produkMap[item.KdProd].NmProd} (${item.KdProd})` : '',
                         open: false,
                         activeIndex: -1,
+                        kategoriModalOpen: false,
+                        selectedKategori: null,
                         get results() {
                             const q = this.query.trim().toLowerCase();
                             if (q === '') return produkOptions.slice(0, 30);
                             return produkOptions.filter(p =>
                                 p.NmProd.toLowerCase().includes(q) || p.KdProd.toLowerCase().includes(q)
                             ).slice(0, 30);
+                        },
+                        get produkInKategori() {
+                            if (!this.selectedKategori) return [];
+                            return produkOptions.filter(p => p.KdDivs === this.selectedKategori);
+                        },
+                        openKategoriModal() {
+                            this.selectedKategori = null;
+                            this.kategoriModalOpen = true;
+                            this.open = false;
+                        },
+                        selectFromKategori(p) {
+                            this.select(p);
+                            this.kategoriModalOpen = false;
                         },
                         select(p) {
                             item.KdProd = p.KdProd;
@@ -339,11 +355,19 @@
                      }"
                      @click.outside="open = false">
                     <label class="block text-xs text-gray-500 mb-1">Produk</label>
-                    <input type="text" x-model="query" @focus="open = true" @input="open = true; activeIndex = -1"
-                           @keydown.down.prevent="move(1)" @keydown.up.prevent="move(-1)"
-                           @keydown.enter.prevent="chooseActive()" @keydown.escape="open = false"
-                           autocomplete="off" placeholder="Cari produk..." data-produk-search
-                           class="w-full rounded-md border-gray-300 text-sm">
+                    <div class="flex gap-1">
+                        <input type="text" x-model="query" @focus="open = true" @input="open = true; activeIndex = -1"
+                               @keydown.down.prevent="move(1)" @keydown.up.prevent="move(-1)"
+                               @keydown.enter.prevent="chooseActive()" @keydown.escape="open = false"
+                               autocomplete="off" placeholder="Cari produk..." data-produk-search
+                               class="w-full rounded-md border-gray-300 text-sm">
+                        <button type="button" @click="openKategoriModal()" title="Pilih dari Kategori"
+                                class="shrink-0 px-2 rounded-md border border-gray-300 text-gray-500 hover:bg-gray-100">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h.007v.008H3.75V6.75zm0 5.25h.007v.008H3.75V12zm0 5.25h.007v.008H3.75v-.008zM6 6.75h14.25M6 12h14.25M6 17.25h14.25" />
+                            </svg>
+                        </button>
+                    </div>
                     <input type="hidden" :name="`items[${index}][KdProd]`" :value="item.KdProd" required>
 
                     <div x-show="open && results.length > 0" x-cloak :id="'prod-search-list-' + index"
@@ -359,6 +383,49 @@
                     <p class="text-xs text-gray-400 mt-1" x-show="open && query.length > 0 && results.length === 0">
                         Produk tidak ditemukan.
                     </p>
+
+                    {{-- Modal: pilih produk lewat kategori --}}
+                    <div x-show="kategoriModalOpen" x-cloak @keydown.escape.window="kategoriModalOpen = false"
+                         class="fixed inset-0 z-50 flex items-center justify-center p-4">
+                        <div @click="kategoriModalOpen = false" class="absolute inset-0 bg-gray-900/50"></div>
+
+                        <div class="relative bg-white rounded-lg shadow-lg w-full max-w-2xl flex flex-col" style="max-height: 80vh;" @click.stop>
+                            <div class="px-5 py-4 border-b border-gray-200 flex items-center justify-between shrink-0">
+                                <h3 class="font-semibold text-gray-900">Pilih Produk dari Kategori</h3>
+                                <button type="button" @click="kategoriModalOpen = false" class="text-gray-400 hover:text-gray-600">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
+
+                            <div class="grid grid-cols-2 flex-1" style="min-height: 0;">
+                                <div class="border-r border-gray-200 overflow-y-auto">
+                                    <template x-for="k in kategoriList" :key="k.KdDivs">
+                                        <button type="button" @click="selectedKategori = k.KdDivs"
+                                                :class="selectedKategori === k.KdDivs ? 'bg-indigo-50 text-indigo-700 font-medium' : 'text-gray-700 hover:bg-gray-50'"
+                                                class="block w-full text-left px-3 py-2 text-sm border-b border-gray-100">
+                                            <span x-text="k.NmDivs"></span>
+                                        </button>
+                                    </template>
+                                </div>
+                                <div class="overflow-y-auto">
+                                    <template x-if="!selectedKategori">
+                                        <p class="text-xs text-gray-400 p-3">← Pilih kategori dulu.</p>
+                                    </template>
+                                    <template x-if="selectedKategori && produkInKategori.length === 0">
+                                        <p class="text-xs text-gray-400 p-3">Tidak ada produk di kategori ini.</p>
+                                    </template>
+                                    <template x-for="p in produkInKategori" :key="p.KdProd">
+                                        <button type="button" @click="selectFromKategori(p)"
+                                                class="block w-full text-left px-3 py-2 text-sm border-b border-gray-100 hover:bg-gray-50">
+                                            <span x-text="p.NmProd"></span> <span class="text-gray-400" x-text="'(' + p.KdProd + ')'"></span>
+                                        </button>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <div class="col-span-2 sm:col-span-3">
                     <label class="block text-xs text-gray-500 mb-1">Judul</label>

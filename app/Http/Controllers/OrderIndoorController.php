@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreOrderIndoorRequest;
 use App\Models\Customer;
+use App\Models\Kategori;
 use App\Models\KonfigurasiJasaPotong;
 use App\Models\OrderIndoor;
 use App\Models\OrderIndoorDetail;
@@ -40,6 +41,7 @@ class OrderIndoorController extends Controller
         return view('order-indoor.create', [
             'selectedCustomer' => old('KdCust') ? Customer::where('KdCust', old('KdCust'))->first() : null,
             'produkList' => Produk::orderBy('NoUrut')->get(),
+            'kategoriList' => Kategori::whereHas('produk')->orderBy('NoUrut')->get(),
             'nilaiX' => KonfigurasiJasaPotong::current()->nilai_x,
         ]);
     }
@@ -79,6 +81,7 @@ class OrderIndoorController extends Controller
             'items' => $items,
             'selectedCustomer' => $orderIndoor->customer,
             'produkList' => Produk::orderBy('NoUrut')->get(),
+            'kategoriList' => Kategori::whereHas('produk')->orderBy('NoUrut')->get(),
             'nilaiX' => KonfigurasiJasaPotong::current()->nilai_x,
         ]);
     }
@@ -142,13 +145,13 @@ class OrderIndoorController extends Controller
 
     private function generateNoOrder(string $tglOrder): string
     {
-        $prefix = date('ymd', strtotime($tglOrder));
+        $prefix = 'IND'.date('ymd', strtotime($tglOrder));
 
         $last = OrderIndoor::where('NoOrder', 'like', $prefix.'%')
             ->orderByDesc('NoOrder')
             ->value('NoOrder');
 
-        $nextSeq = $last ? ((int) substr($last, 6, 5)) + 1 : 1;
+        $nextSeq = $last ? ((int) substr($last, 9, 5)) + 1 : 1;
 
         return $prefix.str_pad((string) $nextSeq, 5, '0', STR_PAD_LEFT);
     }

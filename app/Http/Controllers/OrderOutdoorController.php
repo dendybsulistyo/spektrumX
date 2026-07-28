@@ -174,20 +174,35 @@ class OrderOutdoorController extends Controller
             'created_at' => now(),
         ]);
 
-        return redirect()->route('order-cetak.index')->with('status', 'Pengajuan pembatalan order dikirim, menunggu persetujuan Admin/Admin Kasir.');
+        return redirect()->route('order-desain.index')->with('status', 'Pengajuan pembatalan order dikirim, menunggu persetujuan Admin/Admin Kasir.');
     }
 
-    public function approveCancel(OrderOutdoor $orderOutdoor): RedirectResponse
+    /**
+     * Admin/Admin Kasir approves a pending cancellation with one of two
+     * outcomes: void the invoice and queue it for a replacement note
+     * (nota_pengganti), or cancel the order outright with nothing further
+     * to process (batal_total). invoice_voided_at is the flag that decides
+     * which — it's what Kasir's "needs replacement" queue and
+     * createReplacement() both key off, so leaving it null for batal_total
+     * naturally keeps that order out of the replacement flow.
+     */
+    public function approveCancel(Request $request, OrderOutdoor $orderOutdoor): RedirectResponse
     {
         if (! $orderOutdoor->cancel_requested_at) {
             return back()->with('error', 'Order ini tidak punya pengajuan pembatalan yang menunggu persetujuan.');
         }
 
-        DB::transaction(function () use ($orderOutdoor) {
+        $data = $request->validate([
+            'resolution' => ['required', 'in:nota_pengganti,batal_total'],
+        ]);
+
+        $isReplacement = $data['resolution'] === 'nota_pengganti';
+
+        DB::transaction(function () use ($orderOutdoor, $isReplacement) {
             $orderOutdoor->update([
                 'cancel_approved_at' => now(),
                 'cancel_approved_by' => auth()->id(),
-                'invoice_voided_at' => now(),
+                'invoice_voided_at' => $isReplacement ? now() : null,
                 'status' => 'batal',
             ]);
 
@@ -196,13 +211,20 @@ class OrderOutdoorController extends Controller
                 'order_id' => $orderOutdoor->id,
                 'stage' => 'pembatalan',
                 'action' => 'disetujui',
-                'catatan' => 'Nota dihanguskan; menunggu pembuatan nota pengganti oleh kasir.',
+                'catatan' => $isReplacement
+                    ? 'Nota dihanguskan; menunggu pembuatan nota pengganti oleh kasir.'
+                    : 'Disetujui batal total, tidak ada nota pengganti.',
                 'user_id' => auth()->id(),
                 'created_at' => now(),
             ]);
         });
 
-        return redirect()->route('kasir.index')->with('status', 'Pembatalan disetujui. Nota lama hangus dan menunggu nota pengganti dari kasir.');
+        if ($isReplacement) {
+            return redirect()->route('kasir.replacement.create', $orderOutdoor)
+                ->with('status', 'Pembatalan disetujui. Nota lama hangus, silakan buat nota pengganti.');
+        }
+
+        return redirect()->route('order-desain.index')->with('status', 'Pembatalan disetujui, order dibatalkan total.');
     }
 
     public function rejectCancel(OrderOutdoor $orderOutdoor): RedirectResponse
@@ -227,7 +249,7 @@ class OrderOutdoorController extends Controller
             'created_at' => now(),
         ]);
 
-        return redirect()->route('order-cetak.index')->with('status', 'Pengajuan pembatalan ditolak, order lanjut diproses normal.');
+        return redirect()->route('order-desain.index')->with('status', 'Pengajuan pembatalan ditolak, order lanjut diproses normal.');
     }
 
     /**
@@ -255,13 +277,13 @@ class OrderOutdoorController extends Controller
 
     private function generateNoOrder(string $tglOrder): string
     {
-        $prefix = 'O'.date('ymd', strtotime($tglOrder));
+        $prefix = 'OUT'.date('ymd', strtotime($tglOrder));
 
         $last = OrderOutdoor::where('NoOrder', 'like', $prefix.'%')
             ->orderByDesc('NoOrder')
             ->value('NoOrder');
 
-        $nextSeq = $last ? ((int) substr($last, 7, 5)) + 1 : 1;
+        $nextSeq = $last ? ((int) substr($last, 9, 5)) + 1 : 1;
 
         return $prefix.str_pad((string) $nextSeq, 5, '0', STR_PAD_LEFT);
     }

@@ -268,32 +268,34 @@
 
         <template x-for="(item, index) in items" :key="index">
             <div class="mb-3 p-3 bg-gray-50 rounded-md">
-                <div class="grid grid-cols-2 sm:grid-cols-12 gap-2 items-start">
+                <div class="grid grid-cols-2 sm:grid-cols-12 gap-1 items-start">
                 <div class="col-span-2 sm:col-span-2">
                     <label class="block text-xs text-gray-500 mb-1">Nama File / Desain</label>
                     <input type="text" :name="`items[${index}][NmFile]`" x-model="item.NmFile" required
                            data-item-search
-                           class="w-full rounded-md border-gray-300 text-sm">
+                           class="w-full rounded-md border-gray-300 text-sm px-2">
                 </div>
+
                 <div class="sm:col-span-1">
                     <label class="block text-xs text-gray-500 mb-1">Panjang (cm)</label>
                     <input type="number" step="0.01" :name="`items[${index}][Panjang]`" x-model="item.Panjang" required
-                           class="w-full rounded-md border-gray-300 text-sm">
+                           class="w-full rounded-md border-gray-300 text-sm px-2">
                 </div>
+
                 <div class="sm:col-span-1">
                     <label class="block text-xs text-gray-500 mb-1">Lebar (cm)</label>
                     <input type="number" step="0.01" :name="`items[${index}][Lebar]`" x-model="item.Lebar" required
-                           class="w-full rounded-md border-gray-300 text-sm">
+                           class="w-full rounded-md border-gray-300 text-sm px-2">
                 </div>
                 <div class="sm:col-span-1">
                     <label class="block text-xs text-gray-500 mb-1">Qty</label>
                     <input type="number" :name="`items[${index}][Qty]`" x-model="item.Qty" min="1" required
-                           class="w-full rounded-md border-gray-300 text-sm">
+                           class="w-full rounded-md border-gray-300 text-sm px-2">
                 </div>
                 <div class="col-span-2 sm:col-span-2">
                     <label class="block text-xs text-gray-500 mb-1">Printer Outdoor</label>
-                    <select :name="`items[${index}][KdPrn]`" x-model="item.KdPrn" @change="onPrinterChange(item)" class="w-full rounded-md border-gray-300 text-sm">
-                        <option value="">-- Pilih Printer --</option>
+                    <select :name="`items[${index}][KdPrn]`" x-model="item.KdPrn" @change="onPrinterChange(item)" class="w-full rounded-md border-gray-300 text-sm px-2">
+                        <option value="">-- Printer --</option>
                         @foreach ($printerOutdoorList as $p)
                             <option value="{{ $p->KdPrn }}">{{ $p->NmPrn }}</option>
                         @endforeach
@@ -302,8 +304,9 @@
                 <div class="col-span-2 sm:col-span-2">
                     <label class="block text-xs text-gray-500 mb-1">Bahan Cetak (Harga)</label>
                     <select :name="`items[${index}][NoCetak]`" x-model="item.NoCetak" @change="syncKdCtk(item)"
+                            x-init="$nextTick(() => { $el.value = item.NoCetak; })"
                             :disabled="!item.KdPrn" :class="!item.KdPrn && 'bg-gray-100 text-gray-400'"
-                            class="w-full rounded-md border-gray-300 text-sm">
+                            class="w-full rounded-md border-gray-300 text-sm px-2">
                         <option value="">-- Pilih Bahan --</option>
                         <template x-for="b in bahanFor(item.KdPrn)" :key="b.NoCetak">
                             <option :value="b.NoCetak" x-text="b.NmBhn"></option>
@@ -322,7 +325,7 @@
                 </div>
                 <div class="sm:col-span-1">
                     <label class="block text-xs text-gray-500 mb-1">Proof</label>
-                    <select :name="`items[${index}][ada_finishing]`" x-model="item.ada_finishing" class="w-full rounded-md border-gray-300 text-sm">
+                    <select :name="`items[${index}][ada_finishing]`" x-model="item.ada_finishing" class="w-full rounded-md border-gray-300 text-sm px-2">
                         <option value="">-- Pilih --</option>
                         <option value="ya">Ya</option>
                         <option value="tidak">Tidak</option>
@@ -331,8 +334,8 @@
                 <div class="sm:col-span-1">
                     <label class="block text-xs text-gray-500 mb-1">Jenis Finishing</label>
                     <input type="text" :name="`items[${index}][jenis_finishing]`" x-model="item.jenis_finishing"
-                           placeholder="misal: laminasi doff" maxlength="50"
-                           class="w-full rounded-md border-gray-300 text-sm">
+                           placeholder="laminasi doff" maxlength="50"
+                           class="w-full rounded-md border-gray-300 text-sm px-2">
                 </div>
                 <div class="col-span-2 sm:col-span-1 flex justify-end sm:justify-start sm:items-end h-full pt-1 sm:pt-5">
                     <button type="button" @click="items.length > 1 && items.splice(index, 1)"

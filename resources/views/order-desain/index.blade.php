@@ -50,12 +50,21 @@
                                                     diajukan {{ $order->cancelRequestedBy?->name ?? '-' }}
                                                 </span>
                                                 @can('order-outdoor.approve-cancel')
-                                                    <div class="flex gap-1 mt-1">
+                                                    <div class="flex flex-col items-end gap-1 mt-1">
                                                         <form method="POST" action="{{ route('order-outdoor.approve-cancel', $order) }}"
-                                                              onsubmit="return confirm('Setujui pembatalan order {{ $order->NoOrder }}? Order akan ditandai batal.')">
+                                                              onsubmit="return confirm('Setujui pembatalan order {{ $order->NoOrder }} dengan nota pengganti? Nota lama akan dihanguskan.')">
                                                             @csrf
+                                                            <input type="hidden" name="resolution" value="nota_pengganti">
+                                                            <button type="submit" class="inline-flex items-center px-3 py-1.5 bg-indigo-600 text-white text-xs font-semibold rounded-md hover:bg-indigo-700">
+                                                                Setujui + Nota Pengganti
+                                                            </button>
+                                                        </form>
+                                                        <form method="POST" action="{{ route('order-outdoor.approve-cancel', $order) }}"
+                                                              onsubmit="return confirm('Setujui pembatalan TOTAL order {{ $order->NoOrder }}? Tidak akan ada nota pengganti.')">
+                                                            @csrf
+                                                            <input type="hidden" name="resolution" value="batal_total">
                                                             <button type="submit" class="inline-flex items-center px-3 py-1.5 bg-red-600 text-white text-xs font-semibold rounded-md hover:bg-red-700">
-                                                                Setujui
+                                                                Setujui Batal Total
                                                             </button>
                                                         </form>
                                                         <form method="POST" action="{{ route('order-outdoor.reject-cancel', $order) }}"

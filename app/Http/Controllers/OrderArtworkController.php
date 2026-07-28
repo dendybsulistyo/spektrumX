@@ -130,13 +130,13 @@ class OrderArtworkController extends Controller
 
     private function generateNoOrder(string $tglOrder): string
     {
-        $prefix = 'A'.date('ymd', strtotime($tglOrder));
+        $prefix = 'ART'.date('ymd', strtotime($tglOrder));
 
         $last = OrderArtwork::where('NoOrder', 'like', $prefix.'%')
             ->orderByDesc('NoOrder')
             ->value('NoOrder');
 
-        $nextSeq = $last ? ((int) substr($last, 7, 5)) + 1 : 1;
+        $nextSeq = $last ? ((int) substr($last, 9, 5)) + 1 : 1;
 
         return $prefix.str_pad((string) $nextSeq, 5, '0', STR_PAD_LEFT);
     }
