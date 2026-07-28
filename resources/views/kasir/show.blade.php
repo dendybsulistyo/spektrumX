@@ -8,6 +8,20 @@
          @keydown.escape.window="invoiceModalOpen = false">
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div class="lg:col-span-2 bg-white rounded-lg border border-gray-200 overflow-hidden">
+            @if ($type === 'outdoor' && $order->replaces)
+                @php
+                    $credit = (float) $order->replacement_credit;
+                    $difference = (float) $order->total - $credit;
+                @endphp
+                <div class="border-b border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                    <p class="font-semibold">Nota pengganti dari nota hangus {{ $order->replaces->NoOrder }}</p>
+                    <div class="mt-2 grid grid-cols-1 gap-1 sm:grid-cols-3">
+                        <span>Kredit lama: Rp {{ number_format($credit, 0, ',', '.') }}</span>
+                        <span>Total baru: Rp {{ number_format($order->total, 0, ',', '.') }}</span>
+                        <span class="font-semibold">{{ $difference > 0 ? 'Tambahan: Rp '.number_format($difference, 0, ',', '.') : ($difference < 0 ? 'Cashback: Rp '.number_format(abs($difference), 0, ',', '.') : 'Tidak ada selisih') }}</span>
+                    </div>
+                </div>
+            @endif
             <div class="p-4 border-b border-gray-200">
                 <p class="text-sm text-gray-500">Customer</p>
                 <p class="font-semibold text-gray-900">{{ $order->customer?->NmCust ?? '-' }}</p>
@@ -69,7 +83,8 @@
                   @submit="if (dpError) { $event.preventDefault(); }">
                 @csrf
 
-                <div>
+                    @if (! ($type === 'outdoor' && $order->replacement_order_id))
+                    <div>
                     <x-input-label value="Metode Pembayaran" />
                     <div class="mt-2 space-y-2">
                         <label class="flex items-center gap-2">
@@ -91,6 +106,10 @@
                             </label>
                         @endif
                     </div>
+                    @else
+                        <input type="hidden" name="metode_bayar" value="tunai">
+                        <p class="rounded-md bg-amber-50 p-3 text-sm text-amber-800">Proses nota pengganti akan mencatat selisih sebagai tambahan pembayaran atau cashback.</p>
+                    @endif
                     <x-input-error :messages="$errors->get('metode_bayar')" class="mt-1" />
                 </div>
 

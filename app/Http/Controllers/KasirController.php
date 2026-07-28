@@ -52,13 +52,21 @@ class KasirController extends Controller
             ->orderByDesc('NoOrder')
             ->get();
 
-        return view('kasir.index', compact('indoorOrders', 'outdoorOrders', 'artworkOrders', 'dpOrders'));
+        $replacementOrders = OrderOutdoor::query()
+            ->with('customer')
+            ->where('status', 'batal')
+            ->whereNotNull('invoice_voided_at')
+            ->doesntHave('replacement')
+            ->orderByDesc('cancel_approved_at')
+            ->get();
+
+        return view('kasir.index', compact('indoorOrders', 'outdoorOrders', 'artworkOrders', 'dpOrders', 'replacementOrders'));
     }
 
     public function show(string $type, int $id): View
     {
         $order = $this->resolveOrder($type, $id);
-        $order->load('customer.limit');
+        $order->load('customer.limit', 'replaces');
 
         $items = $type === 'indoor' ? $order->detailItems() : $order->items;
 
@@ -77,6 +85,49 @@ class KasirController extends Controller
 
         $order->load('customer.limit');
         $total = (float) $order->total;
+
+        // A replacement keeps the old invoice as history. Money actually
+        // received on it becomes credit; its difference is the only cash
+        // movement the cashier must record on the new invoice.
+        if ($type === 'outdoor' && $order->replacement_order_id) {
+            if ($data['metode_bayar'] !== 'tunai') {
+                return back()->with('error', 'Nota pengganti diproses tunai agar selisih tambahan atau cashback tercatat dengan jelas.');
+            }
+
+            $credit = (float) $order->replacement_credit;
+            $topup = max($total - $credit, 0);
+            $cashback = max($credit - $total, 0);
+
+            DB::transaction(function () use ($order, $type, $data, $total, $topup, $cashback) {
+                $order->update([
+                    'status_bayar' => 'lunas',
+                    'metode_bayar' => 'tunai',
+                    'jumlah_dibayar' => $total,
+                    'jumlah_piutang' => 0,
+                    'topup_amount' => $topup,
+                    'cashback_amount' => $cashback,
+                    'kasir_user_id' => auth()->id(),
+                    'dibayar_at' => now(),
+                    'status' => 'desain',
+                ]);
+
+                OrderStatusNote::create([
+                    'order_type' => $type,
+                    'order_id' => $order->id,
+                    'stage' => 'kasir',
+                    'action' => 'nota_pengganti',
+                    'catatan' => $cashback > 0
+                        ? 'Cashback Rp '.number_format($cashback, 0, ',', '.')
+                        : 'Tambahan pembayaran Rp '.number_format($topup, 0, ',', '.'),
+                    'user_id' => auth()->id(),
+                    'created_at' => now(),
+                ]);
+            });
+
+            return redirect()->route('kasir.show', ['type' => $type, 'id' => $order->id])
+                ->with('status', $cashback > 0 ? 'Nota pengganti selesai. Cashback telah dicatat.' : 'Nota pengganti selesai. Tambahan pembayaran telah dicatat.')
+                ->with('autoPrintInvoice', true);
+        }
 
         if ($data['metode_bayar'] === 'hutang') {
             if (! $this->creditService->canTakeHutang($order->customer, $total)) {

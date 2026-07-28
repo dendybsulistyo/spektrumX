@@ -42,6 +42,11 @@ class OrderOutdoor extends Model
         'cancel_reason',
         'cancel_approved_at',
         'cancel_approved_by',
+        'replacement_order_id',
+        'invoice_voided_at',
+        'replacement_credit',
+        'topup_amount',
+        'cashback_amount',
     ];
 
     protected function casts(): array
@@ -59,6 +64,10 @@ class OrderOutdoor extends Model
             'diambil_at' => 'datetime',
             'cancel_requested_at' => 'datetime',
             'cancel_approved_at' => 'datetime',
+            'invoice_voided_at' => 'datetime',
+            'replacement_credit' => 'float',
+            'topup_amount' => 'float',
+            'cashback_amount' => 'float',
         ];
     }
 
@@ -105,5 +114,15 @@ class OrderOutdoor extends Model
     public function cancelApprovedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'cancel_approved_by');
+    }
+
+    public function replaces(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'replacement_order_id');
+    }
+
+    public function replacement(): HasMany
+    {
+        return $this->hasMany(self::class, 'replacement_order_id');
     }
 }

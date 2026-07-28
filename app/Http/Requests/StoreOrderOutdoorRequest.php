@@ -25,6 +25,7 @@ class StoreOrderOutdoorRequest extends FormRequest
         return [
             'TglOrder' => ['required', 'date'],
             'KdCust' => ['required', 'string', 'exists:customers,KdCust'],
+            'replacement_order_id' => ['nullable', 'integer', 'exists:order_outdoor,id'],
 
             'items' => ['required', 'array', 'min:1'],
             'items.*.NmFile' => ['required', 'string', 'max:50'],

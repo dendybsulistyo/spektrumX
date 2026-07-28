@@ -40,6 +40,7 @@
         .badge-hutang { background: #fef3c7; color: #92400e; }
         .badge-belum { background: #fee2e2; color: #991b1b; }
         .badge-dp { background: #dbeafe; color: #1e40af; }
+        .badge-void { background: #fee2e2; color: #991b1b; }
         .dp-summary { margin-top: 16px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px 16px; }
         .dp-summary .row { display: flex; justify-content: space-between; padding: 2px 0; }
         .dp-summary .row.sisa { font-weight: 700; color: #991b1b; }
@@ -70,7 +71,7 @@
 </head>
 <body>
     @php
-        [$badgeClass, $badgeLabel, $statusNote] = match ($order->status_bayar) {
+        [$badgeClass, $badgeLabel, $statusNote] = $order->invoice_voided_at ? ['badge-void', 'HANGUS', 'Nota dibatalkan dan tidak berlaku sebagai tagihan.'] : match ($order->status_bayar) {
             'lunas' => ['badge-lunas', 'Lunas', 'Dibayar tunai di kasir.'],
             'hutang' => ['badge-hutang', 'Hutang', 'Piutang berjalan — belum lunas.'],
             'dp' => ['badge-dp', 'DP (Belum Lunas)', 'Sudah bayar uang muka — sisa dibayar sebelum pengambilan.'],
@@ -146,6 +147,15 @@
                     <span>Sisa yang Harus Dilunasi</span>
                     <span>Rp {{ number_format($jumlahPiutang, 0, ',', '.') }}</span>
                 </div>
+            </div>
+        @endif
+
+        @if ($order->replacement_order_id)
+            <div class="dp-summary">
+                <div class="row"><span class="muted">Nota asal yang hangus</span><span>{{ $order->replaces?->NoOrder ?? '-' }}</span></div>
+                <div class="row"><span class="muted">Kredit dari nota lama</span><span>Rp {{ number_format($order->replacement_credit ?? 0, 0, ',', '.') }}</span></div>
+                @if (($order->topup_amount ?? 0) > 0)<div class="row sisa"><span>Tambahan pembayaran</span><span>Rp {{ number_format($order->topup_amount, 0, ',', '.') }}</span></div>@endif
+                @if (($order->cashback_amount ?? 0) > 0)<div class="row sisa"><span>Cashback</span><span>Rp {{ number_format($order->cashback_amount, 0, ',', '.') }}</span></div>@endif
             </div>
         @endif
 

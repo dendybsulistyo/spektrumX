@@ -159,7 +159,7 @@ Route::middleware('auth')->group(function () {
     Route::middleware('permission:order-outdoor.manage')->group(function () {
         Route::resource('order-outdoor', OrderOutdoorController::class)->only(['create', 'store', 'update', 'destroy'])->names('order-outdoor');
     });
-    Route::middleware('permission:order-cetak.manage')->group(function () {
+    Route::middleware('permission:order-desain.manage')->group(function () {
         Route::post('/order-outdoor/{orderOutdoor}/request-cancel', [OrderOutdoorController::class, 'requestCancel'])->name('order-outdoor.request-cancel');
     });
     Route::middleware('permission:order-outdoor.approve-cancel')->group(function () {
@@ -179,6 +179,8 @@ Route::middleware('auth')->group(function () {
     Route::middleware('permission:kasir.manage')->group(function () {
         Route::post('/kasir/{type}/{id}/bayar', [KasirController::class, 'bayar'])->name('kasir.bayar');
         Route::post('/kasir/{type}/{id}/lunasi', [KasirController::class, 'lunasi'])->name('kasir.lunasi');
+        Route::get('/kasir/outdoor/{orderOutdoor}/nota-pengganti', [OrderOutdoorController::class, 'createReplacement'])->name('kasir.replacement.create');
+        Route::post('/kasir/outdoor/nota-pengganti', [OrderOutdoorController::class, 'store'])->name('kasir.replacement.store');
     });
 
     Route::middleware('permission:order-desain.view')->group(function () {

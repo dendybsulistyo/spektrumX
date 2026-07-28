@@ -47,11 +47,39 @@ class OrderOutdoorController extends Controller
         ]);
     }
 
+    /** Create a new invoice from an approved cancellation without deleting its history. */
+    public function createReplacement(OrderOutdoor $orderOutdoor): View
+    {
+        abort_unless(
+            $orderOutdoor->status === 'batal' && $orderOutdoor->invoice_voided_at && ! $orderOutdoor->replacement()->exists(),
+            404
+        );
+
+        return view('order-outdoor.create', [
+            'replacementOrder' => $orderOutdoor,
+            'selectedCustomer' => $orderOutdoor->customer,
+            'items' => $orderOutdoor->items,
+            'hargaCetakList' => HargaCetakOutdoor::orderBy('KdCtk')->get(),
+            'printerOutdoorList' => PrinterOutdoor::orderBy('NoUrut')->get(),
+            'bahanCetakOutdoorList' => BahanCetakOutdoor::orderBy('NoUrut')->get(),
+        ]);
+    }
+
     public function store(StoreOrderOutdoorRequest $request): RedirectResponse
     {
         $data = $request->validated();
 
-        DB::transaction(function () use ($data) {
+        $replacement = null;
+
+        DB::transaction(function () use ($data, &$replacement) {
+            if (! empty($data['replacement_order_id'])) {
+                $replacement = OrderOutdoor::lockForUpdate()->findOrFail($data['replacement_order_id']);
+                abort_unless(
+                    $replacement->status === 'batal' && $replacement->invoice_voided_at && ! $replacement->replacement()->exists(),
+                    422,
+                    'Nota asal tidak tersedia untuk dibuatkan pengganti.'
+                );
+            }
             $noOrder = $this->generateNoOrder($data['TglOrder']);
 
             $order = OrderOutdoor::create([
@@ -62,6 +90,8 @@ class OrderOutdoorController extends Controller
                 'Cetak' => false,
                 'status' => 'baru',
                 'status_bayar' => 'belum_bayar',
+                'replacement_order_id' => $replacement?->id,
+                'replacement_credit' => $replacement ? (float) $replacement->jumlah_dibayar : 0,
             ]);
 
             $this->saveItems($order, $data['items']);
@@ -69,7 +99,8 @@ class OrderOutdoorController extends Controller
             $order->update(['total' => $this->pricingService->totalOutdoor($order->fresh())]);
         });
 
-        return redirect()->route('order-outdoor.index')->with('status', 'Order outdoor berhasil dibuat.');
+        return redirect()->route($replacement ? 'kasir.index' : 'order-outdoor.index')
+            ->with('status', $replacement ? 'Nota pengganti berhasil dibuat dan siap diproses kasir.' : 'Order outdoor berhasil dibuat.');
     }
 
     public function edit(OrderOutdoor $orderOutdoor): View
@@ -152,23 +183,26 @@ class OrderOutdoorController extends Controller
             return back()->with('error', 'Order ini tidak punya pengajuan pembatalan yang menunggu persetujuan.');
         }
 
-        $orderOutdoor->update([
-            'cancel_approved_at' => now(),
-            'cancel_approved_by' => auth()->id(),
-            'status' => 'batal',
-        ]);
+        DB::transaction(function () use ($orderOutdoor) {
+            $orderOutdoor->update([
+                'cancel_approved_at' => now(),
+                'cancel_approved_by' => auth()->id(),
+                'invoice_voided_at' => now(),
+                'status' => 'batal',
+            ]);
 
-        OrderStatusNote::create([
-            'order_type' => 'outdoor',
-            'order_id' => $orderOutdoor->id,
-            'stage' => 'pembatalan',
-            'action' => 'disetujui',
-            'catatan' => null,
-            'user_id' => auth()->id(),
-            'created_at' => now(),
-        ]);
+            OrderStatusNote::create([
+                'order_type' => 'outdoor',
+                'order_id' => $orderOutdoor->id,
+                'stage' => 'pembatalan',
+                'action' => 'disetujui',
+                'catatan' => 'Nota dihanguskan; menunggu pembuatan nota pengganti oleh kasir.',
+                'user_id' => auth()->id(),
+                'created_at' => now(),
+            ]);
+        });
 
-        return redirect()->route('order-cetak.index')->with('status', 'Pembatalan order disetujui.');
+        return redirect()->route('kasir.index')->with('status', 'Pembatalan disetujui. Nota lama hangus dan menunggu nota pengganti dari kasir.');
     }
 
     public function rejectCancel(OrderOutdoor $orderOutdoor): RedirectResponse

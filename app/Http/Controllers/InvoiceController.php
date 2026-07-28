@@ -17,7 +17,7 @@ class InvoiceController extends Controller
     public function show(string $type, int $id): View
     {
         $order = $this->resolveOrder($type, $id);
-        $order->load('customer', 'kasir');
+        $order->load('customer', 'kasir', 'replaces');
 
         $rawItems = match ($type) {
             'indoor' => $order->detailItems(),
