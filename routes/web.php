@@ -6,6 +6,8 @@ use App\Http\Controllers\ChatController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DataWarehouseController;
+use App\Http\Controllers\MonitoringKinerjaController;
+use App\Http\Controllers\MonitoringTransaksiController;
 use App\Http\Controllers\DetailIndoorController;
 use App\Http\Controllers\FileMonitorController;
 use App\Http\Controllers\HargaArtworkController;
@@ -49,6 +51,14 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware('permission:data-warehouse.view')->group(function () {
         Route::get('/data-warehouse', [DataWarehouseController::class, 'index'])->name('data-warehouse.index');
+    });
+
+    Route::middleware('permission:monitoring-kinerja.view')->group(function () {
+        Route::get('/monitoring-kinerja', [MonitoringKinerjaController::class, 'index'])->name('monitoring-kinerja.index');
+    });
+
+    Route::middleware('permission:monitoring-transaksi.view')->group(function () {
+        Route::get('/monitoring-transaksi', [MonitoringTransaksiController::class, 'index'])->name('monitoring-transaksi.index');
     });
 
     Route::middleware('permission:customers.view')->group(function () {
@@ -195,6 +205,7 @@ Route::middleware('auth')->group(function () {
     });
     Route::middleware('permission:order-cetak.manage')->group(function () {
         Route::post('/order-cetak/{type}/{id}', [OrderCetakController::class, 'update'])->name('order-cetak.update');
+        Route::post('/order-cetak/outdoor-unit/{detail}/{unit}', [OrderCetakController::class, 'updateOutdoorUnit'])->name('order-cetak.update-outdoor-unit');
     });
 
     Route::middleware('permission:order-qc.view')->group(function () {

@@ -255,13 +255,31 @@
                         </a>
                     @endcan
 
-                    @can('data-warehouse.view')
+                    @if (Auth::user()->hasPermission('data-warehouse.view') || Auth::user()->hasPermission('monitoring-kinerja.view') || Auth::user()->hasPermission('monitoring-transaksi.view'))
                         <p class="px-2.5 pt-4 pb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">Analitik</p>
+                    @endif
 
+                    @can('data-warehouse.view')
                         @php $active = request()->routeIs('data-warehouse.*'); @endphp
                         <a href="{{ route('data-warehouse.index') }}" class="{{ $navClass($active) }}">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="{{ $iconClass($active) }}">{!! $navIcon('chart-bar') !!}</svg>
                             Data Warehouse
+                        </a>
+                    @endcan
+
+                    @can('monitoring-kinerja.view')
+                        @php $active = request()->routeIs('monitoring-kinerja.*'); @endphp
+                        <a href="{{ route('monitoring-kinerja.index') }}" class="{{ $navClass($active) }}">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="{{ $iconClass($active) }}">{!! $navIcon('chart-bar') !!}</svg>
+                            Monitoring Kinerja
+                        </a>
+                    @endcan
+
+                    @can('monitoring-transaksi.view')
+                        @php $active = request()->routeIs('monitoring-transaksi.*'); @endphp
+                        <a href="{{ route('monitoring-transaksi.index') }}" class="{{ $navClass($active) }}">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="{{ $iconClass($active) }}">{!! $navIcon('chart-bar') !!}</svg>
+                            Monitoring Transaksi
                         </a>
                     @endcan
 

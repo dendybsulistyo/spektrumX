@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class OrderOutdoorDetail extends Model
 {
@@ -44,5 +45,10 @@ class OrderOutdoorDetail extends Model
     public function hargaCetak(): BelongsTo
     {
         return $this->belongsTo(HargaCetakOutdoor::class, 'KdCtk', 'KdCtk');
+    }
+
+    public function cetakUnits(): HasMany
+    {
+        return $this->hasMany(OrderOutdoorCetakUnit::class);
     }
 }

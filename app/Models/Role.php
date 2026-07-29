@@ -104,6 +104,12 @@ class Role extends Model
         'Data Warehouse' => [
             'data-warehouse.view' => 'Lihat dashboard data warehouse',
         ],
+        'Monitoring Kinerja' => [
+            'monitoring-kinerja.view' => 'Lihat monitoring kinerja staf',
+        ],
+        'Monitoring Transaksi' => [
+            'monitoring-transaksi.view' => 'Lihat monitoring transaksi harian/mingguan/bulanan/tahunan',
+        ],
         'Jasa Potong' => [
             'jasa-potong.manage' => 'Kelola nilai X (biaya tetap) Jasa Potong',
         ],

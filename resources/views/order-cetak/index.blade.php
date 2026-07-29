@@ -56,11 +56,21 @@
                                     <td class="px-4 py-3 text-gray-600">{{ is_string($row->order->TglOrder) ? $row->order->TglOrder : $row->order->TglOrder?->format('Y-m-d') }}</td>
                                     <td class="px-4 py-3 text-gray-600">{{ $row->order->customer?->NmCust ?? '-' }}</td>
                                     <td class="px-4 py-3 text-right">
-                                        <button type="button"
-                                                @click="modalOpen = true; type = '{{ $tabKey }}'; id = {{ $row->order->id }}; noOrder = '{{ $row->order->NoOrder }}'"
-                                                class="inline-flex items-center px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-md hover:bg-blue-700">
-                                            Update Status
-                                        </button>
+                                        @if ($tabKey === 'outdoor')
+                                            <form method="POST" action="{{ route('order-cetak.update-outdoor-unit', [$row->detailId, $row->unitIndex]) }}"
+                                                  onsubmit="return confirm('Tandai unit {{ $row->unitIndex }}/{{ $row->unitTotal }} dari {{ $row->itemName }} selesai dicetak?')">
+                                                @csrf
+                                                <button type="submit" class="inline-flex items-center px-3 py-1.5 bg-green-600 text-white text-xs font-semibold rounded-md hover:bg-green-700">
+                                                    Tandai Selesai
+                                                </button>
+                                            </form>
+                                        @else
+                                            <button type="button"
+                                                    @click="modalOpen = true; type = '{{ $tabKey }}'; id = {{ $row->order->id }}; noOrder = '{{ $row->order->NoOrder }}'"
+                                                    class="inline-flex items-center px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-md hover:bg-blue-700">
+                                                Update Status
+                                            </button>
+                                        @endif
                                     </td>
                                 </tr>
                             @empty
