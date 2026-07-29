@@ -17,7 +17,13 @@ class InvoiceController extends Controller
     public function show(string $type, int $id): View
     {
         $order = $this->resolveOrder($type, $id);
-        $order->load('customer', 'kasir', 'replaces');
+        $order->load('customer', 'kasir');
+
+        // The "nota pengganti" (replacement invoice) feature only exists for
+        // Order Outdoor — Indoor/Artwork models don't define this relation.
+        if ($type === 'outdoor') {
+            $order->load('replaces');
+        }
 
         $rawItems = match ($type) {
             'indoor' => $order->detailItems(),

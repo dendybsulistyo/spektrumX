@@ -90,15 +90,15 @@
         },
     }">
 
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-        <div>
+    <div class="flex flex-col sm:flex-row gap-4 mb-6">
+        <div style="width: 100%; max-width: 200px;">
             <x-input-label for="TglOrder" value="Tanggal Order" />
             <x-text-input id="TglOrder" name="TglOrder" type="date" class="mt-1 block w-full"
                 value="{{ old('TglOrder', $order?->TglOrder ?? now()->format('Y-m-d')) }}" required />
             <x-input-error :messages="$errors->get('TglOrder')" class="mt-1" />
         </div>
 
-        <div class="relative"
+        <div class="relative flex-1"
              x-data="{
                 query: @js($selectedCustomerLabel),
                 selectedKdCust: @js(old('KdCust', $selectedCustomer?->KdCust ?? '')),
@@ -304,6 +304,9 @@
                         activeIndex: -1,
                         kategoriModalOpen: false,
                         selectedKategori: null,
+                        kategoriFocusZone: 'kategori',
+                        activeKategoriIndex: -1,
+                        activeProdukIndex: -1,
                         get results() {
                             const q = this.query.trim().toLowerCase();
                             if (q === '') return produkOptions.slice(0, 30);
@@ -319,10 +322,49 @@
                             this.selectedKategori = null;
                             this.kategoriModalOpen = true;
                             this.open = false;
+                            this.kategoriFocusZone = 'kategori';
+                            this.activeKategoriIndex = -1;
+                            this.activeProdukIndex = -1;
+                            this.$nextTick(() => this.$refs.kategoriPanel?.focus());
                         },
                         selectFromKategori(p) {
                             this.select(p);
                             this.kategoriModalOpen = false;
+                        },
+                        pickKategori(i) {
+                            this.activeKategoriIndex = i;
+                            this.selectedKategori = kategoriList[i].KdDivs;
+                            this.activeProdukIndex = -1;
+                        },
+                        moveKategori(delta) {
+                            if (kategoriList.length === 0) return;
+                            const next = this.activeKategoriIndex < 0 ? 0 : Math.max(0, Math.min(kategoriList.length - 1, this.activeKategoriIndex + delta));
+                            this.pickKategori(next);
+                            this.$nextTick(() => {
+                                document.getElementById('kat-item-' + index + '-' + next)
+                                    ?.scrollIntoView({ block: 'nearest' });
+                            });
+                        },
+                        moveProduk(delta) {
+                            if (this.produkInKategori.length === 0) return;
+                            this.activeProdukIndex = this.activeProdukIndex < 0 ? 0 : Math.max(0, Math.min(this.produkInKategori.length - 1, this.activeProdukIndex + delta));
+                            this.$nextTick(() => {
+                                document.getElementById('prod-kat-item-' + index + '-' + this.activeProdukIndex)
+                                    ?.scrollIntoView({ block: 'nearest' });
+                            });
+                        },
+                        focusProdukPane() {
+                            if (this.produkInKategori.length === 0) return;
+                            this.kategoriFocusZone = 'produk';
+                            this.activeProdukIndex = 0;
+                        },
+                        focusKategoriPane() {
+                            this.kategoriFocusZone = 'kategori';
+                        },
+                        chooseActiveProduk() {
+                            if (this.activeProdukIndex >= 0 && this.produkInKategori[this.activeProdukIndex]) {
+                                this.selectFromKategori(this.produkInKategori[this.activeProdukIndex]);
+                            }
                         },
                         select(p) {
                             item.KdProd = p.KdProd;
@@ -389,7 +431,13 @@
                          class="fixed inset-0 z-50 flex items-center justify-center p-4">
                         <div @click="kategoriModalOpen = false" class="absolute inset-0 bg-gray-900/50"></div>
 
-                        <div class="relative bg-white rounded-lg shadow-lg w-full max-w-2xl flex flex-col" style="max-height: 80vh;" @click.stop>
+                        <div class="relative bg-white rounded-lg shadow-lg w-full max-w-2xl flex flex-col" style="max-height: 80vh; outline: none;" @click.stop
+                             x-ref="kategoriPanel" tabindex="-1"
+                             @keydown.down.prevent="kategoriFocusZone === 'kategori' ? moveKategori(1) : moveProduk(1)"
+                             @keydown.up.prevent="kategoriFocusZone === 'kategori' ? moveKategori(-1) : moveProduk(-1)"
+                             @keydown.right.prevent="kategoriFocusZone === 'kategori' && focusProdukPane()"
+                             @keydown.left.prevent="kategoriFocusZone === 'produk' && focusKategoriPane()"
+                             @keydown.enter.prevent="kategoriFocusZone === 'produk' && chooseActiveProduk()">
                             <div class="px-5 py-4 border-b border-gray-200 flex items-center justify-between shrink-0">
                                 <h3 class="font-semibold text-gray-900">Pilih Produk dari Kategori</h3>
                                 <button type="button" @click="kategoriModalOpen = false" class="text-gray-400 hover:text-gray-600">
@@ -399,11 +447,16 @@
                                 </button>
                             </div>
 
+                            <p class="px-5 pt-2 text-xs text-gray-400 shrink-0">
+                                Pakai ↑↓ untuk pilih kategori, → untuk lihat produk, ← untuk kembali, Enter untuk pilih produk.
+                            </p>
+
                             <div class="grid grid-cols-2 flex-1" style="min-height: 0;">
                                 <div class="border-r border-gray-200 overflow-y-auto">
-                                    <template x-for="k in kategoriList" :key="k.KdDivs">
-                                        <button type="button" @click="selectedKategori = k.KdDivs"
-                                                :class="selectedKategori === k.KdDivs ? 'bg-indigo-50 text-indigo-700 font-medium' : 'text-gray-700 hover:bg-gray-50'"
+                                    <template x-for="(k, i) in kategoriList" :key="k.KdDivs">
+                                        <button type="button" @click="pickKategori(i); kategoriFocusZone = 'kategori'"
+                                                :id="'kat-item-' + index + '-' + i"
+                                                :class="activeKategoriIndex === i ? 'bg-indigo-50 text-indigo-700 font-medium' : (selectedKategori === k.KdDivs ? 'bg-gray-50 text-gray-700' : 'text-gray-700 hover:bg-gray-50')"
                                                 class="block w-full text-left px-3 py-2 text-sm border-b border-gray-100">
                                             <span x-text="k.NmDivs"></span>
                                         </button>
@@ -416,9 +469,11 @@
                                     <template x-if="selectedKategori && produkInKategori.length === 0">
                                         <p class="text-xs text-gray-400 p-3">Tidak ada produk di kategori ini.</p>
                                     </template>
-                                    <template x-for="p in produkInKategori" :key="p.KdProd">
-                                        <button type="button" @click="selectFromKategori(p)"
-                                                class="block w-full text-left px-3 py-2 text-sm border-b border-gray-100 hover:bg-gray-50">
+                                    <template x-for="(p, i) in produkInKategori" :key="p.KdProd">
+                                        <button type="button" @click="selectFromKategori(p)" @mouseenter="activeProdukIndex = i"
+                                                :id="'prod-kat-item-' + index + '-' + i"
+                                                :class="kategoriFocusZone === 'produk' && activeProdukIndex === i ? 'bg-indigo-50 text-indigo-700 font-medium' : 'hover:bg-gray-50'"
+                                                class="block w-full text-left px-3 py-2 text-sm border-b border-gray-100">
                                             <span x-text="p.NmProd"></span> <span class="text-gray-400" x-text="'(' + p.KdProd + ')'"></span>
                                         </button>
                                     </template>

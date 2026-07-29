@@ -63,15 +63,15 @@
         },
     }">
 
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-        <div>
+    <div class="flex flex-col sm:flex-row gap-4 mb-6">
+        <div style="width: 100%; max-width: 200px;">
             <x-input-label for="TglOrder" value="Tanggal Order" />
             <x-text-input id="TglOrder" name="TglOrder" type="date" class="mt-1 block w-full"
                 value="{{ old('TglOrder', $order?->TglOrder ?? now()->format('Y-m-d')) }}" required />
             <x-input-error :messages="$errors->get('TglOrder')" class="mt-1" />
         </div>
 
-        <div class="relative"
+        <div class="relative flex-1"
              x-data="{
                 query: @js($selectedCustomerLabel),
                 selectedKdCust: @js(old('KdCust', $selectedCustomer?->KdCust ?? '')),

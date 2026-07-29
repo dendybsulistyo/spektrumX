@@ -40,7 +40,7 @@
             <tbody class="divide-y">
                 @forelse ($orders as $order)
                     <tr>
-                        <td class="px-4 py-3">{{ $order->NoOrder }}</td>
+                        <td class="px-4 py-3"><x-order-number :number="$order->NoOrder" /></td>
                         <td class="px-4 py-3 text-gray-600">{{ \Carbon\Carbon::parse($order->TglOrder)->format('d M Y') }}</td>
                         <td class="px-4 py-3 text-gray-900 font-semibold">{{ $order->customer?->NmCust ?? $order->KdCust }}</td>
                         <td class="px-4 py-3 text-right text-gray-900">Rp {{ number_format($order->total ?? 0, 0, ',', '.') }}</td>

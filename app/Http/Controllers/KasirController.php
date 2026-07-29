@@ -66,7 +66,13 @@ class KasirController extends Controller
     public function show(string $type, int $id): View
     {
         $order = $this->resolveOrder($type, $id);
-        $order->load('customer.limit', 'replaces');
+        $order->load('customer.limit');
+
+        // The "nota pengganti" (replacement invoice) feature only exists for
+        // Order Outdoor — Indoor/Artwork models don't define this relation.
+        if ($type === 'outdoor') {
+            $order->load('replaces');
+        }
 
         $items = $type === 'indoor' ? $order->detailItems() : $order->items;
 
