@@ -24,6 +24,7 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\OrderCetakController;
 use App\Http\Controllers\OrderDesainController;
 use App\Http\Controllers\OrderIndoorController;
+use App\Http\Controllers\OrderCommentController;
 use App\Http\Controllers\OrderOutdoorController;
 use App\Http\Controllers\OrderQcController;
 use App\Http\Controllers\PengambilanController;
@@ -204,9 +205,12 @@ Route::middleware('auth')->group(function () {
         Route::get('/order-cetak', [OrderCetakController::class, 'index'])->name('order-cetak.index');
     });
     Route::middleware('permission:order-cetak.manage')->group(function () {
+        Route::post('/order-cetak/progress/{item}', [OrderCetakController::class, 'updateProgress'])->name('order-cetak.progress');
         Route::post('/order-cetak/{type}/{id}', [OrderCetakController::class, 'update'])->name('order-cetak.update');
-        Route::post('/order-cetak/outdoor-unit/{detail}/{unit}', [OrderCetakController::class, 'updateOutdoorUnit'])->name('order-cetak.update-outdoor-unit');
     });
+
+    Route::post('/order-comments/{type}/{id}', [OrderCommentController::class, 'store'])->name('order-comments.store');
+    Route::post('/order-comments/{type}/{id}/read', [OrderCommentController::class, 'markRead'])->name('order-comments.read');
 
     Route::middleware('permission:order-qc.view')->group(function () {
         Route::get('/order-qc', [OrderQcController::class, 'index'])->name('order-qc.index');

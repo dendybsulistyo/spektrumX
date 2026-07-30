@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\OrderOutdoorCetakUnit;
 use App\Models\OrderStatusNote;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -14,13 +13,7 @@ class MonitoringKinerjaController extends Controller
     /**
      * Order-level activity (one row per stage transition) comes from
      * order_status_notes, which is common to Indoor/Outdoor/Artwork and every
-     * stage (desain/cetak/qc/kasir/pengambilan/pembatalan). Outdoor's cetak
-     * stage is additionally tracked per physical unit in
-     * order_outdoor_cetak_units (added alongside the per-unit cetak
-     * workflow), which is a finer-grained productivity signal than the
-     * single "order done" note it also produces — shown as its own section
-     * rather than folded into the stage table so the two counts aren't
-     * confused with each other.
+     * stage (desain/cetak/qc/kasir/pengambilan/pembatalan).
      */
     public function index(Request $request): View
     {
@@ -44,20 +37,11 @@ class MonitoringKinerjaController extends Controller
         }
         uasort($staffRows, fn ($a, $b) => array_sum($b['counts']) <=> array_sum($a['counts']));
 
-        $cetakUnitCounts = OrderOutdoorCetakUnit::query()
-            ->with('cetakBy')
-            ->whereBetween('cetak_at', ["{$from} 00:00:00", "{$to} 23:59:59"])
-            ->select('cetak_by', DB::raw('count(*) as jumlah_unit'))
-            ->groupBy('cetak_by')
-            ->orderByDesc('jumlah_unit')
-            ->get();
-
         return view('monitoring-kinerja.index', [
             'from' => $from,
             'to' => $to,
             'stages' => $stages,
             'staffRows' => $staffRows,
-            'cetakUnitCounts' => $cetakUnitCounts,
         ]);
     }
 }

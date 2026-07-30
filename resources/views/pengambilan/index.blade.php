@@ -53,20 +53,27 @@
                                     @endif
                                 </td>
                                 <td class="px-4 py-3 text-right">
-                                    @if ($order->status_bayar === 'dp' && (float) $order->jumlah_piutang > 0)
-                                        <span class="inline-flex items-center px-3 py-1.5 bg-gray-100 text-gray-400 text-xs font-semibold rounded-md" title="Lunasi sisa DP dulu lewat halaman Bayar">
-                                            Lunasi DP Dulu
-                                        </span>
-                                    @else
-                                        <form method="POST" action="{{ route('pengambilan.serahkan', ['type' => $tabKey, 'id' => $order->id]) }}"
-                                              onsubmit="return confirm('Konfirmasi barang order {{ $order->NoOrder }} sudah diserahkan ke customer?')">
-                                            @csrf
-                                            <button type="submit"
-                                                    class="inline-flex items-center px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-md hover:bg-blue-700">
-                                                Serahkan Barang
-                                            </button>
-                                        </form>
-                                    @endif
+                                    <div class="flex items-center justify-end gap-1.5">
+                                        @if ($tabKey === 'outdoor')
+                                            <x-order-discussion type="outdoor" :order-id="$order->id" :no-order="$order->NoOrder"
+                                                                 :comments="$outdoorComments->get($order->id, collect())"
+                                                                 :unread="$outdoorUnread->get($order->id, 0)" />
+                                        @endif
+                                        @if ($order->status_bayar === 'dp' && (float) $order->jumlah_piutang > 0)
+                                            <span class="inline-flex items-center px-3 py-1.5 bg-gray-100 text-gray-400 text-xs font-semibold rounded-md" title="Lunasi sisa DP dulu lewat halaman Bayar">
+                                                Lunasi DP Dulu
+                                            </span>
+                                        @else
+                                            <form method="POST" action="{{ route('pengambilan.serahkan', ['type' => $tabKey, 'id' => $order->id]) }}"
+                                                  onsubmit="return confirm('Konfirmasi barang order {{ $order->NoOrder }} sudah diserahkan ke customer?')">
+                                                @csrf
+                                                <button type="submit"
+                                                        class="inline-flex items-center px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-md hover:bg-blue-700">
+                                                    Serahkan Barang
+                                                </button>
+                                            </form>
+                                        @endif
+                                    </div>
                                 </td>
                             </tr>
                         @empty

@@ -26,4 +26,9 @@ class Kategori extends Model
     {
         return $this->hasMany(Produk::class, 'KdDivs', 'KdDivs');
     }
+
+    public function produkArtwork(): HasMany
+    {
+        return $this->hasMany(HargaArtwork::class, 'KdDivs', 'KdDivs');
+    }
 }

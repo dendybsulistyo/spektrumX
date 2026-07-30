@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class OrderOutdoorDetail extends Model
 {
@@ -23,6 +22,7 @@ class OrderOutdoorDetail extends Model
         'Panjang',
         'Lebar',
         'Qty',
+        'qty_diproses',
         'KdCtk',
         'ada_finishing',
         'jenis_finishing',
@@ -34,6 +34,7 @@ class OrderOutdoorDetail extends Model
             'Panjang' => 'float',
             'Lebar' => 'float',
             'ada_finishing' => 'boolean',
+            'qty_diproses' => 'integer',
         ];
     }
 
@@ -42,13 +43,18 @@ class OrderOutdoorDetail extends Model
         return $this->belongsTo(OrderOutdoor::class, 'order_outdoor_id');
     }
 
+    public function sisaQty(): int
+    {
+        return max(0, (int) $this->Qty - (int) $this->qty_diproses);
+    }
+
+    public function isSelesai(): bool
+    {
+        return $this->sisaQty() === 0;
+    }
+
     public function hargaCetak(): BelongsTo
     {
         return $this->belongsTo(HargaCetakOutdoor::class, 'KdCtk', 'KdCtk');
-    }
-
-    public function cetakUnits(): HasMany
-    {
-        return $this->hasMany(OrderOutdoorCetakUnit::class);
     }
 }

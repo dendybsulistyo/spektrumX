@@ -66,37 +66,5 @@
                 </table>
             </div>
         </div>
-
-        {{-- Detail cetak Outdoor per unit --}}
-        <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
-            <div class="px-4 py-3 border-b border-gray-200">
-                <h3 class="text-sm font-semibold text-gray-700">Jumlah Unit Dicetak (Order Outdoor)</h3>
-                <p class="text-xs text-gray-400 mt-0.5">Dihitung per lembar/pcs yang ditandai selesai di Antrian Cetak Outdoor.</p>
-            </div>
-            <div class="overflow-x-auto">
-                <table class="w-full text-sm min-w-[400px]">
-                    <thead class="bg-gray-50 text-left text-xs uppercase text-gray-500">
-                        <tr>
-                            <th class="px-4 py-3">Staf</th>
-                            <th class="px-4 py-3 text-right">Jumlah Unit</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y">
-                        @forelse ($cetakUnitCounts as $row)
-                            <tr>
-                                <td class="px-4 py-3 font-semibold text-gray-900">{{ $row->cetakBy?->name ?? 'Tidak diketahui' }}</td>
-                                <td class="px-4 py-3 text-right text-gray-600">{{ $row->jumlah_unit }}</td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="2" class="px-4 py-8 text-center text-gray-400">
-                                    Belum ada unit yang dicetak pada rentang tanggal ini.
-                                </td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
-        </div>
     </div>
 </x-app-layout>

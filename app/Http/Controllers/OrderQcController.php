@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\OrderArtwork;
+use App\Models\OrderComment;
 use App\Models\OrderIndoor;
 use App\Models\OrderOutdoor;
 use App\Models\OrderStatusNote;
@@ -26,7 +27,13 @@ class OrderQcController extends Controller
         $artworkOrders = OrderArtwork::query()->with('customer')->where('status', 'qc')
             ->orderByDesc('TglOrder')->orderByDesc('NoOrder')->get();
 
-        return view('order-qc.index', compact('indoorOrders', 'outdoorOrders', 'artworkOrders'));
+        $outdoorComments = OrderComment::with('user')
+            ->where('order_type', 'outdoor')->whereIn('order_id', $outdoorOrders->pluck('id'))
+            ->orderBy('created_at')->get()->groupBy('order_id');
+
+        $outdoorUnread = OrderComment::unreadCountsFor('outdoor', $outdoorOrders->pluck('id'));
+
+        return view('order-qc.index', compact('indoorOrders', 'outdoorOrders', 'artworkOrders', 'outdoorComments', 'outdoorUnread'));
     }
 
     public function update(Request $request, string $type, int $id): RedirectResponse

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreOrderArtworkRequest;
 use App\Models\Customer;
 use App\Models\HargaArtwork;
+use App\Models\Kategori;
 use App\Models\OrderArtwork;
 use App\Models\OrderArtworkDetail;
 use App\Services\OrderPricingService;
@@ -39,6 +40,7 @@ class OrderArtworkController extends Controller
         return view('order-artwork.create', [
             'selectedCustomer' => old('KdCust') ? Customer::where('KdCust', old('KdCust'))->first() : null,
             'produkList' => HargaArtwork::orderBy('NoUrut')->get(),
+            'kategoriList' => Kategori::whereHas('produkArtwork')->orderBy('NoUrut')->get(),
         ]);
     }
 
@@ -74,6 +76,7 @@ class OrderArtworkController extends Controller
             'items' => $orderArtwork->items,
             'selectedCustomer' => $orderArtwork->customer,
             'produkList' => HargaArtwork::orderBy('NoUrut')->get(),
+            'kategoriList' => Kategori::whereHas('produkArtwork')->orderBy('NoUrut')->get(),
         ]);
     }
 

@@ -6,6 +6,7 @@ use App\Http\Requests\StoreOrderOutdoorRequest;
 use App\Models\BahanCetakOutdoor;
 use App\Models\Customer;
 use App\Models\HargaCetakOutdoor;
+use App\Models\OrderComment;
 use App\Models\OrderOutdoor;
 use App\Models\OrderOutdoorDetail;
 use App\Models\OrderStatusNote;
@@ -34,7 +35,13 @@ class OrderOutdoorController extends Controller
             ->paginate(15)
             ->withQueryString();
 
-        return view('order-outdoor.index', compact('orders'));
+        $comments = OrderComment::with('user')
+            ->where('order_type', 'outdoor')->whereIn('order_id', $orders->pluck('id'))
+            ->orderBy('created_at')->get()->groupBy('order_id');
+
+        $unread = OrderComment::unreadCountsFor('outdoor', $orders->pluck('id'));
+
+        return view('order-outdoor.index', compact('orders', 'comments', 'unread'));
     }
 
     public function create(): View

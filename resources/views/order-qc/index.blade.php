@@ -41,6 +41,11 @@
                                     <td class="px-4 py-3 text-gray-600">{{ is_string($order->TglOrder) ? $order->TglOrder : $order->TglOrder?->format('Y-m-d') }}</td>
                                     <td class="px-4 py-3 text-gray-600">{{ $order->customer?->NmCust ?? '-' }}</td>
                                     <td class="px-4 py-3 text-right">
+                                        @if ($tabKey === 'outdoor')
+                                            <x-order-discussion type="outdoor" :order-id="$order->id" :no-order="$order->NoOrder"
+                                                                 :comments="$outdoorComments->get($order->id, collect())"
+                                                                 :unread="$outdoorUnread->get($order->id, 0)" />
+                                        @endif
                                         <button type="button"
                                                 @click="modalOpen = true; type = '{{ $tabKey }}'; id = {{ $order->id }}; noOrder = '{{ $order->NoOrder }}'"
                                                 class="inline-flex items-center px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-md hover:bg-blue-700">
