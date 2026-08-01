@@ -24,24 +24,24 @@
         </div>
 
         <div class="overflow-x-auto">
-        <table class="w-full text-sm min-w-[640px]">
+        <table class="w-full text-[13px] min-w-[640px]">
             <thead class="bg-gray-900 text-left text-xs uppercase text-white">
                 <tr>
-                    <th class="px-4 py-3 w-12">No</th>
-                    <th class="px-4 py-3">Kode</th>
-                    <th class="px-4 py-3">Nama Printer</th>
-                    <th class="px-4 py-3">Nomor Urut</th>
-                    <th class="px-4 py-3 text-right">Aksi</th>
+                    <th class="px-3 py-2 w-12">No</th>
+                    <th class="px-3 py-2">Kode</th>
+                    <th class="px-3 py-2">Nama Printer</th>
+                    <th class="px-3 py-2">Nomor Urut</th>
+                    <th class="px-3 py-2 text-right">Aksi</th>
                 </tr>
             </thead>
             <tbody class="divide-y">
                 @forelse ($printerOutdoors as $printerOutdoor)
                     <tr>
-                        <td class="px-4 py-3 text-gray-400">{{ $printerOutdoors->firstItem() + $loop->index }}</td>
-                        <td class="px-4 py-3">{{ $printerOutdoor->KdPrn }}</td>
-                        <td class="px-4 py-3 font-semibold text-gray-900">{{ $printerOutdoor->NmPrn }}</td>
-                        <td class="px-4 py-3 text-gray-600">{{ $printerOutdoor->NoUrut }}</td>
-                        <td class="px-4 py-3 text-right">
+                        <td class="px-3 py-2 text-gray-400">{{ $printerOutdoors->firstItem() + $loop->index }}</td>
+                        <td class="px-3 py-2">{{ $printerOutdoor->KdPrn }}</td>
+                        <td class="px-3 py-2 font-semibold text-gray-900">{{ $printerOutdoor->NmPrn }}</td>
+                        <td class="px-3 py-2 text-gray-600">{{ $printerOutdoor->NoUrut }}</td>
+                        <td class="px-3 py-2 text-right">
                             <a href="{{ route('printer-outdoor.edit', $printerOutdoor) }}" class="inline-flex items-center text-blue-600 hover:text-blue-800" title="Edit"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125" /></svg></a>
                             <form method="POST" action="{{ route('printer-outdoor.destroy', $printerOutdoor) }}" class="inline"
                                   onsubmit="return confirm('Hapus printer outdoor {{ $printerOutdoor->NmPrn }}?')">
@@ -53,7 +53,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="5" class="px-4 py-8 text-center text-gray-400">Belum ada data printer outdoor.</td>
+                        <td colspan="5" class="px-4 py-6 text-center text-gray-400">Belum ada data printer outdoor.</td>
                     </tr>
                 @endforelse
             </tbody>

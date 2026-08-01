@@ -11,9 +11,10 @@ use Illuminate\Http\Request;
 class OrderCommentController extends Controller
 {
     /**
-     * Any staff who can see the order at all (desain, cetak, QC/Bungkus,
-     * pengambilan, or the main order list) can post — this is a shared
-     * discussion thread, not a stage-gated action like Update Status.
+     * Any staff who can see the order at all (desain, cetak, finishing,
+     * QC/Back Office, bungkus, pengambilan, or the main order list) can
+     * post — this is a shared discussion thread, not a stage-gated action
+     * like Update Status.
      */
     public function store(Request $request, string $type, int $id): RedirectResponse
     {
@@ -21,7 +22,9 @@ class OrderCommentController extends Controller
             auth()->user()->hasPermission("order-{$type}.view")
                 || auth()->user()->hasPermission('order-desain.view')
                 || auth()->user()->hasPermission('order-cetak.view')
+                || auth()->user()->hasPermission('order-finishing.view')
                 || auth()->user()->hasPermission('order-qc.view')
+                || auth()->user()->hasPermission('order-bungkus.view')
                 || auth()->user()->hasPermission('pengambilan.view'),
             403
         );

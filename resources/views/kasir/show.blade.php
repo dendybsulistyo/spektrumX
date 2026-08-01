@@ -36,22 +36,22 @@
             </div>
 
             <div class="overflow-x-auto">
-                <table class="w-full text-sm min-w-[480px]">
+                <table class="w-full text-[13px] min-w-[480px]">
                     <thead class="bg-gray-50 text-left text-xs uppercase text-gray-500">
                         <tr>
-                            <th class="px-4 py-3">Item</th>
-                            <th class="px-4 py-3 text-right">Panjang</th>
-                            <th class="px-4 py-3 text-right">Lebar</th>
-                            <th class="px-4 py-3 text-right">Qty</th>
+                            <th class="px-3 py-2">Item</th>
+                            <th class="px-3 py-2 text-right">Panjang</th>
+                            <th class="px-3 py-2 text-right">Lebar</th>
+                            <th class="px-3 py-2 text-right">Qty</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y">
                         @foreach ($items as $item)
                             <tr>
-                                <td class="px-4 py-3 text-gray-900">{{ $item->Judul ?? $item->NmFile }}</td>
-                                <td class="px-4 py-3 text-right text-gray-600">{{ $item->Panjang }}</td>
-                                <td class="px-4 py-3 text-right text-gray-600">{{ $item->Lebar }}</td>
-                                <td class="px-4 py-3 text-right text-gray-600">{{ $item->Qty }}</td>
+                                <td class="px-3 py-2 text-gray-900">{{ $item->Judul ?? $item->NmFile }}</td>
+                                <td class="px-3 py-2 text-right text-gray-600">{{ $item->Panjang }}</td>
+                                <td class="px-3 py-2 text-right text-gray-600">{{ $item->Lebar }}</td>
+                                <td class="px-3 py-2 text-right text-gray-600">{{ $item->Qty }}</td>
                             </tr>
                         @endforeach
                     </tbody>

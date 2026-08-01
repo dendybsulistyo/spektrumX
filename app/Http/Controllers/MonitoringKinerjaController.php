@@ -13,14 +13,14 @@ class MonitoringKinerjaController extends Controller
     /**
      * Order-level activity (one row per stage transition) comes from
      * order_status_notes, which is common to Indoor/Outdoor/Artwork and every
-     * stage (desain/cetak/qc/kasir/pengambilan/pembatalan).
+     * stage (desain/cetak/finishing/qc/kasir/pengambilan/pembatalan).
      */
     public function index(Request $request): View
     {
         $from = $request->filled('from') ? $request->string('from')->toString() : now()->startOfMonth()->format('Y-m-d');
         $to = $request->filled('to') ? $request->string('to')->toString() : now()->format('Y-m-d');
 
-        $stages = ['desain', 'cetak', 'qc', 'kasir', 'pengambilan', 'pembatalan'];
+        $stages = ['desain', 'cetak', 'finishing', 'qc', 'bungkus', 'kasir', 'pengambilan', 'pembatalan'];
 
         $noteCounts = OrderStatusNote::query()
             ->whereBetween('created_at', ["{$from} 00:00:00", "{$to} 23:59:59"])

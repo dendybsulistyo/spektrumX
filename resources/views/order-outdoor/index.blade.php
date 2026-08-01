@@ -24,28 +24,28 @@
         </div>
 
         <div class="overflow-x-auto">
-        <table class="w-full text-sm min-w-[640px]">
+        <table class="w-full text-[13px] min-w-[640px]">
             <thead class="bg-gray-50 text-left text-xs uppercase text-gray-500">
                 <tr>
-                    <th class="px-4 py-3">No. Order</th>
-                    <th class="px-4 py-3">Tanggal</th>
-                    <th class="px-4 py-3">Customer</th>
-                    <th class="px-4 py-3 text-right">Total</th>
-                    <th class="px-4 py-3">Status</th>
-                    <th class="px-4 py-3 text-right">Aksi</th>
+                    <th class="px-3 py-2">No. Order</th>
+                    <th class="px-3 py-2">Tanggal</th>
+                    <th class="px-3 py-2">Customer</th>
+                    <th class="px-3 py-2 text-right">Total</th>
+                    <th class="px-3 py-2">Status</th>
+                    <th class="px-3 py-2 text-right">Aksi</th>
                 </tr>
             </thead>
             <tbody class="divide-y">
                 @forelse ($orders as $order)
                     <tr>
-                        <td class="px-4 py-3"><x-order-number :number="$order->NoOrder" /></td>
-                        <td class="px-4 py-3 text-gray-600">{{ $order->TglOrder->format('d M Y') }}</td>
-                        <td class="px-4 py-3 text-gray-900 font-semibold">{{ $order->customer?->NmCust ?? $order->KdCust }}</td>
-                        <td class="px-4 py-3 text-right text-gray-900">Rp {{ number_format($order->total ?? 0, 0, ',', '.') }}</td>
-                        <td class="px-4 py-3">
+                        <td class="px-3 py-2"><x-order-number :number="$order->NoOrder" /></td>
+                        <td class="px-3 py-2 text-gray-600">{{ $order->TglOrder->format('d M Y') }}</td>
+                        <td class="px-3 py-2 text-gray-900 font-semibold">{{ $order->customer?->NmCust ?? $order->KdCust }}</td>
+                        <td class="px-3 py-2 text-right text-gray-900">Rp {{ number_format($order->total ?? 0, 0, ',', '.') }}</td>
+                        <td class="px-3 py-2">
                             <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">{{ ucfirst(str_replace('_', ' ', $order->status ?? '-')) }}</span>
                         </td>
-                        <td class="px-4 py-3 text-right">
+                        <td class="px-3 py-2 text-right">
                             <x-order-discussion type="outdoor" :order-id="$order->id" :no-order="$order->NoOrder"
                                                  :comments="$comments->get($order->id, collect())"
                                                  :unread="$unread->get($order->id, 0)" />
@@ -60,7 +60,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="6" class="px-4 py-8 text-center text-gray-400">Belum ada order.</td>
+                        <td colspan="6" class="px-4 py-6 text-center text-gray-400">Belum ada order.</td>
                     </tr>
                 @endforelse
             </tbody>

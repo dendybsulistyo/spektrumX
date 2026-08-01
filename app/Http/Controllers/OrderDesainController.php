@@ -2,11 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\BahanCetakOutdoor;
 use App\Models\OrderArtwork;
 use App\Models\OrderComment;
 use App\Models\OrderIndoor;
 use App\Models\OrderOutdoor;
+use App\Models\OrderOutdoorDetail;
 use App\Models\OrderStatusNote;
+use App\Models\PrinterOutdoor;
 use App\Support\ResolvesOrderType;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -22,7 +25,7 @@ class OrderDesainController extends Controller
         $indoorOrders = OrderIndoor::query()->with('customer')->where('status', 'desain')
             ->orderByDesc('TglOrder')->orderByDesc('NoOrder')->get();
 
-        $outdoorOrders = OrderOutdoor::query()->with('customer', 'cancelRequestedBy', 'items')->where('status', 'desain')
+        $outdoorOrders = OrderOutdoor::query()->with('customer', 'cancelRequestedBy', 'items', 'createdBy')->where('status', 'desain')
             ->orderByDesc('TglOrder')->orderByDesc('NoOrder')->get();
 
         $artworkOrders = OrderArtwork::query()->with('customer', 'items')->where('status', 'desain')
@@ -49,7 +52,7 @@ class OrderDesainController extends Controller
         // answer it even though "Update Status" no longer applies.
         $needsReplyIds = OrderComment::orderIdsWithUnreadFor('outdoor')->diff($outdoorOrders->pluck('id'));
 
-        $outdoorNeedsReply = OrderOutdoor::query()->with('customer', 'items')
+        $outdoorNeedsReply = OrderOutdoor::query()->with('customer', 'items', 'createdBy')
             ->whereIn('id', $needsReplyIds)
             ->orderByDesc('TglOrder')->orderByDesc('NoOrder')->get();
 
@@ -61,7 +64,10 @@ class OrderDesainController extends Controller
 
         $outdoorUnread = OrderComment::unreadCountsFor('outdoor', $allOutdoorIds);
 
-        return view('order-desain.index', compact('indoorOrders', 'outdoorOrders', 'outdoorNeedsReply', 'artworkOrders', 'indoorRows', 'artworkRows', 'outdoorComments', 'outdoorUnread'));
+        $printerNames = PrinterOutdoor::pluck('NmPrn', 'KdPrn');
+        $bahanNames = BahanCetakOutdoor::pluck('NmBhn', 'NoCetak');
+
+        return view('order-desain.index', compact('indoorOrders', 'outdoorOrders', 'outdoorNeedsReply', 'artworkOrders', 'indoorRows', 'artworkRows', 'outdoorComments', 'outdoorUnread', 'printerNames', 'bahanNames'));
     }
 
     /**
@@ -121,6 +127,11 @@ class OrderDesainController extends Controller
     {
         $order = $this->resolveOrder($type, $id);
 
+        // Guards against a stale/replayed request (old browser tab, double
+        // submit) silently sending an order that already moved past this
+        // stage back into it — transitions only ever go forward.
+        abort_if($order->status !== 'desain', 422, 'Order ini sudah tidak di antrian desain.');
+
         $data = $request->validate([
             'action' => ['required', 'in:selesai,lanjut'],
         ]);
@@ -140,6 +151,21 @@ class OrderDesainController extends Controller
             'created_at' => now(),
         ]);
 
-        return redirect()->route('order-desain.index')->with('status', 'Order dipindahkan ke antrian cetak.');
+        return redirect()->route('order-desain.index', ['tab' => $type])->with('status', 'Order dipindahkan ke antrian cetak.');
+    }
+
+    /**
+     * Free-text "Gabungan" note per outdoor item — catatan manual operator
+     * desain, tidak terikat validasi/format tertentu.
+     */
+    public function updateGabungan(Request $request, OrderOutdoorDetail $item): RedirectResponse
+    {
+        $data = $request->validate([
+            'gabungan' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $item->update(['gabungan' => $data['gabungan'] ?? null]);
+
+        return redirect()->route('order-desain.index', ['tab' => 'outdoor'])->with('status', 'Gabungan disimpan.');
     }
 }

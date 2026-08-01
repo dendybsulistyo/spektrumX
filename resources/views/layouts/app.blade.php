@@ -33,341 +33,386 @@
                 ];
                 return $icons[$name] ?? $icons['tag'];
             };
+
+            // Grouping mirrors the old sidebar sections — only the container changed
+            // from a vertical accordion to a horizontal dropdown-per-group navbar.
+            $masterDataActive = request()->routeIs('customers.*', 'kategori-produk-indoor.*', 'detail-indoor.*', 'harga-artwork.*', 'printer-outdoor.*', 'bahan-cetak-outdoor.*', 'harga-cetak-outdoor.*', 'printers.*');
+            $transaksiActive = request()->routeIs('order-indoor.*', 'order-outdoor.*', 'order-artwork.*');
+            $operatorActive = request()->routeIs('file.*', 'kasir.*', 'order-desain.*', 'order-cetak.*', 'order-finishing.*', 'order-qc.*', 'order-bungkus.*', 'pengambilan.*');
+            $analitikActive = request()->routeIs('data-warehouse.*', 'monitoring-kinerja.*', 'monitoring-transaksi.*', 'papan-pantau.*');
+            $pengaturanActive = request()->routeIs('roles.*', 'users.*', 'jasa-potong.*');
+
+            $showMasterData = Auth::user()->hasPermission('customers.view') || Auth::user()->hasPermission('produk.view') || Auth::user()->hasPermission('harga-artwork.view') || Auth::user()->hasPermission('printers.view') || Auth::user()->hasPermission('printer-outdoor.view') || Auth::user()->hasPermission('bahan-cetak-outdoor.view') || Auth::user()->hasPermission('harga-cetak-outdoor.view') || Auth::user()->hasPermission('kategori-produk-indoor.view');
+            $showTransaksi = Auth::user()->hasPermission('order-indoor.view') || Auth::user()->hasPermission('order-outdoor.view') || Auth::user()->hasPermission('order-artwork.view');
+            $showOperator = Auth::user()->hasPermission('kasir.view') || Auth::user()->hasPermission('order-desain.view') || Auth::user()->hasPermission('order-cetak.view') || Auth::user()->hasPermission('order-finishing.view') || Auth::user()->hasPermission('order-qc.view') || Auth::user()->hasPermission('order-bungkus.view') || Auth::user()->hasPermission('pengambilan.view') || Auth::user()->hasPermission('file-monitor.view');
+            $showAnalitik = Auth::user()->hasPermission('data-warehouse.view') || Auth::user()->hasPermission('monitoring-kinerja.view') || Auth::user()->hasPermission('monitoring-transaksi.view') || Auth::user()->hasPermission('papan-pantau.view');
+            $showPengaturan = Auth::user()->hasPermission('roles.manage') || Auth::user()->hasPermission('jasa-potong.manage');
+
+            $navTopLink = fn (bool $active) => 'inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-[13px] font-semibold transition '
+                .($active ? 'bg-indigo-50 text-indigo-600' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900');
+            $dropdownLink = fn (bool $active) => 'block px-3 py-1.5 rounded-md text-[13px] '
+                .($active ? 'text-indigo-600 font-semibold bg-indigo-50' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900');
+            $mobileLink = fn (bool $active) => 'block px-3 py-2 rounded-lg text-sm font-medium '
+                .($active ? 'bg-indigo-50 text-indigo-600' : 'text-gray-700 hover:bg-gray-100');
         @endphp
     </head>
     <body class="font-sans antialiased bg-gray-50">
-        <div class="flex min-h-screen" x-data="{ sidebarOpen: false }">
+        <div x-data="{ mobileMenuOpen: false }">
+            <nav class="bg-white border-b border-gray-200 sticky top-0 z-40">
+                <div class="max-w-full mx-auto px-4 sm:px-6">
+                    <div class="flex justify-between h-16">
+                        <div class="flex items-center min-w-0">
+                            <a href="{{ route('dashboard') }}" class="flex items-center gap-2 shrink-0">
+                                <div class="w-7 h-7 rounded-md bg-indigo-600 flex items-center justify-center text-white text-xs font-bold">S</div>
+                                <span class="hidden sm:block text-sm font-bold text-gray-900 truncate">{{ config('app.name', 'SpektrumX') }}</span>
+                            </a>
 
-            <!-- Mobile overlay -->
-            <div x-show="sidebarOpen" x-cloak @click="sidebarOpen = false"
-                 class="fixed inset-0 bg-gray-900/50 z-30 lg:hidden"></div>
+                            <div class="hidden lg:flex lg:items-center lg:ml-6 lg:gap-1">
+                                @php $active = request()->routeIs('dashboard'); @endphp
+                                <a href="{{ route('dashboard') }}" class="{{ $navTopLink($active) }}">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">{!! $navIcon('dashboard') !!}</svg>
+                                    Dashboard
+                                </a>
 
-            <!-- Sidebar -->
-            <aside
-                 class="fixed left-0 top-0 h-screen w-60 bg-white border-r border-gray-200 flex flex-col z-40 transform transition-transform duration-200 ease-in-out -translate-x-full lg:translate-x-0"
-                 :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'">
-                <div class="h-16 px-4 border-b border-gray-200 flex items-center justify-between gap-2">
-                    <div class="flex items-center gap-2 min-w-0">
-                        <div class="w-7 h-7 rounded-md bg-indigo-600 flex items-center justify-center text-white text-xs font-bold shrink-0">S</div>
-                        <div class="min-w-0">
-                            <h1 class="text-sm font-bold text-gray-900 leading-none truncate">{{ config('app.name', 'SpektrumX') }}</h1>
-                            <p class="text-[10px] text-gray-400 mt-0.5">Admin Percetakan</p>
+                                @if ($showMasterData)
+                                    <div class="relative" x-data="{ open: false }" @click.outside="open = false" @keydown.escape="open = false">
+                                        <button type="button" @click="open = !open" class="{{ $navTopLink($masterDataActive) }}">
+                                            Master Data
+                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3 h-3 transition-transform" :class="open ? 'rotate-180' : ''">{!! $navIcon('chevron-down') !!}</svg>
+                                        </button>
+                                        <div x-show="open" x-cloak x-transition
+                                             class="absolute left-0 mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-lg py-2 z-50 max-h-[75vh] overflow-y-auto">
+                                            @can('customers.view')
+                                                <a href="{{ route('customers.index') }}" class="{{ $dropdownLink(request()->routeIs('customers.index') || request()->routeIs('customers.edit')) }}">Customer</a>
+                                                <a href="{{ route('customers.aktif') }}" class="{{ $dropdownLink(request()->routeIs('customers.aktif')) }}">Customer Aktif</a>
+                                            @endcan
+
+                                            @can('printers.view')
+                                                <a href="{{ route('printers.index') }}" class="{{ $dropdownLink(request()->routeIs('printers.*')) }}">Printer</a>
+                                            @endcan
+
+                                            @if (Auth::user()->hasPermission('kategori-produk-indoor.view') || Auth::user()->hasPermission('produk.view'))
+                                                <p class="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">Kategori Indoor</p>
+                                                @can('kategori-produk-indoor.view')
+                                                    <a href="{{ route('kategori-produk-indoor.index') }}" class="{{ $dropdownLink(request()->routeIs('kategori-produk-indoor.*')) }}">Data Divisi</a>
+                                                @endcan
+                                                @can('produk.view')
+                                                    <a href="{{ route('detail-indoor.index') }}" class="{{ $dropdownLink(request()->routeIs('detail-indoor.*')) }}">Data Produk Indoor</a>
+                                                @endcan
+                                            @endif
+
+                                            @can('harga-artwork.view')
+                                                <p class="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">Kategori Artwork</p>
+                                                <a href="{{ route('harga-artwork.index') }}" class="{{ $dropdownLink(request()->routeIs('harga-artwork.*')) }}">Data Bahan</a>
+                                            @endcan
+
+                                            @if (Auth::user()->hasPermission('printer-outdoor.view') || Auth::user()->hasPermission('bahan-cetak-outdoor.view') || Auth::user()->hasPermission('harga-cetak-outdoor.view'))
+                                                <p class="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">Kategori Outdoor</p>
+                                                @can('printer-outdoor.view')
+                                                    <a href="{{ route('printer-outdoor.index') }}" class="{{ $dropdownLink(request()->routeIs('printer-outdoor.*')) }}">Data Printer</a>
+                                                @endcan
+                                                @can('bahan-cetak-outdoor.view')
+                                                    <a href="{{ route('bahan-cetak-outdoor.index') }}" class="{{ $dropdownLink(request()->routeIs('bahan-cetak-outdoor.*')) }}">Bahan</a>
+                                                @endcan
+                                                @can('harga-cetak-outdoor.view')
+                                                    <a href="{{ route('harga-cetak-outdoor.index') }}" class="{{ $dropdownLink(request()->routeIs('harga-cetak-outdoor.*')) }}">Standar Harga</a>
+                                                @endcan
+                                            @endif
+                                        </div>
+                                    </div>
+                                @endif
+
+                                @if ($showTransaksi)
+                                    <div class="relative" x-data="{ open: false }" @click.outside="open = false" @keydown.escape="open = false">
+                                        <button type="button" @click="open = !open" class="{{ $navTopLink($transaksiActive) }}">
+                                            Transaksi
+                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3 h-3 transition-transform" :class="open ? 'rotate-180' : ''">{!! $navIcon('chevron-down') !!}</svg>
+                                        </button>
+                                        <div x-show="open" x-cloak x-transition
+                                             class="absolute left-0 mt-2 w-56 bg-white border border-gray-200 rounded-lg shadow-lg py-2 z-50">
+                                            @can('order-indoor.view')
+                                                <a href="{{ route('order-indoor.index') }}" class="{{ $dropdownLink(request()->routeIs('order-indoor.*')) }}">Order Indoor</a>
+                                            @endcan
+                                            @can('order-outdoor.view')
+                                                <a href="{{ route('order-outdoor.index') }}" class="{{ $dropdownLink(request()->routeIs('order-outdoor.*')) }}">Order Outdoor</a>
+                                            @endcan
+                                            @can('order-artwork.view')
+                                                <a href="{{ route('order-artwork.index') }}" class="{{ $dropdownLink(request()->routeIs('order-artwork.*')) }}">Order Artwork</a>
+                                            @endcan
+                                        </div>
+                                    </div>
+                                @endif
+
+                                @if ($showOperator)
+                                    <div class="relative" x-data="{ open: false }" @click.outside="open = false" @keydown.escape="open = false">
+                                        <button type="button" @click="open = !open" class="{{ $navTopLink($operatorActive) }}">
+                                            Dashboard Operator
+                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3 h-3 transition-transform" :class="open ? 'rotate-180' : ''">{!! $navIcon('chevron-down') !!}</svg>
+                                        </button>
+                                        <div x-show="open" x-cloak x-transition
+                                             class="absolute left-0 mt-2 w-56 bg-white border border-gray-200 rounded-lg shadow-lg py-2 z-50">
+                                            @can('file-monitor.view')
+                                                <a href="{{ route('file.index') }}" class="{{ $dropdownLink(request()->routeIs('file.*')) }}">Penerima File</a>
+                                            @endcan
+                                            @can('kasir.view')
+                                                <a href="{{ route('kasir.index') }}" class="{{ $dropdownLink(request()->routeIs('kasir.*')) }}">Kasir</a>
+                                            @endcan
+                                            @can('order-desain.view')
+                                                <a href="{{ route('order-desain.index') }}" class="{{ $dropdownLink(request()->routeIs('order-desain.*')) }}">Layout/Edit</a>
+                                            @endcan
+                                            @can('order-cetak.view')
+                                                <a href="{{ route('order-cetak.index') }}" class="{{ $dropdownLink(request()->routeIs('order-cetak.*')) }}">Cetak</a>
+                                            @endcan
+                                            @can('order-finishing.view')
+                                                <a href="{{ route('order-finishing.index') }}" class="{{ $dropdownLink(request()->routeIs('order-finishing.*')) }}">Finishing</a>
+                                            @endcan
+                                            @can('order-qc.view')
+                                                <a href="{{ route('order-qc.index') }}" class="{{ $dropdownLink(request()->routeIs('order-qc.*')) }}">Back Office</a>
+                                            @endcan
+                                            @can('order-bungkus.view')
+                                                <a href="{{ route('order-bungkus.index') }}" class="{{ $dropdownLink(request()->routeIs('order-bungkus.*')) }}">Bungkus</a>
+                                            @endcan
+                                            @can('pengambilan.view')
+                                                <a href="{{ route('pengambilan.index') }}" class="{{ $dropdownLink(request()->routeIs('pengambilan.*')) }}">Pengambilan Barang</a>
+                                            @endcan
+                                        </div>
+                                    </div>
+                                @endif
+
+                                @if ($showAnalitik)
+                                    <div class="relative" x-data="{ open: false }" @click.outside="open = false" @keydown.escape="open = false">
+                                        <button type="button" @click="open = !open" class="{{ $navTopLink($analitikActive) }}">
+                                            Analitik
+                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3 h-3 transition-transform" :class="open ? 'rotate-180' : ''">{!! $navIcon('chevron-down') !!}</svg>
+                                        </button>
+                                        <div x-show="open" x-cloak x-transition
+                                             class="absolute left-0 mt-2 w-56 bg-white border border-gray-200 rounded-lg shadow-lg py-2 z-50">
+                                            @can('data-warehouse.view')
+                                                <a href="{{ route('data-warehouse.index') }}" class="{{ $dropdownLink(request()->routeIs('data-warehouse.*')) }}">Data Warehouse</a>
+                                            @endcan
+                                            @can('monitoring-kinerja.view')
+                                                <a href="{{ route('monitoring-kinerja.index') }}" class="{{ $dropdownLink(request()->routeIs('monitoring-kinerja.*')) }}">Monitoring Kinerja</a>
+                                            @endcan
+                                            @can('monitoring-transaksi.view')
+                                                <a href="{{ route('monitoring-transaksi.index') }}" class="{{ $dropdownLink(request()->routeIs('monitoring-transaksi.*')) }}">Monitoring Transaksi</a>
+                                            @endcan
+                                            @can('papan-pantau.view')
+                                                <a href="{{ route('papan-pantau.index') }}" class="{{ $dropdownLink(request()->routeIs('papan-pantau.*')) }}">Papan Pantau</a>
+                                            @endcan
+                                        </div>
+                                    </div>
+                                @endif
+
+                                @if ($showPengaturan)
+                                    <div class="relative" x-data="{ open: false }" @click.outside="open = false" @keydown.escape="open = false">
+                                        <button type="button" @click="open = !open" class="{{ $navTopLink($pengaturanActive) }}">
+                                            Pengaturan
+                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3 h-3 transition-transform" :class="open ? 'rotate-180' : ''">{!! $navIcon('chevron-down') !!}</svg>
+                                        </button>
+                                        <div x-show="open" x-cloak x-transition
+                                             class="absolute left-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg py-2 z-50">
+                                            @can('roles.manage')
+                                                <a href="{{ route('roles.index') }}" class="{{ $dropdownLink(request()->routeIs('roles.*')) }}">Role & Akses</a>
+                                                <a href="{{ route('users.index') }}" class="{{ $dropdownLink(request()->routeIs('users.*')) }}">User</a>
+                                            @endcan
+                                            @can('jasa-potong.manage')
+                                                <a href="{{ route('jasa-potong.edit') }}" class="{{ $dropdownLink(request()->routeIs('jasa-potong.*')) }}">Jasa Potong</a>
+                                            @endcan
+                                        </div>
+                                    </div>
+                                @endif
+                            </div>
+                        </div>
+
+                        <div class="hidden lg:flex lg:items-center">
+                            <div x-data="{ open: false }" class="relative" @click.outside="open = false">
+                                <button @click="open = !open" class="flex items-center gap-2.5">
+                                    <div class="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs font-semibold shrink-0">
+                                        {{ collect(explode(' ', Auth::user()->name))->map(fn ($w) => mb_substr($w, 0, 1))->take(2)->implode('') }}
+                                    </div>
+                                    <div class="text-left leading-tight">
+                                        <div class="text-[13px] font-medium text-gray-800">{{ Auth::user()->name }}</div>
+                                        <div class="text-[11px] text-gray-400">{{ Auth::user()->role?->label ?? 'Belum ada role' }}</div>
+                                    </div>
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3 h-3 text-gray-400 transition-transform" :class="open ? 'rotate-180' : ''">{!! $navIcon('chevron-down') !!}</svg>
+                                </button>
+
+                                <div x-show="open" x-cloak x-transition
+                                     class="absolute right-0 mt-2 w-44 bg-white border border-gray-200 rounded-lg shadow-lg py-1 text-[13px] z-50">
+                                    <a href="{{ route('profile.edit') }}" class="block px-3 py-2 text-gray-600 hover:bg-gray-50">Profil</a>
+                                    <form method="POST" action="{{ route('logout') }}">
+                                        @csrf
+                                        <button type="submit" class="w-full text-left px-3 py-2 text-gray-600 hover:bg-gray-50">
+                                            Logout
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center lg:hidden">
+                            <button @click="mobileMenuOpen = !mobileMenuOpen" class="text-gray-500 hover:text-gray-700">
+                                <svg x-show="!mobileMenuOpen" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+                                </svg>
+                                <svg x-show="mobileMenuOpen" x-cloak xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
                         </div>
                     </div>
-                    <button @click="sidebarOpen = false" class="lg:hidden shrink-0 text-gray-400 hover:text-gray-600">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </button>
                 </div>
 
-                @php
-                    $navClass = fn (bool $active) => 'flex items-center gap-2.5 px-2.5 py-2 rounded-lg font-semibold transition '
-                        .($active ? 'bg-indigo-50 text-indigo-600' : 'text-gray-800 hover:bg-gray-100');
-                    $iconClass = fn (bool $active) => 'w-[18px] h-[18px] shrink-0 '.($active ? 'text-indigo-600' : 'text-gray-400');
-                @endphp
+                <!-- Mobile menu -->
+                <div x-show="mobileMenuOpen" x-cloak class="lg:hidden border-t border-gray-200 max-h-[calc(100vh-4rem)] overflow-y-auto">
+                    <div class="px-3 py-3 space-y-0.5 text-[13px]" @click="mobileMenuOpen = false">
+                        @php $active = request()->routeIs('dashboard'); @endphp
+                        <a href="{{ route('dashboard') }}" class="{{ $mobileLink($active) }}">Dashboard</a>
 
-                <nav class="flex-1 px-2.5 py-3 space-y-0.5 overflow-y-auto text-[13px]" @click="sidebarOpen = false">
-                    @php $active = request()->routeIs('dashboard'); @endphp
-                    <a href="{{ route('dashboard') }}" class="{{ $navClass($active) }}">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="{{ $iconClass($active) }}">{!! $navIcon('dashboard') !!}</svg>
-                        Dashboard
-                    </a>
-
-                    @if (Auth::user()->hasPermission('customers.view') || Auth::user()->hasPermission('produk.view') || Auth::user()->hasPermission('harga-artwork.view') || Auth::user()->hasPermission('operators.view') || Auth::user()->hasPermission('printers.view') || Auth::user()->hasPermission('bahan-outdoor.view') || Auth::user()->hasPermission('kategori-bahan-outdoor.view') || Auth::user()->hasPermission('harga-cetak-outdoor.view'))
-                        <p class="px-2.5 pt-4 pb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">Master Data</p>
-                    @endif
-
-                    @can('customers.view')
-                        @php $active = request()->routeIs('customers.index') || request()->routeIs('customers.edit'); @endphp
-                        <a href="{{ route('customers.index') }}" class="{{ $navClass($active) }}">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="{{ $iconClass($active) }}">{!! $navIcon('users') !!}</svg>
-                            Customer
-                        </a>
-                        @php $active = request()->routeIs('customers.aktif'); @endphp
-                        <a href="{{ route('customers.aktif') }}" class="{{ $navClass($active) }}">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="{{ $iconClass($active) }}">{!! $navIcon('users') !!}</svg>
-                            Customer Aktif
-                        </a>
-                    @endcan
-
-                    <div x-data="{ open: false }">
-                        <button type="button" @click="open = !open" class="{{ $navClass(false) }} w-full justify-between">
-                            <span class="flex items-center gap-2.5">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="{{ $iconClass(false) }}">{!! $navIcon('folder') !!}</svg>
-                                Kategori Indoor
-                            </span>
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-3.5 h-3.5 shrink-0 text-gray-400 transition-transform" :class="open ? 'rotate-180' : ''">{!! $navIcon('chevron-down') !!}</svg>
-                        </button>
-                        <div x-show="open" x-cloak class="pl-11 py-0.5 space-y-0.5">
+                        @if ($showMasterData)
+                            <p class="px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">Master Data</p>
+                            @can('customers.view')
+                                <a href="{{ route('customers.index') }}" class="{{ $mobileLink(request()->routeIs('customers.index') || request()->routeIs('customers.edit')) }}">Customer</a>
+                                <a href="{{ route('customers.aktif') }}" class="{{ $mobileLink(request()->routeIs('customers.aktif')) }}">Customer Aktif</a>
+                            @endcan
+                            @can('printers.view')
+                                <a href="{{ route('printers.index') }}" class="{{ $mobileLink(request()->routeIs('printers.*')) }}">Printer</a>
+                            @endcan
                             @can('kategori-produk-indoor.view')
-                                <a href="{{ route('kategori-produk-indoor.index') }}" class="flex items-center px-2.5 py-1.5 rounded-lg {{ request()->routeIs('kategori-produk-indoor.*') ? 'text-indigo-600 font-semibold' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900' }}">Data Divisi</a>
+                                <a href="{{ route('kategori-produk-indoor.index') }}" class="{{ $mobileLink(request()->routeIs('kategori-produk-indoor.*')) }}">Kategori Indoor — Data Divisi</a>
                             @endcan
                             @can('produk.view')
-                                <a href="{{ route('detail-indoor.index') }}" class="flex items-center px-2.5 py-1.5 rounded-lg {{ request()->routeIs('detail-indoor.*') ? 'text-indigo-600 font-semibold' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900' }}">Data Produk Indoor</a>
+                                <a href="{{ route('detail-indoor.index') }}" class="{{ $mobileLink(request()->routeIs('detail-indoor.*')) }}">Kategori Indoor — Data Produk</a>
                             @endcan
-                        </div>
-                    </div>
-
-                    <div x-data="{ open: false }">
-                        <button type="button" @click="open = !open" class="{{ $navClass(false) }} w-full justify-between">
-                            <span class="flex items-center gap-2.5">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="{{ $iconClass(false) }}">{!! $navIcon('folder') !!}</svg>
-                                Kategori Artwork
-                            </span>
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-3.5 h-3.5 shrink-0 text-gray-400 transition-transform" :class="open ? 'rotate-180' : ''">{!! $navIcon('chevron-down') !!}</svg>
-                        </button>
-                        <div x-show="open" x-cloak class="pl-11 py-0.5 space-y-0.5">
-                            <a href="#" class="flex items-center px-2.5 py-1.5 rounded-lg text-gray-600 hover:bg-gray-100 hover:text-gray-900">Data Divisi</a>
                             @can('harga-artwork.view')
-                                <a href="{{ route('harga-artwork.index') }}" class="flex items-center px-2.5 py-1.5 rounded-lg {{ request()->routeIs('harga-artwork.*') ? 'text-indigo-600 font-semibold' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900' }}">Data Bahan</a>
+                                <a href="{{ route('harga-artwork.index') }}" class="{{ $mobileLink(request()->routeIs('harga-artwork.*')) }}">Kategori Artwork — Data Bahan</a>
                             @endcan
-                        </div>
-                    </div>
-
-
-                    <div x-data="{ open: false }">
-                        <button type="button" @click="open = !open" class="{{ $navClass(false) }} w-full justify-between">
-                            <span class="flex items-center gap-2.5">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="{{ $iconClass(false) }}">{!! $navIcon('folder') !!}</svg>
-                                Kategori Outdoor
-                            </span>
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-3.5 h-3.5 shrink-0 text-gray-400 transition-transform" :class="open ? 'rotate-180' : ''">{!! $navIcon('chevron-down') !!}</svg>
-                        </button>
-                        <div x-show="open" x-cloak class="pl-11 py-0.5 space-y-0.5">
                             @can('printer-outdoor.view')
-                                <a href="{{ route('printer-outdoor.index') }}" class="flex items-center px-2.5 py-1.5 rounded-lg {{ request()->routeIs('printer-outdoor.*') ? 'text-indigo-600 font-semibold' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900' }}">Data Printer</a>
+                                <a href="{{ route('printer-outdoor.index') }}" class="{{ $mobileLink(request()->routeIs('printer-outdoor.*')) }}">Kategori Outdoor — Data Printer</a>
                             @endcan
                             @can('bahan-cetak-outdoor.view')
-                                <a href="{{ route('bahan-cetak-outdoor.index') }}" class="flex items-center px-2.5 py-1.5 rounded-lg {{ request()->routeIs('bahan-cetak-outdoor.*') ? 'text-indigo-600 font-semibold' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900' }}">Bahan</a>
+                                <a href="{{ route('bahan-cetak-outdoor.index') }}" class="{{ $mobileLink(request()->routeIs('bahan-cetak-outdoor.*')) }}">Kategori Outdoor — Bahan</a>
                             @endcan
                             @can('harga-cetak-outdoor.view')
-                                <a href="{{ route('harga-cetak-outdoor.index') }}" class="flex items-center px-2.5 py-1.5 rounded-lg {{ request()->routeIs('harga-cetak-outdoor.*') ? 'text-indigo-600 font-semibold' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900' }}">Standar Harga</a>
+                                <a href="{{ route('harga-cetak-outdoor.index') }}" class="{{ $mobileLink(request()->routeIs('harga-cetak-outdoor.*')) }}">Kategori Outdoor — Standar Harga</a>
                             @endcan
-                        </div>
+                        @endif
+
+                        @if ($showTransaksi)
+                            <p class="px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">Transaksi</p>
+                            @can('order-indoor.view')
+                                <a href="{{ route('order-indoor.index') }}" class="{{ $mobileLink(request()->routeIs('order-indoor.*')) }}">Order Indoor</a>
+                            @endcan
+                            @can('order-outdoor.view')
+                                <a href="{{ route('order-outdoor.index') }}" class="{{ $mobileLink(request()->routeIs('order-outdoor.*')) }}">Order Outdoor</a>
+                            @endcan
+                            @can('order-artwork.view')
+                                <a href="{{ route('order-artwork.index') }}" class="{{ $mobileLink(request()->routeIs('order-artwork.*')) }}">Order Artwork</a>
+                            @endcan
+                        @endif
+
+                        @if ($showOperator)
+                            <p class="px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">Dashboard Operator</p>
+                            @can('file-monitor.view')
+                                <a href="{{ route('file.index') }}" class="{{ $mobileLink(request()->routeIs('file.*')) }}">Penerima File</a>
+                            @endcan
+                            @can('kasir.view')
+                                <a href="{{ route('kasir.index') }}" class="{{ $mobileLink(request()->routeIs('kasir.*')) }}">Kasir</a>
+                            @endcan
+                            @can('order-desain.view')
+                                <a href="{{ route('order-desain.index') }}" class="{{ $mobileLink(request()->routeIs('order-desain.*')) }}">Layout/Edit</a>
+                            @endcan
+                            @can('order-cetak.view')
+                                <a href="{{ route('order-cetak.index') }}" class="{{ $mobileLink(request()->routeIs('order-cetak.*')) }}">Cetak</a>
+                            @endcan
+                            @can('order-finishing.view')
+                                <a href="{{ route('order-finishing.index') }}" class="{{ $mobileLink(request()->routeIs('order-finishing.*')) }}">Finishing</a>
+                            @endcan
+                            @can('order-qc.view')
+                                <a href="{{ route('order-qc.index') }}" class="{{ $mobileLink(request()->routeIs('order-qc.*')) }}">Back Office</a>
+                            @endcan
+                            @can('order-bungkus.view')
+                                <a href="{{ route('order-bungkus.index') }}" class="{{ $mobileLink(request()->routeIs('order-bungkus.*')) }}">Bungkus</a>
+                            @endcan
+                            @can('pengambilan.view')
+                                <a href="{{ route('pengambilan.index') }}" class="{{ $mobileLink(request()->routeIs('pengambilan.*')) }}">Pengambilan Barang</a>
+                            @endcan
+                        @endif
+
+                        @if ($showAnalitik)
+                            <p class="px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">Analitik</p>
+                            @can('data-warehouse.view')
+                                <a href="{{ route('data-warehouse.index') }}" class="{{ $mobileLink(request()->routeIs('data-warehouse.*')) }}">Data Warehouse</a>
+                            @endcan
+                            @can('monitoring-kinerja.view')
+                                <a href="{{ route('monitoring-kinerja.index') }}" class="{{ $mobileLink(request()->routeIs('monitoring-kinerja.*')) }}">Monitoring Kinerja</a>
+                            @endcan
+                            @can('monitoring-transaksi.view')
+                                <a href="{{ route('monitoring-transaksi.index') }}" class="{{ $mobileLink(request()->routeIs('monitoring-transaksi.*')) }}">Monitoring Transaksi</a>
+                            @endcan
+                            @can('papan-pantau.view')
+                                <a href="{{ route('papan-pantau.index') }}" class="{{ $mobileLink(request()->routeIs('papan-pantau.*')) }}">Papan Pantau</a>
+                            @endcan
+                        @endif
+
+                        @if ($showPengaturan)
+                            <p class="px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">Pengaturan</p>
+                            @can('roles.manage')
+                                <a href="{{ route('roles.index') }}" class="{{ $mobileLink(request()->routeIs('roles.*')) }}">Role & Akses</a>
+                                <a href="{{ route('users.index') }}" class="{{ $mobileLink(request()->routeIs('users.*')) }}">User</a>
+                            @endcan
+                            @can('jasa-potong.manage')
+                                <a href="{{ route('jasa-potong.edit') }}" class="{{ $mobileLink(request()->routeIs('jasa-potong.*')) }}">Jasa Potong</a>
+                            @endcan
+                        @endif
                     </div>
 
-
-
-
-                     {{-- @can('kategori-bahan-outdoor.view')
-                        @php $active = request()->routeIs('kategori-bahan-outdoor.*'); @endphp
-                        <a href="{{ route('kategori-bahan-outdoor.index') }}" class="{{ $navClass($active) }}">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="{{ $iconClass($active) }}">{!! $navIcon('tag') !!}</svg>
-                            Kategori Outdoor
-                        </a>
-                    @endcan --}}
-
-                    {{-- @can('kategori.view')
-                        @php $active = request()->routeIs('kategori.*'); @endphp
-                        <a href="{{ route('kategori.index') }}" class="{{ $navClass($active) }}">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="{{ $iconClass($active) }}">{!! $navIcon('tag') !!}</svg>
-                            Harga Indoor
-                        </a>
-                    @endcan --}}
-
-                    @can('printers.view')
-                        @php $active = request()->routeIs('printers.*'); @endphp
-                        <a href="{{ route('printers.index') }}" class="{{ $navClass($active) }}">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="{{ $iconClass($active) }}">{!! $navIcon('printer') !!}</svg>
-                            Printer
-                        </a>
-                    @endcan
-
-                    @if (Auth::user()->hasPermission('order-indoor.view') || Auth::user()->hasPermission('order-outdoor.view') || Auth::user()->hasPermission('order-artwork.view'))
-                        <p class="px-2.5 pt-4 pb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">Transaksi</p>
-                    @endif
-
-                    @can('order-indoor.view')
-                        @php $active = request()->routeIs('order-indoor.*'); @endphp
-                        <a href="{{ route('order-indoor.index') }}" class="{{ $navClass($active) }}">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="{{ $iconClass($active) }}">{!! $navIcon('document') !!}</svg>
-                            Order Indoor
-                        </a>
-                    @endcan
-
-                    @can('order-outdoor.view')
-                        @php $active = request()->routeIs('order-outdoor.*'); @endphp
-                        <a href="{{ route('order-outdoor.index') }}" class="{{ $navClass($active) }}">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="{{ $iconClass($active) }}">{!! $navIcon('truck') !!}</svg>
-                            Order Outdoor
-                        </a>
-                    @endcan
-
-                    @can('order-artwork.view')
-                        @php $active = request()->routeIs('order-artwork.*'); @endphp
-                        <a href="{{ route('order-artwork.index') }}" class="{{ $navClass($active) }}">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="{{ $iconClass($active) }}">{!! $navIcon('tag') !!}</svg>
-                            Order Artwork
-                        </a>
-                    @endcan
-
-
-                    @if (Auth::user()->hasPermission('kasir.view') || Auth::user()->hasPermission('order-desain.view') || Auth::user()->hasPermission('order-cetak.view') || Auth::user()->hasPermission('order-qc.view') || Auth::user()->hasPermission('pengambilan.view'))
-                        <p class="px-2.5 pt-4 pb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">Dashboard Operator</p>
-                    @endif
-
-                    @can('file-monitor.view')
-                        @php $active = request()->routeIs('file.*'); @endphp
-                        <a href="{{ route('file.index') }}" class="{{ $navClass($active) }}">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="{{ $iconClass($active) }}">{!! $navIcon('document') !!}</svg>
-                            File
-                        </a>
-                    @endcan
-
-                    @can('kasir.view')
-                        @php $active = request()->routeIs('kasir.*'); @endphp
-                        <a href="{{ route('kasir.index') }}" class="{{ $navClass($active) }}">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="{{ $iconClass($active) }}">{!! $navIcon('banknotes') !!}</svg>
-                            Bayar
-                        </a>
-                    @endcan
-
-                    @can('order-desain.view')
-                        @php $active = request()->routeIs('order-desain.*'); @endphp
-                        <a href="{{ route('order-desain.index') }}" class="{{ $navClass($active) }}">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="{{ $iconClass($active) }}">{!! $navIcon('document') !!}</svg>
-                            Desain/Edit
-                        </a>
-                    @endcan
-
-                    @can('order-cetak.view')
-                        @php $active = request()->routeIs('order-cetak.*'); @endphp
-                        <a href="{{ route('order-cetak.index') }}" class="{{ $navClass($active) }}">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="{{ $iconClass($active) }}">{!! $navIcon('printer') !!}</svg>
-                            Status Cetak
-                        </a>
-                    @endcan
-
-                    @can('order-qc.view')
-                        @php $active = request()->routeIs('order-qc.*'); @endphp
-                        <a href="{{ route('order-qc.index') }}" class="{{ $navClass($active) }}">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="{{ $iconClass($active) }}">{!! $navIcon('shield') !!}</svg>
-                            Bungkus
-                        </a>
-                    @endcan
-
-                    @can('pengambilan.view')
-                        @php $active = request()->routeIs('pengambilan.*'); @endphp
-                        <a href="{{ route('pengambilan.index') }}" class="{{ $navClass($active) }}">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="{{ $iconClass($active) }}">{!! $navIcon('archive') !!}</svg>
-                            Pengambilan Barang
-                        </a>
-                    @endcan
-
-                    @if (Auth::user()->hasPermission('data-warehouse.view') || Auth::user()->hasPermission('monitoring-kinerja.view') || Auth::user()->hasPermission('monitoring-transaksi.view'))
-                        <p class="px-2.5 pt-4 pb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">Analitik</p>
-                    @endif
-
-                    @can('data-warehouse.view')
-                        @php $active = request()->routeIs('data-warehouse.*'); @endphp
-                        <a href="{{ route('data-warehouse.index') }}" class="{{ $navClass($active) }}">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="{{ $iconClass($active) }}">{!! $navIcon('chart-bar') !!}</svg>
-                            Data Warehouse
-                        </a>
-                    @endcan
-
-                    @can('monitoring-kinerja.view')
-                        @php $active = request()->routeIs('monitoring-kinerja.*'); @endphp
-                        <a href="{{ route('monitoring-kinerja.index') }}" class="{{ $navClass($active) }}">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="{{ $iconClass($active) }}">{!! $navIcon('chart-bar') !!}</svg>
-                            Monitoring Kinerja
-                        </a>
-                    @endcan
-
-                    @can('monitoring-transaksi.view')
-                        @php $active = request()->routeIs('monitoring-transaksi.*'); @endphp
-                        <a href="{{ route('monitoring-transaksi.index') }}" class="{{ $navClass($active) }}">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="{{ $iconClass($active) }}">{!! $navIcon('chart-bar') !!}</svg>
-                            Monitoring Transaksi
-                        </a>
-                    @endcan
-
-                    @if (Auth::user()->hasPermission('roles.manage') || Auth::user()->hasPermission('jasa-potong.manage'))
-                        <p class="px-2.5 pt-4 pb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">Pengaturan</p>
-                    @endif
-
-                    @can('roles.manage')
-                        @php $active = request()->routeIs('roles.*'); @endphp
-                        <a href="{{ route('roles.index') }}" class="{{ $navClass($active) }}">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="{{ $iconClass($active) }}">{!! $navIcon('shield') !!}</svg>
-                            Role & Akses
-                        </a>
-
-                        @php $active = request()->routeIs('users.*'); @endphp
-                        <a href="{{ route('users.index') }}" class="{{ $navClass($active) }}">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="{{ $iconClass($active) }}">{!! $navIcon('user') !!}</svg>
-                            User
-                        </a>
-                    @endcan
-
-                    @can('jasa-potong.manage')
-                        @php $active = request()->routeIs('jasa-potong.*'); @endphp
-                        <a href="{{ route('jasa-potong.edit') }}" class="{{ $navClass($active) }}">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="{{ $iconClass($active) }}">{!! $navIcon('banknotes') !!}</svg>
-                            Jasa Potong
-                        </a>
-                    @endcan
-                </nav>
-            </aside>
-
-            <!-- Main content -->
-            <div class="flex-1 min-w-0 lg:ml-60">
-                <header class="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 sm:px-6 gap-3">
-                    <div class="flex items-center gap-3 min-w-0 flex-1">
-                        <button @click="sidebarOpen = true" class="lg:hidden shrink-0 text-gray-500 hover:text-gray-700">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
-                            </svg>
-                        </button>
-
-                        <div class="min-w-0 flex-1">
-                            @isset($header)
-                                {{ $header }}
-                            @endisset
-                        </div>
-                    </div>
-
-                    <div x-data="{ open: false }" class="relative shrink-0">
-                        <button @click="open = !open" @click.outside="open = false" class="flex items-center gap-2.5">
-                            <div class="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs font-semibold shrink-0">
+                    <div class="pt-3 pb-3 border-t border-gray-200">
+                        <div class="flex items-center gap-3 px-4">
+                            <div class="w-9 h-9 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs font-semibold shrink-0">
                                 {{ collect(explode(' ', Auth::user()->name))->map(fn ($w) => mb_substr($w, 0, 1))->take(2)->implode('') }}
                             </div>
-                            <div class="text-left leading-tight hidden sm:block">
-                                <div class="text-[13px] font-medium text-gray-800">{{ Auth::user()->name }}</div>
-                                <div class="text-[11px] text-gray-400">{{ Auth::user()->role?->label ?? 'Belum ada role' }}</div>
+                            <div>
+                                <div class="text-sm font-medium text-gray-800">{{ Auth::user()->name }}</div>
+                                <div class="text-xs text-gray-400">{{ Auth::user()->role?->label ?? 'Belum ada role' }}</div>
                             </div>
-                        </button>
-
-                        <div x-show="open" x-cloak
-                             class="absolute right-0 mt-2 w-44 bg-white border border-gray-200 rounded-lg shadow-lg py-1 text-[13px] z-50">
-                            <a href="{{ route('profile.edit') }}" class="block px-3 py-2 text-gray-600 hover:bg-gray-50">Profil</a>
+                        </div>
+                        <div class="mt-3 px-2 space-y-0.5 text-[13px]">
+                            <a href="{{ route('profile.edit') }}" class="block px-3 py-2 rounded-lg text-gray-600 hover:bg-gray-100">Profil</a>
                             <form method="POST" action="{{ route('logout') }}">
                                 @csrf
-                                <button type="submit" class="w-full text-left px-3 py-2 text-gray-600 hover:bg-gray-50">
+                                <button type="submit" class="w-full text-left px-3 py-2 rounded-lg text-gray-600 hover:bg-gray-100">
                                     Logout
                                 </button>
                             </form>
                         </div>
                     </div>
+                </div>
+            </nav>
+
+            @isset($header)
+                <header class="bg-white border-b border-gray-200">
+                    <div class="px-4 sm:px-6 py-4">
+                        {{ $header }}
+                    </div>
                 </header>
+            @endisset
 
-                <main class="p-4 sm:p-6">
-                    @if (session('status'))
-                        <div class="mb-4 rounded-md bg-green-50 text-green-700 px-4 py-3 text-sm">
-                            {{ session('status') }}
-                        </div>
-                    @endif
+            <main class="p-4 sm:p-6">
+                @if (session('status'))
+                    <div class="mb-4 rounded-md bg-green-50 text-green-700 px-4 py-3 text-sm">
+                        {{ session('status') }}
+                    </div>
+                @endif
 
-                    @if (session('error'))
-                        <div class="mb-4 rounded-md bg-red-50 text-red-700 px-4 py-3 text-sm">
-                            {{ session('error') }}
-                        </div>
-                    @endif
+                @if (session('error'))
+                    <div class="mb-4 rounded-md bg-red-50 text-red-700 px-4 py-3 text-sm">
+                        {{ session('error') }}
+                    </div>
+                @endif
 
-                    {{ $slot }}
-                </main>
-            </div>
+                {{ $slot }}
+            </main>
         </div>
 
         @include('partials.chat-widget')

@@ -12,25 +12,25 @@
     <div class="bg-white rounded-lg border border-gray-200 overflow-hidden"
          x-data="{ modalOpen: false, modalTitle: '', modalItems: [] }">
         <div class="overflow-x-auto">
-        <table class="w-full text-sm min-w-[640px]">
+        <table class="w-full text-[13px] min-w-[640px]">
             <thead class="bg-gray-50 text-left text-xs uppercase text-gray-500">
                 <tr>
-                    <th class="px-4 py-3 w-12">No</th>
-                    <th class="px-4 py-3">Kode</th>
-                    <th class="px-4 py-3">Nama Kategori</th>
-                    <th class="px-4 py-3">Nomor Urut</th>
-                    <th class="px-4 py-3">Jumlah Produk</th>
-                    <th class="px-4 py-3 text-right">Aksi</th>
+                    <th class="px-3 py-2 w-12">No</th>
+                    <th class="px-3 py-2">Kode</th>
+                    <th class="px-3 py-2">Nama Kategori</th>
+                    <th class="px-3 py-2">Nomor Urut</th>
+                    <th class="px-3 py-2">Jumlah Produk</th>
+                    <th class="px-3 py-2 text-right">Aksi</th>
                 </tr>
             </thead>
             <tbody class="divide-y">
                 @forelse ($kategori as $item)
                     <tr>
-                        <td class="px-4 py-3 text-gray-400">{{ $kategori->firstItem() + $loop->index }}</td>
-                        <td class="px-4 py-3">{{ $item->KdDivs }}</td>
-                        <td class="px-4 py-3 font-semibold text-gray-900">{{ $item->NmDivs }}</td>
-                        <td class="px-4 py-3 text-gray-600">{{ $item->NoUrut }}</td>
-                        <td class="px-4 py-3">
+                        <td class="px-3 py-2 text-gray-400">{{ $kategori->firstItem() + $loop->index }}</td>
+                        <td class="px-3 py-2">{{ $item->KdDivs }}</td>
+                        <td class="px-3 py-2 font-semibold text-gray-900">{{ $item->NmDivs }}</td>
+                        <td class="px-3 py-2 text-gray-600">{{ $item->NoUrut }}</td>
+                        <td class="px-3 py-2">
                             @if ($item->produk_count > 0)
                                 <button type="button"
                                         @click="modalOpen = true; modalTitle = '{{ addslashes($item->NmDivs) }}'; modalItems = {{ $item->produk->map(fn ($p) => ['kode' => $p->KdProd, 'nama' => $p->NmProd, 'harga' => $p->HargaStd])->toJson() }}"
@@ -41,7 +41,7 @@
                                 <span class="text-gray-400">0 produk</span>
                             @endif
                         </td>
-                        <td class="px-4 py-3 text-right">
+                        <td class="px-3 py-2 text-right">
                             <a href="{{ route('kategori.edit', $item) }}" class="inline-flex items-center text-blue-600 hover:text-blue-800" title="Edit"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125" /></svg></a>
                             <form method="POST" action="{{ route('kategori.destroy', $item) }}" class="inline"
                                   onsubmit="return confirm('Hapus kategori {{ $item->NmDivs }}?')">
@@ -53,7 +53,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="6" class="px-4 py-8 text-center text-gray-400">Belum ada kategori.</td>
+                        <td colspan="6" class="px-4 py-6 text-center text-gray-400">Belum ada kategori.</td>
                     </tr>
                 @endforelse
             </tbody>

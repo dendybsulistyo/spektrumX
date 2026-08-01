@@ -98,43 +98,43 @@
         </div>
 
         <div class="overflow-x-auto">
-        <table class="w-full text-sm min-w-[900px]">
+        <table class="w-full text-[13px] min-w-[900px]">
             <thead class="bg-gray-900 text-white text-xs uppercase">
                 <tr>
-                    <th class="px-4 py-3 text-left w-16">No. Urut</th>
-                    <th class="px-4 py-3 text-left w-20">Kode</th>
-                    <th class="px-4 py-3 text-left">Divisi</th>
-                    <th class="px-4 py-3 text-left">Produk</th>
-                    <th class="px-4 py-3 text-right">Harga Std</th>
-                    <th class="px-4 py-3 text-right">Harga Min</th>
-                    <th class="px-4 py-3 text-left">Satuan</th>
-                    <th class="px-4 py-3 text-center">Pj x Lebar</th>
-                    <th class="px-4 py-3 text-center">Pil Harga</th>
-                    <th class="px-4 py-3 text-right">Aksi</th>
+                    <th class="px-3 py-2 text-left w-16">No. Urut</th>
+                    <th class="px-3 py-2 text-left w-20">Kode</th>
+                    <th class="px-3 py-2 text-left">Divisi</th>
+                    <th class="px-3 py-2 text-left">Produk</th>
+                    <th class="px-3 py-2 text-right">Harga Std</th>
+                    <th class="px-3 py-2 text-right">Harga Min</th>
+                    <th class="px-3 py-2 text-left">Satuan</th>
+                    <th class="px-3 py-2 text-center">Pj x Lebar</th>
+                    <th class="px-3 py-2 text-center">Pil Harga</th>
+                    <th class="px-3 py-2 text-right">Aksi</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-200">
                 <template x-if="rows.length === 0">
                     <tr>
-                        <td colspan="10" class="px-4 py-8 text-center text-gray-400">Belum ada data produk.</td>
+                        <td colspan="10" class="px-4 py-6 text-center text-gray-400">Belum ada data produk.</td>
                     </tr>
                 </template>
                 <template x-for="(row, idx) in rows" :key="row.id">
                     <tr :class="idx % 2 === 1 ? 'bg-gray-50' : ''">
-                        <td class="px-4 py-3 text-gray-500" x-text="row.NoUrut"></td>
-                        <td class="px-4 py-3 font-medium text-gray-900" x-text="row.KdProd"></td>
-                        <td class="px-4 py-3 text-gray-600 whitespace-nowrap" x-text="row.NmDivs ?? '-'"></td>
-                        <td class="px-4 py-3 text-blue-700" x-text="row.NmProd"></td>
-                        <td class="px-4 py-3 text-right text-gray-700" x-text="Number(row.HargaStd).toLocaleString('id-ID')"></td>
-                        <td class="px-4 py-3 text-right text-gray-700" x-text="Number(row.HargaMin).toLocaleString('id-ID')"></td>
-                        <td class="px-4 py-3 text-gray-600" x-text="row.Satuan"></td>
-                        <td class="px-4 py-3 text-center">
+                        <td class="px-3 py-2 text-gray-500" x-text="row.NoUrut"></td>
+                        <td class="px-3 py-2 font-medium text-gray-900" x-text="row.KdProd"></td>
+                        <td class="px-3 py-2 text-gray-600 whitespace-nowrap" x-text="row.NmDivs ?? '-'"></td>
+                        <td class="px-3 py-2 text-blue-700" x-text="row.NmProd"></td>
+                        <td class="px-3 py-2 text-right text-gray-700" x-text="Number(row.HargaStd).toLocaleString('id-ID')"></td>
+                        <td class="px-3 py-2 text-right text-gray-700" x-text="Number(row.HargaMin).toLocaleString('id-ID')"></td>
+                        <td class="px-3 py-2 text-gray-600" x-text="row.Satuan"></td>
+                        <td class="px-3 py-2 text-center">
                             <span class="inline-flex items-center justify-center min-w-[1.5rem] h-6 px-1.5 rounded-full text-xs font-semibold whitespace-nowrap"
                                   :style="pjLbStyles[row.isPjLb] || 'background-color:#f3f4f6;color:#9ca3af'"
                                   :title="pjLbLabels[row.isPjLb]" x-text="pjLbBadgeText[row.isPjLb] || row.isPjLb"></span>
                         </td>
-                        <td class="px-4 py-3 text-center text-gray-600" x-text="row.isHPilih === 1 ? 'Ya' : 'Tidak'"></td>
-                        <td class="px-4 py-3 text-right">
+                        <td class="px-3 py-2 text-center text-gray-600" x-text="row.isHPilih === 1 ? 'Ya' : 'Tidak'"></td>
+                        <td class="px-3 py-2 text-right">
                             @can('produk.manage')
                                 <button type="button" @click="openEdit(row)" class="text-blue-600 hover:text-blue-800 hover:underline font-medium">
                                     Edit Harga

@@ -34,9 +34,14 @@ class OrderOutdoor extends Model
         'desain_at',
         'cetak_by',
         'cetak_at',
+        'finishing_by',
+        'finishing_at',
         'qc_by',
         'qc_at',
+        'bungkus_by',
+        'bungkus_at',
         'diambil_at',
+        'pengambilan_by',
         'cancel_requested_at',
         'cancel_requested_by',
         'cancel_reason',
@@ -60,7 +65,9 @@ class OrderOutdoor extends Model
             'dibayar_at' => 'datetime',
             'desain_at' => 'datetime',
             'cetak_at' => 'datetime',
+            'finishing_at' => 'datetime',
             'qc_at' => 'datetime',
+            'bungkus_at' => 'datetime',
             'diambil_at' => 'datetime',
             'cancel_requested_at' => 'datetime',
             'cancel_approved_at' => 'datetime',
@@ -96,9 +103,24 @@ class OrderOutdoor extends Model
         return $this->belongsTo(User::class, 'cetak_by');
     }
 
+    public function finishingBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'finishing_by');
+    }
+
     public function qcBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'qc_by');
+    }
+
+    public function bungkusBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'bungkus_by');
+    }
+
+    public function pengambilanBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'pengambilan_by');
     }
 
     public function createdBy(): BelongsTo

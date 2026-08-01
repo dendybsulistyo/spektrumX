@@ -18,27 +18,27 @@
         </div>
 
         <div class="overflow-x-auto">
-        <table class="w-full text-sm min-w-[640px]">
+        <table class="w-full text-[13px] min-w-[640px]">
             <thead class="bg-gray-50 text-left text-xs uppercase text-gray-500">
                 <tr>
-                    <th class="px-4 py-3 w-12">No</th>
-                    <th class="px-4 py-3">Kode</th>
-                    <th class="px-4 py-3">Nama Customer</th>
-                    <th class="px-4 py-3">Kota</th>
-                    <th class="px-4 py-3">Telepon</th>
-                    <th class="px-4 py-3">Tipe</th>
-                    <th class="px-4 py-3">Tanggal Transaksi Terakhir</th>
+                    <th class="px-3 py-2 w-12">No</th>
+                    <th class="px-3 py-2">Kode</th>
+                    <th class="px-3 py-2">Nama Customer</th>
+                    <th class="px-3 py-2">Kota</th>
+                    <th class="px-3 py-2">Telepon</th>
+                    <th class="px-3 py-2">Tipe</th>
+                    <th class="px-3 py-2">Tanggal Transaksi Terakhir</th>
                 </tr>
             </thead>
             <tbody class="divide-y">
                 @forelse ($customers as $customer)
                     <tr>
-                        <td class="px-4 py-3 text-gray-400">{{ $customers->firstItem() + $loop->index }}</td>
-                        <td class="px-4 py-3">{{ $customer->KdCust }}</td>
-                        <td class="px-4 py-3 font-semibold text-gray-900">{{ $customer->NmCust }}</td>
-                        <td class="px-4 py-3 text-gray-600">{{ $customer->Kota }}</td>
-                        <td class="px-4 py-3 text-gray-600">{{ $customer->Telp }}</td>
-                        <td class="px-4 py-3">
+                        <td class="px-3 py-2 text-gray-400">{{ $customers->firstItem() + $loop->index }}</td>
+                        <td class="px-3 py-2">{{ $customer->KdCust }}</td>
+                        <td class="px-3 py-2 font-semibold text-gray-900">{{ $customer->NmCust }}</td>
+                        <td class="px-3 py-2 text-gray-600">{{ $customer->Kota }}</td>
+                        <td class="px-3 py-2 text-gray-600">{{ $customer->Telp }}</td>
+                        <td class="px-3 py-2">
                             @if ($customer->is_vip)
                                 <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">
                                     VIP
@@ -49,7 +49,7 @@
                                 </span>
                             @endif
                         </td>
-                        <td class="px-4 py-3">
+                        <td class="px-3 py-2">
                             @if ($customer->tanggal_transaksi)
                                 <span class="text-gray-700">{{ \Carbon\Carbon::parse($customer->tanggal_transaksi)->format('d-m-Y') }}</span>
                             @else
@@ -59,7 +59,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="7" class="px-4 py-8 text-center text-gray-400">Belum ada data customer.</td>
+                        <td colspan="7" class="px-4 py-6 text-center text-gray-400">Belum ada data customer.</td>
                     </tr>
                 @endforelse
             </tbody>

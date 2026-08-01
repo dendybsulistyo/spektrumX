@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\OrderArtwork;
 use App\Models\OrderIndoor;
 use App\Models\OrderOutdoor;
 use Illuminate\Support\Collection;
@@ -23,7 +24,9 @@ class DashboardStatsService
             'hutang_nominal' => $all->where('status_bayar', 'hutang')->sum('jumlah_piutang'),
             'desain' => $all->where('status', 'desain')->count(),
             'cetak' => $all->where('status', 'cetak')->count(),
+            'finishing' => $all->where('status', 'finishing')->count(),
             'qc' => $all->where('status', 'qc')->count(),
+            'bungkus' => $all->where('status', 'bungkus')->count(),
             'siap_diambil' => $all->where('status', 'siap_diambil')->count(),
             'selesai' => $all->where('status', 'selesai')->count(),
             'telat' => $all->filter(fn ($o) => $this->isOverdue($o))->count(),
@@ -37,12 +40,15 @@ class DashboardStatsService
     {
         $indoor = OrderIndoor::query()->whereNotNull('created_at')->get();
         $outdoor = OrderOutdoor::query()->get();
+        $artwork = OrderArtwork::query()->get();
 
-        $indoor->load('customer', 'kasir', 'desainBy', 'cetakBy', 'qcBy');
-        $outdoor->load('customer', 'kasir', 'desainBy', 'cetakBy', 'qcBy');
+        $indoor->load('customer', 'kasir', 'desainBy', 'cetakBy', 'finishingBy', 'qcBy', 'bungkusBy', 'pengambilanBy');
+        $outdoor->load('customer', 'kasir', 'desainBy', 'cetakBy', 'finishingBy', 'qcBy', 'bungkusBy', 'pengambilanBy', 'items');
+        $artwork->load('customer', 'kasir', 'desainBy', 'cetakBy', 'finishingBy', 'qcBy', 'bungkusBy', 'pengambilanBy');
 
         $mapped = $indoor->map(fn ($o) => $this->toRow($o, 'Indoor'))
-            ->concat($outdoor->map(fn ($o) => $this->toRow($o, 'Outdoor')));
+            ->concat($outdoor->map(fn ($o) => $this->toRow($o, 'Outdoor')))
+            ->concat($artwork->map(fn ($o) => $this->toRow($o, 'Artwork')));
 
         return $mapped->sortByDesc('created_at')->take($limit)->values();
     }
@@ -55,8 +61,9 @@ class DashboardStatsService
         // actually placed through the new pipeline.
         $indoor = OrderIndoor::query()->whereNotNull('created_at')->get();
         $outdoor = OrderOutdoor::query()->get();
+        $artwork = OrderArtwork::query()->get();
 
-        return $indoor->concat($outdoor);
+        return $indoor->concat($outdoor)->concat($artwork);
     }
 
     /**
@@ -66,7 +73,7 @@ class DashboardStatsService
     {
         $selesaiAt = $order->diambil_at;
         $durasi = $order->created_at
-            ? $order->created_at->diffForHumans($selesaiAt ?? now(), true)
+            ? $order->created_at->locale('id')->diffForHumans($selesaiAt ?? now(), true)
             : null;
 
         return [
@@ -81,10 +88,32 @@ class DashboardStatsService
             'kasir' => $order->kasir?->name,
             'desain_by' => $order->desainBy?->name,
             'cetak_by' => $order->cetakBy?->name,
+            'finishing_by' => $order->finishingBy?->name,
             'qc_by' => $order->qcBy?->name,
+            'bungkus_by' => $order->bungkusBy?->name,
+            'pengambilan_by' => $order->pengambilanBy?->name,
+            'progress' => $this->cetakProgress($order, $tipe),
             'selesai' => $selesaiAt !== null,
             'telat' => $this->isOverdue($order),
         ];
+    }
+
+    /**
+     * Live "N/M unit" cetak progress for an outdoor order currently sitting
+     * in the cetak stage — the per-item qty_diproses tracking only exists
+     * on outdoor orders, so Indoor/Artwork or any other stage has nothing
+     * to show here.
+     */
+    private function cetakProgress($order, string $tipe): ?string
+    {
+        if ($tipe !== 'Outdoor' || $order->status !== 'cetak' || ! $order->relationLoaded('items')) {
+            return null;
+        }
+
+        $done = $order->items->sum('qty_diproses');
+        $total = $order->items->sum('Qty');
+
+        return $total > 0 ? "{$done}/{$total}" : null;
     }
 
     private function isOverdue($order): bool

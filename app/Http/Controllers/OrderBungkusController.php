@@ -12,19 +12,19 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
-class OrderQcController extends Controller
+class OrderBungkusController extends Controller
 {
     use ResolvesOrderType;
 
     public function index(): View
     {
-        $indoorOrders = OrderIndoor::query()->with('customer')->where('status', 'qc')
+        $indoorOrders = OrderIndoor::query()->with('customer')->where('status', 'bungkus')
             ->orderByDesc('TglOrder')->orderByDesc('NoOrder')->get();
 
-        $outdoorOrders = OrderOutdoor::query()->with('customer')->where('status', 'qc')
+        $outdoorOrders = OrderOutdoor::query()->with('customer')->where('status', 'bungkus')
             ->orderByDesc('TglOrder')->orderByDesc('NoOrder')->get();
 
-        $artworkOrders = OrderArtwork::query()->with('customer')->where('status', 'qc')
+        $artworkOrders = OrderArtwork::query()->with('customer')->where('status', 'bungkus')
             ->orderByDesc('TglOrder')->orderByDesc('NoOrder')->get();
 
         $outdoorComments = OrderComment::with('user')
@@ -33,14 +33,14 @@ class OrderQcController extends Controller
 
         $outdoorUnread = OrderComment::unreadCountsFor('outdoor', $outdoorOrders->pluck('id'));
 
-        return view('order-qc.index', compact('indoorOrders', 'outdoorOrders', 'artworkOrders', 'outdoorComments', 'outdoorUnread'));
+        return view('order-bungkus.index', compact('indoorOrders', 'outdoorOrders', 'artworkOrders', 'outdoorComments', 'outdoorUnread'));
     }
 
     public function update(Request $request, string $type, int $id): RedirectResponse
     {
         $order = $this->resolveOrder($type, $id);
 
-        abort_if($order->status !== 'qc', 422, 'Order ini sudah tidak di antrian QC.');
+        abort_if($order->status !== 'bungkus', 422, 'Order ini sudah tidak di antrian bungkus.');
 
         $data = $request->validate([
             'action' => ['required', 'in:selesai,lanjut'],
@@ -48,21 +48,21 @@ class OrderQcController extends Controller
         ]);
 
         $order->update([
-            'status' => 'bungkus',
-            'qc_by' => auth()->id(),
-            'qc_at' => now(),
+            'status' => 'siap_diambil',
+            'bungkus_by' => auth()->id(),
+            'bungkus_at' => now(),
         ]);
 
         OrderStatusNote::create([
             'order_type' => $type,
             'order_id' => $order->id,
-            'stage' => 'qc',
+            'stage' => 'bungkus',
             'action' => $data['action'],
             'catatan' => $data['catatan'] ?? null,
             'user_id' => auth()->id(),
             'created_at' => now(),
         ]);
 
-        return redirect()->route('order-qc.index')->with('status', 'Order dipindahkan ke antrian Bungkus.');
+        return redirect()->route('order-bungkus.index')->with('status', 'Order siap diambil customer.');
     }
 }

@@ -8,10 +8,10 @@
 
         <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
             <div class="overflow-x-auto">
-                <table class="w-full text-sm min-w-[900px] border-collapse">
+                <table class="w-full text-[13px] min-w-[900px] border-collapse">
                     <thead class="text-white text-xs uppercase">
                         <tr class="bg-gray-900">
-                            <th class="px-4 py-3 text-left" rowspan="2">Bahan</th>
+                            <th class="px-3 py-2 text-left" rowspan="2">Bahan</th>
                             <th class="px-2 py-3 text-center w-14" rowspan="2">Kode</th>
                             @foreach ($printers as $printer)
                                 <th class="px-2 py-2 text-center bg-red-600 whitespace-nowrap" colspan="2">{{ $printer->NmPrn }}</th>
@@ -27,7 +27,7 @@
                     <tbody class="divide-y divide-gray-200">
                         @forelse ($bahanList as $bahan)
                             <tr>
-                                <td class="px-4 py-3 bg-gray-900 text-white font-medium whitespace-nowrap">{{ $bahan->NmBhn }}</td>
+                                <td class="px-3 py-2 bg-gray-900 text-white font-medium whitespace-nowrap">{{ $bahan->NmBhn }}</td>
                                 <td class="px-2 py-3 text-center bg-blue-50 text-blue-700 font-semibold">{{ $bahan->NoCetak }}</td>
                                 @foreach ($printers as $printer)
                                     @php
@@ -52,7 +52,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="{{ 2 + count($printers) * 2 }}" class="px-4 py-8 text-center text-gray-400">Belum ada data bahan.</td>
+                                <td colspan="{{ 2 + count($printers) * 2 }}" class="px-4 py-6 text-center text-gray-400">Belum ada data bahan.</td>
                             </tr>
                         @endforelse
                     </tbody>

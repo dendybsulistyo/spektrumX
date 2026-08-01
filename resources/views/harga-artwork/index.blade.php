@@ -30,31 +30,31 @@
         </div>
 
         <div class="overflow-x-auto">
-        <table class="w-full text-sm min-w-[640px]">
+        <table class="w-full text-[13px] min-w-[640px]">
             <thead class="bg-gray-900 text-left text-xs uppercase text-white">
                 <tr>
-                    <th class="px-4 py-3 w-12">No</th>
-                    <th class="px-4 py-3">Kode</th>
-                    <th class="px-4 py-3">Nama Produk</th>
-                    <th class="px-4 py-3">Kategori</th>
-                    <th class="px-4 py-3">Satuan</th>
-                    <th class="px-4 py-3 text-right">Harga Standar</th>
-                    <th class="px-4 py-3 text-right">Harga Minimum</th>
-                    <th class="px-4 py-3">Catatan</th>
-                    <th class="px-4 py-3 text-right">Aksi</th>
+                    <th class="px-3 py-2 w-12">No</th>
+                    <th class="px-3 py-2">Kode</th>
+                    <th class="px-3 py-2">Nama Produk</th>
+                    <th class="px-3 py-2">Kategori</th>
+                    <th class="px-3 py-2">Satuan</th>
+                    <th class="px-3 py-2 text-right">Harga Standar</th>
+                    <th class="px-3 py-2 text-right">Harga Minimum</th>
+                    <th class="px-3 py-2">Catatan</th>
+                    <th class="px-3 py-2 text-right">Aksi</th>
                 </tr>
             </thead>
             <tbody class="divide-y">
                 @forelse ($hargaArtwork as $item)
                     <tr>
-                        <td class="px-4 py-3 text-gray-400">{{ $hargaArtwork->firstItem() + $loop->index }}</td>
-                        <td class="px-4 py-3">{{ $item->KdProd }}</td>
-                        <td class="px-4 py-3 font-semibold text-gray-900">{{ $item->NmProd }}</td>
-                        <td class="px-4 py-3 text-gray-600">{{ $item->kategori?->NmDivs ?? '-' }}</td>
-                        <td class="px-4 py-3 text-gray-600">{{ $item->Satuan }}</td>
-                        <td class="px-4 py-3 text-right text-gray-600">Rp {{ number_format($item->HargaStd, 0, ',', '.') }}</td>
-                        <td class="px-4 py-3 text-right text-gray-600">Rp {{ number_format($item->HargaMin, 0, ',', '.') }}</td>
-                        <td class="px-4 py-3">
+                        <td class="px-3 py-2 text-gray-400">{{ $hargaArtwork->firstItem() + $loop->index }}</td>
+                        <td class="px-3 py-2">{{ $item->KdProd }}</td>
+                        <td class="px-3 py-2 font-semibold text-gray-900">{{ $item->NmProd }}</td>
+                        <td class="px-3 py-2 text-gray-600">{{ $item->kategori?->NmDivs ?? '-' }}</td>
+                        <td class="px-3 py-2 text-gray-600">{{ $item->Satuan }}</td>
+                        <td class="px-3 py-2 text-right text-gray-600">Rp {{ number_format($item->HargaStd, 0, ',', '.') }}</td>
+                        <td class="px-3 py-2 text-right text-gray-600">Rp {{ number_format($item->HargaMin, 0, ',', '.') }}</td>
+                        <td class="px-3 py-2">
                             @if ($item->isPjLb)
                                 <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-blue-50 text-blue-700 mr-1">Pakai P×L</span>
                             @endif
@@ -62,7 +62,7 @@
                                 <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-purple-50 text-purple-700">Harga Bertingkat</span>
                             @endif
                         </td>
-                        <td class="px-4 py-3 text-right">
+                        <td class="px-3 py-2 text-right">
                             <a href="{{ route('harga-artwork.edit', $item) }}" class="inline-flex items-center text-blue-600 hover:text-blue-800" title="Edit"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125" /></svg></a>
                             <form method="POST" action="{{ route('harga-artwork.destroy', $item) }}" class="inline"
                                   onsubmit="return confirm('Hapus harga artwork {{ $item->NmProd }}?')">
@@ -74,7 +74,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="9" class="px-4 py-8 text-center text-gray-400">Belum ada data harga artwork.</td>
+                        <td colspan="9" class="px-4 py-6 text-center text-gray-400">Belum ada data harga artwork.</td>
                     </tr>
                 @endforelse
             </tbody>

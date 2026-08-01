@@ -99,30 +99,30 @@
                 <h3 class="text-sm font-semibold text-gray-700">Rincian per Periode</h3>
             </div>
             <div class="overflow-x-auto">
-                <table class="w-full text-sm min-w-[640px]">
+                <table class="w-full text-[13px] min-w-[640px]">
                     <thead class="bg-gray-50 text-left text-xs uppercase text-gray-500">
                         <tr>
-                            <th class="px-4 py-3">Periode</th>
-                            <th class="px-4 py-3 text-right">Indoor</th>
-                            <th class="px-4 py-3 text-right">Outdoor</th>
-                            <th class="px-4 py-3 text-right">Artwork</th>
-                            <th class="px-4 py-3 text-right">Total Transaksi</th>
-                            <th class="px-4 py-3 text-right">Total Omzet</th>
+                            <th class="px-3 py-2">Periode</th>
+                            <th class="px-3 py-2 text-right">Indoor</th>
+                            <th class="px-3 py-2 text-right">Outdoor</th>
+                            <th class="px-3 py-2 text-right">Artwork</th>
+                            <th class="px-3 py-2 text-right">Total Transaksi</th>
+                            <th class="px-3 py-2 text-right">Total Omzet</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y">
                         @forelse (array_reverse($periods, true) as $periode => $data)
                             <tr>
-                                <td class="px-4 py-3 font-semibold text-gray-900">{{ $periodLabel($periode) }}</td>
-                                <td class="px-4 py-3 text-right text-gray-600">{{ $data['jenis']['Indoor']['jumlah'] ?? 0 }}</td>
-                                <td class="px-4 py-3 text-right text-gray-600">{{ $data['jenis']['Outdoor']['jumlah'] ?? 0 }}</td>
-                                <td class="px-4 py-3 text-right text-gray-600">{{ $data['jenis']['Artwork']['jumlah'] ?? 0 }}</td>
-                                <td class="px-4 py-3 text-right font-semibold text-gray-900">{{ $fmtNum($data['jumlah']) }}</td>
-                                <td class="px-4 py-3 text-right font-semibold text-gray-900">{{ $fmtRp($data['omzet']) }}</td>
+                                <td class="px-3 py-2 font-semibold text-gray-900">{{ $periodLabel($periode) }}</td>
+                                <td class="px-3 py-2 text-right text-gray-600">{{ $data['jenis']['Indoor']['jumlah'] ?? 0 }}</td>
+                                <td class="px-3 py-2 text-right text-gray-600">{{ $data['jenis']['Outdoor']['jumlah'] ?? 0 }}</td>
+                                <td class="px-3 py-2 text-right text-gray-600">{{ $data['jenis']['Artwork']['jumlah'] ?? 0 }}</td>
+                                <td class="px-3 py-2 text-right font-semibold text-gray-900">{{ $fmtNum($data['jumlah']) }}</td>
+                                <td class="px-3 py-2 text-right font-semibold text-gray-900">{{ $fmtRp($data['omzet']) }}</td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="6" class="px-4 py-8 text-center text-gray-400">Tidak ada data pada rentang ini.</td>
+                                <td colspan="6" class="px-4 py-6 text-center text-gray-400">Tidak ada data pada rentang ini.</td>
                             </tr>
                         @endforelse
                     </tbody>

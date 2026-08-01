@@ -1,5 +1,9 @@
 @php
     $order = $order ?? null;
+    // "Username" here means the local part of the login email (before the
+    // @) — there's no dedicated username column on users, and this is the
+    // closest stand-in for it as opposed to the free-text display name.
+    $username = str_replace('.', '', \Illuminate\Support\Str::before(auth()->user()->email, '@'));
     $initialItems = isset($items) && $items->isNotEmpty()
         ? $items->map(fn ($i) => [
             'NmFile' => $i->NmFile, 'Panjang' => $i->Panjang, 'Lebar' => $i->Lebar,
@@ -9,13 +13,14 @@
             'ada_finishing' => $i->ada_finishing === null ? '' : ($i->ada_finishing ? 'ya' : 'tidak'),
             'jenis_finishing' => $i->jenis_finishing,
         ])->values()
-        : collect([['NmFile' => '', 'Panjang' => '', 'Lebar' => '', 'Qty' => 1, 'KdCtk' => '', 'KdPrn' => '', 'NoCetak' => '', 'ada_finishing' => '', 'jenis_finishing' => '']]);
+        : collect([['NmFile' => $username.random_int(1000, 9999), 'Panjang' => '', 'Lebar' => '', 'Qty' => 1, 'KdCtk' => '', 'KdPrn' => '', 'NoCetak' => '', 'ada_finishing' => '', 'jenis_finishing' => '']]);
     $selectedCustomerLabel = $selectedCustomer ? "{$selectedCustomer->NmCust} ({$selectedCustomer->KdCust})" : '';
     $hargaMap = $hargaCetakList->keyBy('KdCtk')->map(fn ($h) => ['std' => (float) $h->HargaStd, 'min' => (float) $h->HargaMin]);
 @endphp
 
 <div x-data="{
         items: {{ old('items') ? json_encode(old('items')) : $initialItems->toJson() }},
+        userName: @js($username),
         hargaMap: {{ $hargaMap->toJson() }},
         bahanOptions: {{ $bahanCetakOutdoorList->map(fn ($bc) => ['NoCetak' => $bc->NoCetak, 'NmBhn' => $bc->NmBhn])->values()->toJson() }},
         hargaFor(item) {
@@ -36,7 +41,8 @@
             item.KdCtk = (item.KdPrn && item.NoCetak) ? (item.KdPrn + item.NoCetak) : '';
         },
         addItem() {
-            this.items.push({ NmFile: '', Panjang: '', Lebar: '', Qty: 1, KdCtk: '', KdPrn: '', NoCetak: '', ada_finishing: '', jenis_finishing: '' });
+            const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+            this.items.push({ NmFile: this.userName + randomSuffix, Panjang: '', Lebar: '', Qty: 1, KdCtk: '', KdPrn: '', NoCetak: '', ada_finishing: '', jenis_finishing: '' });
             this.$nextTick(() => {
                 const inputs = document.querySelectorAll('[data-item-search]');
                 inputs[inputs.length - 1]?.focus();
@@ -279,18 +285,18 @@
                 <div class="sm:col-span-1">
                     <label class="block text-xs text-gray-500 mb-1">Panjang (cm)</label>
                     <input type="number" step="0.01" :name="`items[${index}][Panjang]`" x-model="item.Panjang" required
-                           class="w-full rounded-md border-gray-300 text-sm px-2">
+                           class="w-full rounded-md border-gray-300 text-sm px-2 no-spinner">
                 </div>
 
                 <div class="sm:col-span-1">
                     <label class="block text-xs text-gray-500 mb-1">Lebar (cm)</label>
                     <input type="number" step="0.01" :name="`items[${index}][Lebar]`" x-model="item.Lebar" required
-                           class="w-full rounded-md border-gray-300 text-sm px-2">
+                           class="w-full rounded-md border-gray-300 text-sm px-2 no-spinner">
                 </div>
                 <div class="sm:col-span-1">
                     <label class="block text-xs text-gray-500 mb-1">Qty</label>
                     <input type="number" :name="`items[${index}][Qty]`" x-model="item.Qty" min="1" required
-                           class="w-full rounded-md border-gray-300 text-sm px-2">
+                           class="w-full rounded-md border-gray-300 text-sm px-2 no-spinner">
                 </div>
                 <div class="col-span-2 sm:col-span-2">
                     <label class="block text-xs text-gray-500 mb-1">Printer Outdoor</label>

@@ -3,3 +3,13 @@
 @tailwind utilities;
 
 [x-cloak] { display: none !important; }
+
+/* Hides the native up/down spinner on number inputs, for a narrower field. */
+.no-spinner::-webkit-inner-spin-button,
+.no-spinner::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+.no-spinner {
+    -moz-appearance: textfield;
+}

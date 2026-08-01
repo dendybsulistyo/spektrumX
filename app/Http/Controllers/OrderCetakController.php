@@ -43,13 +43,15 @@ class OrderCetakController extends Controller
 
         $order = $this->resolveOrder($type, $id);
 
+        abort_if($order->status !== 'cetak', 422, 'Order ini sudah tidak di antrian cetak.');
+
         $data = $request->validate([
             'action' => ['required', 'in:selesai,lanjut'],
             'catatan' => ['nullable', 'string', 'max:255'],
         ]);
 
         $order->update([
-            'status' => 'qc',
+            'status' => 'finishing',
             'cetak_by' => auth()->id(),
             'cetak_at' => now(),
         ]);
@@ -64,14 +66,15 @@ class OrderCetakController extends Controller
             'created_at' => now(),
         ]);
 
-        return redirect()->route('order-cetak.index')->with('status', 'Order dipindahkan ke antrian QC.');
+        return redirect()->route('order-cetak.index', ['tab' => $type])->with('status', 'Order dipindahkan ke antrian Finishing.');
     }
 
     /**
      * Petugas cetak mengerjakan item outdoor secara bertahap — tiap submit
      * menambah qty_diproses (dibatasi maksimal sisa Qty pesanan). Begitu
-     * semua item dalam order sudah tuntas, order otomatis pindah ke QC,
-     * tanpa perlu tombol "Update Status" manual seperti Indoor/Artwork.
+     * semua item dalam order sudah tuntas, order otomatis pindah ke
+     * Finishing, tanpa perlu tombol "Update Status" manual seperti
+     * Indoor/Artwork.
      */
     public function updateProgress(Request $request, OrderOutdoorDetail $item): RedirectResponse
     {
@@ -87,24 +90,48 @@ class OrderCetakController extends Controller
         $item->increment('qty_diproses', $data['qty']);
 
         if ($order->items()->get()->every(fn (OrderOutdoorDetail $i) => $i->isSelesai())) {
-            $order->update([
-                'status' => 'qc',
-                'cetak_by' => auth()->id(),
-                'cetak_at' => now(),
-            ]);
+            $this->finishOutdoorOrder($order);
 
-            OrderStatusNote::create([
-                'order_type' => 'outdoor',
-                'order_id' => $order->id,
-                'stage' => 'cetak',
-                'action' => 'selesai',
-                'user_id' => auth()->id(),
-                'created_at' => now(),
-            ]);
-
-            return redirect()->route('order-cetak.index')->with('status', "Order {$order->NoOrder} tuntas, dipindahkan ke antrian QC.");
+            return redirect()->route('order-cetak.index', ['tab' => 'outdoor'])->with('status', "Order {$order->NoOrder} tuntas, dipindahkan ke antrian Finishing.");
         }
 
-        return redirect()->route('order-cetak.index')->with('status', 'Progress tersimpan.');
+        return redirect()->route('order-cetak.index', ['tab' => 'outdoor'])->with('status', 'Progress tersimpan.');
+    }
+
+    /**
+     * Fallback for an outdoor order whose items are already fully
+     * progressed but never got the automatic push into Finishing — e.g. an
+     * order that was sent back to Layout and re-entered Cetak with its
+     * qty_diproses already maxed out, so there was no "last unit" click left
+     * to trigger updateProgress()'s transition. Since there's nothing left
+     * to click in that state, this gives the operator an explicit way to
+     * unstick it.
+     */
+    public function finishOutdoor(OrderOutdoor $order): RedirectResponse
+    {
+        abort_if($order->status !== 'cetak', 422, 'Order ini sudah tidak di antrian cetak.');
+        abort_unless($order->items()->get()->every(fn (OrderOutdoorDetail $i) => $i->isSelesai()), 422, 'Masih ada item yang belum tuntas.');
+
+        $this->finishOutdoorOrder($order);
+
+        return redirect()->route('order-cetak.index', ['tab' => 'outdoor'])->with('status', "Order {$order->NoOrder} dipindahkan ke antrian Finishing.");
+    }
+
+    private function finishOutdoorOrder(OrderOutdoor $order): void
+    {
+        $order->update([
+            'status' => 'finishing',
+            'cetak_by' => auth()->id(),
+            'cetak_at' => now(),
+        ]);
+
+        OrderStatusNote::create([
+            'order_type' => 'outdoor',
+            'order_id' => $order->id,
+            'stage' => 'cetak',
+            'action' => 'selesai',
+            'user_id' => auth()->id(),
+            'created_at' => now(),
+        ]);
     }
 }

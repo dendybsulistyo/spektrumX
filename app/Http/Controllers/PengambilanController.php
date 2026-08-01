@@ -39,6 +39,8 @@ class PengambilanController extends Controller
     {
         $order = $this->resolveOrder($type, $id);
 
+        abort_if($order->status !== 'siap_diambil', 422, 'Order ini sudah tidak di antrian pengambilan.');
+
         if ($order->status_bayar === 'dp' && (float) $order->jumlah_piutang > 0) {
             return back()->with('error', 'Order ini masih ada sisa DP Rp '.number_format($order->jumlah_piutang, 0, ',', '.').' yang belum dilunasi. Lunasi dulu lewat halaman Bayar.');
         }
@@ -46,6 +48,7 @@ class PengambilanController extends Controller
         $order->update([
             'status' => 'selesai',
             'diambil_at' => now(),
+            'pengambilan_by' => auth()->id(),
         ]);
 
         OrderStatusNote::create([

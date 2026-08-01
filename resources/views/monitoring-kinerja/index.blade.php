@@ -2,7 +2,9 @@
     $stageLabels = [
         'desain' => 'Desain',
         'cetak' => 'Cetak',
+        'finishing' => 'Finishing',
         'qc' => 'QC',
+        'bungkus' => 'Bungkus',
         'kasir' => 'Kasir',
         'pengambilan' => 'Pengambilan',
         'pembatalan' => 'Pembatalan',
@@ -36,28 +38,28 @@
                 <p class="text-xs text-gray-400 mt-0.5">Dihitung dari catatan perpindahan status tiap order (Order Indoor, Outdoor, Artwork).</p>
             </div>
             <div class="overflow-x-auto">
-                <table class="w-full text-sm min-w-[560px]">
+                <table class="w-full text-[13px] min-w-[560px]">
                     <thead class="bg-gray-50 text-left text-xs uppercase text-gray-500">
                         <tr>
-                            <th class="px-4 py-3">Staf</th>
+                            <th class="px-3 py-2">Staf</th>
                             @foreach ($stages as $stage)
-                                <th class="px-4 py-3 text-right">{{ $stageLabels[$stage] }}</th>
+                                <th class="px-3 py-2 text-right">{{ $stageLabels[$stage] }}</th>
                             @endforeach
-                            <th class="px-4 py-3 text-right font-semibold">Total</th>
+                            <th class="px-3 py-2 text-right font-semibold">Total</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y">
                         @forelse ($staffRows as $row)
                             <tr>
-                                <td class="px-4 py-3 font-semibold text-gray-900">{{ $row['name'] }}</td>
+                                <td class="px-3 py-2 font-semibold text-gray-900">{{ $row['name'] }}</td>
                                 @foreach ($stages as $stage)
-                                    <td class="px-4 py-3 text-right text-gray-600">{{ $row['counts'][$stage] ?? '-' }}</td>
+                                    <td class="px-3 py-2 text-right text-gray-600">{{ $row['counts'][$stage] ?? '-' }}</td>
                                 @endforeach
-                                <td class="px-4 py-3 text-right font-semibold text-gray-900">{{ array_sum($row['counts']) }}</td>
+                                <td class="px-3 py-2 text-right font-semibold text-gray-900">{{ array_sum($row['counts']) }}</td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="{{ count($stages) + 2 }}" class="px-4 py-8 text-center text-gray-400">
+                                <td colspan="{{ count($stages) + 2 }}" class="px-4 py-6 text-center text-gray-400">
                                     Tidak ada aktivitas pada rentang tanggal ini.
                                 </td>
                             </tr>

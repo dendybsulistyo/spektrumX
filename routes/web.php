@@ -20,13 +20,16 @@ use App\Http\Controllers\KategoriController;
 use App\Http\Controllers\KategoriProdukIndoorController;
 use App\Http\Controllers\OperatorController;
 use App\Http\Controllers\OrderArtworkController;
+use App\Http\Controllers\OrderBungkusController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\OrderCetakController;
 use App\Http\Controllers\OrderDesainController;
+use App\Http\Controllers\OrderFinishingController;
 use App\Http\Controllers\OrderIndoorController;
 use App\Http\Controllers\OrderCommentController;
 use App\Http\Controllers\OrderOutdoorController;
 use App\Http\Controllers\OrderQcController;
+use App\Http\Controllers\PapanPantauController;
 use App\Http\Controllers\PengambilanController;
 use App\Http\Controllers\PrinterController;
 use App\Http\Controllers\PrinterOutdoorController;
@@ -60,6 +63,10 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware('permission:monitoring-transaksi.view')->group(function () {
         Route::get('/monitoring-transaksi', [MonitoringTransaksiController::class, 'index'])->name('monitoring-transaksi.index');
+    });
+
+    Route::middleware('permission:papan-pantau.view')->group(function () {
+        Route::get('/papan-pantau', [PapanPantauController::class, 'index'])->name('papan-pantau.index');
     });
 
     Route::middleware('permission:customers.view')->group(function () {
@@ -198,6 +205,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/order-desain', [OrderDesainController::class, 'index'])->name('order-desain.index');
     });
     Route::middleware('permission:order-desain.manage')->group(function () {
+        Route::post('/order-desain/gabungan/{item}', [OrderDesainController::class, 'updateGabungan'])->name('order-desain.gabungan');
         Route::post('/order-desain/{type}/{id}', [OrderDesainController::class, 'update'])->name('order-desain.update');
     });
 
@@ -206,17 +214,32 @@ Route::middleware('auth')->group(function () {
     });
     Route::middleware('permission:order-cetak.manage')->group(function () {
         Route::post('/order-cetak/progress/{item}', [OrderCetakController::class, 'updateProgress'])->name('order-cetak.progress');
+        Route::post('/order-cetak/finish-outdoor/{order}', [OrderCetakController::class, 'finishOutdoor'])->name('order-cetak.finish-outdoor');
         Route::post('/order-cetak/{type}/{id}', [OrderCetakController::class, 'update'])->name('order-cetak.update');
     });
 
     Route::post('/order-comments/{type}/{id}', [OrderCommentController::class, 'store'])->name('order-comments.store');
     Route::post('/order-comments/{type}/{id}/read', [OrderCommentController::class, 'markRead'])->name('order-comments.read');
 
+    Route::middleware('permission:order-finishing.view')->group(function () {
+        Route::get('/order-finishing', [OrderFinishingController::class, 'index'])->name('order-finishing.index');
+    });
+    Route::middleware('permission:order-finishing.manage')->group(function () {
+        Route::post('/order-finishing/{type}/{id}', [OrderFinishingController::class, 'update'])->name('order-finishing.update');
+    });
+
     Route::middleware('permission:order-qc.view')->group(function () {
         Route::get('/order-qc', [OrderQcController::class, 'index'])->name('order-qc.index');
     });
     Route::middleware('permission:order-qc.manage')->group(function () {
         Route::post('/order-qc/{type}/{id}', [OrderQcController::class, 'update'])->name('order-qc.update');
+    });
+
+    Route::middleware('permission:order-bungkus.view')->group(function () {
+        Route::get('/order-bungkus', [OrderBungkusController::class, 'index'])->name('order-bungkus.index');
+    });
+    Route::middleware('permission:order-bungkus.manage')->group(function () {
+        Route::post('/order-bungkus/{type}/{id}', [OrderBungkusController::class, 'update'])->name('order-bungkus.update');
     });
 
     Route::middleware('permission:pengambilan.view')->group(function () {

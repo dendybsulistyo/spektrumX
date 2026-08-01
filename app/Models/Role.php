@@ -78,9 +78,17 @@ class Role extends Model
             'order-cetak.view' => 'Lihat antrian cetak',
             'order-cetak.manage' => 'Update status cetak',
         ],
+        'Operator Finishing' => [
+            'order-finishing.view' => 'Lihat antrian finishing',
+            'order-finishing.manage' => 'Update status finishing',
+        ],
         'Operator QC' => [
             'order-qc.view' => 'Lihat antrian QC',
             'order-qc.manage' => 'Update status QC',
+        ],
+        'Operator Bungkus' => [
+            'order-bungkus.view' => 'Lihat antrian bungkus',
+            'order-bungkus.manage' => 'Update status bungkus',
         ],
         'Pengambilan Barang' => [
             'pengambilan.view' => 'Lihat daftar pengambilan barang',
@@ -109,6 +117,9 @@ class Role extends Model
         ],
         'Monitoring Transaksi' => [
             'monitoring-transaksi.view' => 'Lihat monitoring transaksi harian/mingguan/bulanan/tahunan',
+        ],
+        'Papan Pantau' => [
+            'papan-pantau.view' => 'Lihat papan pantau produksi lintas tahap (read-only)',
         ],
         'Jasa Potong' => [
             'jasa-potong.manage' => 'Kelola nilai X (biaya tetap) Jasa Potong',

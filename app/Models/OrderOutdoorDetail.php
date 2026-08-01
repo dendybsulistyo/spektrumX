@@ -23,6 +23,7 @@ class OrderOutdoorDetail extends Model
         'Lebar',
         'Qty',
         'qty_diproses',
+        'gabungan',
         'KdCtk',
         'ada_finishing',
         'jenis_finishing',
@@ -56,5 +57,20 @@ class OrderOutdoorDetail extends Model
     public function hargaCetak(): BelongsTo
     {
         return $this->belongsTo(HargaCetakOutdoor::class, 'KdCtk', 'KdCtk');
+    }
+
+    /**
+     * KdCtk is built as KdPrn (2 chars) + NoCetak (2 chars) — see
+     * order-outdoor/_form.blade.php's syncKdCtk(). There's no real FK to
+     * printers_outdoors, so the printer code has to be sliced back out.
+     */
+    public function printerCode(): ?string
+    {
+        return $this->KdCtk ? substr($this->KdCtk, 0, 2) : null;
+    }
+
+    public function bahanCode(): ?string
+    {
+        return $this->KdCtk ? substr($this->KdCtk, 2, 2) : null;
     }
 }

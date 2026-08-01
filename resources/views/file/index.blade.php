@@ -18,22 +18,22 @@
         </div>
 
         <div class="overflow-x-auto">
-        <table class="w-full text-sm min-w-[720px]">
+        <table class="w-full text-[13px] min-w-[720px]">
             <thead class="bg-gray-900 text-left text-xs uppercase text-white">
                 <tr>
-                    <th class="px-4 py-3">No Order</th>
-                    <th class="px-4 py-3">Jenis</th>
-                    <th class="px-4 py-3">Nama File</th>
-                    <th class="px-4 py-3">Customer</th>
-                    <th class="px-4 py-3">Tanggal</th>
-                    <th class="px-4 py-3">User Input</th>
+                    <th class="px-3 py-2">No Order</th>
+                    <th class="px-3 py-2">Jenis</th>
+                    <th class="px-3 py-2">Nama File</th>
+                    <th class="px-3 py-2">Customer</th>
+                    <th class="px-3 py-2">Tanggal</th>
+                    <th class="px-3 py-2">User Input</th>
                 </tr>
             </thead>
             <tbody class="divide-y">
                 @forelse ($files as $file)
                     <tr>
-                        <td class="px-4 py-3 font-semibold text-gray-900">{{ $file->no_order }}</td>
-                        <td class="px-4 py-3">
+                        <td class="px-3 py-2 font-semibold text-gray-900">{{ $file->no_order }}</td>
+                        <td class="px-3 py-2">
                             <span @class([
                                 'inline-flex items-center px-2 py-0.5 rounded-full text-xs',
                                 'bg-blue-50 text-blue-700' => $file->jenis === 'Indoor',
@@ -41,14 +41,14 @@
                                 'bg-purple-50 text-purple-700' => $file->jenis === 'Artwork',
                             ])>{{ $file->jenis }}</span>
                         </td>
-                        <td class="px-4 py-3 font-medium text-gray-900">{{ $file->nama_file ?? '-' }}</td>
-                        <td class="px-4 py-3">{{ $file->customer }}</td>
-                        <td class="px-4 py-3 text-gray-600">{{ $file->tanggal }}</td>
-                        <td class="px-4 py-3 text-gray-600">{{ $file->user_input ?? '-' }}</td>
+                        <td class="px-3 py-2 font-medium text-gray-900">{{ $file->nama_file ?? '-' }}</td>
+                        <td class="px-3 py-2">{{ $file->customer }}</td>
+                        <td class="px-3 py-2 text-gray-600">{{ $file->tanggal }}</td>
+                        <td class="px-3 py-2 text-gray-600">{{ $file->user_input ?? '-' }}</td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="6" class="px-4 py-8 text-center text-gray-400">Belum ada order masuk.</td>
+                        <td colspan="6" class="px-4 py-6 text-center text-gray-400">Belum ada order masuk.</td>
                     </tr>
                 @endforelse
             </tbody>

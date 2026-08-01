@@ -156,7 +156,7 @@
             <div class="bg-white rounded-lg border border-gray-200 p-5">
                 <h3 class="text-sm font-semibold text-gray-700 mb-1">Produk Paling Kurang Laku</h3>
                 <p class="text-xs text-gray-400 mb-4">All-time, di antara produk yang pernah terjual minimal 1x.</p>
-                <table class="w-full text-sm">
+                <table class="w-full text-[13px]">
                     <tbody class="divide-y divide-gray-100">
                         @forelse ($bottomProduk as $p)
                             <tr>
@@ -198,7 +198,7 @@
             @if ($topCustomers->isEmpty())
                 <p class="text-sm text-gray-400 py-4 text-center">Tidak ada data pada rentang ini.</p>
             @else
-                <table class="w-full text-sm">
+                <table class="w-full text-[13px]">
                     <thead class="text-left text-xs uppercase text-gray-400">
                         <tr>
                             <th class="pb-2 w-8">#</th>
@@ -266,7 +266,7 @@
                     </div>
                 </div>
                 <div class="max-h-96 overflow-y-auto overflow-x-auto">
-                    <table class="w-full text-sm" style="min-width: 360px; table-layout: fixed;">
+                    <table class="w-full text-[13px]" style="min-width: 360px; table-layout: fixed;">
                         <colgroup>
                             <col>
                             <col style="width: 110px;">
@@ -337,7 +337,7 @@
             </form>
 
             <div class="overflow-x-auto">
-                <table class="w-full text-sm" style="min-width: 360px; table-layout: fixed;">
+                <table class="w-full text-[13px]" style="min-width: 360px; table-layout: fixed;">
                     <colgroup>
                         <col>
                         <col style="width: 110px;">

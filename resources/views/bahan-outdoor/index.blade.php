@@ -30,28 +30,28 @@
         </div>
 
         <div class="overflow-x-auto">
-        <table class="w-full text-sm min-w-[640px]">
+        <table class="w-full text-[13px] min-w-[640px]">
             <thead class="bg-gray-50 text-left text-xs uppercase text-gray-500">
                 <tr>
-                    <th class="px-4 py-3 w-12">No</th>
-                    <th class="px-4 py-3">Kode</th>
-                    <th class="px-4 py-3">Nama Bahan</th>
-                    <th class="px-4 py-3">Kategori</th>
-                    <th class="px-4 py-3">Keterangan</th>
-                    <th class="px-4 py-3">Satuan</th>
-                    <th class="px-4 py-3 text-right">Aksi</th>
+                    <th class="px-3 py-2 w-12">No</th>
+                    <th class="px-3 py-2">Kode</th>
+                    <th class="px-3 py-2">Nama Bahan</th>
+                    <th class="px-3 py-2">Kategori</th>
+                    <th class="px-3 py-2">Keterangan</th>
+                    <th class="px-3 py-2">Satuan</th>
+                    <th class="px-3 py-2 text-right">Aksi</th>
                 </tr>
             </thead>
             <tbody class="divide-y">
                 @forelse ($bahanOutdoor as $item)
                     <tr>
-                        <td class="px-4 py-3 text-gray-400">{{ $bahanOutdoor->firstItem() + $loop->index }}</td>
-                        <td class="px-4 py-3">{{ $item->KdBrgs }}</td>
-                        <td class="px-4 py-3 font-semibold text-gray-900">{{ $item->NmBrgs }}</td>
-                        <td class="px-4 py-3 text-gray-600">{{ $item->kategori?->NmGrup ?? '-' }}</td>
-                        <td class="px-4 py-3 text-gray-600">{{ $item->Keters }}</td>
-                        <td class="px-4 py-3 text-gray-600">{{ $item->Satuan }}</td>
-                        <td class="px-4 py-3 text-right">
+                        <td class="px-3 py-2 text-gray-400">{{ $bahanOutdoor->firstItem() + $loop->index }}</td>
+                        <td class="px-3 py-2">{{ $item->KdBrgs }}</td>
+                        <td class="px-3 py-2 font-semibold text-gray-900">{{ $item->NmBrgs }}</td>
+                        <td class="px-3 py-2 text-gray-600">{{ $item->kategori?->NmGrup ?? '-' }}</td>
+                        <td class="px-3 py-2 text-gray-600">{{ $item->Keters }}</td>
+                        <td class="px-3 py-2 text-gray-600">{{ $item->Satuan }}</td>
+                        <td class="px-3 py-2 text-right">
                             <a href="{{ route('bahan-outdoor.edit', $item) }}" class="inline-flex items-center text-blue-600 hover:text-blue-800" title="Edit"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125" /></svg></a>
                             <form method="POST" action="{{ route('bahan-outdoor.destroy', $item) }}" class="inline"
                                   onsubmit="return confirm('Hapus bahan {{ $item->NmBrgs }}?')">
@@ -63,7 +63,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="7" class="px-4 py-8 text-center text-gray-400">Belum ada data bahan.</td>
+                        <td colspan="7" class="px-4 py-6 text-center text-gray-400">Belum ada data bahan.</td>
                     </tr>
                 @endforelse
             </tbody>
