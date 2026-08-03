@@ -13,6 +13,9 @@ use App\Http\Controllers\FileMonitorController;
 use App\Http\Controllers\HargaArtworkController;
 use App\Http\Controllers\HargaCetakOutdoorController;
 use App\Http\Controllers\JasaPotongController;
+use App\Http\Controllers\PengeluaranController;
+use App\Http\Controllers\PayrollController;
+use App\Http\Controllers\KeuanganController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\KasirController;
 use App\Http\Controllers\KategoriBahanOutdoorController;
@@ -29,13 +32,17 @@ use App\Http\Controllers\OrderIndoorController;
 use App\Http\Controllers\OrderCommentController;
 use App\Http\Controllers\OrderOutdoorController;
 use App\Http\Controllers\OrderQcController;
+use App\Http\Controllers\OrderReworkController;
 use App\Http\Controllers\PapanPantauController;
 use App\Http\Controllers\PengambilanController;
 use App\Http\Controllers\PrinterController;
 use App\Http\Controllers\PrinterOutdoorController;
 use App\Http\Controllers\ProdukController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\JurnalManualController;
+use App\Http\Controllers\PengaturanKeuanganController;
 use App\Http\Controllers\RoleController;
+use App\Http\Controllers\TutupBukuController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -67,6 +74,50 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware('permission:papan-pantau.view')->group(function () {
         Route::get('/papan-pantau', [PapanPantauController::class, 'index'])->name('papan-pantau.index');
+    });
+
+    Route::middleware('permission:keuangan.view')->group(function () {
+        Route::get('/keuangan/kas-harian', [KeuanganController::class, 'kasHarian'])->name('keuangan.kas-harian');
+        Route::get('/keuangan/piutang', [KeuanganController::class, 'piutang'])->name('keuangan.piutang');
+        Route::get('/keuangan/laba-rugi', [KeuanganController::class, 'labaRugi'])->name('keuangan.laba-rugi');
+        Route::get('/keuangan/tutup-buku', [TutupBukuController::class, 'index'])->name('keuangan.tutup-buku');
+        Route::get('/keuangan/tutup-buku/preview', [TutupBukuController::class, 'preview'])->name('keuangan.tutup-buku.preview');
+        Route::get('/keuangan/jurnal-manual', [JurnalManualController::class, 'index'])->name('keuangan.jurnal-manual');
+        Route::get('/keuangan/laporan-ppn', [KeuanganController::class, 'laporanPpn'])->name('keuangan.laporan-ppn');
+        Route::get('/keuangan/laporan-ppn/export', [KeuanganController::class, 'exportPpn'])->name('keuangan.laporan-ppn.export');
+    });
+
+    Route::middleware('permission:keuangan.tutup-buku')->group(function () {
+        Route::post('/keuangan/tutup-buku', [TutupBukuController::class, 'store'])->name('keuangan.tutup-buku.store');
+        Route::delete('/keuangan/tutup-buku/{periodeTutupBuku}', [TutupBukuController::class, 'destroy'])->name('keuangan.tutup-buku.destroy');
+    });
+
+    Route::middleware('permission:keuangan.jurnal-manual')->group(function () {
+        Route::post('/keuangan/jurnal-manual', [JurnalManualController::class, 'store'])->name('keuangan.jurnal-manual.store');
+        Route::post('/keuangan/jurnal-manual/{jurnalManual}/batalkan', [JurnalManualController::class, 'batalkan'])->name('keuangan.jurnal-manual.batalkan');
+    });
+
+    Route::middleware('permission:keuangan.pengaturan')->group(function () {
+        Route::get('/keuangan/pengaturan', [PengaturanKeuanganController::class, 'edit'])->name('keuangan.pengaturan.edit');
+        Route::put('/keuangan/pengaturan', [PengaturanKeuanganController::class, 'update'])->name('keuangan.pengaturan.update');
+    });
+
+    Route::middleware('permission:pengeluaran.view')->group(function () {
+        Route::get('/pengeluaran', [PengeluaranController::class, 'index'])->name('pengeluaran.index');
+    });
+    Route::middleware('permission:pengeluaran.manage')->group(function () {
+        Route::post('/pengeluaran', [PengeluaranController::class, 'store'])->name('pengeluaran.store');
+        Route::put('/pengeluaran/{pengeluaran}', [PengeluaranController::class, 'update'])->name('pengeluaran.update');
+        Route::delete('/pengeluaran/{pengeluaran}', [PengeluaranController::class, 'destroy'])->name('pengeluaran.destroy');
+    });
+
+    Route::middleware('permission:payroll.view')->group(function () {
+        Route::get('/payroll', [PayrollController::class, 'index'])->name('payroll.index');
+    });
+    Route::middleware('permission:payroll.manage')->group(function () {
+        Route::post('/payroll/gaji/{user}', [PayrollController::class, 'updateGaji'])->name('payroll.update-gaji');
+        Route::post('/payroll/proses', [PayrollController::class, 'proses'])->name('payroll.proses');
+        Route::post('/payroll/{slipGaji}/bayar', [PayrollController::class, 'bayar'])->name('payroll.bayar');
     });
 
     Route::middleware('permission:customers.view')->group(function () {
@@ -197,8 +248,14 @@ Route::middleware('auth')->group(function () {
     Route::middleware('permission:kasir.manage')->group(function () {
         Route::post('/kasir/{type}/{id}/bayar', [KasirController::class, 'bayar'])->name('kasir.bayar');
         Route::post('/kasir/{type}/{id}/lunasi', [KasirController::class, 'lunasi'])->name('kasir.lunasi');
+        Route::post('/kasir/{type}/{id}/lunasi-hutang', [KasirController::class, 'lunasiHutang'])->name('kasir.lunasi-hutang');
         Route::get('/kasir/outdoor/{orderOutdoor}/nota-pengganti', [OrderOutdoorController::class, 'createReplacement'])->name('kasir.replacement.create');
         Route::post('/kasir/outdoor/nota-pengganti', [OrderOutdoorController::class, 'store'])->name('kasir.replacement.store');
+        Route::post('/kasir/{type}/{id}/diskon/request', [KasirController::class, 'requestDiskon'])->name('kasir.diskon.request');
+    });
+    Route::middleware('permission:kasir.approve-diskon')->group(function () {
+        Route::post('/kasir/{type}/{id}/diskon/approve', [KasirController::class, 'approveDiskon'])->name('kasir.diskon.approve');
+        Route::post('/kasir/{type}/{id}/diskon/reject', [KasirController::class, 'rejectDiskon'])->name('kasir.diskon.reject');
     });
 
     Route::middleware('permission:order-desain.view')->group(function () {
@@ -220,6 +277,12 @@ Route::middleware('auth')->group(function () {
 
     Route::post('/order-comments/{type}/{id}', [OrderCommentController::class, 'store'])->name('order-comments.store');
     Route::post('/order-comments/{type}/{id}/read', [OrderCommentController::class, 'markRead'])->name('order-comments.read');
+
+    Route::middleware('permission:order-rework.approve')->group(function () {
+        Route::post('/order-rework/{orderReworkRequest}/approve', [OrderReworkController::class, 'approve'])->name('order-rework.approve');
+        Route::post('/order-rework/{orderReworkRequest}/reject', [OrderReworkController::class, 'reject'])->name('order-rework.reject');
+    });
+    Route::post('/order-rework/{type}/{id}', [OrderReworkController::class, 'store'])->name('order-rework.store');
 
     Route::middleware('permission:order-finishing.view')->group(function () {
         Route::get('/order-finishing', [OrderFinishingController::class, 'index'])->name('order-finishing.index');

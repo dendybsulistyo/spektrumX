@@ -2,12 +2,16 @@
 
 namespace App\Models;
 
+use App\Traits\HasDiskonNota;
+use App\Traits\HasStageProgress;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Collection;
 
 class OrderIndoor extends Model
 {
+    use HasDiskonNota, HasStageProgress;
+
     protected $table = 'order_indoor';
 
     public $timestamps = false;
@@ -26,6 +30,8 @@ class OrderIndoor extends Model
         'total',
         'status_bayar',
         'metode_bayar',
+        'cara_bayar',
+        'no_referensi',
         'jumlah_dibayar',
         'jumlah_piutang',
         'kasir_user_id',
@@ -44,6 +50,15 @@ class OrderIndoor extends Model
         'diambil_at',
         'pengambilan_by',
         'created_at',
+        'diskon_persen',
+        'diskon_requested_persen',
+        'diskon_alasan',
+        'diskon_requested_at',
+        'diskon_requested_by',
+        'diskon_approved_at',
+        'diskon_approved_by',
+        'diskon_rejected_at',
+        'diskon_rejected_by',
     ];
 
     protected function casts(): array
@@ -60,6 +75,11 @@ class OrderIndoor extends Model
             'bungkus_at' => 'datetime',
             'diambil_at' => 'datetime',
             'created_at' => 'datetime',
+            'diskon_persen' => 'float',
+            'diskon_requested_persen' => 'float',
+            'diskon_requested_at' => 'datetime',
+            'diskon_approved_at' => 'datetime',
+            'diskon_rejected_at' => 'datetime',
         ];
     }
 

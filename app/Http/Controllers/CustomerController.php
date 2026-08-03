@@ -194,7 +194,7 @@ class CustomerController extends Controller
      */
     private function onlyCustomerFields(array $data): array
     {
-        return collect($data)->only(['KdCust', 'NmCust', 'Alamat', 'Kota', 'Telp'])->all();
+        return collect($data)->only(['KdCust', 'NmCust', 'Alamat', 'Kota', 'Telp', 'NPWP'])->all();
     }
 
     /**

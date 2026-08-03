@@ -9,8 +9,70 @@
 
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
 
         @vite(['resources/css/app.css', 'resources/js/app.js'])
+        @stack('styles')
+
+        {{-- Navbar digaya ulang ke palet "Industry" (steel-blue, sudut kotak,
+             Barlow) — di-scope ke .industry-nav lewat descendant selector +
+             !important supaya cuma nav yang berubah, konten halaman lain yang
+             belum ikut migrasi (Master Data dll, masih Tailwind indigo) tidak
+             ikut kena. --}}
+        <style>
+            .industry-nav {
+                background: #f2f2f3 !important;
+                border-bottom: 1px solid color-mix(in srgb, #1d1f20 16%, transparent) !important;
+                font-family: 'Barlow', system-ui, sans-serif;
+            }
+            .industry-nav [class*="rounded"] { border-radius: 0 !important; }
+            .industry-nav .brand-mark { background: #5980a6 !important; }
+            .industry-nav a, .industry-nav button, .industry-nav span, .industry-nav div {
+                font-family: 'Barlow Condensed', system-ui, sans-serif;
+            }
+            .industry-nav input { font-family: 'Barlow', system-ui, sans-serif; }
+            .industry-nav .bg-indigo-50 { background: #eef6ff !important; }
+            .industry-nav .bg-indigo-100 { background: #eef6ff !important; }
+            .industry-nav .bg-indigo-600 { background: #5980a6 !important; }
+            .industry-nav .text-indigo-600,
+            .industry-nav .text-indigo-700 { color: #416180 !important; }
+            .industry-nav .border-gray-200 { border-color: color-mix(in srgb, #1d1f20 16%, transparent) !important; }
+            .industry-nav .hover\:bg-gray-100:hover { background: color-mix(in srgb, #1d1f20 7%, transparent) !important; }
+            .industry-nav .shadow-lg { box-shadow: 0 12px 32px color-mix(in srgb, #2b2b2d 22%, transparent) !important; }
+
+            /* Reskin global untuk halaman yang belum ditulis ulang manual ke
+               markup Industry (Master Data, Order Indoor/Outdoor/Artwork,
+               dsb) — override class Tailwind yang sudah ada supaya ikut
+               palet/font/sudut-kotak Industry tanpa perlu tulis ulang tiap
+               file satu-satu. Halaman yang SUDAH ditulis ulang manual (pakai
+               wrapper #industry-page dsb) tidak kepakai class Tailwind lama
+               ini lagi, jadi aman tidak dobel. */
+            body.font-sans { font-family: 'Barlow', system-ui, sans-serif !important; background: #f2f2f3 !important; }
+            body.font-sans h1, body.font-sans h2, body.font-sans h3, body.font-sans h4 { font-family: 'Barlow Condensed', system-ui, sans-serif !important; }
+            body.font-sans .rounded, body.font-sans .rounded-sm, body.font-sans .rounded-md,
+            body.font-sans .rounded-lg, body.font-sans .rounded-xl, body.font-sans .rounded-2xl,
+            body.font-sans .rounded-3xl, body.font-sans .rounded-full { border-radius: 0 !important; }
+            body.font-sans .bg-gray-900 { background: #1d2d3d !important; }
+            body.font-sans .bg-gray-700, body.font-sans .bg-gray-800,
+            body.font-sans .hover\:bg-gray-700:hover { background: #2c455d !important; }
+            body.font-sans .bg-indigo-600, body.font-sans .bg-indigo-500 { background: #5980a6 !important; }
+            body.font-sans .bg-indigo-50, body.font-sans .bg-indigo-100 { background: #eef6ff !important; }
+            body.font-sans .text-indigo-600, body.font-sans .text-indigo-700,
+            body.font-sans .text-blue-600, body.font-sans .text-blue-700 { color: #416180 !important; }
+            body.font-sans .text-blue-800,
+            body.font-sans .hover\:text-blue-800:hover { color: #2c455d !important; }
+            body.font-sans .border-indigo-500,
+            body.font-sans .focus\:border-indigo-500:focus { border-color: #5980a6 !important; }
+            body.font-sans .ring-indigo-500,
+            body.font-sans .focus\:ring-indigo-500:focus { --tw-ring-color: #5980a6 !important; }
+            body.font-sans .border-gray-300, body.font-sans .border-gray-200 { border-color: color-mix(in srgb, #1d1f20 16%, transparent) !important; }
+            body.font-sans .bg-gray-50 { background: #f5f5f8 !important; }
+            body.font-sans .bg-gray-100, body.font-sans .hover\:bg-gray-100:hover,
+            body.font-sans .hover\:bg-gray-200:hover { background: #eaeaec !important; }
+            body.font-sans .shadow-sm { box-shadow: 0 1px 2px color-mix(in srgb, #2b2b2d 14%, transparent) !important; }
+            body.font-sans .shadow-lg { box-shadow: 0 12px 32px color-mix(in srgb, #2b2b2d 22%, transparent) !important; }
+        </style>
 
         @php
             $navIcon = function (string $name) {
@@ -40,6 +102,8 @@
             $transaksiActive = request()->routeIs('order-indoor.*', 'order-outdoor.*', 'order-artwork.*');
             $operatorActive = request()->routeIs('file.*', 'kasir.*', 'order-desain.*', 'order-cetak.*', 'order-finishing.*', 'order-qc.*', 'order-bungkus.*', 'pengambilan.*');
             $analitikActive = request()->routeIs('data-warehouse.*', 'monitoring-kinerja.*', 'monitoring-transaksi.*', 'papan-pantau.*');
+            $keuanganActive = request()->routeIs('keuangan.*', 'pengeluaran.*', 'payroll.*');
+            $showKeuangan = Auth::user()->hasPermission('keuangan.view') || Auth::user()->hasPermission('pengeluaran.view') || Auth::user()->hasPermission('payroll.view') || Auth::user()->hasPermission('keuangan.pengaturan');
             $pengaturanActive = request()->routeIs('roles.*', 'users.*', 'jasa-potong.*');
 
             $showMasterData = Auth::user()->hasPermission('customers.view') || Auth::user()->hasPermission('produk.view') || Auth::user()->hasPermission('harga-artwork.view') || Auth::user()->hasPermission('printers.view') || Auth::user()->hasPermission('printer-outdoor.view') || Auth::user()->hasPermission('bahan-cetak-outdoor.view') || Auth::user()->hasPermission('harga-cetak-outdoor.view') || Auth::user()->hasPermission('kategori-produk-indoor.view');
@@ -58,12 +122,12 @@
     </head>
     <body class="font-sans antialiased bg-gray-50">
         <div x-data="{ mobileMenuOpen: false }">
-            <nav class="bg-white border-b border-gray-200 sticky top-0 z-40">
+            <nav class="industry-nav bg-white border-b border-gray-200 sticky top-0 z-40">
                 <div class="max-w-full mx-auto px-4 sm:px-6">
                     <div class="flex justify-between h-16">
                         <div class="flex items-center min-w-0">
                             <a href="{{ route('dashboard') }}" class="flex items-center gap-2 shrink-0">
-                                <div class="w-7 h-7 rounded-md bg-indigo-600 flex items-center justify-center text-white text-xs font-bold">S</div>
+                                <div class="brand-mark w-7 h-7 rounded-md bg-indigo-600 flex items-center justify-center text-white text-xs font-bold">S</div>
                                 <span class="hidden sm:block text-sm font-bold text-gray-900 truncate">{{ config('app.name', 'SpektrumX') }}</span>
                             </a>
 
@@ -73,6 +137,38 @@
                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">{!! $navIcon('dashboard') !!}</svg>
                                     Dashboard
                                 </a>
+
+                                @if ($showKeuangan)
+                                    <div class="relative" x-data="{ open: false }" @click.outside="open = false" @keydown.escape="open = false">
+                                        <button type="button" @click="open = !open" class="{{ $navTopLink($keuanganActive) }}">
+                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">{!! $navIcon('banknotes') !!}</svg>
+                                            Keuangan
+                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3 h-3 transition-transform" :class="open ? 'rotate-180' : ''">{!! $navIcon('chevron-down') !!}</svg>
+                                        </button>
+                                        <div x-show="open" x-cloak x-transition
+                                             class="absolute left-0 mt-2 w-56 bg-white border border-gray-200 rounded-lg shadow-lg py-2 z-50">
+                                            @can('keuangan.view')
+                                                <a href="{{ route('keuangan.kas-harian') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.kas-harian')) }}">Kas Harian</a>
+                                                <a href="{{ route('keuangan.piutang') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.piutang')) }}">Piutang</a>
+                                            @endcan
+                                            @can('pengeluaran.view')
+                                                <a href="{{ route('pengeluaran.index') }}" class="{{ $dropdownLink(request()->routeIs('pengeluaran.*')) }}">Pengeluaran</a>
+                                            @endcan
+                                            @can('payroll.view')
+                                                <a href="{{ route('payroll.index') }}" class="{{ $dropdownLink(request()->routeIs('payroll.*')) }}">Payroll</a>
+                                            @endcan
+                                            @can('keuangan.view')
+                                                <a href="{{ route('keuangan.laba-rugi') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.laba-rugi')) }}">Laba Rugi</a>
+                                                <a href="{{ route('keuangan.jurnal-manual') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.jurnal-manual')) }}">Jurnal Manual</a>
+                                                <a href="{{ route('keuangan.laporan-ppn') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.laporan-ppn')) }}">Laporan PPN</a>
+                                                <a href="{{ route('keuangan.tutup-buku') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.tutup-buku*')) }}">Tutup Buku</a>
+                                            @endcan
+                                            @can('keuangan.pengaturan')
+                                                <a href="{{ route('keuangan.pengaturan.edit') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.pengaturan.edit')) }}">Pengaturan</a>
+                                            @endcan
+                                        </div>
+                                    </div>
+                                @endif
 
                                 @if ($showMasterData)
                                     <div class="relative" x-data="{ open: false }" @click.outside="open = false" @keydown.escape="open = false">
@@ -268,6 +364,29 @@
                     <div class="px-3 py-3 space-y-0.5 text-[13px]" @click="mobileMenuOpen = false">
                         @php $active = request()->routeIs('dashboard'); @endphp
                         <a href="{{ route('dashboard') }}" class="{{ $mobileLink($active) }}">Dashboard</a>
+
+                        @if ($showKeuangan)
+                            <p class="px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">Keuangan</p>
+                            @can('keuangan.view')
+                                <a href="{{ route('keuangan.kas-harian') }}" class="{{ $mobileLink(request()->routeIs('keuangan.kas-harian')) }}">Kas Harian</a>
+                                <a href="{{ route('keuangan.piutang') }}" class="{{ $mobileLink(request()->routeIs('keuangan.piutang')) }}">Piutang</a>
+                            @endcan
+                            @can('pengeluaran.view')
+                                <a href="{{ route('pengeluaran.index') }}" class="{{ $mobileLink(request()->routeIs('pengeluaran.*')) }}">Pengeluaran</a>
+                            @endcan
+                            @can('payroll.view')
+                                <a href="{{ route('payroll.index') }}" class="{{ $mobileLink(request()->routeIs('payroll.*')) }}">Payroll</a>
+                            @endcan
+                            @can('keuangan.view')
+                                <a href="{{ route('keuangan.laba-rugi') }}" class="{{ $mobileLink(request()->routeIs('keuangan.laba-rugi')) }}">Laba Rugi</a>
+                                <a href="{{ route('keuangan.jurnal-manual') }}" class="{{ $mobileLink(request()->routeIs('keuangan.jurnal-manual')) }}">Jurnal Manual</a>
+                                <a href="{{ route('keuangan.laporan-ppn') }}" class="{{ $mobileLink(request()->routeIs('keuangan.laporan-ppn')) }}">Laporan PPN</a>
+                                <a href="{{ route('keuangan.tutup-buku') }}" class="{{ $mobileLink(request()->routeIs('keuangan.tutup-buku*')) }}">Tutup Buku</a>
+                            @endcan
+                            @can('keuangan.pengaturan')
+                                <a href="{{ route('keuangan.pengaturan.edit') }}" class="{{ $mobileLink(request()->routeIs('keuangan.pengaturan.edit')) }}">Pengaturan</a>
+                            @endcan
+                        @endif
 
                         @if ($showMasterData)
                             <p class="px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">Master Data</p>

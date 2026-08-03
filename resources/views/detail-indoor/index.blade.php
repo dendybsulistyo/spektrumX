@@ -130,7 +130,7 @@
                         <td class="px-3 py-2 text-gray-600" x-text="row.Satuan"></td>
                         <td class="px-3 py-2 text-center">
                             <span class="inline-flex items-center justify-center min-w-[1.5rem] h-6 px-1.5 rounded-full text-xs font-semibold whitespace-nowrap"
-                                  :style="pjLbStyles[row.isPjLb] || 'background-color:#f3f4f6;color:#9ca3af'"
+                                  :style="pjLbStyles[row.isPjLb] || 'background-color:#e5e7eb;color:#1f2937;border:1px solid #9ca3af'"
                                   :title="pjLbLabels[row.isPjLb]" x-text="pjLbBadgeText[row.isPjLb] || row.isPjLb"></span>
                         </td>
                         <td class="px-3 py-2 text-center text-gray-600" x-text="row.isHPilih === 1 ? 'Ya' : 'Tidak'"></td>

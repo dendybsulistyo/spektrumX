@@ -63,18 +63,35 @@
         .link-back { color: #6b7280; text-decoration: none; font-size: 13px; }
         .link-back:hover { text-decoration: underline; }
         @media print {
-            body { background: #fff; padding: 0; }
-            .card { box-shadow: none; border: none; max-width: none; }
+            @page { size: A5; margin: 10mm; }
+            body { background: #fff; padding: 0; font-size: 11px; }
+            .card { box-shadow: none; border: none; max-width: none; padding: 0; }
             .no-print { display: none; }
+            .company-name { font-size: 16px; }
+            .total-amount { font-size: 16px; }
+            table { margin-top: 16px; }
+            th, td { padding: 6px 4px; }
+            .signature { margin-top: 24px; }
+            .signature .line { margin-top: 32px; }
+            .footer-note { margin-top: 20px; padding-top: 10px; }
         }
     </style>
 </head>
 <body>
     @php
+        $caraBayarLabel = match ($order->cara_bayar) {
+            'qris' => 'QRIS',
+            'transfer' => 'Transfer',
+            default => 'Tunai',
+        };
+        $caraBayarNote = $order->cara_bayar
+            ? $caraBayarLabel.($order->no_referensi ? " (Ref: {$order->no_referensi})" : '').' di kasir.'
+            : 'di kasir.';
+
         [$badgeClass, $badgeLabel, $statusNote] = $order->invoice_voided_at ? ['badge-void', 'HANGUS', 'Nota dibatalkan dan tidak berlaku sebagai tagihan.'] : match ($order->status_bayar) {
-            'lunas' => ['badge-lunas', 'Lunas', 'Dibayar tunai di kasir.'],
+            'lunas' => ['badge-lunas', 'Lunas', 'Dibayar '.$caraBayarNote],
             'hutang' => ['badge-hutang', 'Hutang', 'Piutang berjalan — belum lunas.'],
-            'dp' => ['badge-dp', 'DP (Belum Lunas)', 'Sudah bayar uang muka — sisa dibayar sebelum pengambilan.'],
+            'dp' => ['badge-dp', 'DP (Belum Lunas)', 'Sudah bayar uang muka via '.$caraBayarNote],
             default => ['badge-belum', 'Belum Bayar', 'Menunggu pembayaran di kasir.'],
         };
 

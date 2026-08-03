@@ -42,7 +42,7 @@
                             ])>{{ $file->jenis }}</span>
                         </td>
                         <td class="px-3 py-2 font-medium text-gray-900">{{ $file->nama_file ?? '-' }}</td>
-                        <td class="px-3 py-2">{{ $file->customer }}</td>
+                        <td class="px-3 py-2">{{ $file->customer ? ucwords(mb_strtolower($file->customer)) : '-' }}</td>
                         <td class="px-3 py-2 text-gray-600">{{ $file->tanggal }}</td>
                         <td class="px-3 py-2 text-gray-600">{{ $file->user_input ?? '-' }}</td>
                     </tr>

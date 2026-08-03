@@ -1,9 +1,5 @@
 @php
     $order = $order ?? null;
-    // "Username" here means the local part of the login email (before the
-    // @) — there's no dedicated username column on users, and this is the
-    // closest stand-in for it as opposed to the free-text display name.
-    $username = str_replace('.', '', \Illuminate\Support\Str::before(auth()->user()->email, '@'));
     $initialItems = isset($items) && $items->isNotEmpty()
         ? $items->map(fn ($i) => [
             'NmFile' => $i->NmFile, 'Panjang' => $i->Panjang, 'Lebar' => $i->Lebar,
@@ -13,15 +9,38 @@
             'ada_finishing' => $i->ada_finishing === null ? '' : ($i->ada_finishing ? 'ya' : 'tidak'),
             'jenis_finishing' => $i->jenis_finishing,
         ])->values()
-        : collect([['NmFile' => $username.random_int(1000, 9999), 'Panjang' => '', 'Lebar' => '', 'Qty' => 1, 'KdCtk' => '', 'KdPrn' => '', 'NoCetak' => '', 'ada_finishing' => '', 'jenis_finishing' => '']]);
+        : collect([['NmFile' => '', 'Panjang' => '', 'Lebar' => '', 'Qty' => 1, 'KdCtk' => '', 'KdPrn' => '', 'NoCetak' => '', 'ada_finishing' => '', 'jenis_finishing' => '']]);
     $selectedCustomerLabel = $selectedCustomer ? "{$selectedCustomer->NmCust} ({$selectedCustomer->KdCust})" : '';
     $hargaMap = $hargaCetakList->keyBy('KdCtk')->map(fn ($h) => ['std' => (float) $h->HargaStd, 'min' => (float) $h->HargaMin]);
+
+    // Warna badge per printer — sama persis dengan <x-printer-badge> yang
+    // dipakai di antrian desain/cetak/finishing/QC/bungkus, supaya dropdown
+    // pemilihan printer di form ini konsisten warnanya dengan tampilan lain.
+    $printerKnownColors = [
+        '01' => 'bg-amber-100 text-amber-800',
+        '02' => 'bg-teal-100 text-teal-800',
+        '03' => 'bg-violet-100 text-violet-800',
+        '04' => 'bg-rose-100 text-rose-800',
+        '05' => 'bg-sky-100 text-sky-800',
+    ];
+    $printerFallbackPool = [
+        'bg-lime-100 text-lime-800', 'bg-cyan-100 text-cyan-800', 'bg-fuchsia-100 text-fuchsia-800',
+        'bg-orange-100 text-orange-800', 'bg-indigo-100 text-indigo-800', 'bg-emerald-100 text-emerald-800',
+        'bg-pink-100 text-pink-800', 'bg-blue-100 text-blue-800',
+    ];
+    $printerColorMap = $printerOutdoorList->mapWithKeys(
+        fn ($p) => [$p->KdPrn => $printerKnownColors[$p->KdPrn] ?? $printerFallbackPool[crc32($p->KdPrn) % count($printerFallbackPool)]]
+    );
 @endphp
 
 <div x-data="{
         items: {{ old('items') ? json_encode(old('items')) : $initialItems->toJson() }},
-        userName: @js($username),
         hargaMap: {{ $hargaMap->toJson() }},
+        printerOptions: {{ $printerOutdoorList->map(fn ($p) => ['KdPrn' => $p->KdPrn, 'NmPrn' => $p->NmPrn])->values()->toJson() }},
+        printerColorMap: {{ $printerColorMap->toJson() }},
+        printerNameFor(kdPrn) {
+            return this.printerOptions.find(p => p.KdPrn === kdPrn)?.NmPrn ?? '';
+        },
         bahanOptions: {{ $bahanCetakOutdoorList->map(fn ($bc) => ['NoCetak' => $bc->NoCetak, 'NmBhn' => $bc->NmBhn])->values()->toJson() }},
         hargaFor(item) {
             const kdCtk = (item.KdPrn || '') + (item.NoCetak || '');
@@ -41,8 +60,7 @@
             item.KdCtk = (item.KdPrn && item.NoCetak) ? (item.KdPrn + item.NoCetak) : '';
         },
         addItem() {
-            const randomSuffix = Math.floor(1000 + Math.random() * 9000);
-            this.items.push({ NmFile: this.userName + randomSuffix, Panjang: '', Lebar: '', Qty: 1, KdCtk: '', KdPrn: '', NoCetak: '', ada_finishing: '', jenis_finishing: '' });
+            this.items.push({ NmFile: '', Panjang: '', Lebar: '', Qty: 1, KdCtk: '', KdPrn: '', NoCetak: '', ada_finishing: '', jenis_finishing: '' });
             this.$nextTick(() => {
                 const inputs = document.querySelectorAll('[data-item-search]');
                 inputs[inputs.length - 1]?.focus();
@@ -298,14 +316,32 @@
                     <input type="number" :name="`items[${index}][Qty]`" x-model="item.Qty" min="1" required
                            class="w-full rounded-md border-gray-300 text-sm px-2 no-spinner">
                 </div>
-                <div class="col-span-2 sm:col-span-2">
+                <div class="col-span-2 sm:col-span-2 relative" x-data="{ printerOpen: false }">
                     <label class="block text-xs text-gray-500 mb-1">Printer Outdoor</label>
-                    <select :name="`items[${index}][KdPrn]`" x-model="item.KdPrn" @change="onPrinterChange(item)" class="w-full rounded-md border-gray-300 text-sm px-2">
-                        <option value="">-- Printer --</option>
-                        @foreach ($printerOutdoorList as $p)
-                            <option value="{{ $p->KdPrn }}">{{ $p->NmPrn }}</option>
-                        @endforeach
-                    </select>
+                    <input type="hidden" :name="`items[${index}][KdPrn]`" :value="item.KdPrn">
+                    <button type="button" @click="printerOpen = !printerOpen" @click.outside="printerOpen = false"
+                            class="w-full flex items-center justify-between gap-1 rounded-md border border-gray-300 text-sm px-2 py-1.5 bg-white">
+                        <span x-show="item.KdPrn" class="inline-flex items-center px-2 py-0.5 text-xs font-semibold whitespace-nowrap"
+                              :class="printerColorMap[item.KdPrn] || 'bg-gray-100 text-gray-600'" x-text="printerNameFor(item.KdPrn)"></span>
+                        <span x-show="!item.KdPrn" class="text-gray-400">-- Printer --</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 text-gray-400 shrink-0">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                        </svg>
+                    </button>
+                    <div x-show="printerOpen" x-cloak
+                         class="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-56 overflow-y-auto">
+                        <button type="button" @click="item.KdPrn = ''; onPrinterChange(item); printerOpen = false"
+                                class="block w-full text-left px-3 py-1.5 text-sm text-gray-400 hover:bg-gray-50">
+                            -- Printer --
+                        </button>
+                        <template x-for="p in printerOptions" :key="p.KdPrn">
+                            <button type="button" @click="item.KdPrn = p.KdPrn; onPrinterChange(item); printerOpen = false"
+                                    class="flex items-center w-full text-left px-3 py-1.5 hover:bg-gray-50">
+                                <span class="inline-flex items-center px-2 py-0.5 text-xs font-semibold whitespace-nowrap"
+                                      :class="printerColorMap[p.KdPrn] || 'bg-gray-100 text-gray-600'" x-text="p.NmPrn"></span>
+                            </button>
+                        </template>
+                    </div>
                 </div>
                 <div class="col-span-2 sm:col-span-2">
                     <label class="block text-xs text-gray-500 mb-1">Bahan Cetak (Harga)</label>

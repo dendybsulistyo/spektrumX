@@ -9,6 +9,21 @@
         </div>
     </x-slot>
 
+    @php
+        $statusBadgeStyle = fn (?string $status) => match ($status) {
+            'baru' => 'background-color:#ffffff;color:#6b7280;border:1px solid #d1d5db',
+            'desain' => 'background-color:#e0e7ff;color:#3730a3',
+            'cetak' => 'background-color:#cffafe;color:#155e75',
+            'finishing' => 'background-color:#fef3c7;color:#92400e',
+            'qc' => 'background-color:#f3e8ff;color:#6b21a8',
+            'bungkus' => 'background-color:#fce7f3;color:#9d174d',
+            'siap_diambil' => 'background-color:#ccfbf1;color:#115e59',
+            'selesai' => 'background-color:#d1fae5;color:#065f46',
+            'batal' => 'background-color:#7f1d1d;color:#ffffff',
+            default => 'background-color:#f3f4f6;color:#6b7280',
+        };
+    @endphp
+
     <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
 
         <div class="p-4 border-b">
@@ -43,7 +58,7 @@
                         <td class="px-3 py-2 text-gray-900 font-semibold">{{ $order->customer?->NmCust ?? $order->KdCust }}</td>
                         <td class="px-3 py-2 text-right text-gray-900">Rp {{ number_format($order->total ?? 0, 0, ',', '.') }}</td>
                         <td class="px-3 py-2">
-                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">{{ ucfirst(str_replace('_', ' ', $order->status ?? '-')) }}</span>
+                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium" style="{{ $statusBadgeStyle($order->status) }}">{{ ucfirst(str_replace('_', ' ', $order->status ?? '-')) }}</span>
                         </td>
                         <td class="px-3 py-2 text-right">
                             <a href="{{ route('order-indoor.edit', $order) }}" class="inline-flex items-center text-blue-600 hover:text-blue-800" title="Edit"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125" /></svg></a>

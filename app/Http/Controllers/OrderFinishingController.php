@@ -6,7 +6,9 @@ use App\Models\OrderArtwork;
 use App\Models\OrderComment;
 use App\Models\OrderIndoor;
 use App\Models\OrderOutdoor;
+use App\Models\OrderReworkRequest;
 use App\Models\OrderStatusNote;
+use App\Models\PrinterOutdoor;
 use App\Support\ResolvesOrderType;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -18,10 +20,18 @@ class OrderFinishingController extends Controller
 
     public function index(): View
     {
+        return view('order-finishing.index', $this->loadData());
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function loadData(): array
+    {
         $indoorOrders = OrderIndoor::query()->with('customer')->where('status', 'finishing')
             ->orderByDesc('TglOrder')->orderByDesc('NoOrder')->get();
 
-        $outdoorOrders = OrderOutdoor::query()->with('customer')->where('status', 'finishing')
+        $outdoorOrders = OrderOutdoor::query()->with('customer', 'items')->where('status', 'finishing')
             ->orderByDesc('TglOrder')->orderByDesc('NoOrder')->get();
 
         $artworkOrders = OrderArtwork::query()->with('customer')->where('status', 'finishing')
@@ -33,7 +43,12 @@ class OrderFinishingController extends Controller
 
         $outdoorUnread = OrderComment::unreadCountsFor('outdoor', $outdoorOrders->pluck('id'));
 
-        return view('order-finishing.index', compact('indoorOrders', 'outdoorOrders', 'artworkOrders', 'outdoorComments', 'outdoorUnread'));
+        $printerNames = PrinterOutdoor::pluck('NmPrn', 'KdPrn');
+
+        $pendingRework = OrderReworkRequest::pendingMap();
+        $canApproveRework = auth()->user()->hasPermission('order-rework.approve');
+
+        return compact('indoorOrders', 'outdoorOrders', 'artworkOrders', 'outdoorComments', 'outdoorUnread', 'printerNames', 'pendingRework', 'canApproveRework');
     }
 
     public function update(Request $request, string $type, int $id): RedirectResponse
@@ -41,6 +56,7 @@ class OrderFinishingController extends Controller
         $order = $this->resolveOrder($type, $id);
 
         abort_if($order->status !== 'finishing', 422, 'Order ini sudah tidak di antrian finishing.');
+        abort_if(OrderReworkRequest::forOrder($type, $id)->pending()->exists(), 422, 'Order ini sedang menunggu persetujuan pembatalan/ulang proses.');
 
         $data = $request->validate([
             'action' => ['required', 'in:selesai,lanjut'],

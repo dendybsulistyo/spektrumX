@@ -68,6 +68,13 @@
     <x-input-error :messages="$errors->get('Telp')" class="mt-1" />
 </div>
 
+<div>
+    <x-input-label for="NPWP" value="NPWP (opsional)" />
+    <x-text-input id="NPWP" name="NPWP" type="text" class="mt-1 block w-full"
+        value="{{ old('NPWP', $customer?->NPWP) }}" maxlength="20" placeholder="mis. 01.234.567.8-901.000" />
+    <x-input-error :messages="$errors->get('NPWP')" class="mt-1" />
+</div>
+
 <div class="border-t pt-4">
     <label class="inline-flex items-center gap-2">
         <input type="checkbox" name="is_vip" value="1" id="is_vip"

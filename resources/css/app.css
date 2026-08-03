@@ -13,3 +13,16 @@
 .no-spinner {
     -moz-appearance: textfield;
 }
+
+/* Warna hover baris tabel berganti-ganti per baris (siklus 6 warna), supaya
+   baris yang sedang di-hover lebih gampang dibedakan dari baris sekitarnya.
+   Berlaku otomatis di semua tabel (<tbody><tr>) tanpa perlu ubah tiap view. */
+tbody tr {
+    transition: background-color .12s ease;
+}
+tbody tr:nth-child(6n+1):hover { background-color: #fffbeb; } /* amber-50 */
+tbody tr:nth-child(6n+2):hover { background-color: #f0fdfa; } /* teal-50 */
+tbody tr:nth-child(6n+3):hover { background-color: #faf5ff; } /* violet-50 */
+tbody tr:nth-child(6n+4):hover { background-color: #fff1f2; } /* rose-50 */
+tbody tr:nth-child(6n+5):hover { background-color: #f0f9ff; } /* sky-50 */
+tbody tr:nth-child(6n):hover   { background-color: #ecfdf5; } /* emerald-50 */

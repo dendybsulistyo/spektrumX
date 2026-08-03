@@ -2,12 +2,16 @@
 
 namespace App\Models;
 
+use App\Traits\HasDiskonNota;
+use App\Traits\HasStageProgress;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class OrderOutdoor extends Model
 {
+    use HasDiskonNota, HasStageProgress;
+
     protected $table = 'order_outdoor';
 
     /**
@@ -25,6 +29,8 @@ class OrderOutdoor extends Model
         'total',
         'status_bayar',
         'metode_bayar',
+        'cara_bayar',
+        'no_referensi',
         'jumlah_dibayar',
         'jumlah_piutang',
         'kasir_user_id',
@@ -52,6 +58,15 @@ class OrderOutdoor extends Model
         'replacement_credit',
         'topup_amount',
         'cashback_amount',
+        'diskon_persen',
+        'diskon_requested_persen',
+        'diskon_alasan',
+        'diskon_requested_at',
+        'diskon_requested_by',
+        'diskon_approved_at',
+        'diskon_approved_by',
+        'diskon_rejected_at',
+        'diskon_rejected_by',
     ];
 
     protected function casts(): array
@@ -75,6 +90,11 @@ class OrderOutdoor extends Model
             'replacement_credit' => 'float',
             'topup_amount' => 'float',
             'cashback_amount' => 'float',
+            'diskon_persen' => 'float',
+            'diskon_requested_persen' => 'float',
+            'diskon_requested_at' => 'datetime',
+            'diskon_approved_at' => 'datetime',
+            'diskon_rejected_at' => 'datetime',
         ];
     }
 

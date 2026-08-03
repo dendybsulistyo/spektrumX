@@ -8,6 +8,7 @@ use App\Models\OrderComment;
 use App\Models\OrderIndoor;
 use App\Models\OrderOutdoor;
 use App\Models\OrderOutdoorDetail;
+use App\Models\OrderReworkRequest;
 use App\Models\OrderStatusNote;
 use App\Models\PrinterOutdoor;
 use App\Support\ResolvesOrderType;
@@ -21,6 +22,14 @@ class OrderDesainController extends Controller
     use ResolvesOrderType;
 
     public function index(): View
+    {
+        return view('order-desain.index', $this->loadData());
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function loadData(): array
     {
         $indoorOrders = OrderIndoor::query()->with('customer')->where('status', 'desain')
             ->orderByDesc('TglOrder')->orderByDesc('NoOrder')->get();
@@ -67,7 +76,10 @@ class OrderDesainController extends Controller
         $printerNames = PrinterOutdoor::pluck('NmPrn', 'KdPrn');
         $bahanNames = BahanCetakOutdoor::pluck('NmBhn', 'NoCetak');
 
-        return view('order-desain.index', compact('indoorOrders', 'outdoorOrders', 'outdoorNeedsReply', 'artworkOrders', 'indoorRows', 'artworkRows', 'outdoorComments', 'outdoorUnread', 'printerNames', 'bahanNames'));
+        $pendingRework = OrderReworkRequest::pendingMap();
+        $canApproveRework = auth()->user()->hasPermission('order-rework.approve');
+
+        return compact('indoorOrders', 'outdoorOrders', 'outdoorNeedsReply', 'artworkOrders', 'indoorRows', 'artworkRows', 'outdoorComments', 'outdoorUnread', 'printerNames', 'bahanNames', 'pendingRework', 'canApproveRework');
     }
 
     /**
@@ -131,6 +143,7 @@ class OrderDesainController extends Controller
         // submit) silently sending an order that already moved past this
         // stage back into it — transitions only ever go forward.
         abort_if($order->status !== 'desain', 422, 'Order ini sudah tidak di antrian desain.');
+        abort_if(OrderReworkRequest::forOrder($type, $id)->pending()->exists(), 422, 'Order ini sedang menunggu persetujuan pembatalan/ulang proses.');
 
         $data = $request->validate([
             'action' => ['required', 'in:selesai,lanjut'],

@@ -12,9 +12,9 @@ class DashboardStatsService
     /**
      * @return array<string, mixed>
      */
-    public function stats(): array
+    public function stats(?string $from = null, ?string $to = null): array
     {
-        $all = $this->loadOrders();
+        $all = $this->loadOrders($from, $to);
 
         return [
             'total' => $all->count(),
@@ -22,6 +22,8 @@ class DashboardStatsService
             'lunas' => $all->where('status_bayar', 'lunas')->count(),
             'hutang' => $all->where('status_bayar', 'hutang')->count(),
             'hutang_nominal' => $all->where('status_bayar', 'hutang')->sum('jumlah_piutang'),
+            'dp' => $all->where('status_bayar', 'dp')->count(),
+            'dp_nominal' => $all->where('status_bayar', 'dp')->sum('jumlah_piutang'),
             'desain' => $all->where('status', 'desain')->count(),
             'cetak' => $all->where('status', 'cetak')->count(),
             'finishing' => $all->where('status', 'finishing')->count(),
@@ -36,11 +38,13 @@ class DashboardStatsService
     /**
      * @return Collection<int, array<string, mixed>>
      */
-    public function recentOrders(int $limit = 30): Collection
+    public function recentOrders(int $limit = 30, ?string $from = null, ?string $to = null): Collection
     {
-        $indoor = OrderIndoor::query()->whereNotNull('created_at')->get();
-        $outdoor = OrderOutdoor::query()->get();
-        $artwork = OrderArtwork::query()->get();
+        [$indoorQuery, $outdoorQuery, $artworkQuery] = $this->scopedQueries($from, $to);
+
+        $indoor = $indoorQuery->get();
+        $outdoor = $outdoorQuery->get();
+        $artwork = $artworkQuery->get();
 
         $indoor->load('customer', 'kasir', 'desainBy', 'cetakBy', 'finishingBy', 'qcBy', 'bungkusBy', 'pengambilanBy');
         $outdoor->load('customer', 'kasir', 'desainBy', 'cetakBy', 'finishingBy', 'qcBy', 'bungkusBy', 'pengambilanBy', 'items');
@@ -53,17 +57,41 @@ class DashboardStatsService
         return $mapped->sortByDesc('created_at')->take($limit)->values();
     }
 
-    private function loadOrders(): Collection
+    private function loadOrders(?string $from = null, ?string $to = null): Collection
     {
+        [$indoorQuery, $outdoorQuery, $artworkQuery] = $this->scopedQueries($from, $to);
+
+        return $indoorQuery->get()->concat($outdoorQuery->get())->concat($artworkQuery->get());
+    }
+
+    /**
+     * Query builders scoped to an optional created_at date range, shared by
+     * stats() and recentOrders() so both respect the same date filter.
+     *
+     * @return array{0: \Illuminate\Database\Eloquent\Builder, 1: \Illuminate\Database\Eloquent\Builder, 2: \Illuminate\Database\Eloquent\Builder}
+     */
+    private function scopedQueries(?string $from, ?string $to): array
+    {
+        $scope = function ($query) use ($from, $to) {
+            if ($from) {
+                $query->where('created_at', '>=', $from.' 00:00:00');
+            }
+            if ($to) {
+                $query->where('created_at', '<=', $to.' 23:59:59');
+            }
+
+            return $query;
+        };
+
         // Historical rows (pre-dating this pipeline) were backfilled to
         // status/status_bayar = selesai/lunas with no created_at — excluding
         // rows with a null created_at keeps the dashboard scoped to orders
         // actually placed through the new pipeline.
-        $indoor = OrderIndoor::query()->whereNotNull('created_at')->get();
-        $outdoor = OrderOutdoor::query()->get();
-        $artwork = OrderArtwork::query()->get();
-
-        return $indoor->concat($outdoor)->concat($artwork);
+        return [
+            $scope(OrderIndoor::query()->whereNotNull('created_at')),
+            $scope(OrderOutdoor::query()),
+            $scope(OrderArtwork::query()),
+        ];
     }
 
     /**

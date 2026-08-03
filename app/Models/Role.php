@@ -69,6 +69,7 @@ class Role extends Model
         'Kasir' => [
             'kasir.view' => 'Lihat antrian kasir',
             'kasir.manage' => 'Proses pembayaran order',
+            'kasir.approve-diskon' => 'Setujui/tolak pengajuan diskon nota kasir',
         ],
         'Operator Desain' => [
             'order-desain.view' => 'Lihat antrian desain',
@@ -93,6 +94,9 @@ class Role extends Model
         'Pengambilan Barang' => [
             'pengambilan.view' => 'Lihat daftar pengambilan barang',
             'pengambilan.manage' => 'Konfirmasi serah terima barang',
+        ],
+        'Pembatalan & Ulang Proses' => [
+            'order-rework.approve' => 'Setujui/tolak pengajuan pembatalan atau ulang proses order',
         ],
         'Bahan Outdoor' => [
             'bahan-outdoor.view' => 'Lihat bahan outdoor',
@@ -120,6 +124,16 @@ class Role extends Model
         ],
         'Papan Pantau' => [
             'papan-pantau.view' => 'Lihat papan pantau produksi lintas tahap (read-only)',
+        ],
+        'Keuangan' => [
+            'keuangan.view' => 'Lihat rekap kas harian & laporan keuangan',
+            'pengeluaran.view' => 'Lihat catatan pengeluaran',
+            'pengeluaran.manage' => 'Tambah/ubah/hapus catatan pengeluaran',
+            'payroll.view' => 'Lihat data payroll/gajian',
+            'payroll.manage' => 'Atur gaji pegawai & proses pembayaran gajian',
+            'keuangan.tutup-buku' => 'Tutup/buka kembali buku periode (kunci transaksi keuangan bulan tersebut)',
+            'keuangan.jurnal-manual' => 'Posting & batalkan jurnal penyesuaian manual',
+            'keuangan.pengaturan' => 'Atur data perusahaan untuk keperluan pajak (NPWP, status PKP, tarif PPN default)',
         ],
         'Jasa Potong' => [
             'jasa-potong.manage' => 'Kelola nilai X (biaya tetap) Jasa Potong',

@@ -3,85 +3,97 @@
         <h2 class="font-semibold text-xl text-gray-800">Pengambilan Barang</h2>
     </x-slot>
 
-    <div class="bg-white rounded-lg border border-gray-200 overflow-hidden" x-data="{ tab: 'indoor' }">
-        <div class="flex border-b border-gray-200 text-sm gap-1 p-1.5">
-            <button @click="tab = 'indoor'" :class="tab === 'indoor' ? 'bg-amber-100 text-amber-800' : 'text-gray-500 hover:bg-amber-50 hover:text-amber-700'"
-                    class="px-4 py-2 rounded-md font-medium transition">
-                Indoor ({{ $indoorOrders->count() }})
-            </button>
-            <button @click="tab = 'outdoor'" :class="tab === 'outdoor' ? 'bg-teal-100 text-teal-800' : 'text-gray-500 hover:bg-teal-50 hover:text-teal-700'"
-                    class="px-4 py-2 rounded-md font-medium transition">
-                Outdoor ({{ $outdoorOrders->count() }})
-            </button>
-            <button @click="tab = 'artwork'" :class="tab === 'artwork' ? 'bg-violet-100 text-violet-800' : 'text-gray-500 hover:bg-violet-50 hover:text-violet-700'"
-                    class="px-4 py-2 rounded-md font-medium transition">
-                Artwork ({{ $artworkOrders->count() }})
-            </button>
-        </div>
+    @push('styles')
+        <link rel="stylesheet" href="{{ asset('_ds/industry-8c70c3bf-fa3d-4d54-8c9e-e44ac24ed178/styles.css') }}">
+        <style>
+            #industry-pengambilan { font-family: var(--font-body); color: var(--color-text); background: var(--color-bg); margin: calc(var(--space-8) * -1); padding: var(--space-8); }
+            #industry-pengambilan .seg-tab { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; font-family: var(--font-heading); font-weight: 600; font-size: 13px; letter-spacing: 0.02em; cursor: pointer; border: 1px solid var(--color-divider); border-right: none; background: transparent; color: var(--color-text); }
+            #industry-pengambilan .seg-tab:last-child { border-right: 1px solid var(--color-divider); }
+            #industry-pengambilan .seg-tab.active { background: var(--color-accent); color: var(--color-bg); border-color: var(--color-accent); }
+            #industry-pengambilan .in-btn { display: inline-flex; align-items: center; gap: 4px; font-family: var(--font-heading); font-weight: 600; font-size: 12px; padding: 5px 10px; background: var(--color-accent); color: var(--color-bg); border: 1px solid var(--color-accent); cursor: pointer; white-space: nowrap; }
+            #industry-pengambilan .in-btn:hover { background: var(--color-accent-600); }
+            #industry-pengambilan .in-btn[disabled] { opacity: 0.45; cursor: not-allowed; background: var(--color-neutral-400); border-color: var(--color-neutral-400); }
+        </style>
+    @endpush
 
-        @foreach (['indoor' => $indoorOrders, 'outdoor' => $outdoorOrders, 'artwork' => $artworkOrders] as $tabKey => $orders)
-            <div x-show="tab === '{{ $tabKey }}'" @if($tabKey!=='indoor') x-cloak @endif class="overflow-x-auto">
-                <table class="w-full text-[13px] min-w-[640px]">
-                    <thead class="bg-gray-50 text-left text-xs uppercase text-gray-500">
-                        <tr>
-                            <th class="px-3 py-2 w-12">No</th>
-                            <th class="px-3 py-2">No Order</th>
-                            <th class="px-3 py-2">Tanggal</th>
-                            <th class="px-3 py-2">Customer</th>
-                            <th class="px-3 py-2">Pembayaran</th>
-                            <th class="px-3 py-2 text-right">Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y">
-                        @forelse ($orders as $order)
-                            <tr>
-                                <td class="px-3 py-2 text-gray-400">{{ $loop->iteration }}</td>
-                                <td class="px-3 py-2 font-semibold text-gray-900">{{ $order->NoOrder }}</td>
-                                <td class="px-3 py-2 text-gray-600">{{ is_string($order->TglOrder) ? $order->TglOrder : $order->TglOrder?->format('Y-m-d') }}</td>
-                                <td class="px-3 py-2 text-gray-600">{{ $order->customer?->NmCust ?? '-' }}</td>
-                                <td class="px-3 py-2">
-                                    @if ($order->status_bayar === 'lunas')
-                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800">Lunas</span>
-                                    @elseif ($order->status_bayar === 'dp')
-                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">
-                                            Sisa DP Rp {{ number_format($order->jumlah_piutang, 0, ',', '.') }}
-                                        </span>
-                                    @else
-                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">
-                                            Hutang Rp {{ number_format($order->jumlah_piutang, 0, ',', '.') }}
-                                        </span>
-                                    @endif
-                                </td>
-                                <td class="px-3 py-2 text-right">
-                                    <div class="flex items-center justify-end gap-1.5">
-                                        @if ($tabKey === 'outdoor')
-                                            <x-order-discussion type="outdoor" :order-id="$order->id" :no-order="$order->NoOrder"
-                                                                 :comments="$outdoorComments->get($order->id, collect())"
-                                                                 :unread="$outdoorUnread->get($order->id, 0)" />
-                                        @endif
-                                        @if ($order->status_bayar === 'dp' && (float) $order->jumlah_piutang > 0)
-                                            <span class="inline-flex items-center px-3 py-1.5 bg-gray-100 text-gray-400 text-xs font-semibold rounded-md" title="Lunasi sisa DP dulu lewat halaman Bayar">
-                                                Lunasi DP Dulu
-                                            </span>
-                                        @else
-                                            <form method="POST" action="{{ route('pengambilan.serahkan', ['type' => $tabKey, 'id' => $order->id]) }}"
-                                                  onsubmit="return confirm('Konfirmasi barang order {{ $order->NoOrder }} sudah diserahkan ke customer?')">
-                                                @csrf
-                                                <button type="submit"
-                                                        class="inline-flex items-center px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-md hover:bg-blue-700">
-                                                    Serahkan Barang
-                                                </button>
-                                            </form>
-                                        @endif
-                                    </div>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr><td colspan="6" class="px-4 py-6 text-center text-gray-400">Tidak ada barang yang siap diambil.</td></tr>
-                        @endforelse
-                    </tbody>
-                </table>
+    @php
+        $tabs = [
+            'indoor' => ['label' => 'Indoor', 'count' => $indoorOrders->count()],
+            'outdoor' => ['label' => 'Outdoor', 'count' => $outdoorOrders->count()],
+            'artwork' => ['label' => 'Artwork', 'count' => $artworkOrders->count()],
+        ];
+    @endphp
+
+    <div id="industry-pengambilan">
+        <div style="max-width: 1480px; margin: 0 auto; display: flex; flex-direction: column; gap: var(--space-6);" x-data="{ tab: 'indoor' }">
+            <div style="display: flex;">
+                @foreach ($tabs as $key => $t)
+                    <button type="button" @click="tab = '{{ $key }}'" class="seg-tab" :class="tab === '{{ $key }}' ? 'active' : ''">
+                        {{ $t['label'] }} ({{ $t['count'] }})
+                    </button>
+                @endforeach
             </div>
-        @endforeach
+
+            @foreach (['indoor' => $indoorOrders, 'outdoor' => $outdoorOrders, 'artwork' => $artworkOrders] as $tabKey => $orders)
+                <div x-show="tab === '{{ $tabKey }}'" @if($tabKey!=='indoor') x-cloak @endif
+                     class="blueprint" style="padding: var(--space-6);">
+                    <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+                    <div style="overflow-x: auto;">
+                        <table class="table" style="min-width: 640px;">
+                            <thead>
+                                <tr>
+                                    <th style="width: 32px;">No</th><th>No order</th><th>Tanggal</th><th>Customer</th><th>Pembayaran</th><th style="text-align: right;">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse ($orders as $order)
+                                    <tr>
+                                        <td class="text-muted">{{ $loop->iteration }}</td>
+                                        <td style="font-family: var(--font-heading); font-weight: 600;">{{ $order->NoOrder }}</td>
+                                        <td class="text-muted">{{ is_string($order->TglOrder) ? $order->TglOrder : $order->TglOrder?->format('Y-m-d') }}</td>
+                                        <td>{{ $order->customer?->NmCust ? ucwords(mb_strtolower($order->customer->NmCust)) : '-' }}</td>
+                                        <td>
+                                            @if ($order->status_bayar === 'lunas')
+                                                <span class="tag tag-accent">Lunas</span>
+                                            @elseif ($order->status_bayar === 'dp')
+                                                <span class="tag tag-outline">Sisa DP Rp {{ number_format($order->jumlah_piutang, 0, ',', '.') }}</span>
+                                            @else
+                                                <span class="tag tag-outline">Hutang Rp {{ number_format($order->jumlah_piutang, 0, ',', '.') }}</span>
+                                            @endif
+                                        </td>
+                                        <td style="text-align: right;">
+                                            <div style="display: inline-flex; align-items: center; gap: 6px;">
+                                                @if ($tabKey === 'outdoor')
+                                                    <x-order-discussion type="outdoor" :order-id="$order->id" :no-order="$order->NoOrder"
+                                                                         :comments="$outdoorComments->get($order->id, collect())"
+                                                                         :unread="$outdoorUnread->get($order->id, 0)" />
+                                                @endif
+                                                <x-order-rework :type="$tabKey" :order-id="$order->id" :no-order="$order->NoOrder"
+                                                                 current-stage="siap_diambil"
+                                                                 :pending="$pendingRework->get($tabKey.'-'.$order->id)"
+                                                                 :can-approve="$canApproveRework" />
+                                                @if ($pendingRework->has($tabKey.'-'.$order->id))
+                                                    {{-- Menunggu persetujuan pembatalan/ulang proses; tombol serahkan disembunyikan sampai diputuskan --}}
+                                                @elseif ($order->status_bayar === 'dp' && (float) $order->jumlah_piutang > 0)
+                                                    <button type="button" class="in-btn" disabled title="Lunasi sisa DP dulu lewat halaman Bayar">Lunasi DP dulu</button>
+                                                @else
+                                                    <form method="POST" action="{{ route('pengambilan.serahkan', ['type' => $tabKey, 'id' => $order->id]) }}"
+                                                          onsubmit="return confirm('Konfirmasi barang order {{ $order->NoOrder }} sudah diserahkan ke customer?')">
+                                                        @csrf
+                                                        <button type="submit" class="in-btn">Serahkan barang</button>
+                                                    </form>
+                                                @endif
+                                            </div>
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr><td colspan="6" class="text-muted" style="text-align: center; padding: var(--space-6);">Tidak ada barang yang siap diambil.</td></tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            @endforeach
+        </div>
     </div>
 </x-app-layout>

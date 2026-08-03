@@ -7,7 +7,9 @@ use App\Models\OrderComment;
 use App\Models\OrderIndoor;
 use App\Models\OrderOutdoor;
 use App\Models\OrderOutdoorDetail;
+use App\Models\OrderReworkRequest;
 use App\Models\OrderStatusNote;
+use App\Models\PrinterOutdoor;
 use App\Support\ResolvesOrderType;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -18,6 +20,14 @@ class OrderCetakController extends Controller
     use ResolvesOrderType;
 
     public function index(): View
+    {
+        return view('order-cetak.index', $this->loadData());
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function loadData(): array
     {
         $indoorOrders = OrderIndoor::query()->with('customer')->where('status', 'cetak')
             ->orderByDesc('TglOrder')->orderByDesc('NoOrder')->get();
@@ -34,7 +44,12 @@ class OrderCetakController extends Controller
 
         $outdoorUnread = OrderComment::unreadCountsFor('outdoor', $outdoorOrders->pluck('id'));
 
-        return view('order-cetak.index', compact('indoorOrders', 'outdoorOrders', 'artworkOrders', 'outdoorComments', 'outdoorUnread'));
+        $printerNames = PrinterOutdoor::pluck('NmPrn', 'KdPrn');
+
+        $pendingRework = OrderReworkRequest::pendingMap();
+        $canApproveRework = auth()->user()->hasPermission('order-rework.approve');
+
+        return compact('indoorOrders', 'outdoorOrders', 'artworkOrders', 'outdoorComments', 'outdoorUnread', 'printerNames', 'pendingRework', 'canApproveRework');
     }
 
     public function update(Request $request, string $type, int $id): RedirectResponse
@@ -44,6 +59,7 @@ class OrderCetakController extends Controller
         $order = $this->resolveOrder($type, $id);
 
         abort_if($order->status !== 'cetak', 422, 'Order ini sudah tidak di antrian cetak.');
+        abort_if(OrderReworkRequest::forOrder($type, $id)->pending()->exists(), 422, 'Order ini sedang menunggu persetujuan pembatalan/ulang proses.');
 
         $data = $request->validate([
             'action' => ['required', 'in:selesai,lanjut'],
@@ -82,6 +98,7 @@ class OrderCetakController extends Controller
 
         abort_if($order->cancel_requested_at, 422, 'Order ini sedang menunggu persetujuan pembatalan.');
         abort_if($order->status !== 'cetak', 422, 'Order ini sudah tidak di antrian cetak.');
+        abort_if(OrderReworkRequest::forOrder('outdoor', $order->id)->pending()->exists(), 422, 'Order ini sedang menunggu persetujuan pembatalan/ulang proses.');
 
         $data = $request->validate([
             'qty' => ['required', 'integer', 'min:1', 'max:'.$item->sisaQty()],
@@ -110,6 +127,7 @@ class OrderCetakController extends Controller
     public function finishOutdoor(OrderOutdoor $order): RedirectResponse
     {
         abort_if($order->status !== 'cetak', 422, 'Order ini sudah tidak di antrian cetak.');
+        abort_if(OrderReworkRequest::forOrder('outdoor', $order->id)->pending()->exists(), 422, 'Order ini sedang menunggu persetujuan pembatalan/ulang proses.');
         abort_unless($order->items()->get()->every(fn (OrderOutdoorDetail $i) => $i->isSelesai()), 422, 'Masih ada item yang belum tuntas.');
 
         $this->finishOutdoorOrder($order);

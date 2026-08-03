@@ -34,6 +34,7 @@ class StoreCustomerRequest extends FormRequest
             'Alamat' => ['required', 'string', 'max:60'],
             'Kota' => ['required', 'string', 'max:25'],
             'Telp' => ['required', 'string', 'max:40'],
+            'NPWP' => ['nullable', 'string', 'max:20'],
             'is_vip' => ['nullable', 'boolean'],
             'Batas' => ['required_if:is_vip,1', 'nullable', 'numeric', 'min:0'],
         ];
@@ -52,6 +53,7 @@ class StoreCustomerRequest extends FormRequest
             'Alamat' => 'alamat',
             'Kota' => 'kota',
             'Telp' => 'telepon',
+            'NPWP' => 'NPWP',
             'Batas' => 'limit piutang',
         ];
     }

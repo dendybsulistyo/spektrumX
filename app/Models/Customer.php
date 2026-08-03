@@ -21,6 +21,7 @@ class Customer extends Model
         'Alamat',
         'Kota',
         'Telp',
+        'NPWP',
     ];
 
     public function limit()

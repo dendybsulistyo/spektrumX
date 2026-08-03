@@ -3,9 +3,9 @@
         <h2 class="font-semibold text-xl text-gray-800">Bayar Order {{ $order->NoOrder }}</h2>
     </x-slot>
 
-    <div x-data="{ invoiceModalOpen: false, autoPrintPending: {{ session('autoPrintInvoice') ? 'true' : 'false' }} }"
+    <div x-data="{ invoiceModalOpen: false, autoPrintPending: {{ session('autoPrintInvoice') ? 'true' : 'false' }}, diskonModalOpen: false }"
          x-init="if (autoPrintPending) { invoiceModalOpen = true }"
-         @keydown.escape.window="invoiceModalOpen = false">
+         @keydown.escape.window="invoiceModalOpen = false; diskonModalOpen = false">
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div class="lg:col-span-2 bg-white rounded-lg border border-gray-200 overflow-hidden">
             @if ($type === 'outdoor' && $order->replaces)
@@ -58,18 +58,77 @@
                 </table>
             </div>
 
-            <div class="p-4 border-t border-gray-200 flex items-center justify-between">
-                <span class="text-sm font-semibold text-gray-700">Total</span>
-                <span class="text-lg font-bold text-gray-900">Rp {{ number_format($order->total ?? 0, 0, ',', '.') }}</span>
+            @php $diskonStatus = $order->diskonStatus(); @endphp
+
+            <div class="p-4 border-t border-gray-200">
+                <div class="flex items-center justify-between">
+                    <span class="text-sm font-semibold text-gray-700">Total</span>
+                    <span class="text-lg font-bold text-gray-900 {{ $diskonStatus === 'approved' ? 'line-through text-gray-400 text-base font-normal' : '' }}">
+                        Rp {{ number_format($order->total ?? 0, 0, ',', '.') }}
+                    </span>
+                </div>
+
+                @if ($diskonStatus === 'approved')
+                    <div class="flex items-center justify-between mt-1">
+                        <span class="text-sm font-semibold text-green-700">Total setelah diskon {{ rtrim(rtrim(number_format($order->diskon_persen, 2), '0'), '.') }}%</span>
+                        <span class="text-lg font-bold text-green-700">Rp {{ number_format($order->totalSetelahDiskon(), 0, ',', '.') }}</span>
+                    </div>
+                @endif
+
+                <div class="mt-3">
+                    @if ($diskonStatus === 'none')
+                        @can('kasir.manage')
+                            @if ($order->status_bayar !== 'lunas')
+                                <button type="button" @click="diskonModalOpen = true"
+                                        class="text-xs font-semibold text-blue-600 hover:underline">
+                                    + Ajukan Diskon
+                                </button>
+                            @endif
+                        @endcan
+                    @elseif ($diskonStatus === 'pending')
+                        <div class="rounded-md bg-amber-50 border border-amber-200 p-3 text-xs text-amber-800">
+                            <p class="font-semibold">Menunggu persetujuan diskon {{ rtrim(rtrim(number_format($order->diskon_requested_persen, 2), '0'), '.') }}%</p>
+                            <p class="mt-0.5">Alasan: {{ $order->diskon_alasan }}</p>
+                            <p class="mt-0.5 text-amber-600">Diajukan oleh {{ $order->diskonRequestedBy?->name ?? '-' }}</p>
+                            @can('kasir.approve-diskon')
+                                <div class="mt-2 flex gap-2">
+                                    <form method="POST" action="{{ route('kasir.diskon.approve', ['type' => $type, 'id' => $order->id]) }}"
+                                          onsubmit="return confirm('Setujui diskon {{ $order->diskon_requested_persen }}% untuk order {{ $order->NoOrder }}?')">
+                                        @csrf
+                                        <button type="submit" class="px-2.5 py-1 bg-green-600 text-white text-xs font-semibold rounded hover:bg-green-700">Setujui</button>
+                                    </form>
+                                    <form method="POST" action="{{ route('kasir.diskon.reject', ['type' => $type, 'id' => $order->id]) }}"
+                                          onsubmit="return confirm('Tolak pengajuan diskon untuk order {{ $order->NoOrder }}?')">
+                                        @csrf
+                                        <button type="submit" class="px-2.5 py-1 bg-gray-200 text-gray-700 text-xs font-semibold rounded hover:bg-gray-300">Tolak</button>
+                                    </form>
+                                </div>
+                            @endcan
+                        </div>
+                    @elseif ($diskonStatus === 'rejected')
+                        <div class="rounded-md bg-gray-50 border border-gray-200 p-3 text-xs text-gray-600">
+                            <p>Pengajuan diskon {{ rtrim(rtrim(number_format($order->diskon_requested_persen, 2), '0'), '.') }}% ditolak oleh {{ $order->diskonRejectedBy?->name ?? '-' }}.</p>
+                            @can('kasir.manage')
+                                @if ($order->status_bayar !== 'lunas')
+                                    <button type="button" @click="diskonModalOpen = true" class="mt-1 font-semibold text-blue-600 hover:underline">
+                                        Ajukan lagi
+                                    </button>
+                                @endif
+                            @endcan
+                        </div>
+                    @endif
+                </div>
             </div>
         </div>
 
         <div class="bg-white rounded-lg border border-gray-200 p-4"
              x-data="{
                 metode: '{{ old('metode_bayar', 'tunai') }}',
+                caraBayar: '{{ old('cara_bayar', 'tunai') }}',
+                noReferensi: '{{ old('no_referensi') }}',
                 jumlahDp: '{{ old('jumlah_dp') }}',
-                dpMin: {{ (int) ceil(($order->total ?? 0) * 0.5) }},
-                dpMax: {{ max((int) ($order->total ?? 0) - 1, 0) }},
+                dpMin: {{ (int) ceil(($diskonStatus === 'approved' ? $order->totalSetelahDiskon() : $order->total ?? 0) * 0.5) }},
+                dpMax: {{ max((int) ($diskonStatus === 'approved' ? $order->totalSetelahDiskon() : $order->total ?? 0) - 1, 0) }},
                 get dpError() {
                     if (this.metode !== 'dp' || this.jumlahDp === '') return '';
                     const val = Number(this.jumlahDp);
@@ -89,7 +148,7 @@
                     <div class="mt-2 space-y-2">
                         <label class="flex items-center gap-2">
                             <input type="radio" name="metode_bayar" value="tunai" x-model="metode" class="text-gray-900 focus:ring-gray-900">
-                            <span class="text-sm text-gray-700">Tunai (Lunas)</span>
+                            <span class="text-sm text-gray-700">Lunas</span>
                         </label>
                         <label class="flex items-center gap-2">
                             <input type="radio" name="metode_bayar" value="hutang" x-model="metode"
@@ -113,14 +172,41 @@
                     <x-input-error :messages="$errors->get('metode_bayar')" class="mt-1" />
                 </div>
 
+                <div x-show="metode !== 'hutang'" x-cloak>
+                    <x-input-label value="Cara Bayar" />
+                    <div class="mt-2 space-y-2">
+                        <label class="flex items-center gap-2">
+                            <input type="radio" name="cara_bayar" value="tunai" x-model="caraBayar" class="text-gray-900 focus:ring-gray-900">
+                            <span class="text-sm text-gray-700">Tunai</span>
+                        </label>
+                        <label class="flex items-center gap-2">
+                            <input type="radio" name="cara_bayar" value="qris" x-model="caraBayar" class="text-gray-900 focus:ring-gray-900">
+                            <span class="text-sm text-gray-700">QRIS</span>
+                        </label>
+                        <label class="flex items-center gap-2">
+                            <input type="radio" name="cara_bayar" value="transfer" x-model="caraBayar" class="text-gray-900 focus:ring-gray-900">
+                            <span class="text-sm text-gray-700">Transfer</span>
+                        </label>
+                    </div>
+                    <x-input-error :messages="$errors->get('cara_bayar')" class="mt-1" />
+                </div>
+
+                <div x-show="metode !== 'hutang' && caraBayar !== 'tunai'" x-cloak>
+                    <x-input-label for="no_referensi" value="No. Referensi" />
+                    <x-text-input id="no_referensi" name="no_referensi" type="text" x-model="noReferensi"
+                                  class="mt-1 block w-full" maxlength="50" placeholder="ID transaksi QRIS / 4 digit terakhir rekening tujuan" />
+                    <x-input-error :messages="$errors->get('no_referensi')" class="mt-1" />
+                </div>
+
                 @if ($type === 'outdoor')
                     <div x-show="metode === 'dp'" x-cloak>
                         <x-input-label for="jumlah_dp" value="Jumlah DP" />
                         <x-text-input id="jumlah_dp" name="jumlah_dp" type="number" step="100"
                                       x-model="jumlahDp"
                                       class="mt-1 block w-full" />
+                        @php $dpBasis = $diskonStatus === 'approved' ? $order->totalSetelahDiskon() : ($order->total ?? 0); @endphp
                         <p class="text-xs text-gray-500 mt-1">
-                            Minimal Rp {{ number_format(($order->total ?? 0) * 0.5, 0, ',', '.') }} (50% dari total Rp {{ number_format($order->total ?? 0, 0, ',', '.') }})
+                            Minimal Rp {{ number_format($dpBasis * 0.5, 0, ',', '.') }} (50% dari total {{ $diskonStatus === 'approved' ? 'setelah diskon ' : '' }}Rp {{ number_format($dpBasis, 0, ',', '.') }})
                         </p>
                         <x-input-error :messages="$errors->get('jumlah_dp')" class="mt-1" />
                     </div>
@@ -176,6 +262,39 @@
                         @load="if (autoPrintPending) { autoPrintPending = false; $refs.invoiceFrame.contentWindow.focus(); $refs.invoiceFrame.contentWindow.print(); }"
                         class="w-full h-full border-0"></iframe>
             </div>
+        </div>
+    </div>
+
+    <div x-show="diskonModalOpen" x-cloak
+         class="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div @click="diskonModalOpen = false" class="absolute inset-0 bg-gray-900/50"></div>
+
+        <div class="relative bg-white rounded-lg shadow-lg w-full max-w-sm">
+            <form method="POST" action="{{ route('kasir.diskon.request', ['type' => $type, 'id' => $order->id]) }}" class="p-5 space-y-4">
+                @csrf
+                <h3 class="font-semibold text-gray-900">Ajukan Diskon — {{ $order->NoOrder }}</h3>
+                <p class="text-xs text-gray-500">Diskon berlaku ke seluruh nota (persen dari total). Perlu disetujui Admin/Owner/Admin Kasir dulu sebelum bisa dipakai bayar.</p>
+
+                <div>
+                    <x-input-label for="diskon_persen" value="Diskon (%)" />
+                    <x-text-input id="diskon_persen" name="diskon_persen" type="number" step="0.01" min="0.01" max="100"
+                                  class="mt-1 block w-full no-spinner" required />
+                    <x-input-error :messages="$errors->get('diskon_persen')" class="mt-1" />
+                </div>
+
+                <div>
+                    <x-input-label for="diskon_alasan" value="Alasan" />
+                    <textarea id="diskon_alasan" name="diskon_alasan" rows="2" required maxlength="255"
+                              placeholder="misal: customer langganan, komplain kualitas, dll"
+                              class="mt-1 block w-full rounded-md border-gray-300 text-sm"></textarea>
+                    <x-input-error :messages="$errors->get('diskon_alasan')" class="mt-1" />
+                </div>
+
+                <div class="flex justify-end gap-2">
+                    <button type="button" @click="diskonModalOpen = false" class="px-3 py-2 text-sm text-gray-500 hover:underline">Batal</button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700">Ajukan</button>
+                </div>
+            </form>
         </div>
     </div>
     </div>

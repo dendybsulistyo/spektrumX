@@ -37,10 +37,10 @@ class Produk extends Model
      * and bg-purple-100 silently render unstyled. Inline style sidesteps that.
      */
     public const PJLB_BADGE_STYLES = [
-        self::PJLB_QTY => 'background-color:#f3f4f6;color:#4b5563',
+        self::PJLB_QTY => 'background-color:#e5e7eb;color:#1f2937;border:1px solid #9ca3af',
         self::PJLB_AREA => 'background-color:#ffedd5;color:#c2410c',
         self::PJLB_DIMENSION_ONLY => 'background-color:#f3e8ff;color:#7e22ce',
-        self::PJLB_QTY_ALT => 'background-color:#f3f4f6;color:#4b5563',
+        self::PJLB_QTY_ALT => 'background-color:#e5e7eb;color:#1f2937;border:1px solid #9ca3af',
     ];
 
     /** Badge text shown in tables — code 2 gets a descriptive "Pj x Lb" tag since it drives pricing. */
@@ -114,7 +114,7 @@ class Produk extends Model
 
     public function pjLbBadgeStyle(): string
     {
-        return self::PJLB_BADGE_STYLES[$this->isPjLb] ?? 'background-color:#f3f4f6;color:#9ca3af';
+        return self::PJLB_BADGE_STYLES[$this->isPjLb] ?? 'background-color:#e5e7eb;color:#1f2937;border:1px solid #9ca3af';
     }
 
     public function pjLbBadgeText(): string
