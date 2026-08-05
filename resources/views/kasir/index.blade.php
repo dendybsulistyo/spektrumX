@@ -49,7 +49,7 @@
                                 @if ($order->diskonStatus() === 'pending')
                                     <span class="ml-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">Diskon pending</span>
                                 @elseif ($order->diskonStatus() === 'approved')
-                                    <span class="ml-1 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-700">Diskon {{ rtrim(rtrim(number_format($order->diskon_persen, 2), '0'), '.') }}%</span>
+                                    <span class="ml-1 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-700">Diskon {{ $order->diskonApprovedLabel() }}</span>
                                 @endif
                             </td>
                             <td class="px-3 py-2 text-gray-600">{{ $order->TglOrder }}</td>
@@ -90,7 +90,7 @@
                                 @if ($order->diskonStatus() === 'pending')
                                     <span class="ml-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">Diskon pending</span>
                                 @elseif ($order->diskonStatus() === 'approved')
-                                    <span class="ml-1 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-700">Diskon {{ rtrim(rtrim(number_format($order->diskon_persen, 2), '0'), '.') }}%</span>
+                                    <span class="ml-1 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-700">Diskon {{ $order->diskonApprovedLabel() }}</span>
                                 @endif
                             </td>
                             <td class="px-3 py-2 text-gray-600">{{ $order->TglOrder?->format('Y-m-d') }}</td>
@@ -131,7 +131,7 @@
                                 @if ($order->diskonStatus() === 'pending')
                                     <span class="ml-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">Diskon pending</span>
                                 @elseif ($order->diskonStatus() === 'approved')
-                                    <span class="ml-1 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-700">Diskon {{ rtrim(rtrim(number_format($order->diskon_persen, 2), '0'), '.') }}%</span>
+                                    <span class="ml-1 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-700">Diskon {{ $order->diskonApprovedLabel() }}</span>
                                 @endif
                             </td>
                             <td class="px-3 py-2 text-gray-600">{{ is_string($order->TglOrder) ? $order->TglOrder : $order->TglOrder?->format('Y-m-d') }}</td>
@@ -154,18 +154,24 @@
         <div x-show="tab === 'replacement'" x-cloak class="overflow-x-auto">
             <table class="w-full text-[13px] min-w-[720px]">
                 <thead class="bg-gray-50 text-left text-xs uppercase text-gray-500"><tr>
-                    <th class="px-3 py-2">Nota Hangus</th><th class="px-3 py-2">Customer</th><th class="px-3 py-2 text-right">Dana Dibayar Lama</th><th class="px-3 py-2 text-right">Aksi</th>
+                    <th class="px-3 py-2">Nota Hangus</th><th class="px-3 py-2">Tipe</th><th class="px-3 py-2">Customer</th><th class="px-3 py-2 text-right">Dana Dibayar Lama</th><th class="px-3 py-2 text-right">Aksi</th>
                 </tr></thead>
                 <tbody class="divide-y">
                     @forelse ($replacementOrders as $order)
+                        @php
+                            $replacementRoute = $order->order_type === 'outdoor'
+                                ? route('kasir.replacement.create', $order)
+                                : route('kasir.replacement.create.' . $order->order_type, $order);
+                        @endphp
                         <tr>
                             <td class="px-3 py-2"><span class="font-semibold text-gray-900">{{ $order->NoOrder }}</span><span class="ml-2 rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700">Hangus</span><p class="mt-1 text-xs text-gray-500">{{ $order->cancel_reason }}</p></td>
+                            <td class="px-3 py-2 text-gray-600">{{ ucfirst($order->order_type) }}</td>
                             <td class="px-3 py-2 text-gray-600">{{ $order->customer?->NmCust ? ucwords(mb_strtolower($order->customer->NmCust)) : '-' }}</td>
                             <td class="px-3 py-2 text-right text-gray-900">Rp {{ number_format($order->jumlah_dibayar ?? 0, 0, ',', '.') }}</td>
-                            <td class="px-3 py-2 text-right"><a href="{{ route('kasir.replacement.create', $order) }}" class="inline-flex items-center rounded-md bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-700">Buat Nota Pengganti</a></td>
+                            <td class="px-3 py-2 text-right"><a href="{{ $replacementRoute }}" class="inline-flex items-center rounded-md bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-700">Buat Nota Pengganti</a></td>
                         </tr>
                     @empty
-                        <tr><td colspan="4" class="px-4 py-6 text-center text-gray-400">Tidak ada nota hangus yang menunggu penggantian.</td></tr>
+                        <tr><td colspan="5" class="px-4 py-6 text-center text-gray-400">Tidak ada nota hangus yang menunggu penggantian.</td></tr>
                     @endforelse
                 </tbody>
             </table>
@@ -194,7 +200,7 @@
                                 @if ($order->diskonStatus() === 'pending')
                                     <span class="ml-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">Diskon pending</span>
                                 @elseif ($order->diskonStatus() === 'approved')
-                                    <span class="ml-1 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-700">Diskon {{ rtrim(rtrim(number_format($order->diskon_persen, 2), '0'), '.') }}%</span>
+                                    <span class="ml-1 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-700">Diskon {{ $order->diskonApprovedLabel() }}</span>
                                 @endif
                             </td>
                             <td class="px-3 py-2 text-gray-600">{{ is_string($order->TglOrder) ? $order->TglOrder : $order->TglOrder?->format('Y-m-d') }}</td>

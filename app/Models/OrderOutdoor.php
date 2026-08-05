@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Traits\HasCancelAndNotaPengganti;
 use App\Traits\HasDiskonNota;
 use App\Traits\HasStageProgress;
 use Illuminate\Database\Eloquent\Model;
@@ -10,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class OrderOutdoor extends Model
 {
-    use HasDiskonNota, HasStageProgress;
+    use HasCancelAndNotaPengganti, HasDiskonNota, HasStageProgress;
 
     protected $table = 'order_outdoor';
 
@@ -59,7 +60,10 @@ class OrderOutdoor extends Model
         'topup_amount',
         'cashback_amount',
         'diskon_persen',
+        'diskon_nominal_tetap',
+        'diskon_tipe',
         'diskon_requested_persen',
+        'diskon_requested_nominal',
         'diskon_alasan',
         'diskon_requested_at',
         'diskon_requested_by',
@@ -91,7 +95,9 @@ class OrderOutdoor extends Model
             'topup_amount' => 'float',
             'cashback_amount' => 'float',
             'diskon_persen' => 'float',
+            'diskon_nominal_tetap' => 'float',
             'diskon_requested_persen' => 'float',
+            'diskon_requested_nominal' => 'float',
             'diskon_requested_at' => 'datetime',
             'diskon_approved_at' => 'datetime',
             'diskon_rejected_at' => 'datetime',
@@ -148,23 +154,4 @@ class OrderOutdoor extends Model
         return $this->belongsTo(User::class, 'created_by');
     }
 
-    public function cancelRequestedBy(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'cancel_requested_by');
-    }
-
-    public function cancelApprovedBy(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'cancel_approved_by');
-    }
-
-    public function replaces(): BelongsTo
-    {
-        return $this->belongsTo(self::class, 'replacement_order_id');
-    }
-
-    public function replacement(): HasMany
-    {
-        return $this->hasMany(self::class, 'replacement_order_id');
-    }
 }

@@ -108,11 +108,15 @@
 
             $showMasterData = Auth::user()->hasPermission('customers.view') || Auth::user()->hasPermission('produk.view') || Auth::user()->hasPermission('harga-artwork.view') || Auth::user()->hasPermission('printers.view') || Auth::user()->hasPermission('printer-outdoor.view') || Auth::user()->hasPermission('bahan-cetak-outdoor.view') || Auth::user()->hasPermission('harga-cetak-outdoor.view') || Auth::user()->hasPermission('kategori-produk-indoor.view');
             $showTransaksi = Auth::user()->hasPermission('order-indoor.view') || Auth::user()->hasPermission('order-outdoor.view') || Auth::user()->hasPermission('order-artwork.view');
-            $showOperator = Auth::user()->hasPermission('kasir.view') || Auth::user()->hasPermission('order-desain.view') || Auth::user()->hasPermission('order-cetak.view') || Auth::user()->hasPermission('order-finishing.view') || Auth::user()->hasPermission('order-qc.view') || Auth::user()->hasPermission('order-bungkus.view') || Auth::user()->hasPermission('pengambilan.view') || Auth::user()->hasPermission('file-monitor.view');
+            $canApproveCancel = Auth::user()->hasPermission('order-indoor.approve-cancel') || Auth::user()->hasPermission('order-outdoor.approve-cancel') || Auth::user()->hasPermission('order-artwork.approve-cancel');
+            $pendingApprovalCount = $canApproveCancel ? \App\Http\Controllers\PembatalanController::pendingCount() : 0;
+            $canApproveDiskon = Auth::user()->hasPermission('kasir.approve-diskon');
+            $pendingDiskonCount = $canApproveDiskon ? \App\Http\Controllers\DiskonApprovalController::pendingCount() : 0;
+            $showOperator = Auth::user()->hasPermission('kasir.view') || Auth::user()->hasPermission('order-desain.view') || Auth::user()->hasPermission('order-cetak.view') || Auth::user()->hasPermission('order-finishing.view') || Auth::user()->hasPermission('order-qc.view') || Auth::user()->hasPermission('order-bungkus.view') || Auth::user()->hasPermission('pengambilan.view') || Auth::user()->hasPermission('file-monitor.view') || $canApproveCancel || $canApproveDiskon;
             $showAnalitik = Auth::user()->hasPermission('data-warehouse.view') || Auth::user()->hasPermission('monitoring-kinerja.view') || Auth::user()->hasPermission('monitoring-transaksi.view') || Auth::user()->hasPermission('papan-pantau.view');
             $showPengaturan = Auth::user()->hasPermission('roles.manage') || Auth::user()->hasPermission('jasa-potong.manage');
 
-            $navTopLink = fn (bool $active) => 'inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-[13px] font-semibold transition '
+            $navTopLink = fn (bool $active) => 'inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-[14px] font-semibold transition '
                 .($active ? 'bg-indigo-50 text-indigo-600' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900');
             $dropdownLink = fn (bool $active) => 'block px-3 py-1.5 rounded-md text-[13px] '
                 .($active ? 'text-indigo-600 font-semibold bg-indigo-50' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900');
@@ -149,6 +153,8 @@
                                              class="absolute left-0 mt-2 w-56 bg-white border border-gray-200 rounded-lg shadow-lg py-2 z-50">
                                             @can('keuangan.view')
                                                 <a href="{{ route('keuangan.kas-harian') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.kas-harian')) }}">Kas Harian</a>
+                                                <a href="{{ route('keuangan.rekap-kasir') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.rekap-kasir')) }}">Rekap per Kasir</a>
+                                                <a href="{{ route('keuangan.rekap-customer') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.rekap-customer')) }}">Total Order per Customer</a>
                                                 <a href="{{ route('keuangan.piutang') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.piutang')) }}">Piutang</a>
                                             @endcan
                                             @can('pengeluaran.view')
@@ -271,6 +277,22 @@
                                             @can('pengambilan.view')
                                                 <a href="{{ route('pengambilan.index') }}" class="{{ $dropdownLink(request()->routeIs('pengambilan.*')) }}">Pengambilan Barang</a>
                                             @endcan
+                                            @if ($canApproveCancel)
+                                                <a href="{{ route('pembatalan.index') }}" class="{{ $dropdownLink(request()->routeIs('pembatalan.*')) }} flex items-center gap-1.5">
+                                                    Approval Batal
+                                                    @if ($pendingApprovalCount > 0)
+                                                        <span class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-white text-[11px] font-bold leading-none">{{ $pendingApprovalCount }}</span>
+                                                    @endif
+                                                </a>
+                                            @endif
+                                            @if ($canApproveDiskon)
+                                                <a href="{{ route('diskon-approval.index') }}" class="{{ $dropdownLink(request()->routeIs('diskon-approval.*')) }} flex items-center gap-1.5">
+                                                    Approval Diskon
+                                                    @if ($pendingDiskonCount > 0)
+                                                        <span class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-white text-[11px] font-bold leading-none">{{ $pendingDiskonCount }}</span>
+                                                    @endif
+                                                </a>
+                                            @endif
                                         </div>
                                     </div>
                                 @endif
@@ -369,6 +391,8 @@
                             <p class="px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">Keuangan</p>
                             @can('keuangan.view')
                                 <a href="{{ route('keuangan.kas-harian') }}" class="{{ $mobileLink(request()->routeIs('keuangan.kas-harian')) }}">Kas Harian</a>
+                                <a href="{{ route('keuangan.rekap-kasir') }}" class="{{ $mobileLink(request()->routeIs('keuangan.rekap-kasir')) }}">Rekap per Kasir</a>
+                                <a href="{{ route('keuangan.rekap-customer') }}" class="{{ $mobileLink(request()->routeIs('keuangan.rekap-customer')) }}">Total Order per Customer</a>
                                 <a href="{{ route('keuangan.piutang') }}" class="{{ $mobileLink(request()->routeIs('keuangan.piutang')) }}">Piutang</a>
                             @endcan
                             @can('pengeluaran.view')
@@ -456,6 +480,22 @@
                             @can('pengambilan.view')
                                 <a href="{{ route('pengambilan.index') }}" class="{{ $mobileLink(request()->routeIs('pengambilan.*')) }}">Pengambilan Barang</a>
                             @endcan
+                            @if ($canApproveCancel)
+                                <a href="{{ route('pembatalan.index') }}" class="{{ $mobileLink(request()->routeIs('pembatalan.*')) }} flex items-center gap-1.5">
+                                    Approval Batal
+                                    @if ($pendingApprovalCount > 0)
+                                        <span class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-white text-[11px] font-bold leading-none">{{ $pendingApprovalCount }}</span>
+                                    @endif
+                                </a>
+                            @endif
+                            @if ($canApproveDiskon)
+                                <a href="{{ route('diskon-approval.index') }}" class="{{ $mobileLink(request()->routeIs('diskon-approval.*')) }} flex items-center gap-1.5">
+                                    Approval Diskon
+                                    @if ($pendingDiskonCount > 0)
+                                        <span class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-white text-[11px] font-bold leading-none">{{ $pendingDiskonCount }}</span>
+                                    @endif
+                                </a>
+                            @endif
                         @endif
 
                         @if ($showAnalitik)

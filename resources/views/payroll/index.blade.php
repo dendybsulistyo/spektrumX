@@ -10,7 +10,7 @@
             #industry-payroll .tag-draft { background: #fef3c7; color: #92400e; }
             #industry-payroll .tag-dibayar { background: #d1fae5; color: #065f46; }
             #industry-payroll .tag-belum { background: #f3f4f6; color: #6b7280; }
-            #industry-payroll .in-btn { display: inline-flex; align-items: center; gap: 4px; font-family: var(--font-heading); font-weight: 600; font-size: 12px; padding: 5px 10px; background: var(--color-accent); color: var(--color-bg); border: 1px solid var(--color-accent); cursor: pointer; white-space: nowrap; }
+            #industry-payroll .in-btn { display: inline-flex; align-items: center; gap: 4px; font-family: var(--font-heading); font-weight: 600; font-size: 13px; padding: 5px 10px; background: var(--color-accent); color: var(--color-bg); border: 1px solid var(--color-accent); cursor: pointer; white-space: nowrap; }
             #industry-payroll .in-btn:hover { background: var(--color-accent-600); }
             #industry-payroll .in-btn-secondary { background: transparent; color: var(--color-text); border-color: var(--color-divider); }
         </style>
@@ -55,17 +55,17 @@
             <section style="display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-4);">
                 <div class="card blueprint"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
                     <div class="card-kicker">Total Gaji Terkonfigurasi</div>
-                    <div style="font-family: var(--font-heading); font-weight: 600; font-size: 24px; line-height: 1;">{{ $fmt($totalGajiPokok) }}</div>
+                    <div style="font-family: var(--font-heading); font-weight: 600; font-size: 26px; line-height: 1;">{{ $fmt($totalGajiPokok) }}</div>
                     <div class="card-meta">Per bulan, semua pegawai aktif</div>
                 </div>
                 <div class="card blueprint"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
                     <div class="card-kicker">Draft Periode Ini</div>
-                    <div style="font-family: var(--font-heading); font-weight: 600; font-size: 24px; line-height: 1;">{{ $fmt($totalDraft) }}</div>
+                    <div style="font-family: var(--font-heading); font-weight: 600; font-size: 26px; line-height: 1;">{{ $fmt($totalDraft) }}</div>
                 </div>
                 <div class="card blueprint" style="background: var(--color-accent-900); color: var(--color-bg); border-color: var(--color-accent-900);">
                     <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
                     <div class="card-kicker" style="color: var(--color-accent-300);">Sudah Dibayar Periode Ini</div>
-                    <div style="font-family: var(--font-heading); font-weight: 600; font-size: 24px; line-height: 1;">{{ $fmt($totalDibayar) }}</div>
+                    <div style="font-family: var(--font-heading); font-weight: 600; font-size: 26px; line-height: 1;">{{ $fmt($totalDibayar) }}</div>
                 </div>
             </section>
 

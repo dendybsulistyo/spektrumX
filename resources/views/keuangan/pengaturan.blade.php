@@ -15,7 +15,7 @@
 
             <div class="blueprint" style="padding: var(--space-4);">
                 <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
-                <p class="text-muted" style="font-size: 13px; margin: 0;">
+                <p class="text-muted" style="font-size: 14px; margin: 0;">
                     Data perusahaan untuk keperluan pajak — dipakai di kop laporan/faktur dan sebagai default tarif di Laporan PPN. Diisi sekali, berlaku untuk seluruh sistem.
                 </p>
             </div>

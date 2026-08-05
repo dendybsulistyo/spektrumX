@@ -6,12 +6,14 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * Discount-per-nota with an approval gate: a kasir requests a percentage
- * (diskon_requested_persen), and it only ever affects money once an
- * Admin/Owner/Admin Kasir approves it — at which point diskon_persen (the
- * value actually used everywhere else, e.g. KasirController::bayar()) gets
- * set. Rejecting never touches diskon_persen, so a rejected request simply
- * has no financial effect.
+ * Discount-per-nota with an approval gate: a kasir requests either a
+ * percentage (diskon_requested_persen) or a flat Rupiah amount
+ * (diskon_requested_nominal) — diskon_tipe records which one — and it only
+ * ever affects money once an Admin/Owner/Admin Kasir approves it, at which
+ * point diskon_persen or diskon_nominal_tetap (whichever matches the tipe)
+ * gets set. Rejecting never touches those approved columns, so a rejected
+ * request simply has no financial effect. Either way, diskonNominal()
+ * always resolves to a plain Rupiah amount for the rest of the app to use.
  */
 trait HasDiskonNota
 {
@@ -49,6 +51,10 @@ trait HasDiskonNota
 
     public function diskonNominal(): float
     {
+        if ($this->diskon_tipe === 'nominal') {
+            return round((float) $this->diskon_nominal_tetap, 2);
+        }
+
         if (! $this->diskon_persen) {
             return 0.0;
         }
@@ -59,5 +65,31 @@ trait HasDiskonNota
     public function totalSetelahDiskon(): float
     {
         return round((float) $this->total - $this->diskonNominal(), 2);
+    }
+
+    /**
+     * Human-readable label for the currently APPROVED discount, e.g. "10%"
+     * or "Rp 50.000".
+     */
+    public function diskonApprovedLabel(): string
+    {
+        if ($this->diskon_tipe === 'nominal') {
+            return 'Rp '.number_format((float) $this->diskon_nominal_tetap, 0, ',', '.');
+        }
+
+        return rtrim(rtrim(number_format((float) $this->diskon_persen, 2), '0'), '.').'%';
+    }
+
+    /**
+     * Same as diskonApprovedLabel() but for the still-pending/rejected
+     * request values (diskon_requested_persen / diskon_requested_nominal).
+     */
+    public function diskonRequestedLabel(): string
+    {
+        if ($this->diskon_tipe === 'nominal') {
+            return 'Rp '.number_format((float) $this->diskon_requested_nominal, 0, ',', '.');
+        }
+
+        return rtrim(rtrim(number_format((float) $this->diskon_requested_persen, 2), '0'), '.').'%';
     }
 }

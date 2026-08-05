@@ -53,6 +53,7 @@ class Role extends Model
         'Order Indoor' => [
             'order-indoor.view' => 'Lihat order',
             'order-indoor.manage' => 'Buat/ubah/hapus order',
+            'order-indoor.approve-cancel' => 'Setujui/tolak pengajuan pembatalan order indoor',
         ],
         'Order Outdoor' => [
             'order-outdoor.view' => 'Lihat order outdoor',
@@ -62,6 +63,7 @@ class Role extends Model
         'Order Artwork' => [
             'order-artwork.view' => 'Lihat order artwork',
             'order-artwork.manage' => 'Buat/ubah/hapus order artwork',
+            'order-artwork.approve-cancel' => 'Setujui/tolak pengajuan pembatalan order artwork',
         ],
         'File Monitor' => [
             'file-monitor.view' => 'Lihat monitoring file masuk (order indoor/outdoor/artwork)',

@@ -8,6 +8,8 @@ use App\Models\HargaArtwork;
 use App\Models\Kategori;
 use App\Models\OrderArtwork;
 use App\Models\OrderArtworkDetail;
+use App\Models\OrderStatusNote;
+use App\Services\ApproverNotificationService;
 use App\Services\OrderPricingService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -16,7 +18,10 @@ use Illuminate\View\View;
 
 class OrderArtworkController extends Controller
 {
-    public function __construct(private readonly OrderPricingService $pricingService) {}
+    public function __construct(
+        private readonly OrderPricingService $pricingService,
+        private readonly ApproverNotificationService $notifier,
+    ) {}
 
     public function index(Request $request): View
     {
@@ -44,11 +49,43 @@ class OrderArtworkController extends Controller
         ]);
     }
 
+    /**
+     * Pre-fills the normal create form with a cancelled+voided order's
+     * customer/items so a kasir can issue its nota pengganti — the same
+     * pattern as OrderOutdoorController::createReplacement().
+     */
+    public function createReplacement(OrderArtwork $orderArtwork): View
+    {
+        abort_unless(
+            $orderArtwork->status === 'batal' && $orderArtwork->invoice_voided_at && ! $orderArtwork->replacement()->exists(),
+            404
+        );
+
+        return view('order-artwork.create', [
+            'replacementOrder' => $orderArtwork,
+            'selectedCustomer' => $orderArtwork->customer,
+            'items' => $orderArtwork->items,
+            'produkList' => HargaArtwork::orderBy('NoUrut')->get(),
+            'kategoriList' => Kategori::whereHas('produkArtwork')->orderBy('NoUrut')->get(),
+        ]);
+    }
+
     public function store(StoreOrderArtworkRequest $request): RedirectResponse
     {
         $data = $request->validated();
 
-        DB::transaction(function () use ($data) {
+        $replacement = null;
+
+        DB::transaction(function () use ($data, &$replacement) {
+            if (! empty($data['replacement_order_id'])) {
+                $replacement = OrderArtwork::lockForUpdate()->findOrFail($data['replacement_order_id']);
+                abort_unless(
+                    $replacement->status === 'batal' && $replacement->invoice_voided_at && ! $replacement->replacement()->exists(),
+                    422,
+                    'Nota asal tidak tersedia untuk dibuatkan pengganti.'
+                );
+            }
+
             $noOrder = $this->generateNoOrder($data['TglOrder']);
 
             $order = OrderArtwork::create([
@@ -59,6 +96,8 @@ class OrderArtworkController extends Controller
                 'Cetak' => false,
                 'status' => 'baru',
                 'status_bayar' => 'belum_bayar',
+                'replacement_order_id' => $replacement?->id,
+                'replacement_credit' => $replacement ? (float) $replacement->jumlah_dibayar : 0,
             ]);
 
             $this->saveItems($order, $data['items']);
@@ -66,7 +105,8 @@ class OrderArtworkController extends Controller
             $order->update(['total' => $this->pricingService->totalArtwork($order->fresh('items'))]);
         });
 
-        return redirect()->route('order-artwork.index')->with('status', 'Order artwork berhasil dibuat.');
+        return redirect()->route($replacement ? 'kasir.index' : 'order-artwork.index')
+            ->with('status', $replacement ? 'Nota pengganti berhasil dibuat dan siap diproses kasir.' : 'Order artwork berhasil dibuat.');
     }
 
     public function edit(OrderArtwork $orderArtwork): View
@@ -105,6 +145,112 @@ class OrderArtworkController extends Controller
         $orderArtwork->delete();
 
         return redirect()->route('order-artwork.index')->with('status', 'Order artwork berhasil dihapus.');
+    }
+
+    public function requestCancel(Request $request, OrderArtwork $orderArtwork): RedirectResponse
+    {
+        if ($orderArtwork->cancel_requested_at) {
+            return back()->with('error', 'Order ini sudah punya pengajuan pembatalan yang menunggu persetujuan.');
+        }
+
+        $data = $request->validate([
+            'cancel_reason' => ['required', 'string', 'max:255'],
+        ]);
+
+        $orderArtwork->update([
+            'cancel_requested_at' => now(),
+            'cancel_requested_by' => auth()->id(),
+            'cancel_reason' => $data['cancel_reason'],
+        ]);
+
+        OrderStatusNote::create([
+            'order_type' => 'artwork',
+            'order_id' => $orderArtwork->id,
+            'stage' => 'pembatalan',
+            'action' => 'diajukan',
+            'catatan' => $data['cancel_reason'],
+            'user_id' => auth()->id(),
+            'created_at' => now(),
+        ]);
+
+        $this->notifier->notify(
+            'order-artwork.approve-cancel',
+            "Pengajuan pembatalan order artwork {$orderArtwork->NoOrder}"
+                .($orderArtwork->customer?->NmCust ? ' ('.ucwords(mb_strtolower($orderArtwork->customer->NmCust)).')' : '')
+                ." — alasan: {$data['cancel_reason']}. Menunggu persetujuan."
+        );
+
+        return redirect()->route('order-desain.index', ['tab' => 'artwork'])->with('status', 'Pengajuan pembatalan order dikirim, menunggu persetujuan Admin/Admin Kasir.');
+    }
+
+    /**
+     * Same two outcomes as Outdoor's: void the invoice and queue it for a
+     * replacement note (nota_pengganti), or cancel outright (batal_total).
+     */
+    public function approveCancel(Request $request, OrderArtwork $orderArtwork): RedirectResponse
+    {
+        if (! $orderArtwork->cancel_requested_at) {
+            return back()->with('error', 'Order ini tidak punya pengajuan pembatalan yang menunggu persetujuan.');
+        }
+
+        $data = $request->validate([
+            'resolution' => ['required', 'in:nota_pengganti,batal_total'],
+        ]);
+
+        $isReplacement = $data['resolution'] === 'nota_pengganti';
+
+        DB::transaction(function () use ($orderArtwork, $isReplacement) {
+            $orderArtwork->update([
+                'cancel_approved_at' => now(),
+                'cancel_approved_by' => auth()->id(),
+                'invoice_voided_at' => $isReplacement ? now() : null,
+                'status' => 'batal',
+            ]);
+
+            OrderStatusNote::create([
+                'order_type' => 'artwork',
+                'order_id' => $orderArtwork->id,
+                'stage' => 'pembatalan',
+                'action' => 'disetujui',
+                'catatan' => $isReplacement
+                    ? 'Nota dihanguskan; menunggu pembuatan nota pengganti oleh kasir.'
+                    : 'Disetujui batal total, tidak ada nota pengganti.',
+                'user_id' => auth()->id(),
+                'created_at' => now(),
+            ]);
+        });
+
+        if ($isReplacement) {
+            return redirect()->route('kasir.replacement.create.artwork', $orderArtwork)
+                ->with('status', 'Pembatalan disetujui. Nota lama hangus, silakan buat nota pengganti.');
+        }
+
+        return redirect()->route('order-desain.index', ['tab' => 'artwork'])->with('status', 'Pembatalan disetujui, order dibatalkan total.');
+    }
+
+    public function rejectCancel(OrderArtwork $orderArtwork): RedirectResponse
+    {
+        if (! $orderArtwork->cancel_requested_at) {
+            return back()->with('error', 'Order ini tidak punya pengajuan pembatalan yang menunggu persetujuan.');
+        }
+
+        $orderArtwork->update([
+            'cancel_requested_at' => null,
+            'cancel_requested_by' => null,
+            'cancel_reason' => null,
+        ]);
+
+        OrderStatusNote::create([
+            'order_type' => 'artwork',
+            'order_id' => $orderArtwork->id,
+            'stage' => 'pembatalan',
+            'action' => 'ditolak',
+            'catatan' => null,
+            'user_id' => auth()->id(),
+            'created_at' => now(),
+        ]);
+
+        return redirect()->route('order-desain.index', ['tab' => 'artwork'])->with('status', 'Pengajuan pembatalan ditolak, order lanjut diproses normal.');
     }
 
     /**

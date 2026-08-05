@@ -7,13 +7,13 @@
         <link rel="stylesheet" href="{{ asset('_ds/industry-8c70c3bf-fa3d-4d54-8c9e-e44ac24ed178/styles.css') }}">
         <style>
             #industry-jurnal-manual { font-family: var(--font-body); color: var(--color-text); background: var(--color-bg); margin: calc(var(--space-8) * -1); padding: var(--space-8); }
-            #industry-jurnal-manual .in-btn { display: inline-flex; align-items: center; gap: 4px; font-family: var(--font-heading); font-weight: 600; font-size: 12px; padding: 5px 10px; background: var(--color-accent); color: var(--color-bg); border: 1px solid var(--color-accent); cursor: pointer; white-space: nowrap; }
+            #industry-jurnal-manual .in-btn { display: inline-flex; align-items: center; gap: 4px; font-family: var(--font-heading); font-weight: 600; font-size: 13px; padding: 5px 10px; background: var(--color-accent); color: var(--color-bg); border: 1px solid var(--color-accent); cursor: pointer; white-space: nowrap; }
             #industry-jurnal-manual .in-btn:hover { background: var(--color-accent-600); }
             #industry-jurnal-manual .in-btn-danger { background: #991b1b; border-color: #991b1b; }
             #industry-jurnal-manual .in-btn-danger:hover { background: #7f1d1d; }
             #industry-jurnal-manual .tag-posted { background: #d1fae5; color: #065f46; }
             #industry-jurnal-manual .tag-dibatalkan { background: #f3f4f6; color: #6b7280; text-decoration: line-through; }
-            #industry-jurnal-manual .lines-sub { font-size: 12px; }
+            #industry-jurnal-manual .lines-sub { font-size: 13px; }
             #industry-jurnal-manual .lines-sub td { padding-top: 2px; padding-bottom: 2px; border: none !important; }
         </style>
     @endpush

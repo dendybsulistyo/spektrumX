@@ -61,13 +61,24 @@ class KasirController extends Controller
             ->orderByDesc('NoOrder')
             ->get();
 
-        $replacementOrders = OrderOutdoor::query()
-            ->with('customer')
-            ->where('status', 'batal')
-            ->whereNotNull('invoice_voided_at')
-            ->doesntHave('replacement')
-            ->orderByDesc('cancel_approved_at')
-            ->get();
+        // Voided invoices across all 3 order types, waiting for a kasir to
+        // issue their nota pengganti — tagged with order_type so the view
+        // can route each row to the right create-replacement page.
+        $replacementOrders = collect();
+        foreach (['indoor' => OrderIndoor::class, 'outdoor' => OrderOutdoor::class, 'artwork' => OrderArtwork::class] as $orderType => $model) {
+            $model::query()
+                ->with('customer')
+                ->where('status', 'batal')
+                ->whereNotNull('invoice_voided_at')
+                ->doesntHave('replacement')
+                ->orderByDesc('cancel_approved_at')
+                ->get()
+                ->each(function ($order) use (&$replacementOrders, $orderType) {
+                    $order->order_type = $orderType;
+                    $replacementOrders->push($order);
+                });
+        }
+        $replacementOrders = $replacementOrders->sortByDesc('cancel_approved_at')->values();
 
         return view('kasir.index', compact('indoorOrders', 'outdoorOrders', 'artworkOrders', 'dpOrders', 'replacementOrders'));
     }
@@ -75,13 +86,7 @@ class KasirController extends Controller
     public function show(string $type, int $id): View
     {
         $order = $this->resolveOrder($type, $id);
-        $order->load('customer.limit');
-
-        // The "nota pengganti" (replacement invoice) feature only exists for
-        // Order Outdoor — Indoor/Artwork models don't define this relation.
-        if ($type === 'outdoor') {
-            $order->load('replaces');
-        }
+        $order->load(['customer.limit', 'replaces']);
 
         $items = $type === 'indoor' ? $order->detailItems() : $order->items;
 
@@ -111,7 +116,7 @@ class KasirController extends Controller
         // A replacement keeps the old invoice as history. Money actually
         // received on it becomes credit; its difference is the only cash
         // movement the cashier must record on the new invoice.
-        if ($type === 'outdoor' && $order->replacement_order_id) {
+        if ($order->replacement_order_id) {
             if ($data['metode_bayar'] !== 'tunai') {
                 return back()->with('error', 'Nota pengganti diproses tunai agar selisih tambahan atau cashback tercatat dengan jelas.');
             }
@@ -459,8 +464,9 @@ class KasirController extends Controller
     }
 
     /**
-     * A kasir asks for a percentage off the whole nota. Doesn't touch money
-     * by itself — bayar() only applies it once diskonStatus() is 'approved'.
+     * A kasir asks for either a percentage or a flat Rupiah amount off the
+     * whole nota. Doesn't touch money by itself — bayar() only applies it
+     * once diskonStatus() is 'approved'.
      */
     public function requestDiskon(Request $request, string $type, int $id): RedirectResponse
     {
@@ -475,12 +481,16 @@ class KasirController extends Controller
         }
 
         $data = $request->validate([
-            'diskon_persen' => ['required', 'numeric', 'min:0.01', 'max:100'],
+            'diskon_tipe' => ['required', 'in:persen,nominal'],
+            'diskon_persen' => ['required_if:diskon_tipe,persen', 'nullable', 'numeric', 'min:0.01', 'max:100'],
+            'diskon_nominal' => ['required_if:diskon_tipe,nominal', 'nullable', 'numeric', 'min:1', 'max:'.(float) $order->total],
             'diskon_alasan' => ['required', 'string', 'max:255'],
         ]);
 
         $order->update([
-            'diskon_requested_persen' => $data['diskon_persen'],
+            'diskon_tipe' => $data['diskon_tipe'],
+            'diskon_requested_persen' => $data['diskon_tipe'] === 'persen' ? $data['diskon_persen'] : null,
+            'diskon_requested_nominal' => $data['diskon_tipe'] === 'nominal' ? $data['diskon_nominal'] : null,
             'diskon_alasan' => $data['diskon_alasan'],
             'diskon_requested_at' => now(),
             'diskon_requested_by' => auth()->id(),
@@ -490,7 +500,11 @@ class KasirController extends Controller
             'diskon_rejected_by' => null,
         ]);
 
-        $this->notifyDiskonApprovers($order, $data['diskon_persen'], $data['diskon_alasan']);
+        $label = $data['diskon_tipe'] === 'persen'
+            ? "{$data['diskon_persen']}%"
+            : 'Rp '.number_format((float) $data['diskon_nominal'], 0, ',', '.');
+
+        $this->notifyDiskonApprovers($order, $label, $data['diskon_alasan']);
 
         return back()->with('status', 'Pengajuan diskon terkirim, menunggu persetujuan Admin/Owner/Admin Kasir.');
     }
@@ -504,12 +518,13 @@ class KasirController extends Controller
         }
 
         $order->update([
-            'diskon_persen' => $order->diskon_requested_persen,
+            'diskon_persen' => $order->diskon_tipe === 'persen' ? $order->diskon_requested_persen : null,
+            'diskon_nominal_tetap' => $order->diskon_tipe === 'nominal' ? $order->diskon_requested_nominal : null,
             'diskon_approved_at' => now(),
             'diskon_approved_by' => auth()->id(),
         ]);
 
-        return back()->with('status', "Diskon {$order->diskon_requested_persen}% untuk order {$order->NoOrder} disetujui.");
+        return back()->with('status', "Diskon {$order->diskonRequestedLabel()} untuk order {$order->NoOrder} disetujui.");
     }
 
     public function rejectDiskon(Request $request, string $type, int $id): RedirectResponse
@@ -533,7 +548,7 @@ class KasirController extends Controller
      * there's no broadcast/group channel, so this just fires one direct
      * message per approver, from the kasir who made the request.
      */
-    private function notifyDiskonApprovers(Model $order, float $persen, string $alasan): void
+    private function notifyDiskonApprovers(Model $order, string $label, string $alasan): void
     {
         $approverRoleIds = Role::query()
             ->whereJsonContains('permissions', 'kasir.approve-diskon')
@@ -544,7 +559,7 @@ class KasirController extends Controller
             ->where('id', '!=', auth()->id())
             ->get();
 
-        $body = "Pengajuan diskon {$persen}% untuk order {$order->NoOrder}"
+        $body = "Pengajuan diskon {$label} untuk order {$order->NoOrder}"
             .($order->customer?->NmCust ? ' ('.ucwords(mb_strtolower($order->customer->NmCust)).')' : '')
             ." — alasan: {$alasan}. Menunggu persetujuan.";
 

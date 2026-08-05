@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Akun;
+use App\Models\Customer;
 use App\Models\JurnalEntry;
 use App\Models\OrderArtwork;
 use App\Models\OrderIndoor;
@@ -49,6 +50,7 @@ class KeuanganController extends Controller
 
         $rows = $payments->map(function (OrderPayment $p) use ($ordersByKey) {
             $order = $ordersByKey["{$p->order_type}-{$p->order_id}"] ?? null;
+            $jumlah = (float) $p->jumlah;
 
             return [
                 'waktu' => $p->created_at,
@@ -59,23 +61,140 @@ class KeuanganController extends Controller
                 'cara_bayar' => $p->cara_bayar,
                 'cara_bayar_label' => OrderPayment::CARA_BAYAR_LABELS[$p->cara_bayar] ?? $p->cara_bayar,
                 'no_referensi' => $p->no_referensi,
-                'jumlah' => (float) $p->jumlah,
+                // Refund rows carry a negative jumlah — split into debit
+                // (kas masuk) / kredit (kas keluar) so the cashier reads
+                // money in vs. money out directly, no sign to interpret.
+                'debit' => $jumlah > 0 ? $jumlah : null,
+                'kredit' => $jumlah < 0 ? abs($jumlah) : null,
                 'kasir' => $p->user?->name ?? '-',
             ];
         });
 
-        $summary = [
-            'tunai' => $payments->where('cara_bayar', 'tunai')->sum('jumlah'),
-            'qris' => $payments->where('cara_bayar', 'qris')->sum('jumlah'),
-            'transfer' => $payments->where('cara_bayar', 'transfer')->sum('jumlah'),
+        $summaryFor = fn (string $caraBayar) => [
+            'masuk' => (float) $payments->where('cara_bayar', $caraBayar)->where('jumlah', '>', 0)->sum('jumlah'),
+            'keluar' => (float) $payments->where('cara_bayar', $caraBayar)->where('jumlah', '<', 0)->sum('jumlah') * -1,
         ];
+
+        $summary = [
+            'tunai' => $summaryFor('tunai'),
+            'qris' => $summaryFor('qris'),
+            'transfer' => $summaryFor('transfer'),
+        ];
+
+        $totalMasuk = (float) $payments->where('jumlah', '>', 0)->sum('jumlah');
+        $totalKeluar = (float) $payments->where('jumlah', '<', 0)->sum('jumlah') * -1;
 
         return view('keuangan.kas-harian', [
             'tanggal' => $tanggal,
             'rows' => $rows,
             'summary' => $summary,
-            'total' => array_sum($summary),
+            'totalMasuk' => $totalMasuk,
+            'totalKeluar' => $totalKeluar,
+            'totalNet' => $totalMasuk - $totalKeluar,
             'jumlahTransaksi' => $payments->count(),
+        ]);
+    }
+
+    /**
+     * Total cash brought in by each cashier operator over a date range —
+     * "kasir pagi hasilnya berapa, kasir sore hasilnya berapa" — grouped by
+     * whoever was logged in when the OrderPayment row was created. Refunds
+     * (negative jumlah) net out against that same operator's total, same
+     * debit/kredit split as kasHarian().
+     */
+    public function rekapKasir(Request $request): View
+    {
+        $dari = $request->filled('dari') ? $request->string('dari')->toString() : now()->format('Y-m-d');
+        $sampai = $request->filled('sampai') ? $request->string('sampai')->toString() : now()->format('Y-m-d');
+
+        $payments = OrderPayment::with('user')
+            ->whereBetween('created_at', ["{$dari} 00:00:00", "{$sampai} 23:59:59"])
+            ->get();
+
+        $rows = $payments->groupBy(fn (OrderPayment $p) => $p->user_id)
+            ->map(function ($group) {
+                $masuk = (float) $group->where('jumlah', '>', 0)->sum('jumlah');
+                $keluar = (float) $group->where('jumlah', '<', 0)->sum('jumlah') * -1;
+
+                return [
+                    'kasir' => $group->first()->user?->name ?? '-',
+                    'jumlah_transaksi' => $group->count(),
+                    'masuk' => $masuk,
+                    'keluar' => $keluar,
+                    'net' => $masuk - $keluar,
+                ];
+            })
+            ->sortByDesc('net')
+            ->values();
+
+        return view('keuangan.rekap-kasir', [
+            'dari' => $dari,
+            'sampai' => $sampai,
+            'rows' => $rows,
+            'totalMasuk' => (float) $payments->where('jumlah', '>', 0)->sum('jumlah'),
+            'totalKeluar' => (float) $payments->where('jumlah', '<', 0)->sum('jumlah') * -1,
+            'jumlahTransaksi' => $payments->count(),
+        ]);
+    }
+
+    /**
+     * Total order per customer — search-driven rather than listing every
+     * customer, since with hundreds of customers a full list would just be
+     * noise. Nothing is shown until a name/kode is searched (mirrors the
+     * search pattern already used on CustomerController::index()).
+     */
+    public function rekapCustomer(Request $request): View
+    {
+        $search = $request->filled('search') ? $request->string('search')->toString() : null;
+
+        $rows = collect();
+
+        if ($search) {
+            $customers = Customer::query()
+                ->where('NmCust', 'like', "%{$search}%")
+                ->orWhere('KdCust', 'like', "%{$search}%")
+                ->orderBy('NmCust')
+                ->limit(20)
+                ->get();
+
+            $models = ['Indoor' => OrderIndoor::class, 'Outdoor' => OrderOutdoor::class, 'Artwork' => OrderArtwork::class];
+
+            $rows = $customers->map(function (Customer $customer) use ($models) {
+                $jumlahOrder = 0;
+                $totalNilai = 0.0;
+                $totalDibayar = 0.0;
+                $totalPiutang = 0.0;
+                $perTipe = [];
+
+                foreach ($models as $label => $model) {
+                    $orders = $model::where('KdCust', $customer->KdCust)->get(['total', 'jumlah_dibayar', 'jumlah_piutang']);
+
+                    if ($orders->isEmpty()) {
+                        continue;
+                    }
+
+                    $jumlahOrder += $orders->count();
+                    $totalNilai += (float) $orders->sum('total');
+                    $totalDibayar += (float) $orders->sum('jumlah_dibayar');
+                    $totalPiutang += (float) $orders->sum('jumlah_piutang');
+                    $perTipe[] = "{$label} {$orders->count()}";
+                }
+
+                return [
+                    'kode' => $customer->KdCust,
+                    'nama' => $customer->NmCust,
+                    'jumlah_order' => $jumlahOrder,
+                    'per_tipe' => implode(' · ', $perTipe),
+                    'total_nilai' => $totalNilai,
+                    'total_dibayar' => $totalDibayar,
+                    'total_piutang' => $totalPiutang,
+                ];
+            })->sortByDesc('total_nilai')->values();
+        }
+
+        return view('keuangan.rekap-customer', [
+            'search' => $search,
+            'rows' => $rows,
         ]);
     }
 

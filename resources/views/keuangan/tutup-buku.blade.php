@@ -20,7 +20,7 @@
 
             <div class="blueprint" style="padding: var(--space-4);">
                 <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
-                <p class="text-muted" style="font-size: 13px; margin: 0;">
+                <p class="text-muted" style="font-size: 14px; margin: 0;">
                     Menutup periode mengunci semua Pengeluaran dan pemrosesan Payroll bertanggal di bulan itu — tidak bisa lagi ditambah, diubah, atau dihapus. Gunakan setelah rekonsiliasi kas &amp; Laba Rugi bulan tersebut selesai dicek.
                 </p>
             </div>
@@ -42,11 +42,11 @@
                         <section style="display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-4); margin-bottom: var(--space-4);">
                             <div class="card blueprint"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
                                 <div class="card-kicker">Kas Masuk — {{ $previewPeriode }}</div>
-                                <div style="font-family: var(--font-heading); font-weight: 600; font-size: 22px; line-height: 1;">{{ $fmt($previewKasMasuk) }}</div>
+                                <div style="font-family: var(--font-heading); font-weight: 600; font-size: 24px; line-height: 1;">{{ $fmt($previewKasMasuk) }}</div>
                             </div>
                             <div class="card blueprint"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
                                 <div class="card-kicker">Pengeluaran — {{ $previewPeriode }}</div>
-                                <div style="font-family: var(--font-heading); font-weight: 600; font-size: 22px; line-height: 1;">{{ $fmt($previewPengeluaran) }}</div>
+                                <div style="font-family: var(--font-heading); font-weight: 600; font-size: 24px; line-height: 1;">{{ $fmt($previewPengeluaran) }}</div>
                             </div>
                         </section>
 
@@ -87,7 +87,7 @@
                                                   onsubmit="return confirm('Buka kembali periode {{ $row->periode }}? Transaksi bulan ini akan bisa diubah lagi.')">
                                                 @csrf
                                                 @method('DELETE')
-                                                <button type="submit" class="in-btn in-btn-secondary" style="font-family: var(--font-heading); font-weight: 600; font-size: 12px; padding: 5px 10px; background: transparent; border: 1px solid var(--color-divider); cursor: pointer;">Buka Kembali</button>
+                                                <button type="submit" class="in-btn in-btn-secondary" style="font-family: var(--font-heading); font-weight: 600; font-size: 13px; padding: 5px 10px; background: transparent; border: 1px solid var(--color-divider); cursor: pointer;">Buka Kembali</button>
                                             </form>
                                         </td>
                                     @endcan

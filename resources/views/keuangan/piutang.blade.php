@@ -9,7 +9,7 @@
             #industry-piutang { font-family: var(--font-body); color: var(--color-text); background: var(--color-bg); margin: calc(var(--space-8) * -1); padding: var(--space-8); }
             #industry-piutang .tag-hutang { background: #fee2e2; color: #991b1b; }
             #industry-piutang .tag-dp { background: #dbeafe; color: #1e3a8a; }
-            #industry-piutang .in-btn { display: inline-flex; align-items: center; gap: 4px; font-family: var(--font-heading); font-weight: 600; font-size: 12px; padding: 5px 10px; background: var(--color-accent); color: var(--color-bg); border: 1px solid var(--color-accent); cursor: pointer; white-space: nowrap; }
+            #industry-piutang .in-btn { display: inline-flex; align-items: center; gap: 4px; font-family: var(--font-heading); font-weight: 600; font-size: 13px; padding: 5px 10px; background: var(--color-accent); color: var(--color-bg); border: 1px solid var(--color-accent); cursor: pointer; white-space: nowrap; }
             #industry-piutang .in-btn:hover { background: var(--color-accent-600); }
         </style>
     @endpush
@@ -26,16 +26,16 @@
             <section style="display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-4);">
                 <div class="card blueprint"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
                     <div class="card-kicker">Hutang VIP</div>
-                    <div style="font-family: var(--font-heading); font-weight: 600; font-size: 28px; line-height: 1;">{{ $fmt($totalHutang) }}</div>
+                    <div style="font-family: var(--font-heading); font-weight: 600; font-size: 31px; line-height: 1;">{{ $fmt($totalHutang) }}</div>
                 </div>
                 <div class="card blueprint"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
                     <div class="card-kicker">Sisa DP</div>
-                    <div style="font-family: var(--font-heading); font-weight: 600; font-size: 28px; line-height: 1;">{{ $fmt($totalDp) }}</div>
+                    <div style="font-family: var(--font-heading); font-weight: 600; font-size: 31px; line-height: 1;">{{ $fmt($totalDp) }}</div>
                 </div>
                 <div class="card blueprint" style="background: var(--color-accent-900); color: var(--color-bg); border-color: var(--color-accent-900);">
                     <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
                     <div class="card-kicker" style="color: var(--color-accent-300);">Total Piutang Berjalan</div>
-                    <div style="font-family: var(--font-heading); font-weight: 600; font-size: 28px; line-height: 1;">{{ $fmt($totalHutang + $totalDp) }}</div>
+                    <div style="font-family: var(--font-heading); font-weight: 600; font-size: 31px; line-height: 1;">{{ $fmt($totalHutang + $totalDp) }}</div>
                 </div>
             </section>
 

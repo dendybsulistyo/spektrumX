@@ -15,6 +15,7 @@ class OrderPayment extends Model
         'pelunasan_dp' => 'Pelunasan DP',
         'pelunasan_hutang' => 'Pelunasan Hutang',
         'nota_pengganti' => 'Nota Pengganti',
+        'refund' => 'Refund',
     ];
 
     public const CARA_BAYAR_LABELS = [

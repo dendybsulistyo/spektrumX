@@ -11,6 +11,7 @@ use App\Models\OrderOutdoor;
 use App\Models\OrderOutdoorDetail;
 use App\Models\OrderStatusNote;
 use App\Models\PrinterOutdoor;
+use App\Services\ApproverNotificationService;
 use App\Services\OrderPricingService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -19,7 +20,10 @@ use Illuminate\View\View;
 
 class OrderOutdoorController extends Controller
 {
-    public function __construct(private readonly OrderPricingService $pricingService) {}
+    public function __construct(
+        private readonly OrderPricingService $pricingService,
+        private readonly ApproverNotificationService $notifier,
+    ) {}
 
     public function index(Request $request): View
     {
@@ -180,6 +184,13 @@ class OrderOutdoorController extends Controller
             'user_id' => auth()->id(),
             'created_at' => now(),
         ]);
+
+        $this->notifier->notify(
+            'order-outdoor.approve-cancel',
+            "Pengajuan pembatalan order outdoor {$orderOutdoor->NoOrder}"
+                .($orderOutdoor->customer?->NmCust ? ' ('.ucwords(mb_strtolower($orderOutdoor->customer->NmCust)).')' : '')
+                ." — alasan: {$data['cancel_reason']}. Menunggu persetujuan."
+        );
 
         return redirect()->route('order-desain.index', ['tab' => 'outdoor'])->with('status', 'Pengajuan pembatalan order dikirim, menunggu persetujuan Admin/Admin Kasir.');
     }

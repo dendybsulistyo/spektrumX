@@ -7,11 +7,11 @@
         <link rel="stylesheet" href="{{ asset('_ds/industry-8c70c3bf-fa3d-4d54-8c9e-e44ac24ed178/styles.css') }}">
         <style>
             #industry-cetak { font-family: var(--font-body); color: var(--color-text); background: var(--color-bg); margin: calc(var(--space-8) * -1); padding: var(--space-8); }
-            #industry-cetak .seg-tab { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; font-family: var(--font-heading); font-weight: 600; font-size: 13px; letter-spacing: 0.02em; cursor: pointer; border: 1px solid var(--color-divider); border-right: none; background: transparent; color: var(--color-text); }
+            #industry-cetak .seg-tab { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; font-family: var(--font-heading); font-weight: 600; font-size: 14px; letter-spacing: 0.02em; cursor: pointer; border: 1px solid var(--color-divider); border-right: none; background: transparent; color: var(--color-text); }
             #industry-cetak .seg-tab:last-child { border-right: 1px solid var(--color-divider); }
             #industry-cetak .seg-tab.active { background: var(--color-accent); color: var(--color-bg); border-color: var(--color-accent); }
-            #industry-cetak .in-input { width: 64px; min-height: 30px; padding: 4px 8px; font: inherit; font-size: 13px; color: var(--color-text); background: var(--color-surface); border: 1px solid var(--color-divider); }
-            #industry-cetak .in-btn { display: inline-flex; align-items: center; gap: 4px; font-family: var(--font-heading); font-weight: 600; font-size: 12px; padding: 5px 10px; background: var(--color-accent); color: var(--color-bg); border: 1px solid var(--color-accent); cursor: pointer; }
+            #industry-cetak .in-input { width: 64px; min-height: 30px; padding: 4px 8px; font: inherit; font-size: 14px; color: var(--color-text); background: var(--color-surface); border: 1px solid var(--color-divider); }
+            #industry-cetak .in-btn { display: inline-flex; align-items: center; gap: 4px; font-family: var(--font-heading); font-weight: 600; font-size: 13px; padding: 5px 10px; background: var(--color-accent); color: var(--color-bg); border: 1px solid var(--color-accent); cursor: pointer; }
             #industry-cetak .in-btn:hover { background: var(--color-accent-600); }
         </style>
     @endpush
@@ -62,20 +62,24 @@
                                             <td class="text-muted">{{ is_string($order->TglOrder) ? $order->TglOrder : $order->TglOrder?->format('Y-m-d') }}</td>
                                             <td>{{ $order->customer?->NmCust ? ucwords(mb_strtolower($order->customer->NmCust)) : '-' }}</td>
                                             <td style="text-align: right;">
-                                                <div style="display: inline-flex; align-items: center; gap: 6px;">
-                                                    <x-order-rework :type="$tabKey" :order-id="$order->id" :no-order="$order->NoOrder"
-                                                                     current-stage="cetak"
-                                                                     :pending="$pendingRework->get($tabKey.'-'.$order->id)"
-                                                                     :can-approve="$canApproveRework" />
-                                                    @if (! $pendingRework->has($tabKey.'-'.$order->id))
-                                                        @can('order-cetak.manage')
-                                                            <button type="button" class="in-btn"
-                                                                    @click="modalOpen = true; type = '{{ $tabKey }}'; id = {{ $order->id }}; noOrder = '{{ $order->NoOrder }}'">
-                                                                Kirim Finishing
-                                                            </button>
-                                                        @endcan
-                                                    @endif
-                                                </div>
+                                                @if ($order->cancel_requested_at)
+                                                    <span class="tag tag-danger" title="{{ $order->cancel_reason }}">Menunggu Persetujuan Batal</span>
+                                                @else
+                                                    <div style="display: inline-flex; align-items: center; gap: 6px;">
+                                                        <x-order-rework :type="$tabKey" :order-id="$order->id" :no-order="$order->NoOrder"
+                                                                         current-stage="cetak"
+                                                                         :pending="$pendingRework->get($tabKey.'-'.$order->id)"
+                                                                         :can-approve="$canApproveRework" />
+                                                        @if (! $pendingRework->has($tabKey.'-'.$order->id))
+                                                            @can('order-cetak.manage')
+                                                                <button type="button" class="in-btn"
+                                                                        @click="modalOpen = true; type = '{{ $tabKey }}'; id = {{ $order->id }}; noOrder = '{{ $order->NoOrder }}'">
+                                                                    Kirim Finishing
+                                                                </button>
+                                                            @endcan
+                                                        @endif
+                                                    </div>
+                                                @endif
                                             </td>
                                         </tr>
                                     @empty

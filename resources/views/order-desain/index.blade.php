@@ -7,11 +7,11 @@
         <link rel="stylesheet" href="{{ asset('_ds/industry-8c70c3bf-fa3d-4d54-8c9e-e44ac24ed178/styles.css') }}">
         <style>
             #industry-desain { font-family: var(--font-body); color: var(--color-text); background: var(--color-bg); margin: calc(var(--space-8) * -1); padding: var(--space-8); }
-            #industry-desain .seg-tab { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; font-family: var(--font-heading); font-weight: 600; font-size: 13px; letter-spacing: 0.02em; cursor: pointer; border: 1px solid var(--color-divider); border-right: none; background: transparent; color: var(--color-text); }
+            #industry-desain .seg-tab { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; font-family: var(--font-heading); font-weight: 600; font-size: 14px; letter-spacing: 0.02em; cursor: pointer; border: 1px solid var(--color-divider); border-right: none; background: transparent; color: var(--color-text); }
             #industry-desain .seg-tab:last-child { border-right: 1px solid var(--color-divider); }
             #industry-desain .seg-tab.active { background: var(--color-accent); color: var(--color-bg); border-color: var(--color-accent); }
-            #industry-desain .in-input { width: 100%; min-height: 28px; padding: 4px 6px; font: inherit; font-size: 12px; color: var(--color-text); background: var(--color-surface); border: 1px solid var(--color-divider); }
-            #industry-desain .in-btn { display: inline-flex; align-items: center; gap: 4px; font-family: var(--font-heading); font-weight: 600; font-size: 12px; padding: 5px 10px; background: var(--color-accent); color: var(--color-bg); border: 1px solid var(--color-accent); cursor: pointer; white-space: nowrap; }
+            #industry-desain .in-input { width: 100%; min-height: 28px; padding: 4px 6px; font: inherit; font-size: 13px; color: var(--color-text); background: var(--color-surface); border: 1px solid var(--color-divider); }
+            #industry-desain .in-btn { display: inline-flex; align-items: center; gap: 4px; font-family: var(--font-heading); font-weight: 600; font-size: 13px; padding: 5px 10px; background: var(--color-accent); color: var(--color-bg); border: 1px solid var(--color-accent); cursor: pointer; white-space: nowrap; }
             #industry-desain .in-btn:hover { background: var(--color-accent-600); }
             #industry-desain .in-btn-danger { background: var(--color-accent-900); border-color: var(--color-accent-900); }
             #industry-desain .in-btn-danger:hover { background: var(--color-accent-800); }
@@ -30,7 +30,7 @@
 
     <div id="industry-desain">
         <div style="max-width: 1480px; margin: 0 auto; display: flex; flex-direction: column; gap: var(--space-6);"
-             x-data="{ modalOpen: false, type: '', id: null, noOrder: '', cancelModalOpen: false, cancelId: null, cancelNoOrder: '' }">
+             x-data="{ modalOpen: false, type: '', id: null, noOrder: '', cancelModalOpen: false, cancelType: '', cancelId: null, cancelNoOrder: '' }">
 
             <div x-data="{ tab: '{{ $initialTab }}' }">
                 <div style="display: flex;">
@@ -66,7 +66,7 @@
                                             <td>
                                                 {{ $row->itemName }}
                                                 @if ($row->size)
-                                                    <span class="text-muted" style="font-size: 11px;">({{ $row->size }})</span>
+                                                    <span class="text-muted" style="font-size: 12px;">({{ $row->size }})</span>
                                                 @endif
                                             </td>
                                             <td class="text-muted">
@@ -79,17 +79,49 @@
                                             <td class="text-muted">{{ is_string($row->order->TglOrder) ? $row->order->TglOrder : $row->order->TglOrder?->format('Y-m-d') }}</td>
                                             <td>{{ $row->order->customer?->NmCust ? ucwords(mb_strtolower($row->order->customer->NmCust)) : '-' }}</td>
                                             <td style="text-align: right;">
-                                                <div style="display: inline-flex; align-items: center; gap: 6px;">
+                                                <div style="display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: flex-end;">
                                                     <x-order-rework :type="$tabKey" :order-id="$row->order->id" :no-order="$row->order->NoOrder"
                                                                      current-stage="desain"
                                                                      :pending="$pendingRework->get($tabKey.'-'.$row->order->id)"
                                                                      :can-approve="$canApproveRework" />
-                                                    @unless ($pendingRework->has($tabKey.'-'.$row->order->id))
+                                                    @if ($row->order->cancel_requested_at)
+                                                        <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px; width: 100%;">
+                                                            <span class="tag tag-outline" title="{{ $row->order->cancel_reason }}">Menunggu Persetujuan Pembatalan</span>
+                                                            <span class="text-muted" style="font-size: 11px;">diajukan {{ $row->order->cancelRequestedBy?->name ?? '-' }}</span>
+                                                            @can('order-' . $tabKey . '.approve-cancel')
+                                                                <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px; margin-top: 2px;">
+                                                                    <form method="POST" action="{{ route('order-' . $tabKey . '.approve-cancel', $row->order->id) }}"
+                                                                          onsubmit="return confirm('Setujui pembatalan order {{ $row->order->NoOrder }} dengan nota pengganti? Nota lama akan dihanguskan.')">
+                                                                        @csrf
+                                                                        <input type="hidden" name="resolution" value="nota_pengganti">
+                                                                        <button type="submit" class="in-btn">Setujui + Nota Pengganti</button>
+                                                                    </form>
+                                                                    <form method="POST" action="{{ route('order-' . $tabKey . '.approve-cancel', $row->order->id) }}"
+                                                                          onsubmit="return confirm('Setujui pembatalan TOTAL order {{ $row->order->NoOrder }}? Tidak akan ada nota pengganti.')">
+                                                                        @csrf
+                                                                        <input type="hidden" name="resolution" value="batal_total">
+                                                                        <button type="submit" class="in-btn in-btn-danger">Setujui Batal Total</button>
+                                                                    </form>
+                                                                    <form method="POST" action="{{ route('order-' . $tabKey . '.reject-cancel', $row->order->id) }}"
+                                                                          onsubmit="return confirm('Tolak pengajuan pembatalan order {{ $row->order->NoOrder }}?')">
+                                                                        @csrf
+                                                                        <button type="submit" class="in-btn in-btn-ghost">Tolak</button>
+                                                                    </form>
+                                                                </div>
+                                                            @endcan
+                                                        </div>
+                                                    @elseif (! $pendingRework->has($tabKey.'-'.$row->order->id))
                                                         <button type="button" class="in-btn"
                                                                 @click="modalOpen = true; type = '{{ $tabKey }}'; id = {{ $row->order->id }}; noOrder = '{{ $row->order->NoOrder }}'">
                                                             Update status
                                                         </button>
-                                                    @endunless
+                                                        @can('order-desain.manage')
+                                                            <button type="button" class="in-btn in-btn-danger"
+                                                                    @click="cancelModalOpen = true; cancelType = '{{ $tabKey }}'; cancelId = {{ $row->order->id }}; cancelNoOrder = '{{ $row->order->NoOrder }}'">
+                                                                Batal &amp; IB
+                                                            </button>
+                                                        @endcan
+                                                    @endif
                                                 </div>
                                             </td>
                                         </tr>
@@ -164,7 +196,7 @@
                                                     @if ($order->cancel_requested_at)
                                                         <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px; width: 100%;">
                                                             <span class="tag tag-outline" title="{{ $order->cancel_reason }}">Menunggu Persetujuan Pembatalan</span>
-                                                            <span class="text-muted" style="font-size: 10px;">diajukan {{ $order->cancelRequestedBy?->name ?? '-' }}</span>
+                                                            <span class="text-muted" style="font-size: 11px;">diajukan {{ $order->cancelRequestedBy?->name ?? '-' }}</span>
                                                             @can('order-outdoor.approve-cancel')
                                                                 <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px; margin-top: 2px;">
                                                                     <form method="POST" action="{{ route('order-outdoor.approve-cancel', $order) }}"
@@ -196,7 +228,7 @@
                                                                 <button type="submit" class="in-btn">Kirim Cetak</button>
                                                             </form>
                                                             <button type="button" class="in-btn in-btn-danger"
-                                                                    @click="cancelModalOpen = true; cancelId = {{ $order->id }}; cancelNoOrder = '{{ $order->NoOrder }}'">
+                                                                    @click="cancelModalOpen = true; cancelType = 'outdoor'; cancelId = {{ $order->id }}; cancelNoOrder = '{{ $order->NoOrder }}'">
                                                                 Batal &amp; IB
                                                             </button>
                                                         @endcan
@@ -276,17 +308,31 @@
                     <form method="POST" :action="`/order-desain/${type}/${id}`" style="display: flex; flex-direction: column; gap: var(--space-3);">
                         @csrf
                         <div class="dialog-title">Update status — <span x-text="noOrder"></span></div>
-                        <div class="field">
-                            <label>Status</label>
-                            <select name="action" class="input">
-                                <option value="selesai">Selesai</option>
-                                <option value="lanjut">Lanjut</option>
-                            </select>
-                        </div>
-                        <div class="dialog-actions">
-                            <button type="button" @click="modalOpen = false" class="btn btn-secondary">Batal</button>
-                            <button type="submit" class="btn btn-primary">Simpan</button>
-                        </div>
+                        <template x-if="type === 'indoor'">
+                            <div>
+                                <p style="margin: 0 0 var(--space-3);">Desain sudah selesai?</p>
+                                <div class="dialog-actions">
+                                    <button type="button" @click="modalOpen = false" class="btn btn-secondary">Batal</button>
+                                    <button type="submit" name="action" value="lanjut" class="btn btn-secondary">No</button>
+                                    <button type="submit" name="action" value="selesai" class="btn btn-primary">Yes</button>
+                                </div>
+                            </div>
+                        </template>
+                        <template x-if="type !== 'indoor'">
+                            <div>
+                                <div class="field">
+                                    <label>Status</label>
+                                    <select name="action" class="input">
+                                        <option value="selesai">Selesai</option>
+                                        <option value="lanjut">Lanjut</option>
+                                    </select>
+                                </div>
+                                <div class="dialog-actions">
+                                    <button type="button" @click="modalOpen = false" class="btn btn-secondary">Batal</button>
+                                    <button type="submit" class="btn btn-primary">Simpan</button>
+                                </div>
+                            </div>
+                        </template>
                     </form>
                 </div>
             </div>
@@ -295,10 +341,10 @@
                 <div @click="cancelModalOpen = false" style="position: absolute; inset: 0;"></div>
                 <div class="dialog blueprint" style="position: relative;">
                     <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
-                    <form method="POST" :action="`/order-outdoor/${cancelId}/request-cancel`" style="display: flex; flex-direction: column; gap: var(--space-3);">
+                    <form method="POST" :action="`/order-${cancelType}/${cancelId}/request-cancel`" style="display: flex; flex-direction: column; gap: var(--space-3);">
                         @csrf
                         <div class="dialog-title">Ajukan pembatalan — <span x-text="cancelNoOrder"></span></div>
-                        <p class="text-muted" style="font-size: 12px; margin: 0;">Order akan ditandai menunggu persetujuan. Perlu disetujui Admin/Admin Kasir sebelum benar-benar dibatalkan.</p>
+                        <p class="text-muted" style="font-size: 13px; margin: 0;">Order akan ditandai menunggu persetujuan. Perlu disetujui Admin/Admin Kasir sebelum benar-benar dibatalkan.</p>
                         <div class="field">
                             <label>Alasan pembatalan</label>
                             <textarea name="cancel_reason" rows="3" required maxlength="255" class="input" placeholder="misal: customer minta batal, salah spesifikasi, dll"></textarea>

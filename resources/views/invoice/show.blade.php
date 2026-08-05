@@ -8,7 +8,7 @@
         * { box-sizing: border-box; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
-            font-size: 13px;
+            font-size: 14px;
             color: #111827;
             background: #f3f4f6;
             margin: 0;
@@ -24,17 +24,17 @@
             padding: 32px;
         }
         .muted { color: #6b7280; }
-        .label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: #9ca3af; font-weight: 600; }
+        .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #9ca3af; font-weight: 600; }
         .header { display: flex; justify-content: space-between; align-items: flex-start; }
-        .company-name { font-size: 20px; font-weight: 700; margin: 0; }
+        .company-name { font-size: 22px; font-weight: 700; margin: 0; }
         .header .right { text-align: right; }
         .header .right p { margin: 2px 0; }
         .divider { border: none; border-top: 1px solid #e5e7eb; margin: 24px 0; }
         .bill-to { display: flex; justify-content: space-between; align-items: flex-start; }
-        .bill-to .customer-name { font-weight: 700; font-size: 15px; margin: 4px 0 2px; }
+        .bill-to .customer-name { font-weight: 700; font-size: 16px; margin: 4px 0 2px; }
         .badge {
             display: inline-flex; align-items: center; padding: 4px 12px; border-radius: 999px;
-            font-size: 11px; font-weight: 700;
+            font-size: 12px; font-weight: 700;
         }
         .badge-lunas { background: #d1fae5; color: #065f46; }
         .badge-hutang { background: #fef3c7; color: #92400e; }
@@ -46,29 +46,29 @@
         .dp-summary .row.sisa { font-weight: 700; color: #991b1b; }
         table { width: 100%; border-collapse: collapse; margin-top: 24px; }
         th, td { text-align: left; padding: 10px 8px; }
-        thead th { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: #9ca3af; border-bottom: 2px solid #e5e7eb; }
+        thead th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #9ca3af; border-bottom: 2px solid #e5e7eb; }
         tbody td { border-bottom: 1px solid #f3f4f6; }
         .text-right { text-align: right; }
         .item-name { font-weight: 600; color: #111827; }
         .total-row td { padding-top: 16px; border-bottom: none; }
-        .total-label { font-size: 13px; color: #6b7280; }
-        .total-amount { font-size: 20px; font-weight: 700; color: #4f46e5; }
-        .footer-note { margin-top: 32px; padding-top: 16px; border-top: 1px solid #e5e7eb; font-size: 12px; color: #6b7280; }
+        .total-label { font-size: 14px; color: #6b7280; }
+        .total-amount { font-size: 22px; font-weight: 700; color: #4f46e5; }
+        .footer-note { margin-top: 32px; padding-top: 16px; border-top: 1px solid #e5e7eb; font-size: 13px; color: #6b7280; }
         .signature { margin-top: 40px; text-align: right; }
         .signature .line { display: inline-block; min-width: 180px; border-top: 1px solid #9ca3af; margin-top: 48px; padding-top: 4px; }
         .actions { max-width: 720px; margin: 20px auto 0; display: flex; justify-content: space-between; align-items: center; }
-        .btn { padding: 10px 20px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; text-decoration: none; }
+        .btn { padding: 10px 20px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; text-decoration: none; }
         .btn-primary { background: #4f46e5; color: #fff; }
         .btn-primary:hover { background: #4338ca; }
-        .link-back { color: #6b7280; text-decoration: none; font-size: 13px; }
+        .link-back { color: #6b7280; text-decoration: none; font-size: 14px; }
         .link-back:hover { text-decoration: underline; }
         @media print {
             @page { size: A5; margin: 10mm; }
-            body { background: #fff; padding: 0; font-size: 11px; }
+            body { background: #fff; padding: 0; font-size: 12px; }
             .card { box-shadow: none; border: none; max-width: none; padding: 0; }
             .no-print { display: none; }
-            .company-name { font-size: 16px; }
-            .total-amount { font-size: 16px; }
+            .company-name { font-size: 18px; }
+            .total-amount { font-size: 18px; }
             table { margin-top: 16px; }
             th, td { padding: 6px 4px; }
             .signature { margin-top: 24px; }

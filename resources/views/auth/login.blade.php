@@ -35,7 +35,7 @@
             <div style="text-align: center; margin-bottom: 4px;">
                 <div class="card-kicker" style="justify-content: center;">Spektrum</div>
                 <h1 style="margin: 4px 0 0;">Login</h1>
-                <p class="text-muted" style="font-size: 13px; margin-top: 2px;">Masuk Dashboard</p>
+                <p class="text-muted" style="font-size: 14px; margin-top: 2px;">Masuk Dashboard</p>
             </div>
 
             <x-auth-session-status class="text-sm text-center" :status="session('status')" />
@@ -75,7 +75,7 @@
                     Ingat saya
                 </label>
                 @if (Route::has('password.request'))
-                    <a href="{{ route('password.request') }}" style="font-size: 13px;">Lupa password?</a>
+                    <a href="{{ route('password.request') }}" style="font-size: 14px;">Lupa password?</a>
                 @endif
             </div>
 

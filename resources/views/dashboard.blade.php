@@ -98,14 +98,14 @@
                 @foreach ($cards as $card)
                     <div class="card blueprint"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
                         <div class="card-kicker">{{ $card['label'] }}</div>
-                        <div style="font-family: var(--font-heading); font-weight: 600; font-size: 40px; line-height: 1;">{{ $card['value'] }}</div>
+                        <div style="font-family: var(--font-heading); font-weight: 600; font-size: 44px; line-height: 1;">{{ $card['value'] }}</div>
                         <div class="card-meta">{{ $card['meta'] }}</div>
                     </div>
                 @endforeach
                 <div class="card blueprint" style="background: #5c0a0a; color: #fff; border-color: #5c0a0a;">
                     <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
-                    <div class="card-kicker" style="color: #fca5a5; font-weight: 700; font-size: 11px;">Telat &gt; 3&times;24 jam</div>
-                    <div style="font-family: var(--font-heading); font-weight: 600; font-size: 40px; line-height: 1; color: #fff;">{{ $stats['telat'] }}</div>
+                    <div class="card-kicker" style="color: #fca5a5; font-weight: 700; font-size: 12px;">Telat &gt; 3&times;24 jam</div>
+                    <div style="font-family: var(--font-heading); font-weight: 600; font-size: 44px; line-height: 1; color: #fff;">{{ $stats['telat'] }}</div>
                     <div class="card-meta" style="color: #fca5a5;">Belum siap diambil</div>
                 </div>
             </section>
@@ -116,9 +116,9 @@
                     <div style="padding: var(--space-3) var(--space-4); border-left: 1px solid var(--color-divider); display: flex; flex-direction: column; gap: 4px;">
                         <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 8px;">
                             <span class="card-kicker">{{ $s['label'] }}</span>
-                            <span class="text-muted" style="font-size: 10px; letter-spacing: 0.08em;">{{ $s['num'] }}</span>
+                            <span class="text-muted" style="font-size: 11px; letter-spacing: 0.08em;">{{ $s['num'] }}</span>
                         </div>
-                        <div style="font-family: var(--font-heading); font-weight: 600; font-size: 32px; line-height: 1;">{{ $s['count'] }}</div>
+                        <div style="font-family: var(--font-heading); font-weight: 600; font-size: 35px; line-height: 1;">{{ $s['count'] }}</div>
                     </div>
                 @endforeach
             </section>
@@ -128,7 +128,7 @@
                 <div style="display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-4); flex-wrap: wrap; margin-bottom: var(--space-4);">
                     <div>
                         <h4 style="margin: 0 0 2px;">Monitoring order terbaru</h4>
-                        <div class="text-muted" style="font-size: 12px;">
+                        <div class="text-muted" style="font-size: 13px;">
                             @if ($from || $to)
                                 Order dari {{ $from ?: 'awal' }} sampai {{ $to ?: 'sekarang' }} —
                             @else

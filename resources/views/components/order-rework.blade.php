@@ -14,10 +14,23 @@
             Menunggu Persetujuan
         </span>
 
-        @if ($canApprove)
+        @if ($pending->action === 'batal')
+            {{-- Pembatalan (batal) requests are approved centrally on the
+                 Approval page, since approving one triggers a refund — not
+                 shown here to avoid two different places to approve the
+                 same financial action. --}}
             <div class="mt-1 text-xs bg-amber-50 border border-amber-200 rounded-md p-2 max-w-xs">
                 <p class="text-amber-800">
-                    <span class="font-semibold">{{ $pending->action === 'batal' ? 'Pembatalan' : 'Ulang ke ' . (\App\Models\OrderReworkRequest::STAGE_LABELS[$pending->target_stage] ?? $pending->target_stage) }}</span>
+                    <span class="font-semibold">Pembatalan</span>
+                    — {{ $pending->reason }}
+                    <span class="text-amber-500">({{ $pending->requestedBy->name ?? '-' }})</span>
+                </p>
+                <p class="text-amber-600 mt-1">Lihat menu <span class="font-semibold">Approval</span> untuk menyetujui/menolak.</p>
+            </div>
+        @elseif ($canApprove)
+            <div class="mt-1 text-xs bg-amber-50 border border-amber-200 rounded-md p-2 max-w-xs">
+                <p class="text-amber-800">
+                    <span class="font-semibold">Ulang ke {{ \App\Models\OrderReworkRequest::STAGE_LABELS[$pending->target_stage] ?? $pending->target_stage }}</span>
                     — {{ $pending->reason }}
                     <span class="text-amber-500">({{ $pending->requestedBy->name ?? '-' }})</span>
                 </p>

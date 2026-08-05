@@ -8,7 +8,7 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: Arial, sans-serif;
-            font-size: 11px;
+            font-size: 12px;
             line-height: 1.3;
             background: #f5f5f5;
             color: #333;
@@ -30,7 +30,7 @@
             padding-bottom: 10px;
         }
         .title {
-            font-size: 18px;
+            font-size: 20px;
             font-weight: bold;
             color: #d32f2f;
         }
@@ -58,7 +58,7 @@
             text-align: left;
             font-weight: bold;
             border: 1px solid #ccc;
-            font-size: 10px;
+            font-size: 11px;
         }
         td {
             padding: 6px 8px;
@@ -68,14 +68,14 @@
         .price { text-align: right; }
         .tidak-tersedia {
             color: #999;
-            font-size: 9px;
+            font-size: 10px;
             font-style: italic;
         }
         .footer {
             margin-top: 30px;
             padding-top: 10px;
             border-top: 1px solid #ddd;
-            font-size: 9px;
+            font-size: 10px;
             color: #666;
         }
         .actions {
@@ -93,7 +93,7 @@
             border: none;
             border-radius: 4px;
             cursor: pointer;
-            font-size: 13px;
+            font-size: 14px;
             font-weight: 600;
         }
         .btn:hover { background: #1565c0; }

@@ -34,6 +34,8 @@ use App\Http\Controllers\OrderOutdoorController;
 use App\Http\Controllers\OrderQcController;
 use App\Http\Controllers\OrderReworkController;
 use App\Http\Controllers\PapanPantauController;
+use App\Http\Controllers\DiskonApprovalController;
+use App\Http\Controllers\PembatalanController;
 use App\Http\Controllers\PengambilanController;
 use App\Http\Controllers\PrinterController;
 use App\Http\Controllers\PrinterOutdoorController;
@@ -78,6 +80,8 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware('permission:keuangan.view')->group(function () {
         Route::get('/keuangan/kas-harian', [KeuanganController::class, 'kasHarian'])->name('keuangan.kas-harian');
+        Route::get('/keuangan/rekap-kasir', [KeuanganController::class, 'rekapKasir'])->name('keuangan.rekap-kasir');
+        Route::get('/keuangan/rekap-customer', [KeuanganController::class, 'rekapCustomer'])->name('keuangan.rekap-customer');
         Route::get('/keuangan/piutang', [KeuanganController::class, 'piutang'])->name('keuangan.piutang');
         Route::get('/keuangan/laba-rugi', [KeuanganController::class, 'labaRugi'])->name('keuangan.laba-rugi');
         Route::get('/keuangan/tutup-buku', [TutupBukuController::class, 'index'])->name('keuangan.tutup-buku');
@@ -185,12 +189,26 @@ Route::middleware('auth')->group(function () {
     Route::middleware('permission:order-indoor.manage')->group(function () {
         Route::resource('order-indoor', OrderIndoorController::class)->only(['create', 'store', 'update', 'destroy'])->names('order-indoor');
     });
+    Route::middleware('permission:order-desain.manage')->group(function () {
+        Route::post('/order-indoor/{orderIndoor}/request-cancel', [OrderIndoorController::class, 'requestCancel'])->name('order-indoor.request-cancel');
+    });
+    Route::middleware('permission:order-indoor.approve-cancel')->group(function () {
+        Route::post('/order-indoor/{orderIndoor}/approve-cancel', [OrderIndoorController::class, 'approveCancel'])->name('order-indoor.approve-cancel');
+        Route::post('/order-indoor/{orderIndoor}/reject-cancel', [OrderIndoorController::class, 'rejectCancel'])->name('order-indoor.reject-cancel');
+    });
 
     Route::middleware('permission:order-artwork.view')->group(function () {
         Route::resource('order-artwork', OrderArtworkController::class)->only(['index', 'edit'])->names('order-artwork');
     });
     Route::middleware('permission:order-artwork.manage')->group(function () {
         Route::resource('order-artwork', OrderArtworkController::class)->only(['create', 'store', 'update', 'destroy'])->names('order-artwork');
+    });
+    Route::middleware('permission:order-desain.manage')->group(function () {
+        Route::post('/order-artwork/{orderArtwork}/request-cancel', [OrderArtworkController::class, 'requestCancel'])->name('order-artwork.request-cancel');
+    });
+    Route::middleware('permission:order-artwork.approve-cancel')->group(function () {
+        Route::post('/order-artwork/{orderArtwork}/approve-cancel', [OrderArtworkController::class, 'approveCancel'])->name('order-artwork.approve-cancel');
+        Route::post('/order-artwork/{orderArtwork}/reject-cancel', [OrderArtworkController::class, 'rejectCancel'])->name('order-artwork.reject-cancel');
     });
 
     Route::middleware('permission:kategori-bahan-outdoor.view')->group(function () {
@@ -251,6 +269,10 @@ Route::middleware('auth')->group(function () {
         Route::post('/kasir/{type}/{id}/lunasi-hutang', [KasirController::class, 'lunasiHutang'])->name('kasir.lunasi-hutang');
         Route::get('/kasir/outdoor/{orderOutdoor}/nota-pengganti', [OrderOutdoorController::class, 'createReplacement'])->name('kasir.replacement.create');
         Route::post('/kasir/outdoor/nota-pengganti', [OrderOutdoorController::class, 'store'])->name('kasir.replacement.store');
+        Route::get('/kasir/indoor/{orderIndoor}/nota-pengganti', [OrderIndoorController::class, 'createReplacement'])->name('kasir.replacement.create.indoor');
+        Route::post('/kasir/indoor/nota-pengganti', [OrderIndoorController::class, 'store'])->name('kasir.replacement.store.indoor');
+        Route::get('/kasir/artwork/{orderArtwork}/nota-pengganti', [OrderArtworkController::class, 'createReplacement'])->name('kasir.replacement.create.artwork');
+        Route::post('/kasir/artwork/nota-pengganti', [OrderArtworkController::class, 'store'])->name('kasir.replacement.store.artwork');
         Route::post('/kasir/{type}/{id}/diskon/request', [KasirController::class, 'requestDiskon'])->name('kasir.diskon.request');
     });
     Route::middleware('permission:kasir.approve-diskon')->group(function () {
@@ -282,7 +304,15 @@ Route::middleware('auth')->group(function () {
         Route::post('/order-rework/{orderReworkRequest}/approve', [OrderReworkController::class, 'approve'])->name('order-rework.approve');
         Route::post('/order-rework/{orderReworkRequest}/reject', [OrderReworkController::class, 'reject'])->name('order-rework.reject');
     });
+
+    // Access controlled inside the controller (any of the 3 approve-cancel
+    // permissions) rather than a single route-level gate — this is a
+    // consolidated view of data each type's routes already protect.
+    Route::get('/pembatalan', [PembatalanController::class, 'index'])->name('pembatalan.index');
     Route::post('/order-rework/{type}/{id}', [OrderReworkController::class, 'store'])->name('order-rework.store');
+
+    // Access controlled inside the controller (kasir.approve-diskon).
+    Route::get('/approval-diskon', [DiskonApprovalController::class, 'index'])->name('diskon-approval.index');
 
     Route::middleware('permission:order-finishing.view')->group(function () {
         Route::get('/order-finishing', [OrderFinishingController::class, 'index'])->name('order-finishing.index');

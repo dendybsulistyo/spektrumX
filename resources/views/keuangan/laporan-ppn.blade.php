@@ -38,7 +38,7 @@
                     <a href="{{ route('keuangan.laporan-ppn') }}" class="btn btn-secondary" style="height: 36px;">Reset</a>
                     <a href="{{ route('keuangan.laporan-ppn.export', ['dari' => $dari, 'sampai' => $sampai, 'rate' => $rate]) }}" class="btn btn-secondary" style="height: 36px; margin-left: auto;">Export CSV</a>
                 </form>
-                <p class="text-muted" style="font-size: 12px; margin: var(--space-3) 0 0;">
+                <p class="text-muted" style="font-size: 13px; margin: var(--space-3) 0 0;">
                     Laporan ini memuat <strong>semua</strong> order berstatus lunas pada periode ini, tanpa terkecuali — DPP dihitung dari asumsi harga jual sudah termasuk PPN ({{ $rate }}%), sehingga DPP = Total ÷ (1 + tarif) dan PPN = Total − DPP. Sesuaikan tarif di atas kalau berbeda.
                 </p>
             </div>
@@ -46,17 +46,17 @@
             <section style="display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-4);">
                 <div class="card blueprint"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
                     <div class="card-kicker">Total Omzet (termasuk PPN)</div>
-                    <div style="font-family: var(--font-heading); font-weight: 600; font-size: 24px; line-height: 1;">{{ $fmt($totalOmzet) }}</div>
+                    <div style="font-family: var(--font-heading); font-weight: 600; font-size: 26px; line-height: 1;">{{ $fmt($totalOmzet) }}</div>
                     <div class="card-meta">{{ $rows->count() }} transaksi lunas</div>
                 </div>
                 <div class="card blueprint"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
                     <div class="card-kicker">Total DPP</div>
-                    <div style="font-family: var(--font-heading); font-weight: 600; font-size: 24px; line-height: 1;">{{ $fmt($totalDpp) }}</div>
+                    <div style="font-family: var(--font-heading); font-weight: 600; font-size: 26px; line-height: 1;">{{ $fmt($totalDpp) }}</div>
                 </div>
                 <div class="card blueprint" style="background: var(--color-accent-900); color: var(--color-bg); border-color: var(--color-accent-900);">
                     <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
                     <div class="card-kicker" style="color: var(--color-accent-300);">Total PPN Keluaran</div>
-                    <div style="font-family: var(--font-heading); font-weight: 600; font-size: 24px; line-height: 1;">{{ $fmt($totalPpn) }}</div>
+                    <div style="font-family: var(--font-heading); font-weight: 600; font-size: 26px; line-height: 1;">{{ $fmt($totalPpn) }}</div>
                 </div>
             </section>
 

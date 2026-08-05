@@ -7,7 +7,7 @@
         <link rel="stylesheet" href="{{ asset('_ds/industry-8c70c3bf-fa3d-4d54-8c9e-e44ac24ed178/styles.css') }}">
         <style>
             #industry-pengeluaran { font-family: var(--font-body); color: var(--color-text); background: var(--color-bg); margin: calc(var(--space-8) * -1); padding: var(--space-8); }
-            #industry-pengeluaran .in-btn { display: inline-flex; align-items: center; gap: 4px; font-family: var(--font-heading); font-weight: 600; font-size: 12px; padding: 5px 10px; background: var(--color-accent); color: var(--color-bg); border: 1px solid var(--color-accent); cursor: pointer; white-space: nowrap; }
+            #industry-pengeluaran .in-btn { display: inline-flex; align-items: center; gap: 4px; font-family: var(--font-heading); font-weight: 600; font-size: 13px; padding: 5px 10px; background: var(--color-accent); color: var(--color-bg); border: 1px solid var(--color-accent); cursor: pointer; white-space: nowrap; }
             #industry-pengeluaran .in-btn:hover { background: var(--color-accent-600); }
             #industry-pengeluaran .in-btn-danger { background: #991b1b; border-color: #991b1b; }
             #industry-pengeluaran .in-btn-danger:hover { background: #7f1d1d; }
@@ -67,13 +67,13 @@
                 @foreach ($totalPerKategori->sortDesc()->take(3) as $kat => $jml)
                     <div class="card blueprint"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
                         <div class="card-kicker">{{ $kategoriOptions[$kat] ?? $kat }}</div>
-                        <div style="font-family: var(--font-heading); font-weight: 600; font-size: 24px; line-height: 1;">{{ $fmt($jml) }}</div>
+                        <div style="font-family: var(--font-heading); font-weight: 600; font-size: 26px; line-height: 1;">{{ $fmt($jml) }}</div>
                     </div>
                 @endforeach
                 <div class="card blueprint" style="background: var(--color-accent-900); color: var(--color-bg); border-color: var(--color-accent-900);">
                     <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
                     <div class="card-kicker" style="color: var(--color-accent-300);">Total Pengeluaran</div>
-                    <div style="font-family: var(--font-heading); font-weight: 600; font-size: 24px; line-height: 1;">{{ $fmt($total) }}</div>
+                    <div style="font-family: var(--font-heading); font-weight: 600; font-size: 26px; line-height: 1;">{{ $fmt($total) }}</div>
                 </div>
             </section>
 
