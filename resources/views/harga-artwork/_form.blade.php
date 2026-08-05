@@ -59,11 +59,16 @@
 </div>
 
 <div class="border-t pt-4 space-y-2">
-    <label class="flex items-center gap-2">
-        <input type="checkbox" name="isPjLb" value="1" {{ old('isPjLb', $hargaArtwork?->isPjLb) ? 'checked' : '' }}
-               class="rounded border-gray-300 text-gray-900 focus:ring-gray-900">
-        <span class="text-sm text-gray-700">Harga dihitung dari Panjang × Lebar (produk cetak per meter)</span>
-    </label>
+    <div>
+        <x-input-label for="isPjLb" value="Cara Hitung Harga Order" />
+        <select id="isPjLb" name="isPjLb" required
+                class="mt-1 block w-full rounded-md border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500">
+            @foreach (\App\Models\HargaArtwork::PJLB_LABELS as $code => $label)
+                <option value="{{ $code }}" @selected((int) old('isPjLb', $hargaArtwork?->isPjLb) === $code)>{{ $code }} — {{ $label }}</option>
+            @endforeach
+        </select>
+        <x-input-error :messages="$errors->get('isPjLb')" class="mt-1" />
+    </div>
     <label class="flex items-center gap-2">
         <input type="checkbox" name="isHPilih" value="1" {{ old('isHPilih', $hargaArtwork?->isHPilih) == 1 ? 'checked' : '' }}
                class="rounded border-gray-300 text-gray-900 focus:ring-gray-900">

@@ -28,7 +28,7 @@ class RoleSeeder extends Seeder
         Role::updateOrCreate(['name' => 'operator'], [
             'label' => 'Operator/Staff Order',
             'permissions' => [
-                'customers.view', 'produk.view', 'kategori.view', 'harga-artwork.view', 'order-indoor.view', 'order-indoor.manage',
+                'customers.view', 'produk.view', 'kategori.view', 'kategori-produk-indoor.view', 'kategori-produk-indoor.manage', 'harga-artwork.view', 'order-indoor.view', 'order-indoor.manage',
                 'bahan-outdoor.view', 'harga-cetak-outdoor.view', 'order-outdoor.view', 'order-outdoor.manage',
                 'order-artwork.view', 'order-artwork.manage',
             ],
@@ -53,9 +53,9 @@ class RoleSeeder extends Seeder
             'label' => 'Owner',
             'permissions' => [
                 'customers.view', 'produk.view', 'kategori-produk-indoor.view', 'kategori.view', 'harga-artwork.view', 'operators.view', 'printers.view', 'order-indoor.view',
-                'bahan-outdoor.view', 'kategori-bahan-outdoor.view', 'harga-cetak-outdoor.view', 'printer-outdoor.view', 'bahan-cetak-outdoor.view', 'order-outdoor.view', 'order-artwork.view',
+                'bahan-outdoor.view', 'kategori-bahan-outdoor.view', 'harga-cetak-outdoor.view', 'harga-cetak-outdoor-khusus.view', 'harga-cetak-outdoor-khusus.manage', 'printer-outdoor.view', 'bahan-cetak-outdoor.view', 'order-outdoor.view', 'order-artwork.view',
                 'file-monitor.view', 'kasir.view', 'order-desain.view', 'order-cetak.view', 'order-qc.view', 'pengambilan.view', 'data-warehouse.view',
-                'jasa-potong.manage',
+                'jasa-potong.manage', 'jasa-potong-artwork.manage',
             ],
         ]);
     }

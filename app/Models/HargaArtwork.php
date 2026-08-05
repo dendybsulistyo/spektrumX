@@ -12,12 +12,21 @@ class HargaArtwork extends Model
     /**
      * isPjLb codes, same convention as Produk (produk_indoor): determines how
      * an order line for this product is priced and whether Panjang/Lebar are
-     * collected on the order form. Only codes 1 and 2 occur in harga_artwork
-     * data — the Jasa Potong (4) formula is indoor-specific and doesn't apply here.
+     * collected on the order form. Code 4 ("Jasa Potong") uses its own
+     * formula via konfigurasi_jasa_potong_artwork, same shape as Indoor's
+     * but with an independent X value — see OrderPricingService::lineTotalArtwork().
      */
     public const PJLB_QTY = 1;
 
     public const PJLB_AREA = 2;
+
+    public const PJLB_QTY_ALT = 4;
+
+    public const PJLB_LABELS = [
+        self::PJLB_QTY => 'Qty × Harga',
+        self::PJLB_AREA => 'Panjang × Lebar × Qty × Harga',
+        self::PJLB_QTY_ALT => 'Jasa Potong (Qty = Harga)',
+    ];
 
     /**
      * The attributes that are mass assignable.
@@ -70,5 +79,10 @@ class HargaArtwork extends Model
     public function needsDimensionInput(): bool
     {
         return $this->isPjLb === self::PJLB_AREA;
+    }
+
+    public function isJasaPotong(): bool
+    {
+        return $this->isPjLb === self::PJLB_QTY_ALT;
     }
 }

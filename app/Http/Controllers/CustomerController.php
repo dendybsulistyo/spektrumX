@@ -180,6 +180,21 @@ class CustomerController extends Controller
         return response()->json($customers);
     }
 
+    /**
+     * VIP price overrides for Outdoor (harga_cetak_outdoor_khusus), keyed
+     * by KdCtk — fetched client-side by order-outdoor/_form.blade.php when
+     * a customer is picked via the live search widget (no page reload), so
+     * the on-screen estimate matches what OrderPricingService will
+     * actually charge. Empty object for non-VIP customers / no overrides.
+     */
+    public function hargaCetakOutdoorKhusus(Customer $customer): JsonResponse
+    {
+        $khusus = $customer->hargaCetakOutdoorKhusus()->get()
+            ->mapWithKeys(fn ($h) => [$h->KdCtk => ['std' => (float) $h->HargaStd, 'min' => (float) $h->HargaMin]]);
+
+        return response()->json($khusus);
+    }
+
     public function destroy(Customer $customer): RedirectResponse
     {
         CustomerLimit::where('KdCust', $customer->KdCust)->delete();

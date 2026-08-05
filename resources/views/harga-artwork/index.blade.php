@@ -55,8 +55,11 @@
                         <td class="px-3 py-2 text-right text-gray-600">Rp {{ number_format($item->HargaStd, 0, ',', '.') }}</td>
                         <td class="px-3 py-2 text-right text-gray-600">Rp {{ number_format($item->HargaMin, 0, ',', '.') }}</td>
                         <td class="px-3 py-2">
-                            @if ($item->isPjLb)
+                            @if ($item->isAreaPriced())
                                 <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-blue-50 text-blue-700 mr-1">Pakai P×L</span>
+                            @endif
+                            @if ($item->isJasaPotong())
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-blue-50 text-blue-700 mr-1">Jasa Potong</span>
                             @endif
                             @if ($item->isHPilih === 1)
                                 <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-purple-50 text-purple-700">Harga Bertingkat</span>

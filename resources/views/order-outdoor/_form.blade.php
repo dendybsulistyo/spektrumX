@@ -12,6 +12,15 @@
         : collect([['NmFile' => '', 'Panjang' => '', 'Lebar' => '', 'Qty' => 1, 'KdCtk' => '', 'KdPrn' => '', 'NoCetak' => '', 'ada_finishing' => '', 'jenis_finishing' => '']]);
     $selectedCustomerLabel = $selectedCustomer ? "{$selectedCustomer->NmCust} ({$selectedCustomer->KdCust})" : '';
     $hargaMap = $hargaCetakList->keyBy('KdCtk')->map(fn ($h) => ['std' => (float) $h->HargaStd, 'min' => (float) $h->HargaMin]);
+    // VIP price overrides for the pre-selected customer (edit/replacement/
+    // validation-failed create) — merged in server-side so the initial
+    // render already matches what OrderPricingService will charge; the
+    // live search widget re-fetches and re-merges this on customer change.
+    if ($selectedCustomer) {
+        foreach ($selectedCustomer->hargaCetakOutdoorKhusus as $khusus) {
+            $hargaMap[$khusus->KdCtk] = ['std' => (float) $khusus->HargaStd, 'min' => (float) $khusus->HargaMin];
+        }
+    }
 
     // Warna badge per printer — sama persis dengan <x-printer-badge> yang
     // dipakai di antrian desain/cetak/finishing/QC/bungkus, supaya dropdown
@@ -35,7 +44,23 @@
 
 <div x-data="{
         items: {{ old('items') ? json_encode(old('items')) : $initialItems->toJson() }},
+        hargaMapStandard: {{ $hargaCetakList->keyBy('KdCtk')->map(fn ($h) => ['std' => (float) $h->HargaStd, 'min' => (float) $h->HargaMin])->toJson() }},
         hargaMap: {{ $hargaMap->toJson() }},
+        async fetchKhusus(kdCust) {
+            if (!kdCust) {
+                this.applyKhusus({});
+                return;
+            }
+            try {
+                const res = await fetch(`/customers/${kdCust}/harga-cetak-outdoor-khusus`);
+                this.applyKhusus(res.ok ? await res.json() : {});
+            } catch (e) {
+                this.applyKhusus({});
+            }
+        },
+        applyKhusus(khususMap) {
+            this.hargaMap = { ...this.hargaMapStandard, ...khususMap };
+        },
         printerOptions: {{ $printerOutdoorList->map(fn ($p) => ['KdPrn' => $p->KdPrn, 'NmPrn' => $p->NmPrn])->values()->toJson() }},
         printerColorMap: {{ $printerColorMap->toJson() }},
         printerNameFor(kdPrn) {
@@ -45,6 +70,10 @@
         hargaFor(item) {
             const kdCtk = (item.KdPrn || '') + (item.NoCetak || '');
             return this.hargaMap[kdCtk] ?? null;
+        },
+        isHargaKhusus(item) {
+            const kdCtk = (item.KdPrn || '') + (item.NoCetak || '');
+            return !!this.hargaMap[kdCtk] && this.hargaMap[kdCtk] !== this.hargaMapStandard[kdCtk];
         },
         bahanFor(kdPrn) {
             if (!kdPrn) return [];
@@ -131,6 +160,7 @@
                     this.query = `${c.NmCust} (${c.KdCust})`;
                     this.open = false;
                     this.activeIndex = -1;
+                    fetchKhusus(c.KdCust);
                 },
                 move(delta) {
                     if (!this.open || this.displayResults.length === 0) return;
@@ -361,6 +391,7 @@
                     <template x-if="item.KdPrn && item.NoCetak">
                         <p class="text-xs mt-1" :class="hargaFor(item) ? 'text-green-700' : 'text-red-600'">
                             <span x-show="hargaFor(item)" x-text="'Rp ' + (hargaFor(item)?.std ?? 0).toLocaleString('id-ID')"></span>
+                            <span x-show="hargaFor(item) && isHargaKhusus(item)" class="ml-1 inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-purple-100 text-purple-700">Harga VIP</span>
                             <span x-show="!hargaFor(item)">Harga belum diatur untuk kombinasi ini</span>
                         </p>
                     </template>

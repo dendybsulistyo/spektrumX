@@ -6,6 +6,7 @@ use App\Http\Requests\StoreOrderArtworkRequest;
 use App\Models\Customer;
 use App\Models\HargaArtwork;
 use App\Models\Kategori;
+use App\Models\KonfigurasiJasaPotongArtwork;
 use App\Models\OrderArtwork;
 use App\Models\OrderArtworkDetail;
 use App\Models\OrderStatusNote;
@@ -46,6 +47,7 @@ class OrderArtworkController extends Controller
             'selectedCustomer' => old('KdCust') ? Customer::where('KdCust', old('KdCust'))->first() : null,
             'produkList' => HargaArtwork::orderBy('NoUrut')->get(),
             'kategoriList' => Kategori::whereHas('produkArtwork')->orderBy('NoUrut')->get(),
+            'nilaiX' => KonfigurasiJasaPotongArtwork::current()->nilai_x,
         ]);
     }
 
@@ -67,6 +69,7 @@ class OrderArtworkController extends Controller
             'items' => $orderArtwork->items,
             'produkList' => HargaArtwork::orderBy('NoUrut')->get(),
             'kategoriList' => Kategori::whereHas('produkArtwork')->orderBy('NoUrut')->get(),
+            'nilaiX' => KonfigurasiJasaPotongArtwork::current()->nilai_x,
         ]);
     }
 
@@ -117,6 +120,7 @@ class OrderArtworkController extends Controller
             'selectedCustomer' => $orderArtwork->customer,
             'produkList' => HargaArtwork::orderBy('NoUrut')->get(),
             'kategoriList' => Kategori::whereHas('produkArtwork')->orderBy('NoUrut')->get(),
+            'nilaiX' => KonfigurasiJasaPotongArtwork::current()->nilai_x,
         ]);
     }
 
@@ -273,6 +277,9 @@ class OrderArtworkController extends Controller
                 'Panjang' => $item['Panjang'],
                 'Lebar' => $item['Lebar'],
                 'Qty' => $item['Qty'],
+                'PisauTurun' => $item['PisauTurun'] ?? null,
+                'JumlahKertas' => $item['JumlahKertas'] ?? null,
+                'TebalKertas' => $item['TebalKertas'] ?? null,
             ]);
         }
     }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Models\HargaArtwork;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -17,14 +18,15 @@ class StoreHargaArtworkRequest extends FormRequest
     }
 
     /**
-     * Unchecked checkboxes send nothing at all — normalize here since these
-     * are NOT NULL columns with no default. isHPilih is a legacy code
-     * column (1 = Ya, 2 = Tidak), not a 0/1 boolean like isPjLb.
+     * isPjLb is now a proper code select (1/2/4, same convention as
+     * Produk::PJLB_LABELS) rather than a checkbox. isHPilih is still a
+     * legacy checkbox-backed code column (1 = Ya, 2 = Tidak) — unchecked
+     * checkboxes send nothing at all, so it's normalized here since it's a
+     * NOT NULL column with no default.
      */
     protected function prepareForValidation(): void
     {
         $this->merge([
-            'isPjLb' => $this->boolean('isPjLb'),
             'isHPilih' => $this->boolean('isHPilih') ? 1 : 2,
         ]);
     }
@@ -49,7 +51,7 @@ class StoreHargaArtworkRequest extends FormRequest
             'HargaStd' => ['required', 'numeric', 'min:0'],
             'HargaMin' => ['required', 'numeric', 'min:0'],
             'Satuan' => ['required', 'string', 'max:8'],
-            'isPjLb' => ['nullable', 'boolean'],
+            'isPjLb' => ['required', Rule::in(array_keys(HargaArtwork::PJLB_LABELS))],
             'isHPilih' => ['required', 'integer', 'in:1,2'],
         ];
     }

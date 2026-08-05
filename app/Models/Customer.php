@@ -29,6 +29,11 @@ class Customer extends Model
         return $this->hasOne(CustomerLimit::class, 'KdCust', 'KdCust');
     }
 
+    public function hargaCetakOutdoorKhusus()
+    {
+        return $this->hasMany(HargaCetakOutdoorKhusus::class, 'KdCust', 'KdCust');
+    }
+
     public function getIsVipAttribute(): bool
     {
         return $this->limit !== null;

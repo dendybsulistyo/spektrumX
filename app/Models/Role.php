@@ -23,8 +23,8 @@ class Role extends Model
             'produk.manage' => 'Tambah/ubah/hapus produk',
         ],
         'Kategori Produk Indoor' => [
-            'kategori-produk-indoor.view' => 'Lihat data divisi indoor',
-            'kategori-produk-indoor.manage' => 'Tambah/ubah/hapus divisi indoor',
+            'kategori-produk-indoor.view' => 'Lihat data divisi (dipakai bareng Indoor & Artwork)',
+            'kategori-produk-indoor.manage' => 'Tambah/ubah/hapus divisi (dipakai bareng Indoor & Artwork)',
         ],
         'Bahan Artwork' => [
             'harga-artwork.view' => 'Lihat harga artwork',
@@ -112,6 +112,10 @@ class Role extends Model
             'harga-cetak-outdoor.view' => 'Lihat harga cetak outdoor',
             'harga-cetak-outdoor.manage' => 'Tambah/ubah/hapus harga cetak outdoor',
         ],
+        'Harga Khusus Customer VIP' => [
+            'harga-cetak-outdoor-khusus.view' => 'Lihat harga khusus outdoor customer VIP',
+            'harga-cetak-outdoor-khusus.manage' => 'Atur harga khusus outdoor per customer VIP',
+        ],
         'Pengaturan' => [
             'roles.manage' => 'Kelola role & user',
         ],
@@ -138,7 +142,8 @@ class Role extends Model
             'keuangan.pengaturan' => 'Atur data perusahaan untuk keperluan pajak (NPWP, status PKP, tarif PPN default)',
         ],
         'Jasa Potong' => [
-            'jasa-potong.manage' => 'Kelola nilai X (biaya tetap) Jasa Potong',
+            'jasa-potong.manage' => 'Kelola nilai X (biaya tetap) Jasa Potong Indoor',
+            'jasa-potong-artwork.manage' => 'Kelola nilai X (biaya tetap) Jasa Potong Artwork',
         ],
     ];
 

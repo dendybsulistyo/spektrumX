@@ -7,10 +7,9 @@
 
         <title>{{ config('app.name', 'SpektrumX') }}</title>
 
-        <link rel="preconnect" href="https://fonts.bunny.net">
-        <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
-        <link rel="preconnect" href="https://fonts.googleapis.com">
-        <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+        {{-- Self-hosted (public/fonts) — app runs on client machines without
+             internet access, so Google Fonts/bunny.net CDN links won't load. --}}
+        <link href="{{ asset('fonts/fonts.css') }}" rel="stylesheet">
 
         @vite(['resources/css/app.css', 'resources/js/app.js'])
         @stack('styles')
@@ -104,7 +103,7 @@
             $analitikActive = request()->routeIs('data-warehouse.*', 'monitoring-kinerja.*', 'monitoring-transaksi.*', 'papan-pantau.*');
             $keuanganActive = request()->routeIs('keuangan.*', 'pengeluaran.*', 'payroll.*');
             $showKeuangan = Auth::user()->hasPermission('keuangan.view') || Auth::user()->hasPermission('pengeluaran.view') || Auth::user()->hasPermission('payroll.view') || Auth::user()->hasPermission('keuangan.pengaturan');
-            $pengaturanActive = request()->routeIs('roles.*', 'users.*', 'jasa-potong.*');
+            $pengaturanActive = request()->routeIs('roles.*', 'users.*', 'jasa-potong.*', 'jasa-potong-artwork.*');
 
             $showMasterData = Auth::user()->hasPermission('customers.view') || Auth::user()->hasPermission('produk.view') || Auth::user()->hasPermission('harga-artwork.view') || Auth::user()->hasPermission('printers.view') || Auth::user()->hasPermission('printer-outdoor.view') || Auth::user()->hasPermission('bahan-cetak-outdoor.view') || Auth::user()->hasPermission('harga-cetak-outdoor.view') || Auth::user()->hasPermission('kategori-produk-indoor.view');
             $showTransaksi = Auth::user()->hasPermission('order-indoor.view') || Auth::user()->hasPermission('order-outdoor.view') || Auth::user()->hasPermission('order-artwork.view');
@@ -114,7 +113,7 @@
             $pendingDiskonCount = $canApproveDiskon ? \App\Http\Controllers\DiskonApprovalController::pendingCount() : 0;
             $showOperator = Auth::user()->hasPermission('kasir.view') || Auth::user()->hasPermission('order-desain.view') || Auth::user()->hasPermission('order-cetak.view') || Auth::user()->hasPermission('order-finishing.view') || Auth::user()->hasPermission('order-qc.view') || Auth::user()->hasPermission('order-bungkus.view') || Auth::user()->hasPermission('pengambilan.view') || Auth::user()->hasPermission('file-monitor.view') || $canApproveCancel || $canApproveDiskon;
             $showAnalitik = Auth::user()->hasPermission('data-warehouse.view') || Auth::user()->hasPermission('monitoring-kinerja.view') || Auth::user()->hasPermission('monitoring-transaksi.view') || Auth::user()->hasPermission('papan-pantau.view');
-            $showPengaturan = Auth::user()->hasPermission('roles.manage') || Auth::user()->hasPermission('jasa-potong.manage');
+            $showPengaturan = Auth::user()->hasPermission('roles.manage') || Auth::user()->hasPermission('jasa-potong.manage') || Auth::user()->hasPermission('jasa-potong-artwork.manage');
 
             $navTopLink = fn (bool $active) => 'inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-[14px] font-semibold transition '
                 .($active ? 'bg-indigo-50 text-indigo-600' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900');
@@ -189,10 +188,6 @@
                                                 <a href="{{ route('customers.aktif') }}" class="{{ $dropdownLink(request()->routeIs('customers.aktif')) }}">Customer Aktif</a>
                                             @endcan
 
-                                            @can('printers.view')
-                                                <a href="{{ route('printers.index') }}" class="{{ $dropdownLink(request()->routeIs('printers.*')) }}">Printer</a>
-                                            @endcan
-
                                             @if (Auth::user()->hasPermission('kategori-produk-indoor.view') || Auth::user()->hasPermission('produk.view'))
                                                 <p class="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">Kategori Indoor</p>
                                                 @can('kategori-produk-indoor.view')
@@ -203,12 +198,17 @@
                                                 @endcan
                                             @endif
 
-                                            @can('harga-artwork.view')
+                                            @if (Auth::user()->hasPermission('kategori-produk-indoor.view') || Auth::user()->hasPermission('harga-artwork.view'))
                                                 <p class="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">Kategori Artwork</p>
-                                                <a href="{{ route('harga-artwork.index') }}" class="{{ $dropdownLink(request()->routeIs('harga-artwork.*')) }}">Data Bahan</a>
-                                            @endcan
+                                                @can('kategori-produk-indoor.view')
+                                                    <a href="{{ route('kategori-produk-indoor.index') }}" class="{{ $dropdownLink(request()->routeIs('kategori-produk-indoor.*')) }}">Data Divisi</a>
+                                                @endcan
+                                                @can('harga-artwork.view')
+                                                    <a href="{{ route('harga-artwork.index') }}" class="{{ $dropdownLink(request()->routeIs('harga-artwork.*')) }}">Data Bahan</a>
+                                                @endcan
+                                            @endif
 
-                                            @if (Auth::user()->hasPermission('printer-outdoor.view') || Auth::user()->hasPermission('bahan-cetak-outdoor.view') || Auth::user()->hasPermission('harga-cetak-outdoor.view'))
+                                            @if (Auth::user()->hasPermission('printer-outdoor.view') || Auth::user()->hasPermission('bahan-cetak-outdoor.view') || Auth::user()->hasPermission('harga-cetak-outdoor.view') || Auth::user()->hasPermission('harga-cetak-outdoor-khusus.view'))
                                                 <p class="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">Kategori Outdoor</p>
                                                 @can('printer-outdoor.view')
                                                     <a href="{{ route('printer-outdoor.index') }}" class="{{ $dropdownLink(request()->routeIs('printer-outdoor.*')) }}">Data Printer</a>
@@ -218,6 +218,9 @@
                                                 @endcan
                                                 @can('harga-cetak-outdoor.view')
                                                     <a href="{{ route('harga-cetak-outdoor.index') }}" class="{{ $dropdownLink(request()->routeIs('harga-cetak-outdoor.*')) }}">Standar Harga</a>
+                                                @endcan
+                                                @can('harga-cetak-outdoor-khusus.view')
+                                                    <a href="{{ route('harga-cetak-outdoor-khusus.index') }}" class="{{ $dropdownLink(request()->routeIs('harga-cetak-outdoor-khusus.*')) }}">Harga Khusus VIP</a>
                                                 @endcan
                                             @endif
                                         </div>
@@ -334,7 +337,10 @@
                                                 <a href="{{ route('users.index') }}" class="{{ $dropdownLink(request()->routeIs('users.*')) }}">User</a>
                                             @endcan
                                             @can('jasa-potong.manage')
-                                                <a href="{{ route('jasa-potong.edit') }}" class="{{ $dropdownLink(request()->routeIs('jasa-potong.*')) }}">Jasa Potong</a>
+                                                <a href="{{ route('jasa-potong.edit') }}" class="{{ $dropdownLink(request()->routeIs('jasa-potong.*')) }}">Jasa Potong Indoor</a>
+                                            @endcan
+                                            @can('jasa-potong-artwork.manage')
+                                                <a href="{{ route('jasa-potong-artwork.edit') }}" class="{{ $dropdownLink(request()->routeIs('jasa-potong-artwork.*')) }}">Jasa Potong Artwork</a>
                                             @endcan
                                         </div>
                                     </div>
@@ -418,14 +424,14 @@
                                 <a href="{{ route('customers.index') }}" class="{{ $mobileLink(request()->routeIs('customers.index') || request()->routeIs('customers.edit')) }}">Customer</a>
                                 <a href="{{ route('customers.aktif') }}" class="{{ $mobileLink(request()->routeIs('customers.aktif')) }}">Customer Aktif</a>
                             @endcan
-                            @can('printers.view')
-                                <a href="{{ route('printers.index') }}" class="{{ $mobileLink(request()->routeIs('printers.*')) }}">Printer</a>
-                            @endcan
                             @can('kategori-produk-indoor.view')
                                 <a href="{{ route('kategori-produk-indoor.index') }}" class="{{ $mobileLink(request()->routeIs('kategori-produk-indoor.*')) }}">Kategori Indoor — Data Divisi</a>
                             @endcan
                             @can('produk.view')
                                 <a href="{{ route('detail-indoor.index') }}" class="{{ $mobileLink(request()->routeIs('detail-indoor.*')) }}">Kategori Indoor — Data Produk</a>
+                            @endcan
+                            @can('kategori-produk-indoor.view')
+                                <a href="{{ route('kategori-produk-indoor.index') }}" class="{{ $mobileLink(request()->routeIs('kategori-produk-indoor.*')) }}">Kategori Artwork — Data Divisi</a>
                             @endcan
                             @can('harga-artwork.view')
                                 <a href="{{ route('harga-artwork.index') }}" class="{{ $mobileLink(request()->routeIs('harga-artwork.*')) }}">Kategori Artwork — Data Bahan</a>
@@ -438,6 +444,9 @@
                             @endcan
                             @can('harga-cetak-outdoor.view')
                                 <a href="{{ route('harga-cetak-outdoor.index') }}" class="{{ $mobileLink(request()->routeIs('harga-cetak-outdoor.*')) }}">Kategori Outdoor — Standar Harga</a>
+                            @endcan
+                            @can('harga-cetak-outdoor-khusus.view')
+                                <a href="{{ route('harga-cetak-outdoor-khusus.index') }}" class="{{ $mobileLink(request()->routeIs('harga-cetak-outdoor-khusus.*')) }}">Kategori Outdoor — Harga Khusus VIP</a>
                             @endcan
                         @endif
 
@@ -521,7 +530,10 @@
                                 <a href="{{ route('users.index') }}" class="{{ $mobileLink(request()->routeIs('users.*')) }}">User</a>
                             @endcan
                             @can('jasa-potong.manage')
-                                <a href="{{ route('jasa-potong.edit') }}" class="{{ $mobileLink(request()->routeIs('jasa-potong.*')) }}">Jasa Potong</a>
+                                <a href="{{ route('jasa-potong.edit') }}" class="{{ $mobileLink(request()->routeIs('jasa-potong.*')) }}">Jasa Potong Indoor</a>
+                            @endcan
+                            @can('jasa-potong-artwork.manage')
+                                <a href="{{ route('jasa-potong-artwork.edit') }}" class="{{ $mobileLink(request()->routeIs('jasa-potong-artwork.*')) }}">Jasa Potong Artwork</a>
                             @endcan
                         @endif
                     </div>

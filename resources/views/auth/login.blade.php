@@ -24,7 +24,7 @@
          bg-black juga dipasang di <body> supaya celah pembulatan/scrollbar
          di tepi tetap hitam, tidak nembus putih. --}}
     <div class="min-h-screen w-full flex items-center justify-end p-4 sm:p-8 lg:p-16 bg-black"
-         style="background-image: url('{{ asset('images/spektrumLogin6.png') }}'); background-size: contain; background-position: center; background-repeat: no-repeat;">
+         style="background-image: url('{{ asset('images/spektrumLogin7.png') }}'); background-size: contain; background-position: center; background-repeat: no-repeat;">
 
         <form method="POST" action="{{ route('login') }}" class="blueprint"
               style="position: relative; width: min(420px, 100%); background: var(--color-bg); border: 1px solid var(--color-divider);

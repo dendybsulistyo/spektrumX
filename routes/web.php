@@ -12,6 +12,8 @@ use App\Http\Controllers\DetailIndoorController;
 use App\Http\Controllers\FileMonitorController;
 use App\Http\Controllers\HargaArtworkController;
 use App\Http\Controllers\HargaCetakOutdoorController;
+use App\Http\Controllers\HargaCetakOutdoorKhususController;
+use App\Http\Controllers\JasaPotongArtworkController;
 use App\Http\Controllers\JasaPotongController;
 use App\Http\Controllers\PengeluaranController;
 use App\Http\Controllers\PayrollController;
@@ -61,6 +63,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/customers-search', [CustomerController::class, 'search'])->name('customers.search');
     Route::post('/customers-quick-create', [CustomerController::class, 'quickCreate'])->name('customers.quick-create');
+    Route::get('/customers/{customer:KdCust}/harga-cetak-outdoor-khusus', [CustomerController::class, 'hargaCetakOutdoorKhusus'])->name('customers.harga-cetak-outdoor-khusus');
 
     Route::middleware('permission:data-warehouse.view')->group(function () {
         Route::get('/data-warehouse', [DataWarehouseController::class, 'index'])->name('data-warehouse.index');
@@ -240,6 +243,13 @@ Route::middleware('auth')->group(function () {
         Route::post('/harga-cetak-outdoor-matrix', [HargaCetakOutdoorController::class, 'updateMatrix'])->name('harga-cetak-outdoor.update-matrix');
     });
 
+    Route::middleware('permission:harga-cetak-outdoor-khusus.view')->group(function () {
+        Route::get('/harga-cetak-outdoor-khusus', [HargaCetakOutdoorKhususController::class, 'index'])->name('harga-cetak-outdoor-khusus.index');
+    });
+    Route::middleware('permission:harga-cetak-outdoor-khusus.manage')->group(function () {
+        Route::post('/harga-cetak-outdoor-khusus-matrix', [HargaCetakOutdoorKhususController::class, 'updateMatrix'])->name('harga-cetak-outdoor-khusus.update-matrix');
+    });
+
     Route::middleware('permission:order-outdoor.view')->group(function () {
         Route::resource('order-outdoor', OrderOutdoorController::class)->only(['index', 'edit'])->names('order-outdoor');
     });
@@ -357,6 +367,11 @@ Route::middleware('auth')->group(function () {
     Route::middleware('permission:jasa-potong.manage')->group(function () {
         Route::get('/jasa-potong', [JasaPotongController::class, 'edit'])->name('jasa-potong.edit');
         Route::put('/jasa-potong', [JasaPotongController::class, 'update'])->name('jasa-potong.update');
+    });
+
+    Route::middleware('permission:jasa-potong-artwork.manage')->group(function () {
+        Route::get('/jasa-potong-artwork', [JasaPotongArtworkController::class, 'edit'])->name('jasa-potong-artwork.edit');
+        Route::put('/jasa-potong-artwork', [JasaPotongArtworkController::class, 'update'])->name('jasa-potong-artwork.update');
     });
 
     Route::middleware('permission:harga-cetak-outdoor.view')->group(function () {

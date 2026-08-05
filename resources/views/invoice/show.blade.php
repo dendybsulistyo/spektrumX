@@ -54,7 +54,9 @@
         .total-label { font-size: 14px; color: #6b7280; }
         .total-amount { font-size: 22px; font-weight: 700; color: #4f46e5; }
         .footer-note { margin-top: 32px; padding-top: 16px; border-top: 1px solid #e5e7eb; font-size: 13px; color: #6b7280; }
-        .signature { margin-top: 40px; text-align: right; }
+        .print-time { margin-top: 6px; font-size: 10px; color: #9ca3af; }
+        .signature-row { margin-top: 40px; display: flex; justify-content: space-between; }
+        .signature { text-align: center; }
         .signature .line { display: inline-block; min-width: 180px; border-top: 1px solid #9ca3af; margin-top: 48px; padding-top: 4px; }
         .actions { max-width: 720px; margin: 20px auto 0; display: flex; justify-content: space-between; align-items: center; }
         .btn { padding: 10px 20px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; text-decoration: none; }
@@ -71,7 +73,7 @@
             .total-amount { font-size: 18px; }
             table { margin-top: 16px; }
             th, td { padding: 6px 4px; }
-            .signature { margin-top: 24px; }
+            .signature-row { margin-top: 24px; }
             .signature .line { margin-top: 32px; }
             .footer-note { margin-top: 20px; padding-top: 10px; }
         }
@@ -176,14 +178,18 @@
             </div>
         @endif
 
-        @if ($order->kasir)
+        <div class="signature-row">
             <div class="signature">
-                <span class="line">{{ $order->kasir->name }}</span>
+                <span class="line">Customer</span>
             </div>
-        @endif
+            <div class="signature">
+                <span class="line">Kasir</span>
+            </div>
+        </div>
 
         <div class="footer-note">
             Terima kasih atas pesanan Anda. Simpan invoice ini sebagai bukti transaksi.
+            <p class="print-time">Dicetak: {{ now()->translatedFormat('d M Y, H:i') }}</p>
         </div>
     </div>
 

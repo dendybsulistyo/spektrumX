@@ -23,6 +23,9 @@ class OrderArtworkDetail extends Model
         'Panjang',
         'Lebar',
         'Qty',
+        'PisauTurun',
+        'JumlahKertas',
+        'TebalKertas',
     ];
 
     protected function casts(): array
@@ -30,6 +33,9 @@ class OrderArtworkDetail extends Model
         return [
             'Panjang' => 'float',
             'Lebar' => 'float',
+            'PisauTurun' => 'integer',
+            'JumlahKertas' => 'integer',
+            'TebalKertas' => 'integer',
         ];
     }
 
