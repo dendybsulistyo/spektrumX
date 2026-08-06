@@ -189,7 +189,8 @@
                                             @endcan
 
                                             @if (Auth::user()->hasPermission('kategori-produk-indoor.view') || Auth::user()->hasPermission('produk.view'))
-                                                <p class="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">Kategori Indoor</p>
+                                                <p class="px-3 py-1.5 mx-1 bg-gray-50 text-[11px] font-semibold uppercase tracking-wide text-gray-500">Kategori Indoor</p>
+                                                <hr class="mx-3 mb-1 border-gray-100">
                                                 @can('kategori-produk-indoor.view')
                                                     <a href="{{ route('kategori-produk-indoor.index') }}" class="{{ $dropdownLink(request()->routeIs('kategori-produk-indoor.*')) }}">Data Divisi</a>
                                                 @endcan
@@ -199,7 +200,8 @@
                                             @endif
 
                                             @if (Auth::user()->hasPermission('kategori-produk-indoor.view') || Auth::user()->hasPermission('harga-artwork.view'))
-                                                <p class="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">Kategori Artwork</p>
+                                                <p class="px-3 py-1.5 mx-1 bg-gray-50 text-[11px] font-semibold uppercase tracking-wide text-gray-500">Kategori Artwork</p>
+                                                <hr class="mx-3 mb-1 border-gray-100">
                                                 @can('kategori-produk-indoor.view')
                                                     <a href="{{ route('kategori-produk-indoor.index') }}" class="{{ $dropdownLink(request()->routeIs('kategori-produk-indoor.*')) }}">Data Divisi</a>
                                                 @endcan
@@ -209,7 +211,8 @@
                                             @endif
 
                                             @if (Auth::user()->hasPermission('printer-outdoor.view') || Auth::user()->hasPermission('bahan-cetak-outdoor.view') || Auth::user()->hasPermission('harga-cetak-outdoor.view') || Auth::user()->hasPermission('harga-cetak-outdoor-khusus.view'))
-                                                <p class="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">Kategori Outdoor</p>
+                                                <p class="px-3 py-1.5 mx-1 bg-gray-50 text-[11px] font-semibold uppercase tracking-wide text-gray-500">Kategori Outdoor</p>
+                                                <hr class="mx-3 mb-1 border-gray-100">
                                                 @can('printer-outdoor.view')
                                                     <a href="{{ route('printer-outdoor.index') }}" class="{{ $dropdownLink(request()->routeIs('printer-outdoor.*')) }}">Data Printer</a>
                                                 @endcan

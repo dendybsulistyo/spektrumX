@@ -3,7 +3,7 @@
         <h2 class="font-semibold text-xl text-gray-800">Harga Khusus Customer VIP</h2>
     </x-slot>
 
-    <div class="space-y-4">
+    <div class="space-y-4 max-w-2xl">
         <div class="bg-white rounded-lg border border-gray-200 p-4">
             <p class="text-xs text-gray-500 mb-3">
                 Cuma customer VIP (punya plafon hutang) yang bisa diset harga khususnya. Kosongkan harga untuk kembali pakai Standar Harga Outdoor.
