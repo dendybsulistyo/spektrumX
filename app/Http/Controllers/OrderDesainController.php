@@ -47,11 +47,16 @@ class OrderDesainController extends Controller
         // products (no dimension input) stay as a single row. Outdoor
         // displays one row per order as usual (it previously had its own
         // per-unit tracking here, but that turned out not to be wanted).
+        //
+        // Order Indoor now also accepts Artwork-catalog items in the same
+        // order (jenis_produk per line) — those always expand regardless of
+        // Panjang/Lebar, matching Artwork's own always-expand behavior
+        // below, since the expand decision is now per-ITEM, not per-order.
         $indoorRows = $this->expandRows(
             $indoorOrders,
             fn ($o) => $o->detailItems(),
             'Judul',
-            fn ($item) => (float) $item->Panjang > 0 && (float) $item->Lebar > 0,
+            fn ($item) => $item->jenis_produk === 'artwork' || ((float) $item->Panjang > 0 && (float) $item->Lebar > 0),
         );
         $artworkRows = $this->expandRows($artworkOrders, fn ($o) => $o->items, 'Judul');
 

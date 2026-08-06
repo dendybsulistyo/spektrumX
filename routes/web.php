@@ -6,6 +6,7 @@ use App\Http\Controllers\ChatController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DataWarehouseController;
+use App\Http\Controllers\PreviewCetakController;
 use App\Http\Controllers\MonitoringKinerjaController;
 use App\Http\Controllers\MonitoringTransaksiController;
 use App\Http\Controllers\DetailIndoorController;
@@ -64,6 +65,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/customers-search', [CustomerController::class, 'search'])->name('customers.search');
     Route::post('/customers-quick-create', [CustomerController::class, 'quickCreate'])->name('customers.quick-create');
     Route::get('/customers/{customer:KdCust}/harga-cetak-outdoor-khusus', [CustomerController::class, 'hargaCetakOutdoorKhusus'])->name('customers.harga-cetak-outdoor-khusus');
+
+    Route::middleware('permission:preview-cetak.view')->group(function () {
+        Route::get('/preview-cetak', [PreviewCetakController::class, 'index'])->name('preview-cetak.index');
+    });
 
     Route::middleware('permission:data-warehouse.view')->group(function () {
         Route::get('/data-warehouse', [DataWarehouseController::class, 'index'])->name('data-warehouse.index');

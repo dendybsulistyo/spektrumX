@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreOrderArtworkRequest;
-use App\Models\Customer;
 use App\Models\HargaArtwork;
 use App\Models\Kategori;
 use App\Models\KonfigurasiJasaPotongArtwork;
@@ -41,14 +40,17 @@ class OrderArtworkController extends Controller
         return view('order-artwork.index', compact('orders'));
     }
 
-    public function create(): View
+    /**
+     * Order Artwork's own "new order" form is retired — new orders (Indoor,
+     * Artwork, or a mix of both in one nota) are now all created through
+     * Order Indoor's merged form. Old orders already in `order_artwork`
+     * keep working through every other method on this controller
+     * (edit/update/destroy/cancel/nota-pengganti) unchanged.
+     */
+    public function create(): RedirectResponse
     {
-        return view('order-artwork.create', [
-            'selectedCustomer' => old('KdCust') ? Customer::where('KdCust', old('KdCust'))->first() : null,
-            'produkList' => HargaArtwork::orderBy('NoUrut')->get(),
-            'kategoriList' => Kategori::whereHas('produkArtwork')->orderBy('NoUrut')->get(),
-            'nilaiX' => KonfigurasiJasaPotongArtwork::current()->nilai_x,
-        ]);
+        return redirect()->route('order-indoor.create')
+            ->with('status', 'Order artwork baru sekarang dibuat lewat form Order Indoor (bisa campur produk Indoor & Artwork dalam 1 nota).');
     }
 
     /**

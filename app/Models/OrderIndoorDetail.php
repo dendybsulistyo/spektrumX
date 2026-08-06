@@ -18,6 +18,7 @@ class OrderIndoorDetail extends Model
     protected $fillable = [
         'BrsOrder',
         'KdProd',
+        'jenis_produk',
         'NmProd',
         'Judul',
         'Panjang',
@@ -38,5 +39,15 @@ class OrderIndoorDetail extends Model
             'JumlahKertas' => 'integer',
             'TebalKertas' => 'integer',
         ];
+    }
+
+    /**
+     * Whether this line's KdProd/pricing should be looked up from
+     * harga_artwork (HargaArtwork) instead of produk_indoor (Produk) — see
+     * OrderPricingService::totalIndoor() and InvoiceController.
+     */
+    public function isArtwork(): bool
+    {
+        return $this->jenis_produk === 'artwork';
     }
 }

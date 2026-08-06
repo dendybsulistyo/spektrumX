@@ -141,6 +141,13 @@
                                     Dashboard
                                 </a>
 
+                                @can('preview-cetak.view')
+                                    <a href="{{ route('preview-cetak.index') }}" class="{{ $navTopLink(request()->routeIs('preview-cetak.*')) }}">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">{!! $navIcon('printer') !!}</svg>
+                                        Preview Cetak
+                                    </a>
+                                @endcan
+
                                 @if ($showKeuangan)
                                     <div class="relative" x-data="{ open: false }" @click.outside="open = false" @keydown.escape="open = false">
                                         <button type="button" @click="open = !open" class="{{ $navTopLink($keuanganActive) }}">
@@ -244,9 +251,9 @@
                                             @can('order-outdoor.view')
                                                 <a href="{{ route('order-outdoor.index') }}" class="{{ $dropdownLink(request()->routeIs('order-outdoor.*')) }}">Order Outdoor</a>
                                             @endcan
-                                            @can('order-artwork.view')
+                                            {{-- @can('order-artwork.view')
                                                 <a href="{{ route('order-artwork.index') }}" class="{{ $dropdownLink(request()->routeIs('order-artwork.*')) }}">Order Artwork</a>
-                                            @endcan
+                                            @endcan --}}
                                         </div>
                                     </div>
                                 @endif
@@ -395,6 +402,9 @@
                     <div class="px-3 py-3 space-y-0.5 text-[13px]" @click="mobileMenuOpen = false">
                         @php $active = request()->routeIs('dashboard'); @endphp
                         <a href="{{ route('dashboard') }}" class="{{ $mobileLink($active) }}">Dashboard</a>
+                        @can('preview-cetak.view')
+                            <a href="{{ route('preview-cetak.index') }}" class="{{ $mobileLink(request()->routeIs('preview-cetak.*')) }}">Preview Cetak</a>
+                        @endcan
 
                         @if ($showKeuangan)
                             <p class="px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">Keuangan</p>

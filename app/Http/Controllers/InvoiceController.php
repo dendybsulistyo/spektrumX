@@ -34,7 +34,24 @@ class InvoiceController extends Controller
 
         $items = $rawItems->map(function ($item) use ($type) {
             [$name, $subtotal] = match ($type) {
+                // Order Indoor now also holds Artwork-catalog items in the
+                // same order (jenis_produk per line) — look up whichever
+                // catalog/formula that specific line was priced from.
                 'indoor' => (function () use ($item) {
+                    if ($item->isArtwork()) {
+                        $harga = HargaArtwork::where('KdProd', $item->KdProd)->first();
+
+                        return [
+                            $item->Judul,
+                            $harga
+                                ? $this->pricingService->lineTotalArtwork(
+                                    $harga, $item->Panjang, $item->Lebar, $item->Qty,
+                                    $item->PisauTurun, $item->JumlahKertas, $item->TebalKertas,
+                                )
+                                : 0,
+                        ];
+                    }
+
                     $produk = Produk::where('KdProd', $item->KdProd)->first();
 
                     return [

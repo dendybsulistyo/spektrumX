@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreOrderIndoorRequest;
 use App\Models\Customer;
+use App\Models\HargaArtwork;
 use App\Models\Kategori;
 use App\Models\KonfigurasiJasaPotong;
+use App\Models\KonfigurasiJasaPotongArtwork;
 use App\Models\OrderIndoor;
 use App\Models\OrderIndoorDetail;
 use App\Models\OrderStatusNote;
@@ -46,8 +48,10 @@ class OrderIndoorController extends Controller
         return view('order-indoor.create', [
             'selectedCustomer' => old('KdCust') ? Customer::where('KdCust', old('KdCust'))->first() : null,
             'produkList' => Produk::orderBy('NoUrut')->get(),
-            'kategoriList' => Kategori::whereHas('produk')->orderBy('NoUrut')->get(),
+            'artworkProdukList' => HargaArtwork::orderBy('NoUrut')->get(),
+            'kategoriList' => $this->kategoriGabungan(),
             'nilaiX' => KonfigurasiJasaPotong::current()->nilai_x,
+            'nilaiXArtwork' => KonfigurasiJasaPotongArtwork::current()->nilai_x,
         ]);
     }
 
@@ -67,8 +71,10 @@ class OrderIndoorController extends Controller
             'replacementOrder' => $orderIndoor,
             'selectedCustomer' => $orderIndoor->customer,
             'produkList' => Produk::orderBy('NoUrut')->get(),
-            'kategoriList' => Kategori::whereHas('produk')->orderBy('NoUrut')->get(),
+            'artworkProdukList' => HargaArtwork::orderBy('NoUrut')->get(),
+            'kategoriList' => $this->kategoriGabungan(),
             'nilaiX' => KonfigurasiJasaPotong::current()->nilai_x,
+            'nilaiXArtwork' => KonfigurasiJasaPotongArtwork::current()->nilai_x,
             'items' => $orderIndoor->detailItems(),
         ]);
     }
@@ -122,8 +128,10 @@ class OrderIndoorController extends Controller
             'items' => $items,
             'selectedCustomer' => $orderIndoor->customer,
             'produkList' => Produk::orderBy('NoUrut')->get(),
-            'kategoriList' => Kategori::whereHas('produk')->orderBy('NoUrut')->get(),
+            'artworkProdukList' => HargaArtwork::orderBy('NoUrut')->get(),
+            'kategoriList' => $this->kategoriGabungan(),
             'nilaiX' => KonfigurasiJasaPotong::current()->nilai_x,
+            'nilaiXArtwork' => KonfigurasiJasaPotongArtwork::current()->nilai_x,
         ]);
     }
 
@@ -272,12 +280,16 @@ class OrderIndoorController extends Controller
             $seq = str_pad((string) ($index + 1), 2, '0', STR_PAD_LEFT);
             $brsOrder = $order->NoOrder.$seq;
 
-            $produk = Produk::where('KdProd', $item['KdProd'])->first();
+            $jenisProduk = $item['jenis_produk'] ?? 'indoor';
+            $nmProd = $jenisProduk === 'artwork'
+                ? HargaArtwork::where('KdProd', $item['KdProd'])->value('NmProd')
+                : Produk::where('KdProd', $item['KdProd'])->value('NmProd');
 
             OrderIndoorDetail::create([
                 'BrsOrder' => $brsOrder,
                 'KdProd' => $item['KdProd'],
-                'NmProd' => $produk->NmProd ?? '',
+                'jenis_produk' => $jenisProduk,
+                'NmProd' => $nmProd ?? '',
                 'Judul' => $item['Judul'],
                 'Panjang' => $item['Panjang'],
                 'Lebar' => $item['Lebar'],
@@ -288,6 +300,19 @@ class OrderIndoorController extends Controller
                 'TebalKertas' => $item['TebalKertas'] ?? null,
             ]);
         }
+    }
+
+    /**
+     * Kategori shared by both catalogs (Indoor's produk_indoor and
+     * Artwork's harga_artwork both key off kategori_produk_indoor.KdDivs —
+     * see Kategori::produk()/produkArtwork()), so the merged order form's
+     * "pick by kategori" picker can browse either catalog from one list.
+     */
+    private function kategoriGabungan()
+    {
+        return Kategori::where(fn ($q) => $q->whereHas('produk')->orWhereHas('produkArtwork'))
+            ->orderBy('NoUrut')
+            ->get();
     }
 
     private function generateNoOrder(string $tglOrder): string

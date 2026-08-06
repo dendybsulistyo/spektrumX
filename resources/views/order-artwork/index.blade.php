@@ -2,14 +2,18 @@
     <x-slot name="header">
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <h2 class="font-semibold text-xl text-gray-800">Order Artwork</h2>
-            @can('order-artwork.manage')
-                <a href="{{ route('order-artwork.create') }}"
+            @can('order-indoor.manage')
+                <a href="{{ route('order-indoor.create') }}"
                    class="inline-flex items-center px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-md hover:bg-gray-700">
-                    + Buat Order
+                    + Buat Order (lewat Order Indoor)
                 </a>
             @endcan
         </div>
     </x-slot>
+
+    <p class="text-xs text-gray-500 mb-4">
+        Order artwork baru sekarang dibuat lewat menu Order Indoor — bisa campur produk Indoor & Artwork dalam 1 nota. Halaman ini tinggal buat cari/kelola order artwork yang sudah ada.
+    </p>
 
     @php
         $statusBadgeStyle = fn (?string $status) => match ($status) {

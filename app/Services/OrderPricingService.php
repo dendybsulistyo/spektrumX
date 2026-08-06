@@ -75,9 +75,25 @@ class OrderPricingService
         return $hargaStd * $areaM2 * $qty;
     }
 
+    /**
+     * Order Indoor now also accepts Artwork-catalog items in the same
+     * order/nota (one nota instead of two when a customer orders both) —
+     * each line's `jenis_produk` says which catalog/formula to use.
+     */
     public function totalIndoor(OrderIndoor $order): float
     {
         return $order->detailItems()->sum(function ($item) {
+            if ($item->isArtwork()) {
+                $harga = HargaArtwork::where('KdProd', $item->KdProd)->first();
+
+                return $harga
+                    ? $this->lineTotalArtwork(
+                        $harga, $item->Panjang, $item->Lebar, $item->Qty,
+                        $item->PisauTurun, $item->JumlahKertas, $item->TebalKertas,
+                    )
+                    : 0;
+            }
+
             $produk = Produk::where('KdProd', $item->KdProd)->first();
 
             return $produk

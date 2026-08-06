@@ -116,6 +116,9 @@ class Role extends Model
             'harga-cetak-outdoor-khusus.view' => 'Lihat harga khusus outdoor customer VIP',
             'harga-cetak-outdoor-khusus.manage' => 'Atur harga khusus outdoor per customer VIP',
         ],
+        'Preview Cetak' => [
+            'preview-cetak.view' => 'Pakai alat preview mockup cetak (kaos, mug, spanduk, dll)',
+        ],
         'Pengaturan' => [
             'roles.manage' => 'Kelola role & user',
         ],

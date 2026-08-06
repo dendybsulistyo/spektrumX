@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Models\HargaArtwork;
 use App\Models\Produk;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Contracts\Validation\Validator;
@@ -30,7 +31,11 @@ class StoreOrderIndoorRequest extends FormRequest
             'replacement_order_id' => ['nullable', 'integer', 'exists:order_indoor,id'],
 
             'items' => ['required', 'array', 'min:1'],
-            'items.*.KdProd' => ['required', 'string', 'exists:produk_indoor,KdProd'],
+            // KdProd's existence depends on jenis_produk (produk_indoor vs
+            // harga_artwork) — can't express as a static exists: rule,
+            // checked in withValidator() below instead.
+            'items.*.KdProd' => ['required', 'string'],
+            'items.*.jenis_produk' => ['required', 'in:indoor,artwork'],
             'items.*.Judul' => ['required', 'string', 'max:30'],
             'items.*.Panjang' => ['required', 'numeric', 'min:0'],
             'items.*.Lebar' => ['required', 'numeric', 'min:0'],
@@ -42,22 +47,42 @@ class StoreOrderIndoorRequest extends FormRequest
     }
 
     /**
-     * Produk with isPjLb === Produk::PJLB_QTY_ALT (4, "Jasa Potong") price
-     * entirely from PisauTurun/JumlahKertas/TebalKertas — require all three
-     * for those items specifically, since the plain "required" rule can't
-     * look up the related produk's isPjLb.
+     * Order Indoor now accepts items from two catalogs (produk_indoor for
+     * "indoor" items, harga_artwork for "artwork" items — see
+     * OrderIndoorDetail::jenis_produk), so KdProd existence and the
+     * Jasa-Potong-required-fields check both need to look up the catalog
+     * that matches each item's own jenis_produk rather than one fixed table.
      */
     public function withValidator(Validator $validator): void
     {
         $validator->after(function (Validator $validator) {
             $items = $this->input('items', []);
-            $kodeList = collect($items)->pluck('KdProd')->filter()->unique();
-            $produkMap = Produk::whereIn('KdProd', $kodeList)->get()->keyBy('KdProd');
+
+            $indoorCodes = collect($items)->where('jenis_produk', 'indoor')->pluck('KdProd')->filter()->unique();
+            $artworkCodes = collect($items)->where('jenis_produk', 'artwork')->pluck('KdProd')->filter()->unique();
+
+            $produkMap = Produk::whereIn('KdProd', $indoorCodes)->get()->keyBy('KdProd');
+            $artworkMap = HargaArtwork::whereIn('KdProd', $artworkCodes)->get()->keyBy('KdProd');
 
             foreach ($items as $index => $item) {
-                $produk = $produkMap->get($item['KdProd'] ?? null);
+                $jenisProduk = $item['jenis_produk'] ?? 'indoor';
+                $kdProd = $item['KdProd'] ?? null;
 
-                if (! $produk || $produk->isPjLb !== Produk::PJLB_QTY_ALT) {
+                $produk = $jenisProduk === 'artwork'
+                    ? $artworkMap->get($kdProd)
+                    : $produkMap->get($kdProd);
+
+                if (! $produk) {
+                    $validator->errors()->add("items.{$index}.KdProd", 'Produk tidak ditemukan.');
+
+                    continue;
+                }
+
+                $isJasaPotong = $jenisProduk === 'artwork'
+                    ? $produk->isJasaPotong()
+                    : $produk->isPjLb === Produk::PJLB_QTY_ALT;
+
+                if (! $isJasaPotong) {
                     continue;
                 }
 

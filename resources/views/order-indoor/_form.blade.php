@@ -2,45 +2,63 @@
     $order = $order ?? null;
     $initialItems = isset($items) && $items->isNotEmpty()
         ? $items->map(fn ($i) => [
-            'KdProd' => $i->KdProd, 'Judul' => $i->Judul, 'Panjang' => $i->Panjang, 'Lebar' => $i->Lebar, 'Qty' => $i->Qty,
+            'KdProd' => $i->KdProd, 'jenis_produk' => $i->jenis_produk ?? 'indoor',
+            'Judul' => $i->Judul, 'Panjang' => $i->Panjang, 'Lebar' => $i->Lebar, 'Qty' => $i->Qty,
             'PisauTurun' => $i->PisauTurun, 'JumlahKertas' => $i->JumlahKertas, 'TebalKertas' => $i->TebalKertas,
         ])->values()
-        : collect([['KdProd' => '', 'Judul' => '', 'Panjang' => '', 'Lebar' => '', 'Qty' => 1, 'PisauTurun' => null, 'JumlahKertas' => null, 'TebalKertas' => null]]);
+        : collect([['KdProd' => '', 'jenis_produk' => 'indoor', 'Judul' => '', 'Panjang' => '', 'Lebar' => '', 'Qty' => 1, 'PisauTurun' => null, 'JumlahKertas' => null, 'TebalKertas' => null]]);
     $selectedCustomerLabel = $selectedCustomer ? "{$selectedCustomer->NmCust} ({$selectedCustomer->KdCust})" : '';
     $submitLabel = $order ? 'Simpan Perubahan' : 'Simpan Order';
+
+    // Order Indoor kini juga menerima produk dari katalog Artwork (satu
+    // order/nota bisa campur Indoor+Artwork) — kedua katalog digabung jadi
+    // satu produkMap/produkOptions, key-nya composite "jenis_produk|KdProd"
+    // karena kode 4-karakter KdProd bisa saja sama di kedua tabel.
+    $produkGabungan = $produkList->map(fn ($p) => [
+        'key' => 'indoor|'.$p->KdProd, 'KdProd' => $p->KdProd, 'jenis_produk' => 'indoor',
+        'NmProd' => $p->NmProd, 'HargaStd' => $p->HargaStd, 'HargaMin' => $p->HargaMin,
+        'isPjLb' => $p->isPjLb, 'Satuan' => $p->Satuan, 'KdDivs' => $p->KdDivs,
+    ])->concat(($artworkProdukList ?? collect())->map(fn ($p) => [
+        'key' => 'artwork|'.$p->KdProd, 'KdProd' => $p->KdProd, 'jenis_produk' => 'artwork',
+        'NmProd' => $p->NmProd, 'HargaStd' => $p->HargaStd, 'HargaMin' => $p->HargaMin,
+        'isPjLb' => $p->isPjLb, 'Satuan' => $p->Satuan, 'KdDivs' => $p->KdDivs,
+    ]));
 @endphp
 
 <div x-data="{
         items: {{ old('items') ? json_encode(old('items')) : $initialItems->toJson() }},
-        produkMap: @js($produkList->mapWithKeys(fn ($p) => [$p->KdProd => [
-            'NmProd' => $p->NmProd,
-            'HargaStd' => $p->HargaStd,
-            'HargaMin' => $p->HargaMin,
-            'isPjLb' => $p->isPjLb,
-            'Satuan' => $p->Satuan,
-        ]])),
-        produkOptions: @js($produkList->map(fn ($p) => ['KdProd' => $p->KdProd, 'NmProd' => $p->NmProd, 'KdDivs' => $p->KdDivs])),
+        produkMap: @js($produkGabungan->keyBy('key')->map(fn ($p) => [
+            'NmProd' => $p['NmProd'], 'HargaStd' => $p['HargaStd'], 'HargaMin' => $p['HargaMin'],
+            'isPjLb' => $p['isPjLb'], 'Satuan' => $p['Satuan'],
+        ])),
+        produkOptions: @js($produkGabungan->map(fn ($p) => [
+            'KdProd' => $p['KdProd'], 'jenis_produk' => $p['jenis_produk'], 'NmProd' => $p['NmProd'], 'KdDivs' => $p['KdDivs'],
+        ])),
         kategoriList: @js($kategoriList->map(fn ($k) => ['KdDivs' => $k->KdDivs, 'NmDivs' => $k->NmDivs])),
         nilaiX: {{ (float) $nilaiX }},
+        nilaiXArtwork: {{ (float) ($nilaiXArtwork ?? 0) }},
         potongModalIndex: null,
-        needsDimension(kdProd) {
-            const p = this.produkMap[kdProd];
+        produkKey(item) {
+            return (item.jenis_produk || 'indoor') + '|' + item.KdProd;
+        },
+        needsDimension(item) {
+            const p = this.produkMap[this.produkKey(item)];
             return p ? [2, 3].includes(p.isPjLb) : false;
         },
-        isJasaPotong(kdProd) {
-            const p = this.produkMap[kdProd];
+        isJasaPotong(item) {
+            const p = this.produkMap[this.produkKey(item)];
             return p ? p.isPjLb === 4 : false;
         },
-        dimensionUnit(kdProd) {
-            const p = this.produkMap[kdProd];
+        dimensionUnit(item) {
+            const p = this.produkMap[this.produkKey(item)];
             return p && p.Satuan === 'sqm' ? '(m)' : '(cm)';
         },
         onProdukChange(item) {
-            if (!this.needsDimension(item.KdProd)) {
+            if (!this.needsDimension(item)) {
                 item.Panjang = 0;
                 item.Lebar = 0;
             }
-            if (this.isJasaPotong(item.KdProd)) {
+            if (this.isJasaPotong(item)) {
                 this.potongModalIndex = this.items.indexOf(item);
             } else {
                 item.PisauTurun = null;
@@ -52,14 +70,15 @@
             const p = Number(item.PisauTurun) || 0;
             const q = Number(item.JumlahKertas) || 0;
             const tb = Number(item.TebalKertas) || 0;
-            return ((p * q * tb) / 10) + this.nilaiX;
+            const x = item.jenis_produk === 'artwork' ? this.nilaiXArtwork : this.nilaiX;
+            return ((p * q * tb) / 10) + x;
         },
         syncPotongQty(index) {
             const item = this.items[index];
             item.Qty = Math.round(this.potongTotal(item));
         },
         lineTotal(item) {
-            const p = this.produkMap[item.KdProd];
+            const p = this.produkMap[this.produkKey(item)];
             if (!p) return 0;
             const qty = Number(item.Qty) || 0;
             let raw;
@@ -76,7 +95,7 @@
             return this.items.reduce((sum, item) => sum + this.lineTotal(item), 0);
         },
         addItem() {
-            this.items.push({ KdProd: '', Judul: '', Panjang: '', Lebar: '', Qty: 1, PisauTurun: null, JumlahKertas: null, TebalKertas: null });
+            this.items.push({ KdProd: '', jenis_produk: 'indoor', Judul: '', Panjang: '', Lebar: '', Qty: 1, PisauTurun: null, JumlahKertas: null, TebalKertas: null });
             this.$nextTick(() => {
                 const inputs = document.querySelectorAll('[data-produk-search]');
                 inputs[inputs.length - 1]?.focus();
@@ -299,7 +318,7 @@
             <div class="grid grid-cols-2 sm:grid-cols-12 gap-2 items-start mb-1 p-3 bg-gray-50 rounded-md">
                 <div class="col-span-2 sm:col-span-3 relative"
                      x-data="{
-                        query: produkMap[item.KdProd] ? `${produkMap[item.KdProd].NmProd} (${item.KdProd})` : '',
+                        query: produkMap[produkKey(item)] ? `${produkMap[produkKey(item)].NmProd} (${item.KdProd})${item.jenis_produk === 'artwork' ? ' — Artwork' : ''}` : '',
                         open: false,
                         activeIndex: -1,
                         kategoriModalOpen: false,
@@ -368,7 +387,8 @@
                         },
                         select(p) {
                             item.KdProd = p.KdProd;
-                            this.query = `${p.NmProd} (${p.KdProd})`;
+                            item.jenis_produk = p.jenis_produk;
+                            this.query = `${p.NmProd} (${p.KdProd})${p.jenis_produk === 'artwork' ? ' — Artwork' : ''}`;
                             this.open = false;
                             this.activeIndex = -1;
                             onProdukChange(item);
@@ -411,14 +431,16 @@
                         </button>
                     </div>
                     <input type="hidden" :name="`items[${index}][KdProd]`" :value="item.KdProd" required>
+                    <input type="hidden" :name="`items[${index}][jenis_produk]`" :value="item.jenis_produk || 'indoor'">
 
                     <div x-show="open && results.length > 0" x-cloak :id="'prod-search-list-' + index"
                          class="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto">
-                        <template x-for="(p, i) in results" :key="p.KdProd">
+                        <template x-for="(p, i) in results" :key="p.jenis_produk + '|' + p.KdProd">
                             <button type="button" @click="select(p)" @mouseenter="activeIndex = i" :id="'prod-search-item-' + index + '-' + i"
                                     :class="i === activeIndex ? 'bg-gray-100' : ''"
                                     class="block w-full text-left px-3 py-2 text-sm hover:bg-gray-100">
                                 <span x-text="p.NmProd"></span> <span class="text-gray-400" x-text="'(' + p.KdProd + ')'"></span>
+                                <span x-show="p.jenis_produk === 'artwork'" class="ml-1 inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-purple-100 text-purple-700">Artwork</span>
                             </button>
                         </template>
                     </div>
@@ -469,12 +491,13 @@
                                     <template x-if="selectedKategori && produkInKategori.length === 0">
                                         <p class="text-xs text-gray-400 p-3">Tidak ada produk di kategori ini.</p>
                                     </template>
-                                    <template x-for="(p, i) in produkInKategori" :key="p.KdProd">
+                                    <template x-for="(p, i) in produkInKategori" :key="p.jenis_produk + '|' + p.KdProd">
                                         <button type="button" @click="selectFromKategori(p)" @mouseenter="activeProdukIndex = i"
                                                 :id="'prod-kat-item-' + index + '-' + i"
                                                 :class="kategoriFocusZone === 'produk' && activeProdukIndex === i ? 'bg-indigo-50 text-indigo-700 font-medium' : 'hover:bg-gray-50'"
                                                 class="block w-full text-left px-3 py-2 text-sm border-b border-gray-100">
                                             <span x-text="p.NmProd"></span> <span class="text-gray-400" x-text="'(' + p.KdProd + ')'"></span>
+                                            <span x-show="p.jenis_produk === 'artwork'" class="ml-1 inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-purple-100 text-purple-700">Artwork</span>
                                         </button>
                                     </template>
                                 </div>
@@ -487,25 +510,25 @@
                     <input type="text" :name="`items[${index}][Judul]`" x-model="item.Judul" maxlength="30" required
                            class="w-full rounded-md border-gray-300 text-sm">
                 </div>
-                <template x-if="!isJasaPotong(item.KdProd)">
+                <template x-if="!isJasaPotong(item)">
                     <div class="sm:col-span-2">
-                        <label class="block text-xs text-gray-500 mb-1">Panjang <span x-text="dimensionUnit(item.KdProd)"></span></label>
+                        <label class="block text-xs text-gray-500 mb-1">Panjang <span x-text="dimensionUnit(item)"></span></label>
                         <input type="number" step="0.01" :name="`items[${index}][Panjang]`" x-model="item.Panjang"
-                               :readonly="!needsDimension(item.KdProd)" :required="needsDimension(item.KdProd)"
-                               :class="!needsDimension(item.KdProd) && 'bg-gray-100 text-gray-400'"
+                               :readonly="!needsDimension(item)" :required="needsDimension(item)"
+                               :class="!needsDimension(item) && 'bg-gray-100 text-gray-400'"
                                class="w-full rounded-md border-gray-300 text-sm">
                     </div>
                 </template>
-                <template x-if="!isJasaPotong(item.KdProd)">
+                <template x-if="!isJasaPotong(item)">
                     <div class="sm:col-span-2">
-                        <label class="block text-xs text-gray-500 mb-1">Lebar <span x-text="dimensionUnit(item.KdProd)"></span></label>
+                        <label class="block text-xs text-gray-500 mb-1">Lebar <span x-text="dimensionUnit(item)"></span></label>
                         <input type="number" step="0.01" :name="`items[${index}][Lebar]`" x-model="item.Lebar"
-                               :readonly="!needsDimension(item.KdProd)" :required="needsDimension(item.KdProd)"
-                               :class="!needsDimension(item.KdProd) && 'bg-gray-100 text-gray-400'"
+                               :readonly="!needsDimension(item)" :required="needsDimension(item)"
+                               :class="!needsDimension(item) && 'bg-gray-100 text-gray-400'"
                                class="w-full rounded-md border-gray-300 text-sm">
                     </div>
                 </template>
-                <template x-if="isJasaPotong(item.KdProd)">
+                <template x-if="isJasaPotong(item)">
                     <div class="sm:col-span-4">
                         <label class="block text-xs text-gray-500 mb-1">Data Jasa Potong</label>
                         <button type="button" @click="potongModalIndex = index"
@@ -529,7 +552,7 @@
                 <div class="sm:col-span-1">
                     <label class="block text-xs text-gray-500 mb-1">Qty</label>
                     <input type="number" :name="`items[${index}][Qty]`" x-model="item.Qty" min="1" required
-                           :readonly="isJasaPotong(item.KdProd)" :class="isJasaPotong(item.KdProd) && 'bg-gray-100 text-gray-400'"
+                           :readonly="isJasaPotong(item)" :class="isJasaPotong(item) && 'bg-gray-100 text-gray-400'"
                            class="w-full rounded-md border-gray-300 text-sm">
                 </div>
                 <div class="col-span-2 sm:col-span-1 flex justify-end sm:justify-start sm:items-end h-full pt-1 sm:pt-5">
