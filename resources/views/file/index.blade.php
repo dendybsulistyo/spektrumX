@@ -5,7 +5,7 @@
 
     <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
 
-        <div class="p-4 border-b">
+        <div class="p-4 border-b flex flex-wrap items-center gap-3">
             <form method="GET" class="flex gap-2">
                 <input type="text" name="search" value="{{ request('search') }}"
                        placeholder="Cari no order, nama customer, atau nama file..."
@@ -15,6 +15,13 @@
                     <a href="{{ route('file.index') }}" class="px-4 py-2 text-sm text-gray-500 hover:underline">Reset</a>
                 @endif
             </form>
+
+            @can('kasir.replacement.manage')
+                <a href="{{ route('kasir.index', ['tab' => 'replacement']) }}"
+                   class="ml-auto inline-flex items-center px-3 py-1.5 bg-rose-50 text-rose-700 border border-rose-200 text-xs font-semibold rounded-md hover:bg-rose-100">
+                    Nota Pengganti ({{ $replacementCount }})
+                </a>
+            @endcan
         </div>
 
         <div class="overflow-x-auto">

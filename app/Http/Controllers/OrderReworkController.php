@@ -24,9 +24,11 @@ class OrderReworkController extends Controller
 
     /**
      * Any operator who can manage at least one production stage can raise a
-     * rework/cancel request from wherever the order currently sits — this
-     * is a shared cross-stage action, not gated to one specific stage's
+     * rework request from wherever the order currently sits — this is a
+     * shared cross-stage action, not gated to one specific stage's
      * permission, since the button appears on all six stage pages.
+     * kasir.manage is also allowed since "Batalkan Order" (action=batal) now
+     * lives in Kasir instead of on the stage pages.
      */
     public function store(Request $request, string $type, int $id): RedirectResponse
     {
@@ -36,7 +38,8 @@ class OrderReworkController extends Controller
                 || auth()->user()->hasPermission('order-finishing.manage')
                 || auth()->user()->hasPermission('order-qc.manage')
                 || auth()->user()->hasPermission('order-bungkus.manage')
-                || auth()->user()->hasPermission('pengambilan.manage'),
+                || auth()->user()->hasPermission('pengambilan.manage')
+                || auth()->user()->hasPermission('kasir.manage'),
             403
         );
 
@@ -122,8 +125,23 @@ class OrderReworkController extends Controller
                 $this->creditService->reduceHutang($order->customer, $piutang);
             }
         } elseif ($dibayar > 0 && $order->cara_bayar) {
-            $akunKas = AccountingService::akunKasFor($order->cara_bayar);
             $kdBantu = $order->customer?->KdCust ?? '';
+
+            // 'campuran' means the original payment was split across
+            // methods — reverse it out of the same real methods (tunai/
+            // qris/transfer) it actually came from instead of guessing one.
+            // order_payments.cara_bayar has no 'campuran' value of its own,
+            // so the refund is recorded as one row per real method too.
+            $breakdown = $order->cara_bayar === 'campuran'
+                ? $this->refundBreakdownByMethod($type, $order->id, $dibayar)
+                : [$order->cara_bayar => $dibayar];
+
+            $kasLines = collect($breakdown)
+                ->map(fn ($jumlah, $caraBayar) => ['akun' => AccountingService::akunKasFor($caraBayar), 'jumlah' => $jumlah])
+                ->groupBy('akun')
+                ->map(fn ($rows, $akun) => ['akun' => $akun, 'kredit' => (float) array_sum(array_column($rows->all(), 'jumlah')), 'kd_bantu' => $kdBantu])
+                ->values()
+                ->all();
 
             $this->accounting->post(
                 now()->format('Y-m-d'),
@@ -131,26 +149,57 @@ class OrderReworkController extends Controller
                 'Refund pembatalan order '.$order->NoOrder,
                 [
                     ['akun' => AccountingService::AKUN_PENJUALAN, 'debet' => $dibayar],
-                    ['akun' => $akunKas, 'kredit' => $dibayar, 'kd_bantu' => $kdBantu],
+                    ...$kasLines,
                 ]
             );
 
-            OrderPayment::create([
-                'order_type' => $type,
-                'order_id' => $order->id,
-                'jenis' => 'refund',
-                'jumlah' => -$dibayar,
-                'cara_bayar' => $order->cara_bayar,
-                'no_referensi' => null,
-                'user_id' => auth()->id(),
-                'created_at' => now(),
-            ]);
+            foreach ($breakdown as $caraBayar => $jumlah) {
+                OrderPayment::create([
+                    'order_type' => $type,
+                    'order_id' => $order->id,
+                    'jenis' => 'refund',
+                    'jumlah' => -$jumlah,
+                    'cara_bayar' => $caraBayar,
+                    'no_referensi' => null,
+                    'user_id' => auth()->id(),
+                    'created_at' => now(),
+                ]);
+            }
         }
 
         $order->update([
             'jumlah_dibayar' => 0,
             'jumlah_piutang' => 0,
         ]);
+    }
+
+    /**
+     * Reconstructs the per-method split for a refund when the order's own
+     * cara_bayar is 'campuran' — sums the actual OrderPayment rows by
+     * method (excluding any prior refunds) and proportions the amount still
+     * being refunded across those same methods, so both the journal and the
+     * refund's own OrderPayment rows reflect where the money actually came
+     * from. Falls back to a single 'transfer' bucket if the ledger somehow
+     * has nothing to go on (shouldn't happen for a paid order, but a
+     * refund still has to land somewhere).
+     *
+     * @return array<string, float>
+     */
+    private function refundBreakdownByMethod(string $type, int $orderId, float $dibayar): array
+    {
+        $byMethod = OrderPayment::forOrder($type, $orderId)
+            ->where('jenis', '!=', 'refund')
+            ->get()
+            ->groupBy('cara_bayar')
+            ->map(fn ($rows) => (float) $rows->sum('jumlah'));
+
+        $totalPaid = (float) $byMethod->sum();
+
+        if ($totalPaid <= 0) {
+            return ['transfer' => $dibayar];
+        }
+
+        return $byMethod->map(fn ($jumlah) => $jumlah / $totalPaid * $dibayar)->all();
     }
 
     public function reject(OrderReworkRequest $orderReworkRequest): RedirectResponse

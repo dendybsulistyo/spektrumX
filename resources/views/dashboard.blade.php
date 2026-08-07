@@ -66,6 +66,7 @@
             ['num' => '07', 'label' => 'Selesai', 'count' => $stats['selesai']],
         ];
         $tipeAbbr = ['Indoor' => 'IN', 'Outdoor' => 'OUT', 'Artwork' => 'ART'];
+        $countsByTipe = $recent->countBy('tipe');
     @endphp
 
     <div id="industry-dashboard">
@@ -123,7 +124,7 @@
                 @endforeach
             </section>
 
-            <section class="blueprint" style="padding: var(--space-6);">
+            <section class="blueprint" style="padding: var(--space-6);" x-data="{ tipeTab: 'semua' }">
                 <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
                 <div style="display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-4); flex-wrap: wrap; margin-bottom: var(--space-4);">
                     <div>
@@ -139,6 +140,21 @@
                     </div>
                     <span class="tag tag-outline">{{ $recent->count() }} order ditampilkan</span>
                 </div>
+
+                <div class="seg" style="margin-bottom: var(--space-4);">
+                    <label class="seg-opt">
+                        <input type="radio" name="tipeTab" value="semua" x-model="tipeTab">
+                        Semua ({{ $recent->count() }})
+                    </label>
+                    <label class="seg-opt">
+                        <input type="radio" name="tipeTab" value="indoor" x-model="tipeTab">
+                        Indoor ({{ $countsByTipe['Indoor'] ?? 0 }})
+                    </label>
+                    <label class="seg-opt">
+                        <input type="radio" name="tipeTab" value="outdoor" x-model="tipeTab">
+                        Outdoor ({{ $countsByTipe['Outdoor'] ?? 0 }})
+                    </label>
+                </div>
                 <div style="overflow-x: auto;">
                     <table class="table" style="min-width: 1240px;">
                         <thead>
@@ -148,7 +164,7 @@
                         </thead>
                         <tbody>
                             @forelse ($recent as $row)
-                                <tr>
+                                <tr x-show="tipeTab === 'semua' || tipeTab === '{{ strtolower($row['tipe']) }}'">
                                     <td class="text-muted">{{ $loop->iteration }}</td>
                                     <td style="font-family: var(--font-heading); font-weight: 600; letter-spacing: 0.03em;">{{ $row['no_order'] }}</td>
                                     <td><span class="tag tag-neutral">{{ $tipeAbbr[$row['tipe']] ?? $row['tipe'] }}</span></td>

@@ -59,7 +59,7 @@
                     <table class="table" style="min-width: 640px;">
                         <thead>
                             <tr>
-                                <th>Kasir</th><th style="text-align: right;">Jumlah Transaksi</th><th style="text-align: right;">Masuk</th><th style="text-align: right;">Keluar</th><th style="text-align: right;">Net</th>
+                                <th>Kasir</th><th style="text-align: right;">Jumlah Transaksi</th><th style="text-align: right;">Masuk</th><th style="text-align: right;">Keluar</th><th style="text-align: right;">Net</th><th style="text-align: right;">Aksi</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -70,9 +70,16 @@
                                     <td style="text-align: right;">{{ $fmt($row['masuk']) }}</td>
                                     <td style="text-align: right; color: #991b1b;">{{ $row['keluar'] > 0 ? $fmt($row['keluar']) : '-' }}</td>
                                     <td style="text-align: right; font-family: var(--font-heading); font-weight: 600;">{{ $fmt($row['net']) }}</td>
+                                    <td style="text-align: right;">
+                                        @if ($row['user_id'])
+                                            <a href="{{ route('keuangan.rekap-kasir.customer', ['kasir' => $row['user_id'], 'dari' => $dari, 'sampai' => $sampai]) }}" class="text-muted" style="font-size: 13px;">
+                                                Lihat Customer &rarr;
+                                            </a>
+                                        @endif
+                                    </td>
                                 </tr>
                             @empty
-                                <tr><td colspan="5" class="text-muted" style="text-align: center; padding: var(--space-6);">Belum ada transaksi pada rentang tanggal ini.</td></tr>
+                                <tr><td colspan="6" class="text-muted" style="text-align: center; padding: var(--space-6);">Belum ada transaksi pada rentang tanggal ini.</td></tr>
                             @endforelse
                         </tbody>
                     </table>

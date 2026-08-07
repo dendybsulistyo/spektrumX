@@ -72,6 +72,7 @@ class Role extends Model
             'kasir.view' => 'Lihat antrian kasir',
             'kasir.manage' => 'Proses pembayaran order',
             'kasir.approve-diskon' => 'Setujui/tolak pengajuan diskon nota kasir',
+            'kasir.replacement.manage' => 'Buat nota pengganti',
         ],
         'Operator Desain' => [
             'order-desain.view' => 'Lihat antrian desain',

@@ -30,7 +30,7 @@
 
     <div id="industry-desain">
         <div style="max-width: 1480px; margin: 0 auto; display: flex; flex-direction: column; gap: var(--space-6);"
-             x-data="{ modalOpen: false, type: '', id: null, noOrder: '', cancelModalOpen: false, cancelType: '', cancelId: null, cancelNoOrder: '' }">
+             x-data="{ modalOpen: false, type: '', id: null, noOrder: '' }">
 
             <div x-data="{ tab: '{{ $initialTab }}' }">
                 <div style="display: flex;">
@@ -115,12 +115,6 @@
                                                                 @click="modalOpen = true; type = '{{ $tabKey }}'; id = {{ $row->order->id }}; noOrder = '{{ $row->order->NoOrder }}'">
                                                             Update status
                                                         </button>
-                                                        @can('order-desain.manage')
-                                                            <button type="button" class="in-btn in-btn-danger"
-                                                                    @click="cancelModalOpen = true; cancelType = '{{ $tabKey }}'; cancelId = {{ $row->order->id }}; cancelNoOrder = '{{ $row->order->NoOrder }}'">
-                                                                Batal &amp; IB
-                                                            </button>
-                                                        @endcan
                                                     @endif
                                                 </div>
                                             </td>
@@ -227,10 +221,6 @@
                                                                 <input type="hidden" name="action" value="selesai">
                                                                 <button type="submit" class="in-btn">Kirim Cetak</button>
                                                             </form>
-                                                            <button type="button" class="in-btn in-btn-danger"
-                                                                    @click="cancelModalOpen = true; cancelType = 'outdoor'; cancelId = {{ $order->id }}; cancelNoOrder = '{{ $order->NoOrder }}'">
-                                                                Batal &amp; IB
-                                                            </button>
                                                         @endcan
                                                     @endif
                                                 </div>
@@ -337,25 +327,6 @@
                 </div>
             </div>
 
-            <div x-show="cancelModalOpen" x-cloak @keydown.escape.window="cancelModalOpen = false" class="dialog-backdrop">
-                <div @click="cancelModalOpen = false" style="position: absolute; inset: 0;"></div>
-                <div class="dialog blueprint" style="position: relative;">
-                    <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
-                    <form method="POST" :action="`/order-${cancelType}/${cancelId}/request-cancel`" style="display: flex; flex-direction: column; gap: var(--space-3);">
-                        @csrf
-                        <div class="dialog-title">Ajukan pembatalan — <span x-text="cancelNoOrder"></span></div>
-                        <p class="text-muted" style="font-size: 13px; margin: 0;">Order akan ditandai menunggu persetujuan. Perlu disetujui Admin/Admin Kasir sebelum benar-benar dibatalkan.</p>
-                        <div class="field">
-                            <label>Alasan pembatalan</label>
-                            <textarea name="cancel_reason" rows="3" required maxlength="255" class="input" placeholder="misal: customer minta batal, salah spesifikasi, dll"></textarea>
-                        </div>
-                        <div class="dialog-actions">
-                            <button type="button" @click="cancelModalOpen = false" class="btn btn-secondary">Batal</button>
-                            <button type="submit" class="btn btn-primary">Ajukan pembatalan</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
         </div>
     </div>
 </x-app-layout>

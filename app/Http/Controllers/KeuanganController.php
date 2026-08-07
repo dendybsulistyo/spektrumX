@@ -117,6 +117,7 @@ class KeuanganController extends Controller
                 $keluar = (float) $group->where('jumlah', '<', 0)->sum('jumlah') * -1;
 
                 return [
+                    'user_id' => $group->first()->user_id,
                     'kasir' => $group->first()->user?->name ?? '-',
                     'jumlah_transaksi' => $group->count(),
                     'masuk' => $masuk,
@@ -134,6 +135,123 @@ class KeuanganController extends Controller
             'totalMasuk' => (float) $payments->where('jumlah', '>', 0)->sum('jumlah'),
             'totalKeluar' => (float) $payments->where('jumlah', '<', 0)->sum('jumlah') * -1,
             'jumlahTransaksi' => $payments->count(),
+        ]);
+    }
+
+    /**
+     * Drill-down from rekapKasir(): every customer a given kasir operator
+     * personally processed payment for in the period, split by order type —
+     * "kasir A layani customer siapa aja, indoor berapa outdoor berapa" —
+     * plus how much of what they took in came in tunai/QRIS/transfer.
+     *
+     * Order counts are keyed off each order's own kasir_user_id/dibayar_at
+     * (who actually pressed "Proses Pembayaran"), so a DP + separate
+     * pelunasan on the same order still counts as one order, not two. The
+     * money breakdown, however, is sourced from the OrderPayment ledger
+     * instead — a single payment can now be split across methods (e.g. DP
+     * paid as half QRIS half transfer), which the order's own cara_bayar
+     * column can no longer represent (it just says 'campuran'), so the
+     * ledger is the only accurate source for "how much came in via which
+     * method". Hutang orders contribute to the indoor/outdoor counts but
+     * nothing to the cara_bayar totals, since no cash has actually moved.
+     */
+    public function rekapKasirCustomer(Request $request, int $kasir): View
+    {
+        $dari = $request->filled('dari') ? $request->string('dari')->toString() : now()->format('Y-m-d');
+        $sampai = $request->filled('sampai') ? $request->string('sampai')->toString() : now()->format('Y-m-d');
+
+        $kasirUser = \App\Models\User::findOrFail($kasir);
+
+        $models = ['indoor' => OrderIndoor::class, 'outdoor' => OrderOutdoor::class];
+
+        $customers = collect();
+
+        foreach ($models as $type => $model) {
+            $model::query()
+                ->with('customer')
+                ->where('kasir_user_id', $kasir)
+                ->whereBetween('dibayar_at', ["{$dari} 00:00:00", "{$sampai} 23:59:59"])
+                ->get()
+                ->each(function ($order) use (&$customers, $type) {
+                    $key = $order->KdCust ?: '-';
+
+                    if (! $customers->has($key)) {
+                        $customers->put($key, [
+                            'kode' => $order->KdCust,
+                            'nama' => $order->customer?->NmCust ? ucwords(mb_strtolower($order->customer->NmCust)) : ($order->KdCust ?: 'Tanpa customer'),
+                            'indoor' => 0,
+                            'outdoor' => 0,
+                            'tunai' => 0.0,
+                            'qris' => 0.0,
+                            'transfer' => 0.0,
+                        ]);
+                    }
+
+                    $entry = $customers->get($key);
+                    $entry[$type]++;
+                    $customers->put($key, $entry);
+                });
+        }
+
+        $payments = OrderPayment::query()
+            ->whereIn('order_type', array_keys($models))
+            ->where('user_id', $kasir)
+            ->whereBetween('created_at', ["{$dari} 00:00:00", "{$sampai} 23:59:59"])
+            ->get();
+
+        // Resolve each payment's customer without N+1 — one query per order
+        // type for the handful of orders referenced this period.
+        $kdCustByOrder = collect();
+        foreach ($payments->groupBy('order_type') as $type => $rows) {
+            $models[$type]::query()
+                ->whereIn('id', $rows->pluck('order_id')->unique())
+                ->get(['id', 'KdCust'])
+                ->each(function ($order) use (&$kdCustByOrder, $type) {
+                    $kdCustByOrder["{$type}-{$order->id}"] = $order->KdCust;
+                });
+        }
+
+        foreach ($payments as $payment) {
+            if (! in_array($payment->cara_bayar, ['tunai', 'qris', 'transfer'], true)) {
+                continue;
+            }
+
+            $kdCust = $kdCustByOrder["{$payment->order_type}-{$payment->order_id}"] ?? null;
+            $key = $kdCust ?: '-';
+
+            if (! $customers->has($key)) {
+                $customers->put($key, [
+                    'kode' => $kdCust,
+                    'nama' => $kdCust ?: 'Tanpa customer',
+                    'indoor' => 0,
+                    'outdoor' => 0,
+                    'tunai' => 0.0,
+                    'qris' => 0.0,
+                    'transfer' => 0.0,
+                ]);
+            }
+
+            $entry = $customers->get($key);
+            $entry[$payment->cara_bayar] += (float) $payment->jumlah;
+            $customers->put($key, $entry);
+        }
+
+        $rows = $customers
+            ->map(fn ($row) => $row + [
+                'total' => $row['indoor'] + $row['outdoor'],
+                'total_dibayar' => $row['tunai'] + $row['qris'] + $row['transfer'],
+            ])
+            ->sortByDesc('total_dibayar')
+            ->values();
+
+        return view('keuangan.rekap-kasir-customer', [
+            'kasirUser' => $kasirUser,
+            'dari' => $dari,
+            'sampai' => $sampai,
+            'rows' => $rows,
+            'totalTunai' => $rows->sum('tunai'),
+            'totalQris' => $rows->sum('qris'),
+            'totalTransfer' => $rows->sum('transfer'),
         ]);
     }
 

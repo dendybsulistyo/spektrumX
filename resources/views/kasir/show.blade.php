@@ -3,9 +3,9 @@
         <h2 class="font-semibold text-xl text-gray-800">Bayar Order {{ $order->NoOrder }}</h2>
     </x-slot>
 
-    <div x-data="{ invoiceModalOpen: false, autoPrintPending: {{ session('autoPrintInvoice') ? 'true' : 'false' }}, diskonModalOpen: false }"
+    <div x-data="{ invoiceModalOpen: false, autoPrintPending: {{ session('autoPrintInvoice') ? 'true' : 'false' }}, diskonModalOpen: false, cancelModalOpen: false, batalOrderModalOpen: false }"
          x-init="if (autoPrintPending) { invoiceModalOpen = true }"
-         @keydown.escape.window="invoiceModalOpen = false; diskonModalOpen = false">
+         @keydown.escape.window="invoiceModalOpen = false; diskonModalOpen = false; cancelModalOpen = false; batalOrderModalOpen = false">
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div class="lg:col-span-2 bg-white rounded-lg border border-gray-200 overflow-hidden">
             @if ($order->replaces)
@@ -118,6 +118,33 @@
                         </div>
                     @endif
                 </div>
+
+                @if ($order->cancel_requested_at)
+                    <div class="mt-3 rounded-md bg-amber-50 border border-amber-200 p-3 text-xs text-amber-800">
+                        <p class="font-semibold">Menunggu persetujuan pembatalan</p>
+                        <p class="mt-0.5">Alasan: {{ $order->cancel_reason }}</p>
+                        <p class="mt-0.5 text-amber-600">Diajukan oleh {{ $order->cancelRequestedBy?->name ?? '-' }} — disetujui/ditolak dari Antrian Desain.</p>
+                    </div>
+                @elseif ($order->status === 'desain')
+                    @can('kasir.manage')
+                        @if ($pendingRework)
+                            <div class="mt-3 rounded-md bg-amber-50 border border-amber-200 p-3 text-xs text-amber-800">
+                                Ada pengajuan Ulang Proses / Batalkan Order yang masih menunggu persetujuan untuk order ini.
+                            </div>
+                        @else
+                            <div class="mt-3 flex gap-2">
+                                <button type="button" @click="cancelModalOpen = true"
+                                        class="inline-flex items-center px-3 py-1.5 bg-red-600 text-white text-xs font-semibold rounded-md hover:bg-red-700">
+                                    Batal &amp; IB
+                                </button>
+                                <button type="button" @click="batalOrderModalOpen = true"
+                                        class="inline-flex items-center px-3 py-1.5 bg-red-50 text-red-700 border border-red-300 text-xs font-semibold rounded-md hover:bg-red-100">
+                                    Batalkan Order
+                                </button>
+                            </div>
+                        @endif
+                    @endcan
+                @endif
             </div>
         </div>
 
@@ -135,15 +162,34 @@
                     if (val < this.dpMin) return `Jumlah DP minimal Rp ${this.dpMin.toLocaleString('id-ID')}.`;
                     if (val > this.dpMax) return `Jumlah DP tidak boleh melebihi Rp ${this.dpMax.toLocaleString('id-ID')}.`;
                     return '';
-                }
+                },
+                rincian: [{ cara_bayar: 'tunai', jumlah: '', no_referensi: '' }],
+                totalBayar: {{ (float) ($diskonStatus === 'approved' ? $order->totalSetelahDiskon() : ($order->total ?? 0)) }},
+                get targetRincian() {
+                    return this.metode === 'dp' ? Number(this.jumlahDp || 0) : this.totalBayar;
+                },
+                get rincianTotal() {
+                    return this.rincian.reduce((sum, r) => sum + Number(r.jumlah || 0), 0);
+                },
+                get rincianDiff() {
+                    return Math.round((this.targetRincian - this.rincianTotal) * 100) / 100;
+                },
+                get rincianError() {
+                    if (this.metode === 'hutang' || this.rincianDiff === 0) return '';
+                    return this.rincianDiff > 0
+                        ? `Kurang Rp ${this.rincianDiff.toLocaleString('id-ID')}.`
+                        : `Lebih Rp ${Math.abs(this.rincianDiff).toLocaleString('id-ID')}.`;
+                },
+                addRincian() { this.rincian.push({ cara_bayar: 'tunai', jumlah: '', no_referensi: '' }); },
+                removeRincian(i) { this.rincian.splice(i, 1); },
              }">
             <form method="POST" action="{{ route('kasir.bayar', ['type' => $type, 'id' => $order->id]) }}"
                   class="space-y-4" novalidate
-                  @submit="if (dpError) { $event.preventDefault(); }">
+                  @submit="if (dpError || rincianError) { $event.preventDefault(); }">
                 @csrf
 
-                    @if (! $order->replacement_order_id)
                     <div>
+                    @if (! $order->replacement_order_id)
                     <x-input-label value="Metode Pembayaran" />
                     <div class="mt-2 space-y-2">
                         <label class="flex items-center gap-2">
@@ -172,31 +218,77 @@
                     <x-input-error :messages="$errors->get('metode_bayar')" class="mt-1" />
                 </div>
 
-                <div x-show="metode !== 'hutang'" x-cloak>
-                    <x-input-label value="Cara Bayar" />
-                    <div class="mt-2 space-y-2">
-                        <label class="flex items-center gap-2">
-                            <input type="radio" name="cara_bayar" value="tunai" x-model="caraBayar" class="text-gray-900 focus:ring-gray-900">
-                            <span class="text-sm text-gray-700">Tunai</span>
-                        </label>
-                        <label class="flex items-center gap-2">
-                            <input type="radio" name="cara_bayar" value="qris" x-model="caraBayar" class="text-gray-900 focus:ring-gray-900">
-                            <span class="text-sm text-gray-700">QRIS</span>
-                        </label>
-                        <label class="flex items-center gap-2">
-                            <input type="radio" name="cara_bayar" value="transfer" x-model="caraBayar" class="text-gray-900 focus:ring-gray-900">
-                            <span class="text-sm text-gray-700">Transfer</span>
-                        </label>
+                @if ($order->replacement_order_id)
+                    <div x-show="metode !== 'hutang'" x-cloak>
+                        <x-input-label value="Cara Bayar" />
+                        <div class="mt-2 space-y-2">
+                            <label class="flex items-center gap-2">
+                                <input type="radio" name="cara_bayar" value="tunai" x-model="caraBayar" class="text-gray-900 focus:ring-gray-900">
+                                <span class="text-sm text-gray-700">Tunai</span>
+                            </label>
+                            <label class="flex items-center gap-2">
+                                <input type="radio" name="cara_bayar" value="qris" x-model="caraBayar" class="text-gray-900 focus:ring-gray-900">
+                                <span class="text-sm text-gray-700">QRIS</span>
+                            </label>
+                            <label class="flex items-center gap-2">
+                                <input type="radio" name="cara_bayar" value="transfer" x-model="caraBayar" class="text-gray-900 focus:ring-gray-900">
+                                <span class="text-sm text-gray-700">Transfer</span>
+                            </label>
+                        </div>
+                        <x-input-error :messages="$errors->get('cara_bayar')" class="mt-1" />
                     </div>
-                    <x-input-error :messages="$errors->get('cara_bayar')" class="mt-1" />
-                </div>
 
-                <div x-show="metode !== 'hutang' && caraBayar !== 'tunai'" x-cloak>
-                    <x-input-label for="no_referensi" value="No. Referensi" />
-                    <x-text-input id="no_referensi" name="no_referensi" type="text" x-model="noReferensi"
-                                  class="mt-1 block w-full" maxlength="50" placeholder="ID transaksi QRIS / 4 digit terakhir rekening tujuan" />
-                    <x-input-error :messages="$errors->get('no_referensi')" class="mt-1" />
-                </div>
+                    <div x-show="metode !== 'hutang' && caraBayar !== 'tunai'" x-cloak>
+                        <x-input-label for="no_referensi" value="No. Referensi" />
+                        <x-text-input id="no_referensi" name="no_referensi" type="text" x-model="noReferensi"
+                                      class="mt-1 block w-full" maxlength="50" placeholder="ID transaksi QRIS / 4 digit terakhir rekening tujuan" />
+                        <x-input-error :messages="$errors->get('no_referensi')" class="mt-1" />
+                    </div>
+                @else
+                    <div x-show="metode !== 'hutang'" x-cloak>
+                        <x-input-label value="Rincian Pembayaran" />
+                        <p class="text-xs text-gray-500 mt-0.5">Bisa dibagi ke beberapa metode sekaligus, misalnya sebagian QRIS sebagian transfer.</p>
+
+                        <div class="mt-2 space-y-2">
+                            <template x-for="(row, idx) in rincian" :key="idx">
+                                <div class="flex items-start gap-2 rounded-md border border-gray-200 p-2">
+                                    <div class="flex-1 space-y-1.5">
+                                        <div class="flex gap-2">
+                                            <select :name="`rincian[${idx}][cara_bayar]`" x-model="row.cara_bayar"
+                                                    class="rounded-md border-gray-300 text-sm py-1.5 w-28">
+                                                <option value="tunai">Tunai</option>
+                                                <option value="qris">QRIS</option>
+                                                <option value="transfer">Transfer</option>
+                                            </select>
+                                            <input type="text" inputmode="numeric"
+                                                   :value="row.jumlah ? Number(row.jumlah).toLocaleString('id-ID') : ''"
+                                                   @input="row.jumlah = $event.target.value.replace(/\D/g, '')"
+                                                   placeholder="Jumlah" class="flex-1 rounded-md border-gray-300 text-sm py-1.5">
+                                            <input type="hidden" :name="`rincian[${idx}][jumlah]`" :value="row.jumlah">
+                                            <button type="button" x-show="rincian.length > 1" @click="removeRincian(idx)"
+                                                    class="text-gray-400 hover:text-red-600 px-1">&times;</button>
+                                        </div>
+                                        <input type="text" x-show="row.cara_bayar !== 'tunai'" x-cloak
+                                               :name="`rincian[${idx}][no_referensi]`" x-model="row.no_referensi"
+                                               maxlength="50" placeholder="No. referensi QRIS/transfer"
+                                               class="w-full rounded-md border-gray-300 text-xs py-1.5">
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+
+                        <button type="button" @click="addRincian()" class="mt-2 text-xs font-semibold text-blue-600 hover:underline">
+                            + Tambah metode pembayaran
+                        </button>
+
+                        <p class="text-xs mt-2" :class="rincianError ? 'text-red-600 font-semibold' : 'text-gray-400'">
+                            Total rincian: <span x-text="rincianTotal.toLocaleString('id-ID')"></span>
+                            / <span x-text="targetRincian.toLocaleString('id-ID')"></span>
+                            <span x-show="rincianError" x-text="'— ' + rincianError"></span>
+                        </p>
+                        <x-input-error :messages="$errors->get('rincian')" class="mt-1" />
+                    </div>
+                @endif
 
                 @if ($type === 'outdoor')
                     <div x-show="metode === 'dp'" x-cloak>
@@ -317,6 +409,58 @@
                 <div class="flex justify-end gap-2">
                     <button type="button" @click="diskonModalOpen = false" class="px-3 py-2 text-sm text-gray-500 hover:underline">Batal</button>
                     <button type="submit" class="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700">Ajukan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div x-show="cancelModalOpen" x-cloak
+         class="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div @click="cancelModalOpen = false" class="absolute inset-0 bg-gray-900/50"></div>
+
+        <div class="relative bg-white rounded-lg shadow-lg w-full max-w-sm">
+            <form method="POST" action="{{ route('order-' . $type . '.request-cancel', $order->id) }}" class="p-5 space-y-4">
+                @csrf
+                <h3 class="font-semibold text-gray-900">Ajukan pembatalan — {{ $order->NoOrder }}</h3>
+                <p class="text-xs text-gray-500">Order akan ditandai menunggu persetujuan. Perlu disetujui Admin/Admin Kasir dari Antrian Desain sebelum benar-benar dibatalkan.</p>
+
+                <div>
+                    <x-input-label for="cancel_reason" value="Alasan pembatalan" />
+                    <textarea id="cancel_reason" name="cancel_reason" rows="3" required maxlength="255"
+                              placeholder="misal: customer minta batal, salah spesifikasi, dll"
+                              class="mt-1 block w-full rounded-md border-gray-300 text-sm"></textarea>
+                    <x-input-error :messages="$errors->get('cancel_reason')" class="mt-1" />
+                </div>
+
+                <div class="flex justify-end gap-2">
+                    <button type="button" @click="cancelModalOpen = false" class="px-3 py-2 text-sm text-gray-500 hover:underline">Batal</button>
+                    <button type="submit" class="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-md hover:bg-red-700">Ajukan pembatalan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div x-show="batalOrderModalOpen" x-cloak
+         class="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div @click="batalOrderModalOpen = false" class="absolute inset-0 bg-gray-900/50"></div>
+
+        <div class="relative bg-white rounded-lg shadow-lg w-full max-w-sm">
+            <form method="POST" action="{{ route('order-rework.store', [$type, $order->id]) }}" class="p-5 space-y-4">
+                @csrf
+                <input type="hidden" name="action" value="batal">
+                <h3 class="font-semibold text-gray-900">Batalkan Order — {{ $order->NoOrder }}</h3>
+                <p class="text-xs text-gray-500">Order akan dibatalkan total dan uang yang sudah dibayar dikembalikan ke customer. Perlu disetujui dulu di menu Approval.</p>
+
+                <div>
+                    <x-input-label for="batal_order_reason" value="Alasan" />
+                    <textarea id="batal_order_reason" name="reason" rows="3" required maxlength="255"
+                              placeholder="Jelaskan alasan pembatalan..."
+                              class="mt-1 block w-full rounded-md border-gray-300 text-sm"></textarea>
+                </div>
+
+                <div class="flex justify-end gap-2">
+                    <button type="button" @click="batalOrderModalOpen = false" class="px-3 py-2 text-sm text-gray-500 hover:underline">Batal</button>
+                    <button type="submit" class="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-md hover:bg-red-700">Ajukan pembatalan</button>
                 </div>
             </form>
         </div>

@@ -20,7 +20,20 @@
     @endphp
 
     <div id="industry-piutang"
-         x-data="{ modalOpen: false, type: '', id: null, noOrder: '', jenis: '', sisa: '', caraBayar: 'tunai', noReferensi: '' }">
+         x-data="{
+            modalOpen: false, type: '', id: null, noOrder: '', jenis: '', sisa: '', sisaRaw: 0,
+            rincian: [{ cara_bayar: 'tunai', jumlah: '', no_referensi: '' }],
+            get rincianTotal() { return this.rincian.reduce((sum, r) => sum + Number(r.jumlah || 0), 0); },
+            get rincianDiff() { return Math.round((this.sisaRaw - this.rincianTotal) * 100) / 100; },
+            get rincianError() {
+                if (this.rincianDiff === 0) return '';
+                return this.rincianDiff > 0
+                    ? `Kurang Rp ${this.rincianDiff.toLocaleString('id-ID')}.`
+                    : `Lebih Rp ${Math.abs(this.rincianDiff).toLocaleString('id-ID')}.`;
+            },
+            addRincian() { this.rincian.push({ cara_bayar: 'tunai', jumlah: '', no_referensi: '' }); },
+            removeRincian(i) { this.rincian.splice(i, 1); },
+         }">
         <div style="max-width: 1480px; margin: 0 auto; display: flex; flex-direction: column; gap: var(--space-6);">
 
             <section style="display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-4);">
@@ -61,7 +74,7 @@
                                     <td class="text-muted" style="white-space: nowrap;">{{ $row['sejak']?->format('d M Y') ?? '-' }}</td>
                                     <td style="text-align: right;">
                                         <button type="button" class="in-btn"
-                                                @click="modalOpen = true; type = '{{ $row['type'] }}'; id = {{ $row['id'] }}; noOrder = '{{ $row['no_order'] }}'; jenis = '{{ $row['status_bayar'] }}'; sisa = '{{ number_format($row['jumlah_piutang'], 0, ',', '.') }}'; caraBayar = 'tunai'; noReferensi = ''">
+                                                @click="modalOpen = true; type = '{{ $row['type'] }}'; id = {{ $row['id'] }}; noOrder = '{{ $row['no_order'] }}'; jenis = '{{ $row['status_bayar'] }}'; sisa = '{{ number_format($row['jumlah_piutang'], 0, ',', '.') }}'; sisaRaw = {{ (float) $row['jumlah_piutang'] }}; rincian = [{ cara_bayar: 'tunai', jumlah: '', no_referensi: '' }]">
                                             Lunasi
                                         </button>
                                     </td>
@@ -80,34 +93,53 @@
             <div @click="modalOpen = false" class="absolute inset-0 bg-gray-900/50"></div>
 
             <div class="relative bg-white rounded-lg shadow-lg w-full max-w-sm">
-                <form method="POST" :action="jenis === 'hutang' ? `/kasir/${type}/${id}/lunasi-hutang` : `/kasir/${type}/${id}/lunasi`" class="p-5 space-y-4">
+                <form method="POST" :action="jenis === 'hutang' ? `/kasir/${type}/${id}/lunasi-hutang` : `/kasir/${type}/${id}/lunasi`" class="p-5 space-y-4"
+                      @submit="if (rincianError) { $event.preventDefault(); }">
                     @csrf
                     <h3 class="font-semibold text-gray-900">Pelunasan — <span x-text="noOrder"></span></h3>
                     <p class="text-sm text-gray-600">Sisa piutang: <span class="font-semibold" x-text="`Rp ${sisa}`"></span></p>
 
                     <div>
-                        <x-input-label value="Cara Bayar" />
-                        <div class="mt-2 space-y-2">
-                            <label class="flex items-center gap-2">
-                                <input type="radio" name="cara_bayar" value="tunai" x-model="caraBayar" class="text-gray-900 focus:ring-gray-900">
-                                <span class="text-sm text-gray-700">Tunai</span>
-                            </label>
-                            <label class="flex items-center gap-2">
-                                <input type="radio" name="cara_bayar" value="qris" x-model="caraBayar" class="text-gray-900 focus:ring-gray-900">
-                                <span class="text-sm text-gray-700">QRIS</span>
-                            </label>
-                            <label class="flex items-center gap-2">
-                                <input type="radio" name="cara_bayar" value="transfer" x-model="caraBayar" class="text-gray-900 focus:ring-gray-900">
-                                <span class="text-sm text-gray-700">Transfer</span>
-                            </label>
-                        </div>
-                    </div>
+                        <x-input-label value="Rincian Pembayaran" />
+                        <p class="text-xs text-gray-500 mt-0.5">Bisa dibagi ke beberapa metode sekaligus.</p>
 
-                    <div x-show="caraBayar !== 'tunai'" x-cloak>
-                        <x-input-label value="No. Referensi" />
-                        <input type="text" name="no_referensi" x-model="noReferensi" maxlength="50"
-                               placeholder="ID transaksi QRIS / 4 digit terakhir rekening tujuan"
-                               class="mt-1 block w-full rounded-md border-gray-300 text-sm">
+                        <div class="mt-2 space-y-2">
+                            <template x-for="(row, idx) in rincian" :key="idx">
+                                <div class="flex items-start gap-2 rounded-md border border-gray-200 p-2">
+                                    <div class="flex-1 space-y-1.5">
+                                        <div class="flex gap-2">
+                                            <select :name="`rincian[${idx}][cara_bayar]`" x-model="row.cara_bayar"
+                                                    class="rounded-md border-gray-300 text-sm py-1.5 w-28">
+                                                <option value="tunai">Tunai</option>
+                                                <option value="qris">QRIS</option>
+                                                <option value="transfer">Transfer</option>
+                                            </select>
+                                            <input type="text" inputmode="numeric"
+                                                   :value="row.jumlah ? Number(row.jumlah).toLocaleString('id-ID') : ''"
+                                                   @input="row.jumlah = $event.target.value.replace(/\D/g, '')"
+                                                   placeholder="Jumlah" class="flex-1 rounded-md border-gray-300 text-sm py-1.5">
+                                            <input type="hidden" :name="`rincian[${idx}][jumlah]`" :value="row.jumlah">
+                                            <button type="button" x-show="rincian.length > 1" @click="removeRincian(idx)"
+                                                    class="text-gray-400 hover:text-red-600 px-1">&times;</button>
+                                        </div>
+                                        <input type="text" x-show="row.cara_bayar !== 'tunai'" x-cloak
+                                               :name="`rincian[${idx}][no_referensi]`" x-model="row.no_referensi"
+                                               maxlength="50" placeholder="No. referensi QRIS/transfer"
+                                               class="w-full rounded-md border-gray-300 text-xs py-1.5">
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+
+                        <button type="button" @click="addRincian()" class="mt-2 text-xs font-semibold text-blue-600 hover:underline">
+                            + Tambah metode pembayaran
+                        </button>
+
+                        <p class="text-xs mt-2" :class="rincianError ? 'text-red-600 font-semibold' : 'text-gray-400'">
+                            Total rincian: <span x-text="rincianTotal.toLocaleString('id-ID')"></span>
+                            / <span x-text="sisaRaw.toLocaleString('id-ID')"></span>
+                            <span x-show="rincianError" x-text="'— ' + rincianError"></span>
+                        </p>
                     </div>
 
                     <div class="flex justify-end gap-2">

@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\OrderArtwork;
+use App\Models\OrderIndoor;
+use App\Models\OrderOutdoor;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
@@ -67,7 +70,19 @@ class FileMonitorController extends Controller
 
         $headers->setCollection($files);
 
-        return view('file.index', ['files' => $headers]);
+        // Surfaced here (Operator File's main working page) as a shortcut
+        // into Kasir's Nota Pengganti tab, since Operator File is who
+        // actually creates nota pengganti — see kasir.replacement.manage.
+        $replacementCount = 0;
+        foreach ([OrderIndoor::class, OrderOutdoor::class, OrderArtwork::class] as $model) {
+            $replacementCount += $model::query()
+                ->where('status', 'batal')
+                ->whereNotNull('invoice_voided_at')
+                ->doesntHave('replacement')
+                ->count();
+        }
+
+        return view('file.index', ['files' => $headers, 'replacementCount' => $replacementCount]);
     }
 
     /**

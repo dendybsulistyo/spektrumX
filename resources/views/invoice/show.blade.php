@@ -84,6 +84,7 @@
         $caraBayarLabel = match ($order->cara_bayar) {
             'qris' => 'QRIS',
             'transfer' => 'Transfer',
+            'campuran' => 'Campuran',
             default => 'Tunai',
         };
         $caraBayarNote = $order->cara_bayar

@@ -7,6 +7,7 @@ use App\Models\OrderArtwork;
 use App\Models\OrderIndoor;
 use App\Models\OrderOutdoor;
 use App\Models\OrderPayment;
+use App\Models\OrderReworkRequest;
 use App\Models\OrderStatusNote;
 use App\Models\Role;
 use App\Models\User;
@@ -28,8 +29,12 @@ class KasirController extends Controller
         private readonly AccountingService $accounting,
     ) {}
 
-    public function index(): View
+    public function index(Request $request): View
     {
+        $initialTab = in_array($request->query('tab'), ['indoor', 'outdoor', 'artwork', 'replacement', 'dp', 'lunas'], true)
+            ? $request->query('tab')
+            : 'indoor';
+
         $indoorOrders = OrderIndoor::query()
             ->with('customer')
             ->where('status_bayar', 'belum_bayar')
@@ -80,7 +85,32 @@ class KasirController extends Controller
         }
         $replacementOrders = $replacementOrders->sortByDesc('cancel_approved_at')->values();
 
-        return view('kasir.index', compact('indoorOrders', 'outdoorOrders', 'artworkOrders', 'dpOrders', 'replacementOrders'));
+        // Orders already paid but still somewhere in production — a kasir
+        // needs to be able to cancel these too (customer changed their mind
+        // after paying), and doing it from here keeps the cancellation tied
+        // to the same place the payment itself was recorded, so the
+        // financial reports stay consistent.
+        $lunasOrders = collect();
+        foreach (['indoor' => OrderIndoor::class, 'outdoor' => OrderOutdoor::class, 'artwork' => OrderArtwork::class] as $orderType => $model) {
+            $model::query()
+                ->with('customer')
+                ->where('status_bayar', 'lunas')
+                ->whereNotIn('status', ['selesai', 'batal'])
+                ->orderByDesc('dibayar_at')
+                ->get()
+                ->each(function ($order) use (&$lunasOrders, $orderType) {
+                    $order->order_type = $orderType;
+                    $lunasOrders->push($order);
+                });
+        }
+        $lunasOrders = $lunasOrders->sortByDesc('dibayar_at')->values();
+
+        // Needed to hide "Batalkan Order" on rows that already have any
+        // pending rework request (ulang or batal) — OrderReworkController::
+        // store() rejects a second one for the same order regardless of kind.
+        $pendingRework = OrderReworkRequest::pendingMap();
+
+        return view('kasir.index', compact('indoorOrders', 'outdoorOrders', 'artworkOrders', 'dpOrders', 'replacementOrders', 'lunasOrders', 'pendingRework', 'initialTab'));
     }
 
     public function show(string $type, int $id): View
@@ -90,20 +120,39 @@ class KasirController extends Controller
 
         $items = $type === 'indoor' ? $order->detailItems() : $order->items;
 
-        return view('kasir.show', ['type' => $type, 'order' => $order, 'items' => $items]);
+        $pendingRework = OrderReworkRequest::forOrder($type, $id)->pending()->exists();
+
+        return view('kasir.show', ['type' => $type, 'order' => $order, 'items' => $items, 'pendingRework' => $pendingRework]);
     }
 
     public function bayar(Request $request, string $type, int $id): RedirectResponse
     {
         $order = $this->resolveOrder($type, $id);
 
-        $data = $request->validate([
+        // Nota pengganti only ever moves the topup/cashback difference in
+        // one go, via the untouched single cara_bayar path below — splitting
+        // across methods is only offered for a normal lunas/DP collection.
+        $isReplacement = (bool) $order->replacement_order_id;
+
+        $rules = [
             'metode_bayar' => ['required', 'in:tunai,hutang,dp'],
-            'cara_bayar' => ['required_if:metode_bayar,tunai,dp', 'nullable', 'in:tunai,qris,transfer'],
-            'no_referensi' => ['required_if:cara_bayar,qris,transfer', 'nullable', 'string', 'max:50'],
             'jumlah_dp' => ['nullable', 'numeric', 'min:0'],
             'catatan' => ['nullable', 'string', 'max:255'],
-        ]);
+        ];
+
+        $rules += $isReplacement
+            ? [
+                'cara_bayar' => ['required_if:metode_bayar,tunai,dp', 'nullable', 'in:tunai,qris,transfer'],
+                'no_referensi' => ['required_if:cara_bayar,qris,transfer', 'nullable', 'string', 'max:50'],
+            ]
+            : [
+                'rincian' => ['required_if:metode_bayar,tunai,dp', 'array'],
+                'rincian.*.cara_bayar' => ['required_with:rincian', 'in:tunai,qris,transfer'],
+                'rincian.*.jumlah' => ['required_with:rincian', 'numeric', 'min:1'],
+                'rincian.*.no_referensi' => ['nullable', 'string', 'max:50'],
+            ];
+
+        $data = $request->validate($rules);
 
         $order->load('customer.limit');
 
@@ -216,7 +265,19 @@ class KasirController extends Controller
             }
         }
 
+        if ($data['metode_bayar'] !== 'hutang') {
+            $target = $data['metode_bayar'] === 'dp' ? (float) $data['jumlah_dp'] : $total;
+
+            if ($rincianError = $this->checkRincian($data['rincian'] ?? [], $target)) {
+                return back()->with('error', $rincianError)->withInput();
+            }
+        }
+
         DB::transaction(function () use ($order, $type, $data, $total) {
+            $rincian = $data['rincian'] ?? [];
+            $caraBayar = $rincian ? $this->dominantCaraBayar($rincian) : null;
+            $noReferensi = $rincian ? $this->dominantNoReferensi($rincian) : null;
+
             match ($data['metode_bayar']) {
                 'hutang' => (function () use ($order, $total) {
                     $this->creditService->addHutang($order->customer, $total);
@@ -230,14 +291,14 @@ class KasirController extends Controller
                         'jumlah_piutang' => $total,
                     ]);
                 })(),
-                'dp' => (function () use ($order, $data, $total) {
+                'dp' => (function () use ($order, $data, $total, $caraBayar, $noReferensi) {
                     $jumlahDp = (float) $data['jumlah_dp'];
 
                     $order->update([
                         'status_bayar' => 'dp',
                         'metode_bayar' => 'dp',
-                        'cara_bayar' => $data['cara_bayar'],
-                        'no_referensi' => $data['no_referensi'] ?? null,
+                        'cara_bayar' => $caraBayar,
+                        'no_referensi' => $noReferensi,
                         'jumlah_dibayar' => $jumlahDp,
                         'jumlah_piutang' => $total - $jumlahDp,
                     ]);
@@ -245,8 +306,8 @@ class KasirController extends Controller
                 default => $order->update([
                     'status_bayar' => 'lunas',
                     'metode_bayar' => 'tunai',
-                    'cara_bayar' => $data['cara_bayar'],
-                    'no_referensi' => $data['no_referensi'] ?? null,
+                    'cara_bayar' => $caraBayar,
+                    'no_referensi' => $noReferensi,
                     'jumlah_dibayar' => $total,
                     'jumlah_piutang' => 0,
                 ]),
@@ -260,7 +321,7 @@ class KasirController extends Controller
 
             $catatan = trim(collect([
                 $data['catatan'] ?? null,
-                $data['metode_bayar'] !== 'hutang' ? $this->caraBayarLabel($data['cara_bayar'], $data['no_referensi'] ?? null) : null,
+                $data['metode_bayar'] !== 'hutang' ? $this->caraBayarLabel($caraBayar, $noReferensi) : null,
             ])->filter()->implode(' — '));
 
             OrderStatusNote::create([
@@ -276,16 +337,7 @@ class KasirController extends Controller
             // Hutang doesn't move any cash — nothing to log in the payment
             // ledger until it's actually paid off.
             if ($data['metode_bayar'] !== 'hutang') {
-                OrderPayment::create([
-                    'order_type' => $type,
-                    'order_id' => $order->id,
-                    'jenis' => $data['metode_bayar'] === 'dp' ? 'dp' : 'lunas',
-                    'jumlah' => $data['metode_bayar'] === 'dp' ? (float) $data['jumlah_dp'] : $total,
-                    'cara_bayar' => $data['cara_bayar'],
-                    'no_referensi' => $data['no_referensi'] ?? null,
-                    'user_id' => auth()->id(),
-                    'created_at' => now(),
-                ]);
+                $this->createPaymentRows($type, $order->id, $data['metode_bayar'] === 'dp' ? 'dp' : 'lunas', $rincian);
             }
 
             // Revenue is recognized in full at the moment of sale — goods go
@@ -306,7 +358,7 @@ class KasirController extends Controller
                 'dp' => $this->accounting->post(
                     now()->format('Y-m-d'), $order->NoOrder, 'Penjualan DP '.$order->NoOrder,
                     [
-                        ['akun' => AccountingService::akunKasFor($data['cara_bayar']), 'debet' => (float) $data['jumlah_dp'], 'kd_bantu' => $kdBantu],
+                        ...$this->kasLines($rincian, $kdBantu),
                         ['akun' => AccountingService::AKUN_PIUTANG_DAGANG, 'debet' => $total - (float) $data['jumlah_dp'], 'kd_bantu' => $kdBantu],
                         ['akun' => AccountingService::AKUN_PENJUALAN, 'kredit' => $total],
                     ]
@@ -314,7 +366,7 @@ class KasirController extends Controller
                 default => $this->accounting->post(
                     now()->format('Y-m-d'), $order->NoOrder, 'Penjualan lunas '.$order->NoOrder,
                     [
-                        ['akun' => AccountingService::akunKasFor($data['cara_bayar']), 'debet' => $total, 'kd_bantu' => $kdBantu],
+                        ...$this->kasLines($rincian, $kdBantu),
                         ['akun' => AccountingService::AKUN_PENJUALAN, 'kredit' => $total],
                     ]
                 ),
@@ -344,17 +396,27 @@ class KasirController extends Controller
         }
 
         $data = $request->validate([
-            'cara_bayar' => ['required', 'in:tunai,qris,transfer'],
-            'no_referensi' => ['required_if:cara_bayar,qris,transfer', 'nullable', 'string', 'max:50'],
+            'rincian' => ['required', 'array'],
+            'rincian.*.cara_bayar' => ['required_with:rincian', 'in:tunai,qris,transfer'],
+            'rincian.*.jumlah' => ['required_with:rincian', 'numeric', 'min:1'],
+            'rincian.*.no_referensi' => ['nullable', 'string', 'max:50'],
         ]);
 
-        DB::transaction(function () use ($order, $type, $data) {
-            $sisaPiutang = (float) $order->jumlah_piutang;
+        $sisaPiutang = (float) $order->jumlah_piutang;
+
+        if ($rincianError = $this->checkRincian($data['rincian'], $sisaPiutang)) {
+            return back()->with('error', $rincianError)->withInput();
+        }
+
+        DB::transaction(function () use ($order, $type, $data, $sisaPiutang) {
+            $rincian = $data['rincian'];
+            $caraBayar = $this->dominantCaraBayar($rincian);
+            $noReferensi = $this->dominantNoReferensi($rincian);
 
             $order->update([
                 'status_bayar' => 'lunas',
-                'cara_bayar' => $data['cara_bayar'],
-                'no_referensi' => $data['no_referensi'] ?? null,
+                'cara_bayar' => $caraBayar,
+                'no_referensi' => $noReferensi,
                 'jumlah_dibayar' => $order->total,
                 'jumlah_piutang' => 0,
             ]);
@@ -364,26 +426,17 @@ class KasirController extends Controller
                 'order_id' => $order->id,
                 'stage' => 'kasir',
                 'action' => 'selesai',
-                'catatan' => 'Pelunasan sisa DP — '.$this->caraBayarLabel($data['cara_bayar'], $data['no_referensi'] ?? null),
+                'catatan' => 'Pelunasan sisa DP — '.$this->caraBayarLabel($caraBayar, $noReferensi),
                 'user_id' => auth()->id(),
                 'created_at' => now(),
             ]);
 
-            OrderPayment::create([
-                'order_type' => $type,
-                'order_id' => $order->id,
-                'jenis' => 'pelunasan_dp',
-                'jumlah' => $sisaPiutang,
-                'cara_bayar' => $data['cara_bayar'],
-                'no_referensi' => $data['no_referensi'] ?? null,
-                'user_id' => auth()->id(),
-                'created_at' => now(),
-            ]);
+            $this->createPaymentRows($type, $order->id, 'pelunasan_dp', $rincian);
 
             $this->accounting->post(
                 now()->format('Y-m-d'), $order->NoOrder, 'Pelunasan DP '.$order->NoOrder,
                 [
-                    ['akun' => AccountingService::akunKasFor($data['cara_bayar']), 'debet' => $sisaPiutang],
+                    ...$this->kasLines($rincian, $order->customer?->KdCust ?? ''),
                     ['akun' => AccountingService::AKUN_PIUTANG_DAGANG, 'kredit' => $sisaPiutang, 'kd_bantu' => $order->customer?->KdCust ?? ''],
                 ]
             );
@@ -409,17 +462,27 @@ class KasirController extends Controller
         }
 
         $data = $request->validate([
-            'cara_bayar' => ['required', 'in:tunai,qris,transfer'],
-            'no_referensi' => ['required_if:cara_bayar,qris,transfer', 'nullable', 'string', 'max:50'],
+            'rincian' => ['required', 'array'],
+            'rincian.*.cara_bayar' => ['required_with:rincian', 'in:tunai,qris,transfer'],
+            'rincian.*.jumlah' => ['required_with:rincian', 'numeric', 'min:1'],
+            'rincian.*.no_referensi' => ['nullable', 'string', 'max:50'],
         ]);
 
-        DB::transaction(function () use ($order, $type, $data) {
-            $sisaPiutang = (float) $order->jumlah_piutang;
+        $sisaPiutang = (float) $order->jumlah_piutang;
+
+        if ($rincianError = $this->checkRincian($data['rincian'], $sisaPiutang)) {
+            return back()->with('error', $rincianError)->withInput();
+        }
+
+        DB::transaction(function () use ($order, $type, $data, $sisaPiutang) {
+            $rincian = $data['rincian'];
+            $caraBayar = $this->dominantCaraBayar($rincian);
+            $noReferensi = $this->dominantNoReferensi($rincian);
 
             $order->update([
                 'status_bayar' => 'lunas',
-                'cara_bayar' => $data['cara_bayar'],
-                'no_referensi' => $data['no_referensi'] ?? null,
+                'cara_bayar' => $caraBayar,
+                'no_referensi' => $noReferensi,
                 'jumlah_dibayar' => $order->total,
                 'jumlah_piutang' => 0,
             ]);
@@ -433,26 +496,17 @@ class KasirController extends Controller
                 'order_id' => $order->id,
                 'stage' => 'kasir',
                 'action' => 'selesai',
-                'catatan' => 'Pelunasan hutang — '.$this->caraBayarLabel($data['cara_bayar'], $data['no_referensi'] ?? null),
+                'catatan' => 'Pelunasan hutang — '.$this->caraBayarLabel($caraBayar, $noReferensi),
                 'user_id' => auth()->id(),
                 'created_at' => now(),
             ]);
 
-            OrderPayment::create([
-                'order_type' => $type,
-                'order_id' => $order->id,
-                'jenis' => 'pelunasan_hutang',
-                'jumlah' => $sisaPiutang,
-                'cara_bayar' => $data['cara_bayar'],
-                'no_referensi' => $data['no_referensi'] ?? null,
-                'user_id' => auth()->id(),
-                'created_at' => now(),
-            ]);
+            $this->createPaymentRows($type, $order->id, 'pelunasan_hutang', $rincian);
 
             $this->accounting->post(
                 now()->format('Y-m-d'), $order->NoOrder, 'Pelunasan hutang '.$order->NoOrder,
                 [
-                    ['akun' => AccountingService::akunKasFor($data['cara_bayar']), 'debet' => $sisaPiutang],
+                    ...$this->kasLines($rincian, $order->customer?->KdCust ?? ''),
                     ['akun' => AccountingService::AKUN_PIUTANG_DAGANG, 'kredit' => $sisaPiutang, 'kd_bantu' => $order->customer?->KdCust ?? ''],
                 ]
             );
@@ -577,9 +631,96 @@ class KasirController extends Controller
         $label = match ($caraBayar) {
             'qris' => 'QRIS',
             'transfer' => 'Transfer',
+            'campuran' => 'Campuran',
             default => 'Tunai',
         };
 
         return $noReferensi ? "{$label} (Ref: {$noReferensi})" : $label;
+    }
+
+    /**
+     * Cross-field checks a split-payment array (rincian) needs that plain
+     * Laravel validation rules can't express on their own: every non-tunai
+     * split needs a reference number, and the rows must sum exactly to the
+     * amount actually being collected right now.
+     *
+     * @param  array<int, array{cara_bayar: string, jumlah: mixed, no_referensi?: ?string}>  $rincian
+     */
+    private function checkRincian(array $rincian, float $target): ?string
+    {
+        if (empty($rincian)) {
+            return 'Rincian pembayaran wajib diisi.';
+        }
+
+        foreach ($rincian as $row) {
+            if (($row['cara_bayar'] ?? null) !== 'tunai' && empty($row['no_referensi'])) {
+                return 'No. Referensi wajib diisi untuk pembayaran QRIS/Transfer.';
+            }
+        }
+
+        $sum = (float) array_sum(array_column($rincian, 'jumlah'));
+
+        if (abs($sum - $target) > 0.5) {
+            return 'Total rincian pembayaran (Rp '.number_format($sum, 0, ',', '.').') harus sama dengan Rp '.number_format($target, 0, ',', '.').'.';
+        }
+
+        return null;
+    }
+
+    /**
+     * The order's own cara_bayar column can only hold one value —
+     * 'campuran' is stored whenever the kasir actually used more than one
+     * method, with the real per-method breakdown living in the individual
+     * OrderPayment rows instead.
+     */
+    private function dominantCaraBayar(array $rincian): string
+    {
+        $methods = collect($rincian)->pluck('cara_bayar')->unique();
+
+        return $methods->count() === 1 ? $methods->first() : 'campuran';
+    }
+
+    private function dominantNoReferensi(array $rincian): ?string
+    {
+        return count($rincian) === 1 ? ($rincian[0]['no_referensi'] ?? null) : null;
+    }
+
+    /**
+     * One OrderPayment row per split, so a DP paid as 25rb QRIS + 25rb
+     * transfer shows up as two distinct ledger entries instead of one row
+     * that can only carry a single cara_bayar.
+     */
+    private function createPaymentRows(string $type, int $orderId, string $jenis, array $rincian): void
+    {
+        foreach ($rincian as $row) {
+            OrderPayment::create([
+                'order_type' => $type,
+                'order_id' => $orderId,
+                'jenis' => $jenis,
+                'jumlah' => (float) $row['jumlah'],
+                'cara_bayar' => $row['cara_bayar'],
+                'no_referensi' => $row['no_referensi'] ?? null,
+                'user_id' => auth()->id(),
+                'created_at' => now(),
+            ]);
+        }
+    }
+
+    /**
+     * Groups a split by which kas account it actually lands in — QRIS and
+     * transfer both post to the same bank account (see
+     * AccountingService::akunKasFor()), so a QRIS+transfer split still
+     * yields just one debit line, not two.
+     *
+     * @return array<int, array{akun: string, debet: float, kd_bantu: string}>
+     */
+    private function kasLines(array $rincian, string $kdBantu): array
+    {
+        return collect($rincian)
+            ->groupBy(fn ($row) => AccountingService::akunKasFor($row['cara_bayar']))
+            ->map(fn ($rows) => (float) array_sum(array_column($rows->all(), 'jumlah')))
+            ->map(fn ($jumlah, $akun) => ['akun' => $akun, 'debet' => $jumlah, 'kd_bantu' => $kdBantu])
+            ->values()
+            ->all();
     }
 }

@@ -89,6 +89,7 @@ Route::middleware('auth')->group(function () {
     Route::middleware('permission:keuangan.view')->group(function () {
         Route::get('/keuangan/kas-harian', [KeuanganController::class, 'kasHarian'])->name('keuangan.kas-harian');
         Route::get('/keuangan/rekap-kasir', [KeuanganController::class, 'rekapKasir'])->name('keuangan.rekap-kasir');
+        Route::get('/keuangan/rekap-kasir/{kasir}/customer', [KeuanganController::class, 'rekapKasirCustomer'])->name('keuangan.rekap-kasir.customer');
         Route::get('/keuangan/rekap-customer', [KeuanganController::class, 'rekapCustomer'])->name('keuangan.rekap-customer');
         Route::get('/keuangan/piutang', [KeuanganController::class, 'piutang'])->name('keuangan.piutang');
         Route::get('/keuangan/laba-rugi', [KeuanganController::class, 'labaRugi'])->name('keuangan.laba-rugi');
@@ -282,13 +283,17 @@ Route::middleware('auth')->group(function () {
         Route::post('/kasir/{type}/{id}/bayar', [KasirController::class, 'bayar'])->name('kasir.bayar');
         Route::post('/kasir/{type}/{id}/lunasi', [KasirController::class, 'lunasi'])->name('kasir.lunasi');
         Route::post('/kasir/{type}/{id}/lunasi-hutang', [KasirController::class, 'lunasiHutang'])->name('kasir.lunasi-hutang');
+        Route::post('/kasir/{type}/{id}/diskon/request', [KasirController::class, 'requestDiskon'])->name('kasir.diskon.request');
+    });
+    // Nota pengganti is created by Operator File, not by Kasir — its own
+    // permission instead of piggybacking on kasir.manage.
+    Route::middleware('permission:kasir.replacement.manage')->group(function () {
         Route::get('/kasir/outdoor/{orderOutdoor}/nota-pengganti', [OrderOutdoorController::class, 'createReplacement'])->name('kasir.replacement.create');
         Route::post('/kasir/outdoor/nota-pengganti', [OrderOutdoorController::class, 'store'])->name('kasir.replacement.store');
         Route::get('/kasir/indoor/{orderIndoor}/nota-pengganti', [OrderIndoorController::class, 'createReplacement'])->name('kasir.replacement.create.indoor');
         Route::post('/kasir/indoor/nota-pengganti', [OrderIndoorController::class, 'store'])->name('kasir.replacement.store.indoor');
         Route::get('/kasir/artwork/{orderArtwork}/nota-pengganti', [OrderArtworkController::class, 'createReplacement'])->name('kasir.replacement.create.artwork');
         Route::post('/kasir/artwork/nota-pengganti', [OrderArtworkController::class, 'store'])->name('kasir.replacement.store.artwork');
-        Route::post('/kasir/{type}/{id}/diskon/request', [KasirController::class, 'requestDiskon'])->name('kasir.diskon.request');
     });
     Route::middleware('permission:kasir.approve-diskon')->group(function () {
         Route::post('/kasir/{type}/{id}/diskon/approve', [KasirController::class, 'approveDiskon'])->name('kasir.diskon.approve');

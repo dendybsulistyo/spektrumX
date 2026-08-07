@@ -43,15 +43,15 @@
                 <input type="hidden" name="KdPrn" value="{{ $selectedKdPrn }}">
 
                 <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
-                    <div class="p-4 border-b border-gray-200 bg-gray-50">
-                        <p class="text-sm text-gray-700">
-                            Customer: <span class="font-semibold">{{ $selectedCustomer->NmCust }} ({{ $selectedCustomer->KdCust }})</span>
-                            &middot; Printer: <span class="font-semibold">{{ $printer?->NmPrn }}</span>
-                        </p>
-                    </div>
-                    <div class="overflow-x-auto">
+                    <div class="overflow-x-auto" style="max-height: 70vh; overflow-y: auto;">
+                        <div class="px-4 h-11 flex items-center border-b border-gray-200 bg-gray-50 sticky top-0 z-30">
+                            <p class="text-sm text-gray-700 truncate">
+                                Customer: <span class="font-semibold">{{ $selectedCustomer->NmCust }} ({{ $selectedCustomer->KdCust }})</span>
+                                &middot; Printer: <span class="font-semibold">{{ $printer?->NmPrn }}</span>
+                            </p>
+                        </div>
                         <table class="w-full text-[13px] border-collapse">
-                            <thead class="text-white text-xs uppercase">
+                            <thead class="text-white text-xs uppercase sticky top-11 z-20">
                                 <tr class="bg-gray-900">
                                     <th class="px-3 py-2 text-left">Bahan</th>
                                     <th class="px-2 py-2 text-center w-16">Kode</th>
