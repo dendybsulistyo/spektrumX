@@ -46,9 +46,9 @@ class DashboardStatsService
         $outdoor = $outdoorQuery->get();
         $artwork = $artworkQuery->get();
 
-        $indoor->load('customer', 'kasir', 'desainBy', 'cetakBy', 'finishingBy', 'qcBy', 'bungkusBy', 'pengambilanBy');
-        $outdoor->load('customer', 'kasir', 'desainBy', 'cetakBy', 'finishingBy', 'qcBy', 'bungkusBy', 'pengambilanBy', 'items');
-        $artwork->load('customer', 'kasir', 'desainBy', 'cetakBy', 'finishingBy', 'qcBy', 'bungkusBy', 'pengambilanBy');
+        $indoor->load('customer', 'createdBy', 'kasir', 'desainBy', 'cetakBy', 'finishingBy', 'qcBy', 'bungkusBy', 'pengambilanBy');
+        $outdoor->load('customer', 'createdBy', 'kasir', 'desainBy', 'cetakBy', 'finishingBy', 'qcBy', 'bungkusBy', 'pengambilanBy', 'items');
+        $artwork->load('customer', 'createdBy', 'kasir', 'desainBy', 'cetakBy', 'finishingBy', 'qcBy', 'bungkusBy', 'pengambilanBy');
 
         $mapped = $indoor->map(fn ($o) => $this->toRow($o, 'Indoor'))
             ->concat($outdoor->map(fn ($o) => $this->toRow($o, 'Outdoor')))
@@ -113,6 +113,7 @@ class DashboardStatsService
             'status_bayar' => $order->status_bayar,
             'jumlah_piutang' => $order->jumlah_piutang,
             'durasi' => $durasi,
+            'operator_file' => $order->createdBy?->name,
             'kasir' => $order->kasir?->name,
             'desain_by' => $order->desainBy?->name,
             'cetak_by' => $order->cetakBy?->name,

@@ -159,7 +159,7 @@
                     <table class="table" style="min-width: 1240px;">
                         <thead>
                             <tr>
-                                <th style="width: 32px;">No</th><th>No order</th><th>Tipe</th><th>Customer</th><th>Masuk</th><th>Status</th><th>Bayar</th><th style="text-align: right;">Lama proses</th><th>Kasir</th><th>Desain</th><th>Cetak</th><th>Finishing</th><th>QC</th><th>Bungkus</th><th>Ambil</th>
+                                <th style="width: 32px;">No</th><th>No order</th><th>Tipe</th><th>Customer</th><th>Masuk</th><th>Status</th><th>Bayar</th><th style="text-align: right;">Lama proses</th><th>Operator File</th><th>Kasir</th><th>Desain</th><th>Cetak</th><th>Finishing</th><th>QC</th><th>Bungkus</th><th>Ambil</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -181,6 +181,7 @@
                                     </td>
                                     <td><span class="{{ $bayarTagFor($row['status_bayar']) }}">{{ $bayarLabel($row['status_bayar']) }}</span></td>
                                     <td style="text-align: right; white-space: nowrap;">{{ $row['durasi'] ?? '-' }}</td>
+                                    <td class="text-muted">{{ $row['operator_file'] ?? '-' }}</td>
                                     <td class="text-muted">{{ $row['kasir'] ?? '-' }}</td>
                                     <td class="text-muted">{{ $row['desain_by'] ?? '-' }}</td>
                                     <td class="text-muted">{{ $row['cetak_by'] ?? '-' }}</td>
@@ -190,7 +191,7 @@
                                     <td class="text-muted">{{ $row['pengambilan_by'] ?? '-' }}</td>
                                 </tr>
                             @empty
-                                <tr><td colspan="15" class="text-muted" style="text-align: center; padding: var(--space-6);">Tidak ada order pada rentang ini.</td></tr>
+                                <tr><td colspan="16" class="text-muted" style="text-align: center; padding: var(--space-6);">Tidak ada order pada rentang ini.</td></tr>
                             @endforelse
                         </tbody>
                     </table>
