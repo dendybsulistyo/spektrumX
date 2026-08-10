@@ -8,17 +8,33 @@
          @keydown.escape.window="invoiceModalOpen = false; diskonModalOpen = false; cancelModalOpen = false; batalOrderModalOpen = false">
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div class="lg:col-span-2 bg-white rounded-lg border border-gray-200 overflow-hidden">
+            @php $diskonStatus = $order->diskonStatus(); @endphp
+
             @if ($order->replaces)
                 @php
                     $credit = (float) $order->replacement_credit;
-                    $difference = (float) $order->total - $credit;
+                    // Must match what actually gets charged (KasirController::bayar()
+                    // uses totalSetelahDiskon() once a diskon is approved) — otherwise
+                    // this banner disagrees with the "Total setelah diskon" shown below.
+                    $totalBaru = $diskonStatus === 'approved' ? $order->totalSetelahDiskon() : (float) $order->total;
+                    $difference = $totalBaru - $credit;
                 @endphp
                 <div class="border-b border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
                     <p class="font-semibold">Nota pengganti dari nota hangus {{ $order->replaces->NoOrder }}</p>
                     <div class="mt-2 grid grid-cols-1 gap-1 sm:grid-cols-3">
                         <span>Kredit lama: Rp {{ number_format($credit, 0, ',', '.') }}</span>
-                        <span>Total baru: Rp {{ number_format($order->total, 0, ',', '.') }}</span>
-                        <span class="font-semibold">{{ $difference > 0 ? 'Tambahan: Rp '.number_format($difference, 0, ',', '.') : ($difference < 0 ? 'Cashback: Rp '.number_format(abs($difference), 0, ',', '.') : 'Tidak ada selisih') }}</span>
+                        <span>Nilai Order: Rp {{ number_format($order->total, 0, ',', '.') }}</span>
+                        @if ($diskonStatus === 'approved')
+                            <span>Diskon {{ $order->diskonApprovedLabel() }}: -Rp {{ number_format($order->diskonNominal(), 0, ',', '.') }}</span>
+                        @else
+                            <span></span>
+                        @endif
+                    </div>
+                    <div class="mt-1 grid grid-cols-1 gap-1 sm:grid-cols-3">
+                        @if ($diskonStatus === 'approved')
+                            <span>Total setelah diskon: Rp {{ number_format($totalBaru, 0, ',', '.') }}</span>
+                        @endif
+                        <span class="font-semibold sm:col-start-3">{{ $difference > 0 ? 'Tambahan: Rp '.number_format($difference, 0, ',', '.') : ($difference < 0 ? 'Cashback: Rp '.number_format(abs($difference), 0, ',', '.') : 'Tidak ada selisih') }}</span>
                     </div>
                 </div>
             @endif
@@ -43,22 +59,29 @@
                             <th class="px-3 py-2 text-right">Panjang</th>
                             <th class="px-3 py-2 text-right">Lebar</th>
                             <th class="px-3 py-2 text-right">Qty</th>
+                            <th class="px-3 py-2 text-right">Harga Satuan</th>
+                            <th class="px-3 py-2 text-right">Subtotal</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y">
                         @foreach ($items as $item)
                             <tr>
-                                <td class="px-3 py-2 text-gray-900">{{ $item->Judul ?? $item->NmFile }}</td>
-                                <td class="px-3 py-2 text-right text-gray-600">{{ $item->Panjang }}</td>
-                                <td class="px-3 py-2 text-right text-gray-600">{{ $item->Lebar }}</td>
-                                <td class="px-3 py-2 text-right text-gray-600">{{ $item->Qty }}</td>
+                                <td class="px-3 py-2 text-gray-900">
+                                    {{ $item->name }}
+                                    @if ($item->breakdown)
+                                        <p class="text-xs text-gray-400 mt-0.5">{{ $item->breakdown }}</p>
+                                    @endif
+                                </td>
+                                <td class="px-3 py-2 text-right text-gray-600">{{ $item->panjang }}</td>
+                                <td class="px-3 py-2 text-right text-gray-600">{{ $item->lebar }}</td>
+                                <td class="px-3 py-2 text-right text-gray-600">{{ $item->qty }}</td>
+                                <td class="px-3 py-2 text-right text-gray-600">{{ $item->harga_satuan !== null ? 'Rp '.number_format($item->harga_satuan, 0, ',', '.') : '-' }}</td>
+                                <td class="px-3 py-2 text-right text-gray-900">Rp {{ number_format($item->subtotal, 0, ',', '.') }}</td>
                             </tr>
                         @endforeach
                     </tbody>
                 </table>
             </div>
-
-            @php $diskonStatus = $order->diskonStatus(); @endphp
 
             <div class="p-4 border-t border-gray-200">
                 <div class="flex items-center justify-between">
@@ -69,6 +92,10 @@
                 </div>
 
                 @if ($diskonStatus === 'approved')
+                    <div class="flex items-center justify-between mt-1">
+                        <span class="text-sm text-red-600">Diskon {{ $order->diskonApprovedLabel() }}</span>
+                        <span class="text-sm text-red-600">- Rp {{ number_format($order->diskonNominal(), 0, ',', '.') }}</span>
+                    </div>
                     <div class="flex items-center justify-between mt-1">
                         <span class="text-sm font-semibold text-green-700">Total setelah diskon {{ $order->diskonApprovedLabel() }}</span>
                         <span class="text-lg font-bold text-green-700">Rp {{ number_format($order->totalSetelahDiskon(), 0, ',', '.') }}</span>
@@ -150,6 +177,7 @@
 
         <div class="bg-white rounded-lg border border-gray-200 p-4"
              x-data="{
+                isReplacement: {{ $order->replacement_order_id ? 'true' : 'false' }},
                 metode: '{{ old('metode_bayar', 'tunai') }}',
                 caraBayar: '{{ old('cara_bayar', 'tunai') }}',
                 noReferensi: '{{ old('no_referensi') }}',
@@ -174,11 +202,18 @@
                 get rincianDiff() {
                     return Math.round((this.targetRincian - this.rincianTotal) * 100) / 100;
                 },
+                // POS-style: paying more than the bill is fine — the excess
+                // is change handed back, not an error.
+                get rincianKembalian() {
+                    return this.rincianDiff < 0 ? Math.abs(this.rincianDiff) : 0;
+                },
                 get rincianError() {
-                    if (this.metode === 'hutang' || this.rincianDiff === 0) return '';
-                    return this.rincianDiff > 0
-                        ? `Kurang Rp ${this.rincianDiff.toLocaleString('id-ID')}.`
-                        : `Lebih Rp ${Math.abs(this.rincianDiff).toLocaleString('id-ID')}.`;
+                    // Nota pengganti doesn't use the rincian split-payment
+                    // UI at all (still the old single cara_bayar radios
+                    // below) — nothing to validate here, or Proses
+                    // Pembayaran would stay permanently blocked for it.
+                    if (this.isReplacement || this.metode === 'hutang' || this.rincianDiff <= 0) return '';
+                    return `Kurang Rp ${this.rincianDiff.toLocaleString('id-ID')}.`;
                 },
                 addRincian() { this.rincian.push({ cara_bayar: 'tunai', jumlah: '', no_referensi: '' }); },
                 removeRincian(i) { this.rincian.splice(i, 1); },
@@ -281,10 +316,11 @@
                             + Tambah metode pembayaran
                         </button>
 
-                        <p class="text-xs mt-2" :class="rincianError ? 'text-red-600 font-semibold' : 'text-gray-400'">
+                        <p class="text-xs mt-2" :class="rincianError ? 'text-red-600 font-semibold' : (rincianKembalian > 0 ? 'text-green-600 font-semibold' : 'text-gray-400')">
                             Total rincian: <span x-text="rincianTotal.toLocaleString('id-ID')"></span>
                             / <span x-text="targetRincian.toLocaleString('id-ID')"></span>
                             <span x-show="rincianError" x-text="'— ' + rincianError"></span>
+                            <span x-show="rincianKembalian > 0" x-text="'— Kembalian: Rp ' + rincianKembalian.toLocaleString('id-ID')"></span>
                         </p>
                         <x-input-error :messages="$errors->get('rincian')" class="mt-1" />
                     </div>
@@ -319,7 +355,7 @@
 
                 <button type="button" @click="invoiceModalOpen = true"
                         class="block w-full text-center text-sm text-gray-500 hover:underline">
-                    Lihat / Cetak Invoice
+                    Lihat / Cetak Surat Pesanan
                 </button>
             </form>
         </div>
@@ -331,7 +367,7 @@
 
         <div class="relative bg-white rounded-lg shadow-lg flex flex-col" style="width:95vw; max-width:1100px; height:94vh;">
             <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200">
-                <h3 class="font-semibold text-gray-900">Invoice {{ $order->NoOrder }}</h3>
+                <h3 class="font-semibold text-gray-900">Surat Pesanan {{ $order->NoOrder }}</h3>
                 <div class="flex items-center gap-2">
                     <button type="button" @click="$refs.invoiceFrame.contentWindow.focus(); $refs.invoiceFrame.contentWindow.print()"
                             class="inline-flex items-center px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-md hover:bg-blue-700">

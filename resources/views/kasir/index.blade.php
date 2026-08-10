@@ -10,11 +10,12 @@
             lunasiRincian: [{ cara_bayar: 'tunai', jumlah: '', no_referensi: '' }],
             get lunasiRincianTotal() { return this.lunasiRincian.reduce((sum, r) => sum + Number(r.jumlah || 0), 0); },
             get lunasiRincianDiff() { return Math.round((this.lunasiSisaRaw - this.lunasiRincianTotal) * 100) / 100; },
+            // POS-style: paying more than the sisa is fine — the excess is
+            // change handed back, not an error.
+            get lunasiRincianKembalian() { return this.lunasiRincianDiff < 0 ? Math.abs(this.lunasiRincianDiff) : 0; },
             get lunasiRincianError() {
-                if (this.lunasiRincianDiff === 0) return '';
-                return this.lunasiRincianDiff > 0
-                    ? `Kurang Rp ${this.lunasiRincianDiff.toLocaleString('id-ID')}.`
-                    : `Lebih Rp ${Math.abs(this.lunasiRincianDiff).toLocaleString('id-ID')}.`;
+                if (this.lunasiRincianDiff <= 0) return '';
+                return `Kurang Rp ${this.lunasiRincianDiff.toLocaleString('id-ID')}.`;
             },
             addLunasiRincian() { this.lunasiRincian.push({ cara_bayar: 'tunai', jumlah: '', no_referensi: '' }); },
             removeLunasiRincian(i) { this.lunasiRincian.splice(i, 1); },
@@ -359,10 +360,11 @@
                             + Tambah metode pembayaran
                         </button>
 
-                        <p class="text-xs mt-2" :class="lunasiRincianError ? 'text-red-600 font-semibold' : 'text-gray-400'">
+                        <p class="text-xs mt-2" :class="lunasiRincianError ? 'text-red-600 font-semibold' : (lunasiRincianKembalian > 0 ? 'text-green-600 font-semibold' : 'text-gray-400')">
                             Total rincian: <span x-text="lunasiRincianTotal.toLocaleString('id-ID')"></span>
                             / <span x-text="lunasiSisaRaw.toLocaleString('id-ID')"></span>
                             <span x-show="lunasiRincianError" x-text="'— ' + lunasiRincianError"></span>
+                            <span x-show="lunasiRincianKembalian > 0" x-text="'— Kembalian: Rp ' + lunasiRincianKembalian.toLocaleString('id-ID')"></span>
                         </p>
                     </div>
 

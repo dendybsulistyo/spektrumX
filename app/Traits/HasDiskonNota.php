@@ -59,7 +59,13 @@ trait HasDiskonNota
             return 0.0;
         }
 
-        return round((float) $this->total * ((float) $this->diskon_persen / 100), 2);
+        // Percentage discounts land on odd fractional-Rupiah amounts once
+        // the order total itself isn't a round number (e.g. outdoor's
+        // area-based pricing) — round to the nearest Rp 100 so the final
+        // bill never needs coins smaller than that.
+        $raw = (float) $this->total * ((float) $this->diskon_persen / 100);
+
+        return round($raw / 100) * 100;
     }
 
     public function totalSetelahDiskon(): float

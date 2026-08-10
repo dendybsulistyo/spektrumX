@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Invoice {{ $order->NoOrder }}</title>
+    <title>Surat Pesanan {{ $order->NoOrder }}</title>
     <style>
         * { box-sizing: border-box; }
         body {
@@ -50,9 +50,10 @@
         tbody td { border-bottom: 1px solid #f3f4f6; }
         .text-right { text-align: right; }
         .item-name { font-weight: 600; color: #111827; }
+        .item-breakdown { margin: 3px 0 0; font-size: 11px; font-weight: 400; color: #9ca3af; }
         .total-row td { padding-top: 16px; border-bottom: none; }
         .total-label { font-size: 14px; color: #6b7280; }
-        .total-amount { font-size: 22px; font-weight: 700; color: #4f46e5; }
+        .total-amount { font-size: 20px; font-weight: 700; color: #4f46e5; white-space: nowrap; }
         .footer-note { margin-top: 32px; padding-top: 16px; border-top: 1px solid #e5e7eb; font-size: 13px; color: #6b7280; }
         .print-time { margin-top: 6px; font-size: 10px; color: #9ca3af; }
         .signature-row { margin-top: 40px; display: flex; justify-content: space-between; }
@@ -73,6 +74,7 @@
             .total-amount { font-size: 18px; }
             table { margin-top: 16px; }
             th, td { padding: 6px 4px; }
+            .item-breakdown { font-size: 9px; }
             .signature-row { margin-top: 24px; }
             .signature .line { margin-top: 32px; }
             .footer-note { margin-top: 20px; padding-top: 10px; }
@@ -98,8 +100,11 @@
             default => ['badge-belum', 'Belum Bayar', 'Menunggu pembayaran di kasir.'],
         };
 
+        $diskonStatus = $order->diskonStatus();
+        $totalTagihan = $diskonStatus === 'approved' ? $order->totalSetelahDiskon() : (float) ($order->total ?? 0);
+
         $jumlahPiutang = (float) ($order->jumlah_piutang ?? 0);
-        $jumlahDpDibayar = ($order->total ?? 0) - $jumlahPiutang;
+        $jumlahDpDibayar = $totalTagihan - $jumlahPiutang;
     @endphp
 
     <div class="card">
@@ -137,22 +142,39 @@
                     <th class="text-right">Panjang</th>
                     <th class="text-right">Lebar</th>
                     <th class="text-right">Qty</th>
+                    <th class="text-right">Harga Satuan</th>
                     <th class="text-right">Subtotal</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach ($items as $item)
                     <tr>
-                        <td class="item-name">{{ $item->name }}</td>
+                        <td class="item-name">
+                            {{ $item->name }}
+                            @if ($item->breakdown)
+                                <p class="item-breakdown">{{ $item->breakdown }}</p>
+                            @endif
+                        </td>
                         <td class="text-right">{{ $item->panjang }}</td>
                         <td class="text-right">{{ $item->lebar }}</td>
                         <td class="text-right">{{ $item->qty }}</td>
+                        <td class="text-right">{{ $item->harga_satuan !== null ? 'Rp '.number_format($item->harga_satuan, 0, ',', '.') : '-' }}</td>
                         <td class="text-right">Rp {{ number_format($item->subtotal, 0, ',', '.') }}</td>
                     </tr>
                 @endforeach
+                @if ($diskonStatus === 'approved')
+                    <tr class="total-row">
+                        <td colspan="5" class="text-right total-label">Subtotal</td>
+                        <td class="text-right">Rp {{ number_format($order->total ?? 0, 0, ',', '.') }}</td>
+                    </tr>
+                    <tr>
+                        <td colspan="5" class="text-right total-label">Diskon {{ $order->diskonApprovedLabel() }}</td>
+                        <td class="text-right" style="color:#991b1b;">- Rp {{ number_format($order->diskonNominal(), 0, ',', '.') }}</td>
+                    </tr>
+                @endif
                 <tr class="total-row">
-                    <td colspan="4" class="text-right total-label">Total Tagihan</td>
-                    <td class="text-right total-amount">Rp {{ number_format($order->total ?? 0, 0, ',', '.') }}</td>
+                    <td colspan="5" class="text-right total-label">Total Tagihan</td>
+                    <td class="text-right total-amount">Rp {{ number_format($totalTagihan, 0, ',', '.') }}</td>
                 </tr>
             </tbody>
         </table>
@@ -189,14 +211,14 @@
         </div>
 
         <div class="footer-note">
-            Terima kasih atas pesanan Anda. Simpan invoice ini sebagai bukti transaksi.
+            Terima kasih atas pesanan Anda. Simpan surat pesanan ini sebagai bukti transaksi.
             <p class="print-time">Dicetak: {{ now()->translatedFormat('d M Y, H:i') }}</p>
         </div>
     </div>
 
     <div class="actions no-print" id="standaloneActions">
         <a href="javascript:history.back()" class="link-back">← Kembali</a>
-        <button class="btn btn-primary" onclick="window.print()">Print Invoice</button>
+        <button class="btn btn-primary" onclick="window.print()">Cetak Surat Pesanan</button>
     </div>
 
     <script>

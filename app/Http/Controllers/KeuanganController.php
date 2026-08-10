@@ -184,11 +184,13 @@ class KeuanganController extends Controller
                             'tunai' => 0.0,
                             'qris' => 0.0,
                             'transfer' => 0.0,
+                            'no_order' => [],
                         ]);
                     }
 
                     $entry = $customers->get($key);
                     $entry[$type]++;
+                    $entry['no_order'][] = $order->NoOrder;
                     $customers->put($key, $entry);
                 });
         }
@@ -228,6 +230,7 @@ class KeuanganController extends Controller
                     'tunai' => 0.0,
                     'qris' => 0.0,
                     'transfer' => 0.0,
+                    'no_order' => [],
                 ]);
             }
 

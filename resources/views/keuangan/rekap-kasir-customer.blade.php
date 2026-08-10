@@ -73,6 +73,9 @@
                                         @if ($row['kode'])
                                             <span class="text-muted" style="font-size: 12px; font-weight: 400;">({{ $row['kode'] }})</span>
                                         @endif
+                                        @if (! empty($row['no_order']))
+                                            <div class="text-muted" style="font-size: 11px; font-weight: 400; margin-top: 2px;">{{ implode(', ', $row['no_order']) }}</div>
+                                        @endif
                                     </td>
                                     <td style="text-align: right;">{{ $row['indoor'] ?: '-' }}</td>
                                     <td style="text-align: right;">{{ $row['outdoor'] ?: '-' }}</td>

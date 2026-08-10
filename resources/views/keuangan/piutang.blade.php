@@ -25,11 +25,12 @@
             rincian: [{ cara_bayar: 'tunai', jumlah: '', no_referensi: '' }],
             get rincianTotal() { return this.rincian.reduce((sum, r) => sum + Number(r.jumlah || 0), 0); },
             get rincianDiff() { return Math.round((this.sisaRaw - this.rincianTotal) * 100) / 100; },
+            // POS-style: paying more than the sisa is fine — the excess is
+            // change handed back, not an error.
+            get rincianKembalian() { return this.rincianDiff < 0 ? Math.abs(this.rincianDiff) : 0; },
             get rincianError() {
-                if (this.rincianDiff === 0) return '';
-                return this.rincianDiff > 0
-                    ? `Kurang Rp ${this.rincianDiff.toLocaleString('id-ID')}.`
-                    : `Lebih Rp ${Math.abs(this.rincianDiff).toLocaleString('id-ID')}.`;
+                if (this.rincianDiff <= 0) return '';
+                return `Kurang Rp ${this.rincianDiff.toLocaleString('id-ID')}.`;
             },
             addRincian() { this.rincian.push({ cara_bayar: 'tunai', jumlah: '', no_referensi: '' }); },
             removeRincian(i) { this.rincian.splice(i, 1); },
@@ -135,10 +136,11 @@
                             + Tambah metode pembayaran
                         </button>
 
-                        <p class="text-xs mt-2" :class="rincianError ? 'text-red-600 font-semibold' : 'text-gray-400'">
+                        <p class="text-xs mt-2" :class="rincianError ? 'text-red-600 font-semibold' : (rincianKembalian > 0 ? 'text-green-600 font-semibold' : 'text-gray-400')">
                             Total rincian: <span x-text="rincianTotal.toLocaleString('id-ID')"></span>
                             / <span x-text="sisaRaw.toLocaleString('id-ID')"></span>
                             <span x-show="rincianError" x-text="'— ' + rincianError"></span>
+                            <span x-show="rincianKembalian > 0" x-text="'— Kembalian: Rp ' + rincianKembalian.toLocaleString('id-ID')"></span>
                         </p>
                     </div>
 

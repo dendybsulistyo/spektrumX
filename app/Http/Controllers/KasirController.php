@@ -13,6 +13,7 @@ use App\Models\Role;
 use App\Models\User;
 use App\Services\AccountingService;
 use App\Services\CustomerCreditService;
+use App\Services\OrderPricingService;
 use App\Support\ResolvesOrderType;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\RedirectResponse;
@@ -27,6 +28,7 @@ class KasirController extends Controller
     public function __construct(
         private readonly CustomerCreditService $creditService,
         private readonly AccountingService $accounting,
+        private readonly OrderPricingService $pricingService,
     ) {}
 
     public function index(Request $request): View
@@ -118,7 +120,8 @@ class KasirController extends Controller
         $order = $this->resolveOrder($type, $id);
         $order->load(['customer.limit', 'replaces']);
 
-        $items = $type === 'indoor' ? $order->detailItems() : $order->items;
+        $rawItems = $type === 'indoor' ? $order->detailItems() : $order->items;
+        $items = $this->pricingService->detailedLineItems($type, $order, $rawItems);
 
         $pendingRework = OrderReworkRequest::forOrder($type, $id)->pending()->exists();
 
@@ -265,16 +268,20 @@ class KasirController extends Controller
             }
         }
 
+        $rincian = $data['rincian'] ?? [];
+        $kembalian = 0.0;
+
         if ($data['metode_bayar'] !== 'hutang') {
             $target = $data['metode_bayar'] === 'dp' ? (float) $data['jumlah_dp'] : $total;
 
-            if ($rincianError = $this->checkRincian($data['rincian'] ?? [], $target)) {
+            if ($rincianError = $this->checkRincian($rincian, $target)) {
                 return back()->with('error', $rincianError)->withInput();
             }
+
+            [$rincian, $kembalian] = $this->capRincianToTarget($rincian, $target);
         }
 
-        DB::transaction(function () use ($order, $type, $data, $total) {
-            $rincian = $data['rincian'] ?? [];
+        DB::transaction(function () use ($order, $type, $data, $total, $rincian) {
             $caraBayar = $rincian ? $this->dominantCaraBayar($rincian) : null;
             $noReferensi = $rincian ? $this->dominantNoReferensi($rincian) : null;
 
@@ -374,7 +381,7 @@ class KasirController extends Controller
         });
 
         return redirect()->route('kasir.show', ['type' => $type, 'id' => $order->id])
-            ->with('status', 'Pembayaran berhasil diproses.')
+            ->with('status', 'Pembayaran berhasil diproses.'.($kembalian > 0 ? ' Kembalian: Rp '.number_format($kembalian, 0, ',', '.').'.' : ''))
             ->with('autoPrintInvoice', true);
     }
 
@@ -408,8 +415,9 @@ class KasirController extends Controller
             return back()->with('error', $rincianError)->withInput();
         }
 
-        DB::transaction(function () use ($order, $type, $data, $sisaPiutang) {
-            $rincian = $data['rincian'];
+        [$rincian, $kembalian] = $this->capRincianToTarget($data['rincian'], $sisaPiutang);
+
+        DB::transaction(function () use ($order, $type, $sisaPiutang, $rincian) {
             $caraBayar = $this->dominantCaraBayar($rincian);
             $noReferensi = $this->dominantNoReferensi($rincian);
 
@@ -443,7 +451,7 @@ class KasirController extends Controller
         });
 
         return redirect()->route('kasir.show', ['type' => $type, 'id' => $order->id])
-            ->with('status', 'Sisa DP berhasil dilunasi.')
+            ->with('status', 'Sisa DP berhasil dilunasi.'.($kembalian > 0 ? ' Kembalian: Rp '.number_format($kembalian, 0, ',', '.').'.' : ''))
             ->with('autoPrintInvoice', true);
     }
 
@@ -474,8 +482,9 @@ class KasirController extends Controller
             return back()->with('error', $rincianError)->withInput();
         }
 
-        DB::transaction(function () use ($order, $type, $data, $sisaPiutang) {
-            $rincian = $data['rincian'];
+        [$rincian, $kembalian] = $this->capRincianToTarget($data['rincian'], $sisaPiutang);
+
+        DB::transaction(function () use ($order, $type, $sisaPiutang, $rincian) {
             $caraBayar = $this->dominantCaraBayar($rincian);
             $noReferensi = $this->dominantNoReferensi($rincian);
 
@@ -513,7 +522,7 @@ class KasirController extends Controller
         });
 
         return redirect()->route('kasir.show', ['type' => $type, 'id' => $order->id])
-            ->with('status', 'Hutang berhasil dilunasi.')
+            ->with('status', 'Hutang berhasil dilunasi.'.($kembalian > 0 ? ' Kembalian: Rp '.number_format($kembalian, 0, ',', '.').'.' : ''))
             ->with('autoPrintInvoice', true);
     }
 
@@ -641,8 +650,10 @@ class KasirController extends Controller
     /**
      * Cross-field checks a split-payment array (rincian) needs that plain
      * Laravel validation rules can't express on their own: every non-tunai
-     * split needs a reference number, and the rows must sum exactly to the
-     * amount actually being collected right now.
+     * split needs a reference number, and the rows must cover at least the
+     * amount actually being collected right now. Paying MORE than that is
+     * fine — POS-style — capRincianToTarget() below turns the excess into
+     * change instead of extra revenue.
      *
      * @param  array<int, array{cara_bayar: string, jumlah: mixed, no_referensi?: ?string}>  $rincian
      */
@@ -660,11 +671,51 @@ class KasirController extends Controller
 
         $sum = (float) array_sum(array_column($rincian, 'jumlah'));
 
-        if (abs($sum - $target) > 0.5) {
-            return 'Total rincian pembayaran (Rp '.number_format($sum, 0, ',', '.').') harus sama dengan Rp '.number_format($target, 0, ',', '.').'.';
+        if ($sum + 0.5 < $target) {
+            return 'Total rincian pembayaran (Rp '.number_format($sum, 0, ',', '.').') kurang dari Rp '.number_format($target, 0, ',', '.').'.';
         }
 
         return null;
+    }
+
+    /**
+     * Caps a POS-style overpayment down to the amount actually owed — the
+     * excess is change handed back in cash, not revenue, so it must never
+     * land in OrderPayment or the accounting ledger. Trimmed from the tunai
+     * portion first (that's where physical change actually comes from); if
+     * there's no tunai row at all, trims from the last row as a fallback.
+     *
+     * @param  array<int, array{cara_bayar: string, jumlah: mixed, no_referensi?: ?string}>  $rincian
+     * @return array{0: array<int, array{cara_bayar: string, jumlah: mixed, no_referensi?: ?string}>, 1: float}
+     */
+    private function capRincianToTarget(array $rincian, float $target): array
+    {
+        $sum = (float) array_sum(array_column($rincian, 'jumlah'));
+        $kembalian = $sum - $target;
+
+        if ($kembalian <= 0.5) {
+            return [$rincian, 0.0];
+        }
+
+        $trimIndex = null;
+        foreach ($rincian as $i => $row) {
+            if (($row['cara_bayar'] ?? null) === 'tunai') {
+                $trimIndex = $i;
+                break;
+            }
+        }
+        $trimIndex ??= array_key_last($rincian);
+
+        $rincian[$trimIndex]['jumlah'] = max(0, (float) $rincian[$trimIndex]['jumlah'] - $kembalian);
+
+        // Drop the row entirely if trimming zeroed it out, so an empty
+        // OrderPayment row never gets created.
+        if ($rincian[$trimIndex]['jumlah'] <= 0) {
+            unset($rincian[$trimIndex]);
+            $rincian = array_values($rincian);
+        }
+
+        return [$rincian, $kembalian];
     }
 
     /**
