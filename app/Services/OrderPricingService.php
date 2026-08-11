@@ -186,7 +186,7 @@ class OrderPricingService
                 // catalog/formula that specific line was priced from.
                 'indoor' => (function () use ($item) {
                     if ($item->isArtwork()) {
-                        $harga = HargaArtwork::where('KdProd', $item->KdProd)->first();
+                        $harga = HargaArtwork::where('KdProd', $item->KdProd)->with('kategori')->first();
                         $nilaiX = $harga?->isJasaPotong() ? KonfigurasiJasaPotongArtwork::current()->nilai_x : null;
 
                         return [
@@ -198,13 +198,13 @@ class OrderPricingService
                                 )
                                 : 0,
                             $harga && $nilaiX === null ? $harga->HargaStd : null,
-                            $this->produkBahan($item),
-                            null,
+                            $harga?->kategori?->NmDivs,
+                            $this->produkNama($item),
                             $harga ? $this->produkBreakdown($item, $nilaiX) : null,
                         ];
                     }
 
-                    $produk = Produk::where('KdProd', $item->KdProd)->first();
+                    $produk = Produk::where('KdProd', $item->KdProd)->with('kategori')->first();
                     $nilaiX = $produk?->isPjLb === Produk::PJLB_QTY_ALT ? KonfigurasiJasaPotong::current()->nilai_x : null;
 
                     return [
@@ -216,8 +216,8 @@ class OrderPricingService
                             )
                             : 0,
                         $produk && $nilaiX === null ? $produk->HargaStd : null,
-                        $this->produkBahan($item),
-                        null,
+                        $produk?->kategori?->NmDivs,
+                        $this->produkNama($item),
                         $produk ? $this->produkBreakdown($item, $nilaiX) : null,
                     ];
                 })(),
@@ -257,7 +257,7 @@ class OrderPricingService
                         $item->Judul,
                         $harga ? $this->lineTotalArtwork($harga, $item->Panjang, $item->Lebar, $item->Qty) : 0,
                         $harga && $nilaiX === null ? $harga->HargaStd : null,
-                        $this->produkBahan($item),
+                        $this->produkNama($item),
                         null,
                         $harga ? $this->produkBreakdown($item, $nilaiX) : null,
                     ];
@@ -281,9 +281,12 @@ class OrderPricingService
     /**
      * The Indoor/Artwork catalog product actually used to fulfill this
      * line (NmProd/KdProd), separate from Judul which is just the kasir's
-     * free-text job title.
+     * free-text job title. For a merged Order Indoor row this fills the
+     * "Printer" column slot (there's no real printer for Indoor/Artwork,
+     * so that slot is repurposed to show which product was picked) — the
+     * "Bahan" slot instead shows the product's Kategori for those rows.
      */
-    private function produkBahan($item): ?string
+    private function produkNama($item): ?string
     {
         return $item->NmProd ? "{$item->NmProd} ({$item->KdProd})" : null;
     }
