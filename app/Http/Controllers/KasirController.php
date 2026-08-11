@@ -147,6 +147,7 @@ class KasirController extends Controller
             ? [
                 'cara_bayar' => ['required_if:metode_bayar,tunai,dp', 'nullable', 'in:tunai,qris,transfer'],
                 'no_referensi' => ['required_if:cara_bayar,qris,transfer', 'nullable', 'string', 'max:50'],
+                'jumlah_bayar' => ['nullable', 'numeric', 'min:0'],
             ]
             : [
                 'rincian' => ['required_if:metode_bayar,tunai,dp', 'array'],
@@ -176,6 +177,20 @@ class KasirController extends Controller
             $credit = (float) $order->replacement_credit;
             $topup = max($total - $credit, 0);
             $cashback = max($credit - $total, 0);
+
+            // POS-style: if there's a topup owed, the kasir can enter what
+            // the customer actually handed over — only the amount actually
+            // owed gets recorded as revenue, any excess is change.
+            $kembalian = 0.0;
+            if ($topup > 0) {
+                $jumlahBayar = (float) ($data['jumlah_bayar'] ?? 0);
+
+                if ($jumlahBayar + 0.5 < $topup) {
+                    return back()->with('error', 'Jumlah bayar (Rp '.number_format($jumlahBayar, 0, ',', '.').') kurang dari tambahan yang harus dibayar Rp '.number_format($topup, 0, ',', '.').'.')->withInput();
+                }
+
+                $kembalian = $jumlahBayar - $topup;
+            }
 
             DB::transaction(function () use ($order, $type, $data, $total, $topup, $cashback) {
                 $order->update([
@@ -238,7 +253,7 @@ class KasirController extends Controller
             });
 
             return redirect()->route('kasir.show', ['type' => $type, 'id' => $order->id])
-                ->with('status', $cashback > 0 ? 'Nota pengganti selesai. Cashback telah dicatat.' : 'Nota pengganti selesai. Tambahan pembayaran telah dicatat.')
+                ->with('status', ($cashback > 0 ? 'Nota pengganti selesai. Cashback telah dicatat.' : 'Nota pengganti selesai. Tambahan pembayaran telah dicatat.').($kembalian > 0 ? ' Kembalian: Rp '.number_format($kembalian, 0, ',', '.').'.' : ''))
                 ->with('autoPrintInvoice', true);
         }
 

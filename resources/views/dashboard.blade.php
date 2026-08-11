@@ -159,7 +159,7 @@
                     <table class="table" style="min-width: 1240px;">
                         <thead>
                             <tr>
-                                <th style="width: 32px;">No</th><th>No order</th><th>Tipe</th><th>Customer</th><th>Masuk</th><th>Status</th><th>Bayar</th><th style="text-align: right;">Lama proses</th><th>Operator File</th><th>Kasir</th><th>Desain</th><th>Cetak</th><th>Finishing</th><th>QC</th><th>Bungkus</th><th>Ambil</th>
+                                <th style="width: 32px;">No</th><th>No order</th><th>Tipe</th><th>Customer</th><th>Masuk</th><th>Status</th><th>Bayar</th><th style="text-align: right;">Proses</th><th>Penerima</th><th>Kasir</th><th>Layout</th><th>Cetak</th><th>Finishing</th><th>BackOffice</th><th>Bungkus</th><th>Ambil</th>
                             </tr>
                         </thead>
                         <tbody>

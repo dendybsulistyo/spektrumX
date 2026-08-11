@@ -289,7 +289,7 @@
                                                 <a href="{{ route('kasir.index') }}" class="{{ $dropdownLink(request()->routeIs('kasir.*')) }}">Kasir</a>
                                             @endcan
                                             @can('order-desain.view')
-                                                <a href="{{ route('order-desain.index') }}" class="{{ $dropdownLink(request()->routeIs('order-desain.*')) }}">Layout/Edit</a>
+                                                <a href="{{ route('order-desain.index') }}" class="{{ $dropdownLink(request()->routeIs('order-desain.*')) }}">Layout / Desain</a>
                                             @endcan
                                             @can('order-cetak.view')
                                                 <a href="{{ route('order-cetak.index') }}" class="{{ $dropdownLink(request()->routeIs('order-cetak.*')) }}">Cetak</a>

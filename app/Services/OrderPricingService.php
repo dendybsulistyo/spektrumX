@@ -163,13 +163,16 @@ class OrderPricingService
 
     /**
      * Per-line "asal angka" breakdown — name, dimensions, unit price,
-     * subtotal, and a human-readable note (printer/bahan for Outdoor, the
-     * Jasa Potong formula when no single unit price applies) — shared by
-     * the printed Surat Pesanan and the Kasir payment page so both always
-     * show the exact same numbers.
+     * subtotal, the underlying "bahan" (Outdoor: bahan cetak; Indoor/
+     * Artwork: the catalog NmProd/KdProd actually used, separate from
+     * Judul which is just the kasir's free-text job title), and a note for
+     * the cases Harga Satuan alone can't explain (Outdoor's printer, or the
+     * Jasa Potong formula which bypasses HargaStd entirely) — shared by the
+     * printed Surat Pesanan and the Kasir payment page so both always show
+     * the exact same numbers.
      *
      * @param  Collection<int, mixed>  $rawItems
-     * @return Collection<int, object{name: string, panjang: mixed, lebar: mixed, qty: mixed, harga_satuan: ?float, subtotal: float, breakdown: ?string}>
+     * @return Collection<int, object{name: string, bahan: ?string, printer: ?string, panjang: mixed, lebar: mixed, qty: mixed, harga_satuan: ?float, subtotal: float, breakdown: ?string}>
      */
     public function detailedLineItems(string $type, OrderIndoor|OrderOutdoor|OrderArtwork $order, Collection $rawItems): Collection
     {
@@ -177,7 +180,7 @@ class OrderPricingService
         $bahanNames = BahanCetakOutdoor::pluck('NmBhn', 'NoCetak');
 
         return $rawItems->map(function ($item) use ($type, $order, $printerNames, $bahanNames) {
-            [$name, $subtotal, $hargaSatuan, $breakdown] = match ($type) {
+            [$name, $subtotal, $hargaSatuan, $bahan, $printer, $breakdown] = match ($type) {
                 // Order Indoor now also holds Artwork-catalog items in the
                 // same order (jenis_produk per line) — look up whichever
                 // catalog/formula that specific line was priced from.
@@ -195,6 +198,8 @@ class OrderPricingService
                                 )
                                 : 0,
                             $harga && $nilaiX === null ? $harga->HargaStd : null,
+                            $this->produkBahan($item),
+                            null,
                             $harga ? $this->produkBreakdown($item, $nilaiX) : null,
                         ];
                     }
@@ -211,6 +216,8 @@ class OrderPricingService
                             )
                             : 0,
                         $produk && $nilaiX === null ? $produk->HargaStd : null,
+                        $this->produkBahan($item),
+                        null,
                         $produk ? $this->produkBreakdown($item, $nilaiX) : null,
                     ];
                 })(),
@@ -224,7 +231,8 @@ class OrderPricingService
                     $subtotal = $harga ? $this->lineTotalOutdoor($harga, $item->Panjang, $item->Lebar, $item->Qty, $order->KdCust) : 0;
 
                     $hargaSatuan = null;
-                    $breakdown = null;
+                    $bahan = null;
+                    $printer = null;
                     if ($harga) {
                         $areaM2 = ((float) $item->Panjang / 100) * ((float) $item->Lebar / 100);
                         $printer = $printerNames[$item->printerCode()] ?? $item->printerCode() ?? '-';
@@ -234,10 +242,12 @@ class OrderPricingService
                         // always matches whatever price actually applied,
                         // VIP override included.
                         $hargaSatuan = $areaM2 * $item->Qty > 0 ? $subtotal / ($areaM2 * $item->Qty) : $harga->HargaStd;
-                        $breakdown = "Printer: {$printer} · Bahan: {$bahan} · Luas ".number_format($areaM2, 2, ',', '.')." m²";
                     }
 
-                    return [$item->NmFile, $subtotal, $hargaSatuan, $breakdown];
+                    // No breakdown text — same treatment as Indoor: Bahan
+                    // and Printer are their own columns, and Panjang/Lebar/
+                    // Qty/Harga Satuan already fully explain the subtotal.
+                    return [$item->NmFile, $subtotal, $hargaSatuan, $bahan, $printer, null];
                 })(),
                 'artwork' => (function () use ($item) {
                     $harga = HargaArtwork::where('KdProd', $item->KdProd)->first();
@@ -247,6 +257,8 @@ class OrderPricingService
                         $item->Judul,
                         $harga ? $this->lineTotalArtwork($harga, $item->Panjang, $item->Lebar, $item->Qty) : 0,
                         $harga && $nilaiX === null ? $harga->HargaStd : null,
+                        $this->produkBahan($item),
+                        null,
                         $harga ? $this->produkBreakdown($item, $nilaiX) : null,
                     ];
                 })(),
@@ -254,6 +266,8 @@ class OrderPricingService
 
             return (object) [
                 'name' => $name,
+                'bahan' => $bahan,
+                'printer' => $printer,
                 'panjang' => $item->Panjang,
                 'lebar' => $item->Lebar,
                 'qty' => $item->Qty,
@@ -265,10 +279,21 @@ class OrderPricingService
     }
 
     /**
-     * Renders the "asal angka" breakdown note for a Jasa Potong line (isPjLb
-     * 4) — the only case that needs extra text since Harga Satuan has no
-     * single unit price to show for it (the formula bypasses HargaStd
-     * entirely).
+     * The Indoor/Artwork catalog product actually used to fulfill this
+     * line (NmProd/KdProd), separate from Judul which is just the kasir's
+     * free-text job title.
+     */
+    private function produkBahan($item): ?string
+    {
+        return $item->NmProd ? "{$item->NmProd} ({$item->KdProd})" : null;
+    }
+
+    /**
+     * Renders the "asal angka" breakdown note for an Indoor/Artwork line —
+     * only the Jasa Potong formula needs it (isPjLb 4 bypasses HargaStd
+     * entirely, so the Harga Satuan column is blank for it and has nothing
+     * else to explain how the subtotal was computed). Everything else is
+     * already fully explained by the Harga Satuan/Qty/Subtotal columns.
      */
     private function produkBreakdown($item, ?float $nilaiX): ?string
     {

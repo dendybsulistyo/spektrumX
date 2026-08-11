@@ -1,6 +1,6 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800">Antrian QC</h2>
+        <h2 class="font-semibold text-xl text-gray-800">Operator Back Office</h2>
     </x-slot>
 
     @push('styles')

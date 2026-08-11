@@ -46,7 +46,7 @@
         .dp-summary .row.sisa { font-weight: 700; color: #991b1b; }
         table { width: 100%; border-collapse: collapse; margin-top: 24px; }
         th, td { text-align: left; padding: 10px 8px; }
-        thead th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #9ca3af; border-bottom: 2px solid #e5e7eb; }
+        thead th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #9ca3af; border-bottom: 2px solid #e5e7eb; white-space: nowrap; }
         tbody td { border-bottom: 1px solid #f3f4f6; }
         .text-right { text-align: right; }
         .item-name { font-weight: 600; color: #111827; }
@@ -139,10 +139,12 @@
             <thead>
                 <tr>
                     <th>Item</th>
-                    <th class="text-right">Panjang</th>
-                    <th class="text-right">Lebar</th>
+                    <th>Bahan</th>
+                    <th>Printer</th>
+                    <th class="text-right">PJ</th>
+                    <th class="text-right">LB</th>
                     <th class="text-right">Qty</th>
-                    <th class="text-right">Harga Satuan</th>
+                    <th class="text-right">Hrg. Satuan</th>
                     <th class="text-right">Subtotal</th>
                 </tr>
             </thead>
@@ -155,6 +157,8 @@
                                 <p class="item-breakdown">{{ $item->breakdown }}</p>
                             @endif
                         </td>
+                        <td>{{ $item->bahan ?? '-' }}</td>
+                        <td>{{ $item->printer ?? '-' }}</td>
                         <td class="text-right">{{ $item->panjang }}</td>
                         <td class="text-right">{{ $item->lebar }}</td>
                         <td class="text-right">{{ $item->qty }}</td>
@@ -164,16 +168,16 @@
                 @endforeach
                 @if ($diskonStatus === 'approved')
                     <tr class="total-row">
-                        <td colspan="5" class="text-right total-label">Subtotal</td>
+                        <td colspan="7" class="text-right total-label">Subtotal</td>
                         <td class="text-right">Rp {{ number_format($order->total ?? 0, 0, ',', '.') }}</td>
                     </tr>
                     <tr>
-                        <td colspan="5" class="text-right total-label">Diskon {{ $order->diskonApprovedLabel() }}</td>
+                        <td colspan="7" class="text-right total-label">Diskon {{ $order->diskonApprovedLabel() }}</td>
                         <td class="text-right" style="color:#991b1b;">- Rp {{ number_format($order->diskonNominal(), 0, ',', '.') }}</td>
                     </tr>
                 @endif
                 <tr class="total-row">
-                    <td colspan="5" class="text-right total-label">Total Tagihan</td>
+                    <td colspan="7" class="text-right total-label">Total Tagihan</td>
                     <td class="text-right total-amount">Rp {{ number_format($totalTagihan, 0, ',', '.') }}</td>
                 </tr>
             </tbody>

@@ -56,10 +56,12 @@
                     <thead class="bg-gray-50 text-left text-xs uppercase text-gray-500">
                         <tr>
                             <th class="px-3 py-2">Item</th>
-                            <th class="px-3 py-2 text-right">Panjang</th>
-                            <th class="px-3 py-2 text-right">Lebar</th>
+                            <th class="px-3 py-2">Bahan</th>
+                            <th class="px-3 py-2">Printer</th>
+                            <th class="px-3 py-2 text-right">Pj</th>
+                            <th class="px-3 py-2 text-right">Lb</th>
                             <th class="px-3 py-2 text-right">Qty</th>
-                            <th class="px-3 py-2 text-right">Harga Satuan</th>
+                            <th class="px-3 py-2 text-right">Hrg. Satuan</th>
                             <th class="px-3 py-2 text-right">Subtotal</th>
                         </tr>
                     </thead>
@@ -72,6 +74,8 @@
                                         <p class="text-xs text-gray-400 mt-0.5">{{ $item->breakdown }}</p>
                                     @endif
                                 </td>
+                                <td class="px-3 py-2 text-gray-600">{{ $item->bahan ?? '-' }}</td>
+                                <td class="px-3 py-2 text-gray-600">{{ $item->printer ?? '-' }}</td>
                                 <td class="px-3 py-2 text-right text-gray-600">{{ $item->panjang }}</td>
                                 <td class="px-3 py-2 text-right text-gray-600">{{ $item->lebar }}</td>
                                 <td class="px-3 py-2 text-right text-gray-600">{{ $item->qty }}</td>
@@ -181,6 +185,18 @@
                 metode: '{{ old('metode_bayar', 'tunai') }}',
                 caraBayar: '{{ old('cara_bayar', 'tunai') }}',
                 noReferensi: '{{ old('no_referensi') }}',
+                jumlahBayarReplacement: '{{ old('jumlah_bayar') }}',
+                replacementTarget: {{ (float) ($difference ?? 0) }},
+                get replacementKembalian() {
+                    if (!this.jumlahBayarReplacement) return 0;
+                    return Math.max(0, Math.round((Number(this.jumlahBayarReplacement) - this.replacementTarget) * 100) / 100);
+                },
+                get replacementError() {
+                    if (!this.isReplacement || this.replacementTarget <= 0) return '';
+                    const val = Number(this.jumlahBayarReplacement || 0);
+                    if (val + 0.5 < this.replacementTarget) return `Kurang Rp ${Math.round(this.replacementTarget - val).toLocaleString('id-ID')}.`;
+                    return '';
+                },
                 jumlahDp: '{{ old('jumlah_dp') }}',
                 dpMin: {{ (int) ceil(($diskonStatus === 'approved' ? $order->totalSetelahDiskon() : $order->total ?? 0) * 0.5) }},
                 dpMax: {{ max((int) ($diskonStatus === 'approved' ? $order->totalSetelahDiskon() : $order->total ?? 0) - 1, 0) }},
@@ -220,7 +236,7 @@
              }">
             <form method="POST" action="{{ route('kasir.bayar', ['type' => $type, 'id' => $order->id]) }}"
                   class="space-y-4" novalidate
-                  @submit="if (dpError || rincianError) { $event.preventDefault(); }">
+                  @submit="if (dpError || rincianError || replacementError) { $event.preventDefault(); }">
                 @csrf
 
                     <div>
@@ -279,6 +295,23 @@
                                       class="mt-1 block w-full" maxlength="50" placeholder="ID transaksi QRIS / 4 digit terakhir rekening tujuan" />
                         <x-input-error :messages="$errors->get('no_referensi')" class="mt-1" />
                     </div>
+
+                    @if (($difference ?? 0) > 0)
+                        <div x-show="metode !== 'hutang'" x-cloak>
+                            <x-input-label value="Jumlah Bayar" />
+                            <input type="text" inputmode="numeric"
+                                   :value="jumlahBayarReplacement ? Number(jumlahBayarReplacement).toLocaleString('id-ID') : ''"
+                                   @input="jumlahBayarReplacement = $event.target.value.replace(/\D/g, '')"
+                                   placeholder="Jumlah" class="mt-1 block w-full rounded-md border-gray-300 text-sm">
+                            <input type="hidden" name="jumlah_bayar" :value="jumlahBayarReplacement">
+                            <p class="text-xs mt-1" :class="replacementError ? 'text-red-600 font-semibold' : (replacementKembalian > 0 ? 'text-green-600 font-semibold' : 'text-gray-400')">
+                                Tambahan yang harus dibayar: Rp {{ number_format($difference, 0, ',', '.') }}
+                                <span x-show="replacementError" x-text="'— ' + replacementError"></span>
+                                <span x-show="replacementKembalian > 0" x-text="'— Kembalian: Rp ' + replacementKembalian.toLocaleString('id-ID')"></span>
+                            </p>
+                            <x-input-error :messages="$errors->get('jumlah_bayar')" class="mt-1" />
+                        </div>
+                    @endif
                 @else
                     <div x-show="metode !== 'hutang'" x-cloak>
                         <x-input-label value="Rincian Pembayaran" />
