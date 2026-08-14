@@ -1,4 +1,4 @@
-@props(['type', 'orderId', 'noOrder', 'currentStage', 'pending' => null, 'canApprove' => false])
+@props(['type', 'orderId', 'noOrder', 'currentStage', 'pending' => null, 'canApprove' => false, 'compact' => false])
 
 @php
     $stageOptions = collect(\App\Models\OrderReworkRequest::STAGE_LABELS)
@@ -51,12 +51,12 @@
             </div>
         @endif
     @else
-        <button type="button" @click="open = true"
+        <button type="button" @click="open = true" title="Ulang Proses"
                 class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md border border-red-300 text-red-600 text-xs font-semibold hover:bg-red-50">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-3.5 h-3.5">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3" />
             </svg>
-            Ulang Proses
+            {{ $compact ? 'Ulang' : 'Ulang Proses' }}
         </button>
 
         <div x-show="open" x-cloak @keydown.escape.window="open = false"

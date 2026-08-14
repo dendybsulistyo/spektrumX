@@ -19,6 +19,8 @@ class OrderStatusNote extends Model
     protected $fillable = [
         'order_type',
         'order_id',
+        'order_detail_id',
+        'qty',
         'stage',
         'action',
         'catatan',
@@ -30,6 +32,7 @@ class OrderStatusNote extends Model
     {
         return [
             'created_at' => 'datetime',
+            'qty' => 'integer',
         ];
     }
 

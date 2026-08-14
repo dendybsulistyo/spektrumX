@@ -12,6 +12,7 @@
         "laravel/tinker": "^2.10.1"
     },
     "require-dev": {
+        "albertoarena/laravel-truss": "^1.8",
         "fakerphp/faker": "^1.23",
         "laravel/breeze": "^2.4",
         "laravel/pail": "^1.2.2",

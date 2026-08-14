@@ -305,16 +305,14 @@ Route::middleware('auth')->group(function () {
     });
     Route::middleware('permission:order-desain.manage')->group(function () {
         Route::post('/order-desain/gabungan/{item}', [OrderDesainController::class, 'updateGabungan'])->name('order-desain.gabungan');
-        Route::post('/order-desain/{type}/{id}', [OrderDesainController::class, 'update'])->name('order-desain.update');
+        Route::post('/order-desain/progress/{type}/{id}', [OrderDesainController::class, 'updateItem'])->name('order-desain.progress');
     });
 
     Route::middleware('permission:order-cetak.view')->group(function () {
         Route::get('/order-cetak', [OrderCetakController::class, 'index'])->name('order-cetak.index');
     });
     Route::middleware('permission:order-cetak.manage')->group(function () {
-        Route::post('/order-cetak/progress/{item}', [OrderCetakController::class, 'updateProgress'])->name('order-cetak.progress');
-        Route::post('/order-cetak/finish-outdoor/{order}', [OrderCetakController::class, 'finishOutdoor'])->name('order-cetak.finish-outdoor');
-        Route::post('/order-cetak/{type}/{id}', [OrderCetakController::class, 'update'])->name('order-cetak.update');
+        Route::post('/order-cetak/{type}/{id}', [OrderCetakController::class, 'updateItem'])->name('order-cetak.update');
     });
 
     Route::post('/order-comments/{type}/{id}', [OrderCommentController::class, 'store'])->name('order-comments.store');
@@ -338,28 +336,28 @@ Route::middleware('auth')->group(function () {
         Route::get('/order-finishing', [OrderFinishingController::class, 'index'])->name('order-finishing.index');
     });
     Route::middleware('permission:order-finishing.manage')->group(function () {
-        Route::post('/order-finishing/{type}/{id}', [OrderFinishingController::class, 'update'])->name('order-finishing.update');
+        Route::post('/order-finishing/{type}/{id}', [OrderFinishingController::class, 'updateItem'])->name('order-finishing.update');
     });
 
     Route::middleware('permission:order-qc.view')->group(function () {
         Route::get('/order-qc', [OrderQcController::class, 'index'])->name('order-qc.index');
     });
     Route::middleware('permission:order-qc.manage')->group(function () {
-        Route::post('/order-qc/{type}/{id}', [OrderQcController::class, 'update'])->name('order-qc.update');
+        Route::post('/order-qc/{type}/{id}', [OrderQcController::class, 'updateItem'])->name('order-qc.update');
     });
 
     Route::middleware('permission:order-bungkus.view')->group(function () {
         Route::get('/order-bungkus', [OrderBungkusController::class, 'index'])->name('order-bungkus.index');
     });
     Route::middleware('permission:order-bungkus.manage')->group(function () {
-        Route::post('/order-bungkus/{type}/{id}', [OrderBungkusController::class, 'update'])->name('order-bungkus.update');
+        Route::post('/order-bungkus/{type}/{id}', [OrderBungkusController::class, 'updateItem'])->name('order-bungkus.update');
     });
 
     Route::middleware('permission:pengambilan.view')->group(function () {
         Route::get('/pengambilan', [PengambilanController::class, 'index'])->name('pengambilan.index');
     });
     Route::middleware('permission:pengambilan.manage')->group(function () {
-        Route::post('/pengambilan/{type}/{id}', [PengambilanController::class, 'serahkan'])->name('pengambilan.serahkan');
+        Route::post('/pengambilan/{type}/{id}', [PengambilanController::class, 'updateItem'])->name('pengambilan.serahkan');
     });
 
     Route::prefix('chat')->name('chat.')->group(function () {

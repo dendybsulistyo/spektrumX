@@ -14,6 +14,13 @@ use Illuminate\Support\Carbon;
  */
 trait HasStageProgress
 {
+    /**
+     * Header `status` values that are never derived from line items —
+     * pre-production (order not yet paid) or terminal (cancelled / fully
+     * picked up by the customer).
+     */
+    public const NON_ITEM_DERIVED_STATUSES = ['baru', 'dibayar', 'batal', 'selesai'];
+
     public function stageEnteredAt(): ?Carbon
     {
         return match ($this->status) {
@@ -32,5 +39,61 @@ trait HasStageProgress
         $enteredAt = $this->stageEnteredAt();
 
         return $enteredAt !== null && $enteredAt->diffInDays(now()) >= $days;
+    }
+
+    /**
+     * The stage whose `_at` column is stamped once every item has just
+     * cleared it — i.e. the stage immediately before $stage in the
+     * pipeline. Inverse of the `stageEnteredAt()` match above.
+     */
+    public static function stageBefore(string $stage): ?string
+    {
+        return match ($stage) {
+            'cetak' => 'desain',
+            'finishing' => 'cetak',
+            'qc' => 'finishing',
+            'bungkus' => 'qc',
+            'siap_diambil' => 'bungkus',
+            default => null,
+        };
+    }
+
+    /**
+     * Recomputes the header `status` as the LEAST-advanced stage among this
+     * order's line items, and writes it back — same column, same
+     * downstream consumers (Kasir, Papan Pantau, Dashboard, File Monitor,
+     * isMacet), just now driven by item-level progress instead of being
+     * set directly by a stage controller. Called after every item-stage
+     * transition (see StageProgressService::advanceItem()); never touches
+     * pre-production/terminal orders.
+     */
+    public function recalculateStatus(): void
+    {
+        if (in_array($this->status, self::NON_ITEM_DERIVED_STATUSES, true)) {
+            return;
+        }
+
+        $items = $this->detailItems();
+
+        if ($items->isEmpty()) {
+            return;
+        }
+
+        $leastIndex = $items->min(fn ($item) => $item->earliestActiveStageIndex());
+        $newStage = $items->first()::stageName($leastIndex);
+
+        if ($newStage === $this->status) {
+            return;
+        }
+
+        $update = ['status' => $newStage];
+
+        $prevStage = self::stageBefore($newStage);
+        if ($prevStage && ! $this->{"{$prevStage}_at"}) {
+            $update["{$prevStage}_by"] = auth()->id();
+            $update["{$prevStage}_at"] = now();
+        }
+
+        $this->update($update);
     }
 }

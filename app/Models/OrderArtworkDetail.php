@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use App\Traits\HasItemStageProgress;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class OrderArtworkDetail extends Model
 {
+    use HasItemStageProgress;
+
     protected $table = 'order_artwork_detail';
 
     /**
@@ -23,6 +26,14 @@ class OrderArtworkDetail extends Model
         'Panjang',
         'Lebar',
         'Qty',
+        'qty_desain',
+        'qty_cetak',
+        'qty_finishing',
+        'qty_qc',
+        'qty_bungkus',
+        'qty_siap_diambil',
+        'qty_selesai',
+        'stage_entered_at',
         'PisauTurun',
         'JumlahKertas',
         'TebalKertas',
@@ -36,12 +47,25 @@ class OrderArtworkDetail extends Model
             'PisauTurun' => 'integer',
             'JumlahKertas' => 'integer',
             'TebalKertas' => 'integer',
+            'qty_desain' => 'integer',
+            'qty_cetak' => 'integer',
+            'qty_finishing' => 'integer',
+            'qty_qc' => 'integer',
+            'qty_bungkus' => 'integer',
+            'qty_siap_diambil' => 'integer',
+            'qty_selesai' => 'integer',
+            'stage_entered_at' => 'datetime',
         ];
     }
 
     public function order(): BelongsTo
     {
         return $this->belongsTo(OrderArtwork::class, 'order_artwork_id');
+    }
+
+    public function orderTypeSlug(): string
+    {
+        return 'artwork';
     }
 
     public function produk(): BelongsTo

@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use App\Traits\HasItemStageProgress;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class OrderOutdoorDetail extends Model
 {
+    use HasItemStageProgress;
+
     protected $table = 'order_outdoor_detail';
 
     /**
@@ -22,7 +25,14 @@ class OrderOutdoorDetail extends Model
         'Panjang',
         'Lebar',
         'Qty',
-        'qty_diproses',
+        'qty_desain',
+        'qty_cetak',
+        'qty_finishing',
+        'qty_qc',
+        'qty_bungkus',
+        'qty_siap_diambil',
+        'qty_selesai',
+        'stage_entered_at',
         'gabungan',
         'KdCtk',
         'ada_finishing',
@@ -35,7 +45,14 @@ class OrderOutdoorDetail extends Model
             'Panjang' => 'float',
             'Lebar' => 'float',
             'ada_finishing' => 'boolean',
-            'qty_diproses' => 'integer',
+            'qty_desain' => 'integer',
+            'qty_cetak' => 'integer',
+            'qty_finishing' => 'integer',
+            'qty_qc' => 'integer',
+            'qty_bungkus' => 'integer',
+            'qty_siap_diambil' => 'integer',
+            'qty_selesai' => 'integer',
+            'stage_entered_at' => 'datetime',
         ];
     }
 
@@ -44,14 +61,9 @@ class OrderOutdoorDetail extends Model
         return $this->belongsTo(OrderOutdoor::class, 'order_outdoor_id');
     }
 
-    public function sisaQty(): int
+    public function orderTypeSlug(): string
     {
-        return max(0, (int) $this->Qty - (int) $this->qty_diproses);
-    }
-
-    public function isSelesai(): bool
-    {
-        return $this->sisaQty() === 0;
+        return 'outdoor';
     }
 
     public function hargaCetak(): BelongsTo

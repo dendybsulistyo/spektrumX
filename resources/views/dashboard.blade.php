@@ -183,12 +183,30 @@
                                     <td style="text-align: right; white-space: nowrap;">{{ $row['durasi'] ?? '-' }}</td>
                                     <td class="text-muted">{{ $row['operator_file'] ?? '-' }}</td>
                                     <td class="text-muted">{{ $row['kasir'] ?? '-' }}</td>
-                                    <td class="text-muted">{{ $row['desain_by'] ?? '-' }}</td>
-                                    <td class="text-muted">{{ $row['cetak_by'] ?? '-' }}</td>
-                                    <td class="text-muted">{{ $row['finishing_by'] ?? '-' }}</td>
-                                    <td class="text-muted">{{ $row['qc_by'] ?? '-' }}</td>
-                                    <td class="text-muted">{{ $row['bungkus_by'] ?? '-' }}</td>
-                                    <td class="text-muted">{{ $row['pengambilan_by'] ?? '-' }}</td>
+                                    <td class="text-muted">
+                                        @if ($row['desain_progress'])<div>{{ $row['desain_progress'] }}</div>@endif
+                                        <div style="font-size: 11px;">{{ $row['desain_by'] ?? '-' }}</div>
+                                    </td>
+                                    <td class="text-muted">
+                                        @if ($row['cetak_progress'])<div>{{ $row['cetak_progress'] }}</div>@endif
+                                        <div style="font-size: 11px;">{{ $row['cetak_by'] ?? '-' }}</div>
+                                    </td>
+                                    <td class="text-muted">
+                                        @if ($row['finishing_progress'])<div>{{ $row['finishing_progress'] }}</div>@endif
+                                        <div style="font-size: 11px;">{{ $row['finishing_by'] ?? '-' }}</div>
+                                    </td>
+                                    <td class="text-muted">
+                                        @if ($row['qc_progress'])<div>{{ $row['qc_progress'] }}</div>@endif
+                                        <div style="font-size: 11px;">{{ $row['qc_by'] ?? '-' }}</div>
+                                    </td>
+                                    <td class="text-muted">
+                                        @if ($row['bungkus_progress'])<div>{{ $row['bungkus_progress'] }}</div>@endif
+                                        <div style="font-size: 11px;">{{ $row['bungkus_by'] ?? '-' }}</div>
+                                    </td>
+                                    <td class="text-muted">
+                                        @if ($row['pengambilan_progress'])<div>{{ $row['pengambilan_progress'] }}</div>@endif
+                                        <div style="font-size: 11px;">{{ $row['pengambilan_by'] ?? '-' }}</div>
+                                    </td>
                                 </tr>
                             @empty
                                 <tr><td colspan="16" class="text-muted" style="text-align: center; padding: var(--space-6);">Tidak ada order pada rentang ini.</td></tr>

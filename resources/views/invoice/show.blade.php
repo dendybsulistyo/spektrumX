@@ -66,10 +66,11 @@
         .link-back { color: #6b7280; text-decoration: none; font-size: 14px; }
         .link-back:hover { text-decoration: underline; }
         @media print {
-            @page { size: A5; margin: 10mm; }
+            @page { size: A5; margin: 5cm 5cm 3cm 5cm; }
             body { background: #fff; padding: 0; font-size: 12px; }
             .card { box-shadow: none; border: none; max-width: none; padding: 0; }
             .no-print { display: none; }
+            .header { display: none; }
             .company-name { font-size: 18px; }
             .total-amount { font-size: 18px; }
             table { margin-top: 16px; }

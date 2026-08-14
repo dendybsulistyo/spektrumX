@@ -36,7 +36,17 @@ class RoleSeeder extends Seeder
 
         Role::updateOrCreate(['name' => 'operator-desain'], [
             'label' => 'Operator Desain',
-            'permissions' => ['order-indoor.view', 'order-outdoor.view', 'order-artwork.view', 'order-desain.view', 'order-desain.manage'],
+            'permissions' => ['order-indoor.view', 'order-outdoor.view', 'order-desain.view', 'order-desain.manage'],
+        ]);
+
+        Role::updateOrCreate(['name' => 'operator-desain-indoor'], [
+            'label' => 'Operator Desain Indoor',
+            'permissions' => ['order-indoor.view', 'order-desain.view', 'order-desain.manage'],
+        ]);
+
+        Role::updateOrCreate(['name' => 'operator-desain-outdoor'], [
+            'label' => 'Operator Desain Outdoor',
+            'permissions' => ['order-outdoor.view', 'order-desain.view', 'order-desain.manage'],
         ]);
 
         Role::updateOrCreate(['name' => 'operator-cetak'], [

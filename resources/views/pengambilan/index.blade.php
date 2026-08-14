@@ -1,6 +1,6 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800">Operator Pengambilan Barang</h2>
+        <h2 class="font-semibold text-xl text-gray-800">Pengambilan Barang</h2>
     </x-slot>
 
     @push('styles')
@@ -10,22 +10,34 @@
             #industry-pengambilan .seg-tab { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; font-family: var(--font-heading); font-weight: 600; font-size: 14px; letter-spacing: 0.02em; cursor: pointer; border: 1px solid var(--color-divider); border-right: none; background: transparent; color: var(--color-text); }
             #industry-pengambilan .seg-tab:last-child { border-right: 1px solid var(--color-divider); }
             #industry-pengambilan .seg-tab.active { background: var(--color-accent); color: var(--color-bg); border-color: var(--color-accent); }
+            #industry-pengambilan .in-input { width: 70px; min-height: 28px; padding: 4px 6px; font: inherit; font-size: 13px; color: var(--color-text); background: var(--color-surface); border: 1px solid var(--color-divider); }
             #industry-pengambilan .in-btn { display: inline-flex; align-items: center; gap: 4px; font-family: var(--font-heading); font-weight: 600; font-size: 13px; padding: 5px 10px; background: var(--color-accent); color: var(--color-bg); border: 1px solid var(--color-accent); cursor: pointer; white-space: nowrap; }
             #industry-pengambilan .in-btn:hover { background: var(--color-accent-600); }
-            #industry-pengambilan .in-btn[disabled] { opacity: 0.45; cursor: not-allowed; background: var(--color-neutral-400); border-color: var(--color-neutral-400); }
+            #industry-pengambilan .order-card { border: 1px solid var(--color-divider); margin-bottom: var(--space-4); }
+            #industry-pengambilan .order-card-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-3) var(--space-4); background: color-mix(in srgb, var(--color-accent) 5%, transparent); border-bottom: 1px solid var(--color-divider); flex-wrap: wrap; }
+            #industry-pengambilan .item-row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--color-divider); flex-wrap: wrap; }
+            #industry-pengambilan .item-row:last-child { border-bottom: none; }
+            #industry-pengambilan .progress-tag { font-family: var(--font-heading); font-weight: 600; font-size: 13px; color: var(--color-text-muted, #666); }
         </style>
     @endpush
 
+    @if (session('error'))
+        <div class="mx-auto" style="max-width: 1480px;">
+            <div class="tag tag-danger" style="display: block; padding: var(--space-3);">{{ session('error') }}</div>
+        </div>
+    @endif
+
     @php
         $tabs = [
-            'indoor' => ['label' => 'Indoor', 'count' => $indoorOrders->count()],
-            'outdoor' => ['label' => 'Outdoor', 'count' => $outdoorOrders->count()],
-            'artwork' => ['label' => 'Artwork', 'count' => $artworkOrders->count()],
+            'indoor' => ['label' => 'Indoor', 'count' => $indoorItems->count()],
+            'outdoor' => ['label' => 'Outdoor', 'count' => $outdoorItems->count()],
+            'artwork' => ['label' => 'Artwork', 'count' => $artworkItems->count()],
         ];
+        $initialTab = array_key_exists(request('tab'), $tabs) ? request('tab') : 'indoor';
     @endphp
 
     <div id="industry-pengambilan">
-        <div style="max-width: 1480px; margin: 0 auto; display: flex; flex-direction: column; gap: var(--space-6);" x-data="{ tab: 'indoor' }">
+        <div style="max-width: 1480px; margin: 0 auto; display: flex; flex-direction: column; gap: var(--space-6);" x-data="{ tab: '{{ $initialTab }}' }">
             <div style="display: flex;">
                 @foreach ($tabs as $key => $t)
                     <button type="button" @click="tab = '{{ $key }}'" class="seg-tab" :class="tab === '{{ $key }}' ? 'active' : ''">
@@ -34,64 +46,17 @@
                 @endforeach
             </div>
 
-            @foreach (['indoor' => $indoorOrders, 'outdoor' => $outdoorOrders, 'artwork' => $artworkOrders] as $tabKey => $orders)
-                <div x-show="tab === '{{ $tabKey }}'" @if($tabKey!=='indoor') x-cloak @endif
-                     class="blueprint" style="padding: var(--space-6);">
-                    <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
-                    <div style="overflow-x: auto;">
-                        <table class="table" style="min-width: 640px;">
-                            <thead>
-                                <tr>
-                                    <th style="width: 32px;">No</th><th>No order</th><th>Tanggal</th><th>Customer</th><th>Pembayaran</th><th style="text-align: right;">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @forelse ($orders as $order)
-                                    <tr>
-                                        <td class="text-muted">{{ $loop->iteration }}</td>
-                                        <td style="font-family: var(--font-heading); font-weight: 600;">{{ $order->NoOrder }}</td>
-                                        <td class="text-muted">{{ is_string($order->TglOrder) ? $order->TglOrder : $order->TglOrder?->format('Y-m-d') }}</td>
-                                        <td>{{ $order->customer?->NmCust ? ucwords(mb_strtolower($order->customer->NmCust)) : '-' }}</td>
-                                        <td>
-                                            @if ($order->status_bayar === 'lunas')
-                                                <span class="tag tag-accent">Lunas</span>
-                                            @elseif ($order->status_bayar === 'dp')
-                                                <span class="tag tag-outline">Sisa DP Rp {{ number_format($order->jumlah_piutang, 0, ',', '.') }}</span>
-                                            @else
-                                                <span class="tag tag-outline">Hutang Rp {{ number_format($order->jumlah_piutang, 0, ',', '.') }}</span>
-                                            @endif
-                                        </td>
-                                        <td style="text-align: right;">
-                                            <div style="display: inline-flex; align-items: center; gap: 6px;">
-                                                @if ($tabKey === 'outdoor')
-                                                    <x-order-discussion type="outdoor" :order-id="$order->id" :no-order="$order->NoOrder"
-                                                                         :comments="$outdoorComments->get($order->id, collect())"
-                                                                         :unread="$outdoorUnread->get($order->id, 0)" />
-                                                @endif
-                                                <x-order-rework :type="$tabKey" :order-id="$order->id" :no-order="$order->NoOrder"
-                                                                 current-stage="siap_diambil"
-                                                                 :pending="$pendingRework->get($tabKey.'-'.$order->id)"
-                                                                 :can-approve="$canApproveRework" />
-                                                @if ($pendingRework->has($tabKey.'-'.$order->id))
-                                                    {{-- Menunggu persetujuan pembatalan/ulang proses; tombol serahkan disembunyikan sampai diputuskan --}}
-                                                @elseif ($order->status_bayar === 'dp' && (float) $order->jumlah_piutang > 0)
-                                                    <button type="button" class="in-btn" disabled title="Lunasi sisa DP dulu lewat halaman Bayar">Lunasi DP dulu</button>
-                                                @else
-                                                    <form method="POST" action="{{ route('pengambilan.serahkan', ['type' => $tabKey, 'id' => $order->id]) }}"
-                                                          onsubmit="return confirm('Konfirmasi barang order {{ $order->NoOrder }} sudah diserahkan ke customer?')">
-                                                        @csrf
-                                                        <button type="submit" class="in-btn">Serahkan barang</button>
-                                                    </form>
-                                                @endif
-                                            </div>
-                                        </td>
-                                    </tr>
-                                @empty
-                                    <tr><td colspan="6" class="text-muted" style="text-align: center; padding: var(--space-6);">Tidak ada barang yang siap diambil.</td></tr>
-                                @endforelse
-                            </tbody>
-                        </table>
-                    </div>
+            @foreach (['indoor' => $indoorItems, 'outdoor' => $outdoorItems, 'artwork' => $artworkItems] as $tabKey => $itemGroups)
+                <div x-show="tab === '{{ $tabKey }}'" @if($tabKey!=='indoor') x-cloak @endif style="margin-top: var(--space-4);">
+                    @forelse ($itemGroups as $items)
+                        <x-stage-item-card :type="$tabKey" :order="$items->first()->order" :items="$items"
+                                            stage="siap_diambil" route-name="pengambilan.serahkan" next-label="ke Customer"
+                                            :pending-rework="$pendingRework" :can-approve-rework="$canApproveRework"
+                                            :printer-names="$printerNames" :outdoor-comments="$outdoorComments" :outdoor-unread="$outdoorUnread"
+                                            manage-ability="pengambilan.manage" />
+                    @empty
+                        <div class="blueprint text-muted" style="padding: var(--space-6); text-align: center;">Tidak ada order di antrian pengambilan.</div>
+                    @endforelse
                 </div>
             @endforeach
         </div>

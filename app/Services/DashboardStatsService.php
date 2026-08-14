@@ -46,9 +46,9 @@ class DashboardStatsService
         $outdoor = $outdoorQuery->get();
         $artwork = $artworkQuery->get();
 
-        $indoor->load('customer', 'createdBy', 'kasir', 'desainBy', 'cetakBy', 'finishingBy', 'qcBy', 'bungkusBy', 'pengambilanBy');
+        $indoor->load('customer', 'createdBy', 'kasir', 'desainBy', 'cetakBy', 'finishingBy', 'qcBy', 'bungkusBy', 'pengambilanBy', 'items');
         $outdoor->load('customer', 'createdBy', 'kasir', 'desainBy', 'cetakBy', 'finishingBy', 'qcBy', 'bungkusBy', 'pengambilanBy', 'items');
-        $artwork->load('customer', 'createdBy', 'kasir', 'desainBy', 'cetakBy', 'finishingBy', 'qcBy', 'bungkusBy', 'pengambilanBy');
+        $artwork->load('customer', 'createdBy', 'kasir', 'desainBy', 'cetakBy', 'finishingBy', 'qcBy', 'bungkusBy', 'pengambilanBy', 'items');
 
         $mapped = $indoor->map(fn ($o) => $this->toRow($o, 'Indoor'))
             ->concat($outdoor->map(fn ($o) => $this->toRow($o, 'Outdoor')))
@@ -121,28 +121,49 @@ class DashboardStatsService
             'qc_by' => $order->qcBy?->name,
             'bungkus_by' => $order->bungkusBy?->name,
             'pengambilan_by' => $order->pengambilanBy?->name,
-            'progress' => $this->cetakProgress($order, $tipe),
+            'desain_progress' => $this->stageProgress($order, 'desain'),
+            'cetak_progress' => $this->stageProgress($order, 'cetak'),
+            'finishing_progress' => $this->stageProgress($order, 'finishing'),
+            'qc_progress' => $this->stageProgress($order, 'qc'),
+            'bungkus_progress' => $this->stageProgress($order, 'bungkus'),
+            'pengambilan_progress' => $this->stageProgress($order, 'siap_diambil'),
+            'progress' => $order->status === 'selesai' ? null : $this->stageProgress($order, $order->status),
             'selesai' => $selesaiAt !== null,
             'telat' => $this->isOverdue($order),
         ];
     }
 
     /**
-     * Live "N/M unit" cetak progress for an outdoor order currently sitting
-     * in the cetak stage — the per-item qty_diproses tracking only exists
-     * on outdoor orders, so Indoor/Artwork or any other stage has nothing
-     * to show here.
+     * Live "N/M unit" progress at a given stage — N is how much qty has
+     * already moved PAST that stage (summed across the order's line
+     * items), out of the order's total Qty. This has to sum every bucket
+     * strictly AFTER $stage, not just "Qty minus this bucket" — a fast
+     * unit can already be sitting several stages ahead while a slower
+     * unit from the same line hasn't even reached this stage yet, so
+     * "not currently in this bucket" is not the same as "moved past it".
      */
-    private function cetakProgress($order, string $tipe): ?string
+    private const BUCKET_STAGES = ['desain', 'cetak', 'finishing', 'qc', 'bungkus', 'siap_diambil', 'selesai'];
+
+    private function stageProgress($order, string $stage): ?string
     {
-        if ($tipe !== 'Outdoor' || $order->status !== 'cetak' || ! $order->relationLoaded('items')) {
+        $index = array_search($stage, self::BUCKET_STAGES, true);
+
+        if ($index === false || ! $order->relationLoaded('items') || $order->items->isEmpty()) {
             return null;
         }
 
-        $done = $order->items->sum('qty_diproses');
+        $laterStages = array_slice(self::BUCKET_STAGES, $index + 1);
         $total = $order->items->sum('Qty');
 
-        return $total > 0 ? "{$done}/{$total}" : null;
+        if ($total === 0) {
+            return null;
+        }
+
+        $done = $order->items->sum(function ($item) use ($laterStages) {
+            return collect($laterStages)->sum(fn ($s) => (int) $item->{"qty_{$s}"});
+        });
+
+        return "{$done}/{$total}";
     }
 
     private function isOverdue($order): bool

@@ -2,19 +2,22 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\OrderArtwork;
 use App\Models\OrderComment;
-use App\Models\OrderIndoor;
-use App\Models\OrderOutdoor;
 use App\Models\OrderReworkRequest;
-use App\Models\OrderStatusNote;
-use App\Support\ResolvesOrderType;
+use App\Models\PrinterOutdoor;
+use App\Services\StageProgressService;
+use App\Support\ResolvesOrderDetailType;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class PengambilanController extends Controller
 {
-    use ResolvesOrderType;
+    use ResolvesOrderDetailType;
+
+    private const STAGE = 'siap_diambil';
+
+    public function __construct(private StageProgressService $stageProgress) {}
 
     public function index(): View
     {
@@ -26,54 +29,64 @@ class PengambilanController extends Controller
      */
     private function loadData(): array
     {
-        $indoorOrders = OrderIndoor::query()->with('customer')->where('status', 'siap_diambil')
-            ->orderByDesc('TglOrder')->orderByDesc('NoOrder')->get();
+        $itemsByType = $this->stageProgress->itemsAtStage(self::STAGE, [
+            'indoor' => true, 'outdoor' => true, 'artwork' => true,
+        ], outdoorWith: ['order.customer', 'order.cancelRequestedBy']);
 
-        $outdoorOrders = OrderOutdoor::query()->with('customer')->where('status', 'siap_diambil')
-            ->orderByDesc('TglOrder')->orderByDesc('NoOrder')->get();
+        $indoorItems = $itemsByType['indoor'] ?? collect();
+        $outdoorItems = $itemsByType['outdoor'] ?? collect();
+        $artworkItems = $itemsByType['artwork'] ?? collect();
 
-        $artworkOrders = OrderArtwork::query()->with('customer')->where('status', 'siap_diambil')
-            ->orderByDesc('TglOrder')->orderByDesc('NoOrder')->get();
+        $outdoorIds = $outdoorItems->keys();
 
         $outdoorComments = OrderComment::with('user')
-            ->where('order_type', 'outdoor')->whereIn('order_id', $outdoorOrders->pluck('id'))
+            ->where('order_type', 'outdoor')->whereIn('order_id', $outdoorIds)
             ->orderBy('created_at')->get()->groupBy('order_id');
 
-        $outdoorUnread = OrderComment::unreadCountsFor('outdoor', $outdoorOrders->pluck('id'));
+        $outdoorUnread = OrderComment::unreadCountsFor('outdoor', $outdoorIds);
+
+        $printerNames = PrinterOutdoor::pluck('NmPrn', 'KdPrn');
 
         $pendingRework = OrderReworkRequest::pendingMap();
         $canApproveRework = auth()->user()->hasPermission('order-rework.approve');
 
-        return compact('indoorOrders', 'outdoorOrders', 'artworkOrders', 'outdoorComments', 'outdoorUnread', 'pendingRework', 'canApproveRework');
+        return compact('indoorItems', 'outdoorItems', 'artworkItems', 'outdoorComments', 'outdoorUnread', 'printerNames', 'pendingRework', 'canApproveRework');
     }
 
-    public function serahkan(string $type, int $id): RedirectResponse
+    /**
+     * Moves N qty of one line item from Siap Diambil to Selesai — i.e. the
+     * customer physically took N units. Partial pickups are logged
+     * (OrderStatusNote.qty) same as every other stage, so a customer who
+     * picks up their order in two trips has both trips on record. Once
+     * every item's qty on the order has fully moved to Selesai, the
+     * order's header status flips to 'selesai' by itself (via
+     * recalculateStatus()) — same trigger Kasir/reporting already expect,
+     * just now reached bottom-up from items instead of set directly here.
+     */
+    public function updateItem(Request $request, string $type, int $id): RedirectResponse
     {
-        $order = $this->resolveOrder($type, $id);
-
-        abort_if($order->status !== 'siap_diambil', 422, 'Order ini sudah tidak di antrian pengambilan.');
-        abort_if(OrderReworkRequest::forOrder($type, $id)->pending()->exists(), 422, 'Order ini sedang menunggu persetujuan pembatalan/ulang proses.');
+        $item = $this->resolveDetailItem($type, $id);
+        $order = $item->order;
 
         if ($order->status_bayar === 'dp' && (float) $order->jumlah_piutang > 0) {
             return back()->with('error', 'Order ini masih ada sisa DP Rp '.number_format($order->jumlah_piutang, 0, ',', '.').' yang belum dilunasi. Lunasi dulu lewat halaman Bayar.');
         }
 
-        $order->update([
-            'status' => 'selesai',
-            'diambil_at' => now(),
-            'pengambilan_by' => auth()->id(),
+        $data = $request->validate([
+            'qty' => ['nullable', 'integer', 'min:1'],
+            'catatan' => ['nullable', 'string', 'max:255'],
         ]);
 
-        OrderStatusNote::create([
-            'order_type' => $type,
-            'order_id' => $order->id,
-            'stage' => 'pengambilan',
-            'action' => 'selesai',
-            'catatan' => null,
-            'user_id' => auth()->id(),
-            'created_at' => now(),
-        ]);
+        $qty = $data['qty'] ?? $item->qtyAt(self::STAGE);
 
-        return redirect()->route('pengambilan.index')->with('status', 'Barang berhasil diserahkan ke customer.');
+        $result = $this->stageProgress->advance($item, self::STAGE, $qty, $data['catatan'] ?? null, auth()->id());
+
+        if ($result['order']->status === 'selesai' && ! $result['order']->diambil_at) {
+            $result['order']->update(['diambil_at' => now(), 'pengambilan_by' => auth()->id()]);
+        }
+
+        $message = "{$result['moved']} unit diserahkan ke customer.".($result['stageCleared'] ? ' Baris item ini tuntas diambil.' : '');
+
+        return redirect()->route('pengambilan.index')->with('status', $message);
     }
 }

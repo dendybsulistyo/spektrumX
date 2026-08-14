@@ -7,6 +7,7 @@ use App\Traits\HasDiskonNota;
 use App\Traits\HasStageProgress;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Collection;
 
 class OrderIndoor extends Model
@@ -150,12 +151,13 @@ class OrderIndoor extends Model
         return $this->belongsTo(User::class, 'pengambilan_by');
     }
 
-    /**
-     * Indoor detail rows have no real FK back to the header — they're only
-     * linked by string prefix of BrsOrder, matching the legacy convention.
-     */
+    public function items(): HasMany
+    {
+        return $this->hasMany(OrderIndoorDetail::class, 'order_indoor_id');
+    }
+
     public function detailItems(): Collection
     {
-        return OrderIndoorDetail::where('BrsOrder', 'like', $this->NoOrder.'%')->get();
+        return $this->items;
     }
 }

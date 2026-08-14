@@ -2,10 +2,14 @@
 
 namespace App\Models;
 
+use App\Traits\HasItemStageProgress;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class OrderIndoorDetail extends Model
 {
+    use HasItemStageProgress;
+
     protected $table = 'order_indoor_detail';
 
     public $timestamps = false;
@@ -16,6 +20,7 @@ class OrderIndoorDetail extends Model
      * @var list<string>
      */
     protected $fillable = [
+        'order_indoor_id',
         'BrsOrder',
         'KdProd',
         'jenis_produk',
@@ -24,6 +29,14 @@ class OrderIndoorDetail extends Model
         'Panjang',
         'Lebar',
         'Qty',
+        'qty_desain',
+        'qty_cetak',
+        'qty_finishing',
+        'qty_qc',
+        'qty_bungkus',
+        'qty_siap_diambil',
+        'qty_selesai',
+        'stage_entered_at',
         'KdStat',
         'PisauTurun',
         'JumlahKertas',
@@ -38,7 +51,25 @@ class OrderIndoorDetail extends Model
             'PisauTurun' => 'integer',
             'JumlahKertas' => 'integer',
             'TebalKertas' => 'integer',
+            'qty_desain' => 'integer',
+            'qty_cetak' => 'integer',
+            'qty_finishing' => 'integer',
+            'qty_qc' => 'integer',
+            'qty_bungkus' => 'integer',
+            'qty_siap_diambil' => 'integer',
+            'qty_selesai' => 'integer',
+            'stage_entered_at' => 'datetime',
         ];
+    }
+
+    public function order(): BelongsTo
+    {
+        return $this->belongsTo(OrderIndoor::class, 'order_indoor_id');
+    }
+
+    public function orderTypeSlug(): string
+    {
+        return 'indoor';
     }
 
     /**

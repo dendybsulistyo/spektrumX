@@ -113,6 +113,15 @@ class OrderArtwork extends Model
         return $this->hasMany(OrderArtworkDetail::class);
     }
 
+    /**
+     * Common name HasStageProgress::recalculateStatus() calls across all 3
+     * order types, regardless of each type's own relation name/shape.
+     */
+    public function detailItems(): \Illuminate\Support\Collection
+    {
+        return $this->items;
+    }
+
     public function kasir(): BelongsTo
     {
         return $this->belongsTo(User::class, 'kasir_user_id');

@@ -2,21 +2,22 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\OrderArtwork;
 use App\Models\OrderComment;
-use App\Models\OrderIndoor;
-use App\Models\OrderOutdoor;
 use App\Models\OrderReworkRequest;
-use App\Models\OrderStatusNote;
 use App\Models\PrinterOutdoor;
-use App\Support\ResolvesOrderType;
+use App\Services\StageProgressService;
+use App\Support\ResolvesOrderDetailType;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class OrderFinishingController extends Controller
 {
-    use ResolvesOrderType;
+    use ResolvesOrderDetailType;
+
+    private const STAGE = 'finishing';
+
+    public function __construct(private StageProgressService $stageProgress) {}
 
     public function index(): View
     {
@@ -28,57 +29,49 @@ class OrderFinishingController extends Controller
      */
     private function loadData(): array
     {
-        $indoorOrders = OrderIndoor::query()->with('customer')->where('status', 'finishing')
-            ->orderByDesc('TglOrder')->orderByDesc('NoOrder')->get();
+        $itemsByType = $this->stageProgress->itemsAtStage(self::STAGE, [
+            'indoor' => true, 'outdoor' => true, 'artwork' => true,
+        ], outdoorWith: ['order.customer', 'order.cancelRequestedBy']);
 
-        $outdoorOrders = OrderOutdoor::query()->with('customer', 'items')->where('status', 'finishing')
-            ->orderByDesc('TglOrder')->orderByDesc('NoOrder')->get();
+        $indoorItems = $itemsByType['indoor'] ?? collect();
+        $outdoorItems = $itemsByType['outdoor'] ?? collect();
+        $artworkItems = $itemsByType['artwork'] ?? collect();
 
-        $artworkOrders = OrderArtwork::query()->with('customer')->where('status', 'finishing')
-            ->orderByDesc('TglOrder')->orderByDesc('NoOrder')->get();
+        $outdoorIds = $outdoorItems->keys();
 
         $outdoorComments = OrderComment::with('user')
-            ->where('order_type', 'outdoor')->whereIn('order_id', $outdoorOrders->pluck('id'))
+            ->where('order_type', 'outdoor')->whereIn('order_id', $outdoorIds)
             ->orderBy('created_at')->get()->groupBy('order_id');
 
-        $outdoorUnread = OrderComment::unreadCountsFor('outdoor', $outdoorOrders->pluck('id'));
+        $outdoorUnread = OrderComment::unreadCountsFor('outdoor', $outdoorIds);
 
         $printerNames = PrinterOutdoor::pluck('NmPrn', 'KdPrn');
 
         $pendingRework = OrderReworkRequest::pendingMap();
         $canApproveRework = auth()->user()->hasPermission('order-rework.approve');
 
-        return compact('indoorOrders', 'outdoorOrders', 'artworkOrders', 'outdoorComments', 'outdoorUnread', 'printerNames', 'pendingRework', 'canApproveRework');
+        return compact('indoorItems', 'outdoorItems', 'artworkItems', 'outdoorComments', 'outdoorUnread', 'printerNames', 'pendingRework', 'canApproveRework');
     }
 
-    public function update(Request $request, string $type, int $id): RedirectResponse
+    /**
+     * Moves N qty of one line item from Finishing to QC (Back Office). See
+     * StageProgressService::advance().
+     */
+    public function updateItem(Request $request, string $type, int $id): RedirectResponse
     {
-        $order = $this->resolveOrder($type, $id);
-
-        abort_if($order->status !== 'finishing', 422, 'Order ini sudah tidak di antrian finishing.');
-        abort_if(OrderReworkRequest::forOrder($type, $id)->pending()->exists(), 422, 'Order ini sedang menunggu persetujuan pembatalan/ulang proses.');
+        $item = $this->resolveDetailItem($type, $id);
 
         $data = $request->validate([
-            'action' => ['required', 'in:selesai,lanjut'],
+            'qty' => ['nullable', 'integer', 'min:1'],
             'catatan' => ['nullable', 'string', 'max:255'],
         ]);
 
-        $order->update([
-            'status' => 'qc',
-            'finishing_by' => auth()->id(),
-            'finishing_at' => now(),
-        ]);
+        $qty = $data['qty'] ?? $item->qtyAt(self::STAGE);
 
-        OrderStatusNote::create([
-            'order_type' => $type,
-            'order_id' => $order->id,
-            'stage' => 'finishing',
-            'action' => $data['action'],
-            'catatan' => $data['catatan'] ?? null,
-            'user_id' => auth()->id(),
-            'created_at' => now(),
-        ]);
+        $result = $this->stageProgress->advance($item, self::STAGE, $qty, $data['catatan'] ?? null, auth()->id());
 
-        return redirect()->route('order-finishing.index')->with('status', 'Order dipindahkan ke antrian Back Office.');
+        $message = "{$result['moved']} unit dipindahkan ke antrian Back Office.".($result['stageCleared'] ? ' Baris item ini tuntas di Finishing.' : '');
+
+        return redirect()->route('order-finishing.index', ['tab' => $type])->with('status', $message);
     }
 }
