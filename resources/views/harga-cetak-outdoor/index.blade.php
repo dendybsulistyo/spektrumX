@@ -3,8 +3,35 @@
         <h2 class="font-semibold text-xl text-gray-800">Standar Harga Outdoor</h2>
     </x-slot>
 
-    <form method="POST" action="{{ route('harga-cetak-outdoor.update-matrix') }}" novalidate>
-        @csrf
+    <div x-data="{
+            saving: false,
+            toastVisible: false,
+            toastError: false,
+            toastMessage: '',
+            async save(event) {
+                this.saving = true;
+                const form = event.target;
+                try {
+                    const { data } = await axios.post(form.action, new FormData(form));
+                    this.toastMessage = data.message ?? 'Harga berhasil disimpan.';
+                    this.toastError = false;
+                } catch (e) {
+                    this.toastMessage = e.response?.data?.message ?? 'Gagal menyimpan harga. Coba lagi.';
+                    this.toastError = true;
+                } finally {
+                    this.saving = false;
+                    this.toastVisible = true;
+                    setTimeout(() => { this.toastVisible = false; }, 4000);
+                }
+            },
+         }">
+        <div x-show="toastVisible" x-cloak x-transition
+             :class="toastError ? 'bg-red-50 text-red-700 border-red-200' : 'bg-green-50 text-green-700 border-green-200'"
+             style="position: fixed; top: 16px; right: 16px; z-index: 100; padding: 12px 18px; border-radius: 8px; border-width: 1px; font-size: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);"
+             x-text="toastMessage"></div>
+
+        <form method="POST" action="{{ route('harga-cetak-outdoor.update-matrix') }}" novalidate @submit.prevent="save">
+            @csrf
 
         <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
             <div class="overflow-x-auto" style="max-height: 75vh; overflow-y: auto;">
@@ -59,10 +86,11 @@
 
             <div class="p-4 border-t border-gray-200 flex items-center justify-between">
                 <p class="text-xs text-gray-400">Kosongkan kedua sel (Harga &amp; Hrg Min) untuk menghapus harga kombinasi bahan &amp; printer tersebut.</p>
-                <button type="submit" class="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-md hover:bg-gray-700">
-                    Simpan Harga
-                </button>
+                <button type="submit" :disabled="saving"
+                        class="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-md hover:bg-gray-700 disabled:opacity-60 disabled:cursor-not-allowed"
+                        x-text="saving ? 'Menyimpan...' : 'Simpan Harga'"></button>
             </div>
         </div>
-    </form>
+        </form>
+    </div>
 </x-app-layout>

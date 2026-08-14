@@ -75,7 +75,12 @@ class OrderPricingService
             $hargaStd = $khusus->HargaStd ?? $hargaStd;
         }
 
-        return $hargaStd * $areaM2 * $qty;
+        // Area-based pricing (harga per m²) almost never lands on a round
+        // Rupiah amount once Panjang/Lebar aren't whole meters — round to
+        // the nearest Rp 100 so subtotal/total never show a sub-100
+        // remainder, same convention HasDiskonNota::diskonNominal() already
+        // uses for discount amounts.
+        return round($hargaStd * $areaM2 * $qty / 100) * 100;
     }
 
     /**

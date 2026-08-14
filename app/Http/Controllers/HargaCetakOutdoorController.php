@@ -6,6 +6,7 @@ use App\Http\Requests\StoreHargaCetakOutdoorRequest;
 use App\Models\BahanCetakOutdoor;
 use App\Models\HargaCetakOutdoor;
 use App\Models\PrinterOutdoor;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -26,7 +27,7 @@ class HargaCetakOutdoorController extends Controller
         return view('harga-cetak-outdoor.index', compact('printers', 'bahanList', 'prices'));
     }
 
-    public function updateMatrix(Request $request): RedirectResponse
+    public function updateMatrix(Request $request): RedirectResponse|JsonResponse
     {
         $data = $request->validate([
             'harga' => ['required', 'array'],
@@ -53,7 +54,17 @@ class HargaCetakOutdoorController extends Controller
             }
         }
 
-        return redirect()->route('harga-cetak-outdoor.index')->with('status', 'Harga cetak outdoor berhasil disimpan.');
+        $message = 'Harga cetak outdoor berhasil disimpan.';
+
+        // Grid ini disubmit lewat axios (lihat harga-cetak-outdoor/index.blade.php)
+        // supaya operator tidak kehilangan posisi scroll di tabel yang panjang —
+        // axios otomatis kirim Accept: application/json, jadi wantsJson() cukup
+        // untuk membedakannya dari submit form biasa (fallback tanpa JS).
+        if ($request->wantsJson()) {
+            return response()->json(['message' => $message]);
+        }
+
+        return redirect()->route('harga-cetak-outdoor.index')->with('status', $message);
     }
 
     public function create(): View

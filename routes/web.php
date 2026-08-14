@@ -56,6 +56,7 @@ Route::get('/', function () {
 });
 
 Route::get('/dashboard', [DashboardController::class, 'index'])->middleware(['auth', 'verified'])->name('dashboard');
+Route::get('/dashboard/order-progress/{type}/{id}', [DashboardController::class, 'orderProgress'])->middleware(['auth', 'verified'])->name('dashboard.order-progress');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -305,6 +306,7 @@ Route::middleware('auth')->group(function () {
     });
     Route::middleware('permission:order-desain.manage')->group(function () {
         Route::post('/order-desain/gabungan/{item}', [OrderDesainController::class, 'updateGabungan'])->name('order-desain.gabungan');
+        Route::post('/order-desain/nmfile/{item}', [OrderDesainController::class, 'updateNmFile'])->name('order-desain.nmfile');
         Route::post('/order-desain/progress/{type}/{id}', [OrderDesainController::class, 'updateItem'])->name('order-desain.progress');
     });
 

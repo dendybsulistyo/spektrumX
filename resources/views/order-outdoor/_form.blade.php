@@ -11,14 +11,16 @@
         ])->values()
         : collect([['NmFile' => '', 'Panjang' => '', 'Lebar' => '', 'Qty' => 1, 'KdCtk' => '', 'KdPrn' => '', 'NoCetak' => '', 'ada_finishing' => '', 'jenis_finishing' => '']]);
     $selectedCustomerLabel = $selectedCustomer ? "{$selectedCustomer->NmCust} ({$selectedCustomer->KdCust})" : '';
-    $hargaMap = $hargaCetakList->keyBy('KdCtk')->map(fn ($h) => ['std' => (float) $h->HargaStd, 'min' => (float) $h->HargaMin]);
     // VIP price overrides for the pre-selected customer (edit/replacement/
-    // validation-failed create) — merged in server-side so the initial
-    // render already matches what OrderPricingService will charge; the
-    // live search widget re-fetches and re-merges this on customer change.
+    // validation-failed create) — only the actual override rows, applied
+    // through the same applyKhusus() merge the live search widget uses on
+    // customer change (see x-init below), so "is this a khusus price?"
+    // stays a real presence check instead of comparing two independently
+    // JSON-serialized objects by JS reference (which always mismatches).
+    $initialKhususOverrides = collect();
     if ($selectedCustomer) {
         foreach ($selectedCustomer->hargaCetakOutdoorKhusus as $khusus) {
-            $hargaMap[$khusus->KdCtk] = ['std' => (float) $khusus->HargaStd, 'min' => (float) $khusus->HargaMin];
+            $initialKhususOverrides[$khusus->KdCtk] = ['std' => (float) $khusus->HargaStd, 'min' => (float) $khusus->HargaMin];
         }
     }
 
@@ -45,7 +47,7 @@
 <div x-data="{
         items: {{ old('items') ? json_encode(old('items')) : $initialItems->toJson() }},
         hargaMapStandard: {{ $hargaCetakList->keyBy('KdCtk')->map(fn ($h) => ['std' => (float) $h->HargaStd, 'min' => (float) $h->HargaMin])->toJson() }},
-        hargaMap: {{ $hargaMap->toJson() }},
+        hargaMap: {},
         async fetchKhusus(kdCust) {
             if (!kdCust) {
                 this.applyKhusus({});
@@ -101,7 +103,7 @@
                 this.addItem();
             }
         },
-    }">
+    }" x-init="applyKhusus({{ $initialKhususOverrides->toJson() }})">
 
     @if ($errors->any())
         <div class="mb-4 p-3 bg-red-50 border border-red-200 rounded-md text-sm text-red-700">

@@ -286,6 +286,7 @@ class OrderIndoorController extends Controller
                 : Produk::where('KdProd', $item['KdProd'])->value('NmProd');
 
             OrderIndoorDetail::create([
+                'order_indoor_id' => $order->id,
                 'BrsOrder' => $brsOrder,
                 'KdProd' => $item['KdProd'],
                 'jenis_produk' => $jenisProduk,
@@ -294,6 +295,7 @@ class OrderIndoorController extends Controller
                 'Panjang' => $item['Panjang'],
                 'Lebar' => $item['Lebar'],
                 'Qty' => $item['Qty'],
+                'qty_desain' => $item['Qty'],
                 'KdStat' => 0,
                 'PisauTurun' => $item['PisauTurun'] ?? null,
                 'JumlahKertas' => $item['JumlahKertas'] ?? null,

@@ -279,6 +279,7 @@ class OrderArtworkController extends Controller
                 'Panjang' => $item['Panjang'],
                 'Lebar' => $item['Lebar'],
                 'Qty' => $item['Qty'],
+                'qty_desain' => $item['Qty'],
                 'PisauTurun' => $item['PisauTurun'] ?? null,
                 'JumlahKertas' => $item['JumlahKertas'] ?? null,
                 'TebalKertas' => $item['TebalKertas'] ?? null,

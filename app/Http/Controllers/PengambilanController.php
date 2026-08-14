@@ -74,12 +74,14 @@ class PengambilanController extends Controller
 
         $data = $request->validate([
             'qty' => ['nullable', 'integer', 'min:1'],
-            'catatan' => ['nullable', 'string', 'max:255'],
+            'nama_penerima' => ['required', 'string', 'max:100'],
+            'kontak_penerima' => ['required', 'string', 'max:50'],
         ]);
 
         $qty = $data['qty'] ?? $item->qtyAt(self::STAGE);
+        $catatan = "Diambil oleh: {$data['nama_penerima']} (Kontak: {$data['kontak_penerima']})";
 
-        $result = $this->stageProgress->advance($item, self::STAGE, $qty, $data['catatan'] ?? null, auth()->id());
+        $result = $this->stageProgress->advance($item, self::STAGE, $qty, $catatan, auth()->id());
 
         if ($result['order']->status === 'selesai' && ! $result['order']->diambil_at) {
             $result['order']->update(['diambil_at' => now(), 'pengambilan_by' => auth()->id()]);

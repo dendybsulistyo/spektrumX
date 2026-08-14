@@ -3,6 +3,7 @@
     'order',
     'items',
     'stage',
+    'stageLabel',
     'routeName',
     'nextLabel',
     'pendingRework',
@@ -11,6 +12,7 @@
     'outdoorComments' => null,
     'outdoorUnread' => null,
     'manageAbility',
+    'capturePenerima' => false,
 ])
 
 <div class="order-card">
@@ -18,7 +20,7 @@
         <div style="display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-heading); font-weight: 600;">
             <x-order-number :number="$order->NoOrder" />
             <x-macet-badge :show="$order->isMacet()" />
-            <span class="text-muted" style="font-weight: 400; font-size: 12px;">
+            <span class="text-muted" style="font-weight: 400; font-size: 13px; line-height: 1.6;">
                 {{ is_string($order->TglOrder) ? $order->TglOrder : $order->TglOrder?->format('d-m-y') }}
                 &middot; {{ $order->customer?->NmCust ? ucwords(mb_strtolower($order->customer->NmCust)) : '-' }}
             </span>
@@ -57,17 +59,28 @@
                 @endif
             </div>
             <div style="display: inline-flex; align-items: center; gap: var(--space-3);">
-                <span class="progress-tag">{{ $item->qtyAt($stage) }}/{{ $item->Qty }}</span>
+                {{-- Qty yang SUDAH dikirim maju dari tahap ini (0 di awal,
+                     naik seiring diproses) — bukan qty yang masih tersisa. --}}
+                <span class="progress-tag">Progres di {{ $stageLabel }}: {{ $item->Qty - $item->qtyAt($stage) }}/{{ $item->Qty }}</span>
                 @can($manageAbility)
-                    {{-- Qty di sini murni apa yang sudah dikirim maju dari tahap
-                         sebelumnya — operator di tahap ini cuma meneruskan
-                         semuanya, tidak membagi lagi, jadi inputnya read-only. --}}
-                    <form method="POST" action="{{ route($routeName, [$type, $item->id]) }}" style="display: flex; align-items: center; gap: 4px;">
-                        @csrf
-                        <input type="number" value="{{ $item->qtyAt($stage) }}" disabled
-                               class="in-input no-spinner" style="width: 70px;">
-                        <button type="submit" class="in-btn">Kirim {{ $nextLabel }}</button>
-                    </form>
+                    @if ($capturePenerima)
+                        {{-- Pengambilan butuh nama & kontak penerima dulu sebelum
+                             diserahkan — tangkap lewat modal di halaman induk. --}}
+                        <button type="button" class="in-btn"
+                                @click="$dispatch('open-penerima-modal', { type: '{{ $type }}', id: {{ $item->id }}, qty: {{ $item->qtyAt($stage) }}, noOrder: '{{ $order->NoOrder }}' })">
+                            Kirim {{ $nextLabel }}
+                        </button>
+                    @else
+                        {{-- Qty di sini murni apa yang sudah dikirim maju dari tahap
+                             sebelumnya — operator di tahap ini cuma meneruskan
+                             semuanya, tidak membagi lagi, jadi inputnya read-only. --}}
+                        <form method="POST" action="{{ route($routeName, [$type, $item->id]) }}" style="display: flex; align-items: center; gap: 4px;">
+                            @csrf
+                            <input type="number" value="{{ $item->qtyAt($stage) }}" disabled
+                                   class="in-input no-spinner" style="width: 70px;">
+                            <button type="submit" class="in-btn">Kirim {{ $nextLabel }}</button>
+                        </form>
+                    @endif
                 @endcan
             </div>
         </div>

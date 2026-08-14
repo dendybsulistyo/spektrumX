@@ -59,7 +59,7 @@
                                     <div style="display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-heading); font-weight: 600;">
                                         <x-order-number :number="$order->NoOrder" />
                                         <x-macet-badge :show="$order->isMacet()" />
-                                        <span class="text-muted" style="font-weight: 400; font-size: 12px;">
+                                        <span class="text-muted" style="font-weight: 400; font-size: 13px; line-height: 1.6;">
                                             {{ is_string($order->TglOrder) ? $order->TglOrder : $order->TglOrder?->format('Y-m-d') }}
                                             &middot; {{ $order->customer?->NmCust ? ucwords(mb_strtolower($order->customer->NmCust)) : '-' }}
                                         </span>
@@ -105,7 +105,7 @@
                                             @endif
                                         </div>
                                         <div style="display: inline-flex; align-items: center; gap: var(--space-3);">
-                                            <span class="progress-tag">{{ $item->qtyAt('desain') }}/{{ $item->Qty }} di Desain</span>
+                                            <span class="progress-tag">Progres di Desain: {{ $item->Qty - $item->qtyAt('desain') }}/{{ $item->Qty }}</span>
                                             @can('order-desain.manage')
                                                 <form method="POST" action="{{ route('order-desain.progress', ['indoor', $item->id]) }}" style="display: flex; align-items: center; gap: 4px;">
                                                     @csrf
@@ -134,7 +134,7 @@
                                     <div style="display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-heading); font-weight: 600;">
                                         <x-order-number :number="$order->NoOrder" />
                                         <x-macet-badge :show="$order->isMacet()" />
-                                        <span class="text-muted" style="font-weight: 400; font-size: 12px;">
+                                        <span class="text-muted" style="font-weight: 400; font-size: 13px; line-height: 1.6;">
                                             {{ \Carbon\Carbon::parse($order->TglOrder)->format('d-m-y') }}
                                             &middot; {{ $order->customer?->NmCust ? ucwords(mb_strtolower($order->customer->NmCust)) : '-' }}
                                             &middot; {{ $order->createdBy?->name ?? '-' }}
@@ -182,20 +182,25 @@
                                                 @if ((float) $item->Panjang > 0 && (float) $item->Lebar > 0)
                                                     &middot; {{ rtrim(rtrim(number_format((float) $item->Panjang, 2), '0'), '.') }} x {{ rtrim(rtrim(number_format((float) $item->Lebar, 2), '0'), '.') }}
                                                 @endif
-                                                &middot; File: {{ $item->NmFile ?: '-' }}
                                             </span>
                                         </div>
                                         <div style="display: inline-flex; align-items: center; gap: var(--space-3); flex-wrap: wrap;">
                                             @can('order-desain.manage')
+                                                <form method="POST" action="{{ route('order-desain.nmfile', $item) }}">
+                                                    @csrf
+                                                    <input type="text" name="NmFile" value="{{ $item->NmFile }}" maxlength="255"
+                                                           placeholder="Nama file" onchange="this.form.submit()" class="in-input" style="width: 140px;">
+                                                </form>
                                                 <form method="POST" action="{{ route('order-desain.gabungan', $item) }}">
                                                     @csrf
                                                     <input type="text" name="gabungan" value="{{ $item->gabungan }}" maxlength="255"
                                                            placeholder="Gabungan" onchange="this.form.submit()" class="in-input" style="width: 140px;">
                                                 </form>
                                             @else
+                                                <span class="text-muted" style="white-space: nowrap;">{{ $item->NmFile ?: '-' }}</span>
                                                 <span class="text-muted" style="white-space: nowrap;">{{ $item->gabungan ?: '-' }}</span>
                                             @endcan
-                                            <span class="progress-tag">{{ $item->qtyAt('desain') }}/{{ $item->Qty }} di Desain</span>
+                                            <span class="progress-tag">Progres di Desain: {{ $item->Qty - $item->qtyAt('desain') }}/{{ $item->Qty }}</span>
                                             @can('order-desain.manage')
                                                 <form method="POST" action="{{ route('order-desain.progress', ['outdoor', $item->id]) }}" style="display: flex; align-items: center; gap: 4px;">
                                                     @csrf
@@ -223,7 +228,7 @@
                                     <div style="display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-heading); font-weight: 600;">
                                         <x-order-number :number="$order->NoOrder" />
                                         <x-macet-badge :show="$order->isMacet()" />
-                                        <span class="text-muted" style="font-weight: 400; font-size: 12px;">
+                                        <span class="text-muted" style="font-weight: 400; font-size: 13px; line-height: 1.6;">
                                             {{ \Carbon\Carbon::parse($order->TglOrder)->format('d-m-y') }}
                                             &middot; {{ $order->customer?->NmCust ? ucwords(mb_strtolower($order->customer->NmCust)) : '-' }}
                                         </span>

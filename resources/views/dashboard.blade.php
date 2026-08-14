@@ -19,6 +19,10 @@
             #industry-dashboard .tag-purple { background: #f3e8ff; color: #6b21a8; }
             #industry-dashboard .tag-pink { background: #fce7f3; color: #9d174d; }
             #industry-dashboard .tag-teal { background: #ccfbf1; color: #115e59; }
+            /* .text-muted global (55% opacity) kurang kontras untuk baris
+               riwayat proses di modal ini — digelapkan khusus di sini saja,
+               tidak menyentuh halaman lain yang masih pakai .text-muted. */
+            #industry-dashboard .text-muted { color: color-mix(in srgb, var(--color-text) 80%, transparent); }
         </style>
     @endpush
 
@@ -124,7 +128,21 @@
                 @endforeach
             </section>
 
-            <section class="blueprint" style="padding: var(--space-6);" x-data="{ tipeTab: 'semua' }">
+            <section class="blueprint" style="padding: var(--space-6);"
+                     x-data="{
+                         tipeTab: 'semua',
+                         historyOpen: false,
+                         historyLoading: false,
+                         historyData: null,
+                         openHistory(type, id) {
+                             this.historyOpen = true;
+                             this.historyLoading = true;
+                             this.historyData = null;
+                             axios.get(`{{ url('/dashboard/order-progress') }}/${type}/${id}`)
+                                 .then(r => { this.historyData = r.data; })
+                                 .finally(() => { this.historyLoading = false; });
+                         },
+                     }">
                 <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
                 <div style="display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-4); flex-wrap: wrap; margin-bottom: var(--space-4);">
                     <div>
@@ -166,7 +184,12 @@
                             @forelse ($recent as $row)
                                 <tr x-show="tipeTab === 'semua' || tipeTab === '{{ strtolower($row['tipe']) }}'">
                                     <td class="text-muted">{{ $loop->iteration }}</td>
-                                    <td style="font-family: var(--font-heading); font-weight: 600; letter-spacing: 0.03em;">{{ $row['no_order'] }}</td>
+                                    <td style="font-family: var(--font-heading); font-weight: 600; letter-spacing: 0.03em;">
+                                        <button type="button" @click="openHistory('{{ $row['type_slug'] }}', {{ $row['id'] }})"
+                                                style="background: none; border: none; padding: 0; font: inherit; color: var(--color-accent); cursor: pointer; text-decoration: underline; text-underline-offset: 2px;">
+                                            {{ $row['no_order'] }}
+                                        </button>
+                                    </td>
                                     <td><span class="tag tag-neutral">{{ $tipeAbbr[$row['tipe']] ?? $row['tipe'] }}</span></td>
                                     <td>{{ $row['customer'] ? ucwords(mb_strtolower($row['customer'])) : '-' }}</td>
                                     <td class="text-muted" style="white-space: nowrap;">{{ $row['created_at']?->format('d M Y H:i') ?? '-' }}</td>
@@ -213,6 +236,78 @@
                             @endforelse
                         </tbody>
                     </table>
+                </div>
+
+                <div x-show="historyOpen" x-cloak @keydown.escape.window="historyOpen = false"
+                     style="position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; padding: var(--space-4);">
+                    <div @click="historyOpen = false" style="position: absolute; inset: 0; background: rgba(17,24,39,0.5);"></div>
+                    <div class="blueprint" style="position: relative; background: var(--color-bg); width: 100%; max-width: 640px; max-height: 85vh; overflow-y: auto; padding: var(--space-6);">
+                        <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+
+                        <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-4);">
+                            <div>
+                                <h4 style="margin: 0 0 2px;" x-text="historyData ? historyData.no_order : 'Memuat...'"></h4>
+                                <div class="text-muted" style="font-size: 13px;" x-text="historyData ? historyData.customer : ''"></div>
+                            </div>
+                            <button type="button" @click="historyOpen = false" class="btn btn-secondary" style="height: 32px; padding: 0 12px;">Tutup</button>
+                        </div>
+
+                        <template x-if="historyLoading">
+                            <div class="text-muted" style="padding: var(--space-6); text-align: center;">Memuat riwayat...</div>
+                        </template>
+
+                        <template x-if="!historyLoading && historyData">
+                            <div style="display: flex; flex-direction: column; gap: var(--space-5);">
+                                <div>
+                                    <div class="label" style="margin-bottom: 6px;">Item &amp; posisi qty saat ini</div>
+                                    <template x-for="item in historyData.items" :key="item.id">
+                                        <div style="border: 1px solid var(--color-divider); padding: var(--space-3); margin-bottom: 8px;">
+                                            <div style="font-weight: 600; margin-bottom: 4px;">
+                                                <span x-text="item.name"></span>
+                                                <template x-if="item.file">
+                                                    <span class="text-muted" style="font-weight: 400;" x-text="'· ' + item.file"></span>
+                                                </template>
+                                                <span class="text-muted" style="font-weight: 400;">(Qty <span x-text="item.qty_total"></span>)</span>
+                                            </div>
+                                            <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                                                <template x-for="stage in item.stages.filter(s => s.qty > 0)" :key="stage.label">
+                                                    <span class="tag tag-outline" x-text="stage.qty + ' di ' + stage.label"></span>
+                                                </template>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </div>
+
+                                <div>
+                                    <div class="label" style="margin-bottom: 6px;">Riwayat proses (terbaru dulu)</div>
+                                    <div style="display: flex; flex-direction: column; gap: 6px; max-height: 320px; overflow-y: auto;">
+                                        <template x-for="(h, idx) in historyData.history" :key="idx">
+                                            <div style="display: flex; justify-content: space-between; gap: var(--space-3); padding: 6px 0; border-bottom: 1px solid var(--color-divider); font-size: 13px;">
+                                                <div>
+                                                    <div>
+                                                        <span style="font-weight: 600;" x-text="h.stage"></span>
+                                                        <span class="text-muted"> &middot; </span>
+                                                        <span x-text="(h.qty !== null ? h.qty + ' unit' : h.action)"></span>
+                                                        <span class="text-muted" x-show="h.action === 'selesai'"> (tuntas di tahap ini)</span>
+                                                    </div>
+                                                    <template x-if="h.catatan">
+                                                        <div class="text-muted" style="margin-top: 2px;" x-text="h.catatan"></div>
+                                                    </template>
+                                                </div>
+                                                <div class="text-muted" style="white-space: nowrap; text-align: right;">
+                                                    <div x-text="h.created_at"></div>
+                                                    <div x-text="h.user"></div>
+                                                </div>
+                                            </div>
+                                        </template>
+                                        <template x-if="historyData.history.length === 0">
+                                            <div class="text-muted" style="padding: var(--space-4); text-align: center;">Belum ada riwayat.</div>
+                                        </template>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
                 </div>
             </section>
         </div>

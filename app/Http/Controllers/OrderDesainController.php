@@ -119,4 +119,19 @@ class OrderDesainController extends Controller
 
         return redirect()->route('order-desain.index', ['tab' => 'outdoor'])->with('status', 'Gabungan disimpan.');
     }
+
+    /**
+     * Nama file desain per outdoor item — sama pola simpan/submit dengan
+     * updateGabungan() (auto-submit onchange di view).
+     */
+    public function updateNmFile(Request $request, OrderOutdoorDetail $item): RedirectResponse
+    {
+        $data = $request->validate([
+            'NmFile' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $item->update(['NmFile' => $data['NmFile'] ?? '']);
+
+        return redirect()->route('order-desain.index', ['tab' => 'outdoor'])->with('status', 'Nama file disimpan.');
+    }
 }

@@ -37,7 +37,22 @@
     @endphp
 
     <div id="industry-pengambilan">
-        <div style="max-width: 1480px; margin: 0 auto; display: flex; flex-direction: column; gap: var(--space-6);" x-data="{ tab: '{{ $initialTab }}' }">
+        <div style="max-width: 1480px; margin: 0 auto; display: flex; flex-direction: column; gap: var(--space-6);"
+             x-data="{
+                 tab: '{{ $initialTab }}',
+                 penerimaOpen: false,
+                 penerimaType: '',
+                 penerimaId: null,
+                 penerimaQty: 0,
+                 penerimaNoOrder: '',
+             }"
+             @open-penerima-modal="
+                 penerimaOpen = true;
+                 penerimaType = $event.detail.type;
+                 penerimaId = $event.detail.id;
+                 penerimaQty = $event.detail.qty;
+                 penerimaNoOrder = $event.detail.noOrder;
+             ">
             <div style="display: flex;">
                 @foreach ($tabs as $key => $t)
                     <button type="button" @click="tab = '{{ $key }}'" class="seg-tab" :class="tab === '{{ $key }}' ? 'active' : ''">
@@ -50,15 +65,49 @@
                 <div x-show="tab === '{{ $tabKey }}'" @if($tabKey!=='indoor') x-cloak @endif style="margin-top: var(--space-4);">
                     @forelse ($itemGroups as $items)
                         <x-stage-item-card :type="$tabKey" :order="$items->first()->order" :items="$items"
-                                            stage="siap_diambil" route-name="pengambilan.serahkan" next-label="ke Customer"
+                                            stage="siap_diambil" stage-label="Siap Diambil" route-name="pengambilan.serahkan" next-label="ke Customer"
                                             :pending-rework="$pendingRework" :can-approve-rework="$canApproveRework"
                                             :printer-names="$printerNames" :outdoor-comments="$outdoorComments" :outdoor-unread="$outdoorUnread"
-                                            manage-ability="pengambilan.manage" />
+                                            manage-ability="pengambilan.manage" :capture-penerima="true" />
                     @empty
                         <div class="blueprint text-muted" style="padding: var(--space-6); text-align: center;">Tidak ada order di antrian pengambilan.</div>
                     @endforelse
                 </div>
             @endforeach
+
+            <div x-show="penerimaOpen" x-cloak @keydown.escape.window="penerimaOpen = false"
+                 style="position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; padding: var(--space-4);">
+                <div @click="penerimaOpen = false" style="position: absolute; inset: 0; background: rgba(17,24,39,0.5);"></div>
+                <div class="blueprint" style="position: relative; background: var(--color-bg); width: 100%; max-width: 420px; padding: var(--space-6);">
+                    <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+
+                    <h4 style="margin: 0 0 var(--space-4);">Serahkan ke Customer &mdash; <span x-text="penerimaNoOrder"></span></h4>
+
+                    <form method="POST" :action="`/pengambilan/${penerimaType}/${penerimaId}`" style="display: flex; flex-direction: column; gap: var(--space-3);">
+                        @csrf
+                        <input type="hidden" name="qty" :value="penerimaQty">
+
+                        <div>
+                            <label class="label" style="display: block; margin-bottom: 4px;">Nama Penerima</label>
+                            <input type="text" name="nama_penerima" required maxlength="100" class="in-input" style="width: 100%;" placeholder="Nama yang mengambil">
+                        </div>
+
+                        <div>
+                            <label class="label" style="display: block; margin-bottom: 4px;">Kontak Penerima</label>
+                            <input type="text" name="kontak_penerima" required maxlength="50" class="in-input" style="width: 100%;" placeholder="No. HP / kontak">
+                        </div>
+
+                        <div class="text-muted" style="font-size: 12px;">
+                            Qty diserahkan: <span x-text="penerimaQty"></span> unit
+                        </div>
+
+                        <div style="display: flex; justify-content: flex-end; gap: var(--space-2); margin-top: var(--space-2);">
+                            <button type="button" @click="penerimaOpen = false" class="btn btn-secondary" style="height: 32px; padding: 0 12px;">Batal</button>
+                            <button type="submit" class="in-btn">Serahkan</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
         </div>
     </div>
 </x-app-layout>

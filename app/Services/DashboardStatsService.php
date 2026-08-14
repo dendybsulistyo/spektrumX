@@ -105,6 +105,8 @@ class DashboardStatsService
             : null;
 
         return [
+            'id' => $order->id,
+            'type_slug' => strtolower($tipe),
             'no_order' => $order->NoOrder,
             'tipe' => $tipe,
             'customer' => $order->customer?->NmCust ?? $order->KdCust,

@@ -286,6 +286,7 @@ class OrderOutdoorController extends Controller
                 'Panjang' => $item['Panjang'],
                 'Lebar' => $item['Lebar'],
                 'Qty' => $item['Qty'],
+                'qty_desain' => $item['Qty'],
                 'KdCtk' => $item['KdCtk'] ?? null,
                 'ada_finishing' => isset($item['ada_finishing']) ? $item['ada_finishing'] === 'ya' : null,
                 'jenis_finishing' => $item['jenis_finishing'] ?? null,

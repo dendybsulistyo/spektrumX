@@ -44,7 +44,7 @@
                 <div x-show="tab === '{{ $tabKey }}'" @if($tabKey!=='indoor') x-cloak @endif style="margin-top: var(--space-4);">
                     @forelse ($itemGroups as $items)
                         <x-stage-item-card :type="$tabKey" :order="$items->first()->order" :items="$items"
-                                            stage="cetak" route-name="order-cetak.update" next-label="Finishing"
+                                            stage="cetak" stage-label="Cetak" route-name="order-cetak.update" next-label="Finishing"
                                             :pending-rework="$pendingRework" :can-approve-rework="$canApproveRework"
                                             :printer-names="$printerNames" :outdoor-comments="$outdoorComments" :outdoor-unread="$outdoorUnread"
                                             manage-ability="order-cetak.manage" />
