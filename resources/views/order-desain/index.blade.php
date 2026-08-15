@@ -38,13 +38,56 @@
     <div id="industry-desain">
         <div style="max-width: 1480px; margin: 0 auto; display: flex; flex-direction: column; gap: var(--space-6);">
 
-            <div x-data="{ tab: '{{ $initialTab }}' }">
-                <div style="display: flex;">
-                    @foreach ($tabs as $key => $t)
-                        <button type="button" @click="tab = '{{ $key }}'" class="seg-tab" :class="tab === '{{ $key }}' ? 'active' : ''">
-                            {{ $t['label'] }} ({{ $t['count'] }})
-                        </button>
-                    @endforeach
+            <div x-data="{
+                    tab: '{{ $initialTab }}',
+                    selected: {},
+                    sending: false,
+                    get selectedCount() { return Object.keys(this.selected).length; },
+                    switchTab(key) { this.tab = key; this.selected = {}; },
+                    toggle(type, id, checked) {
+                        const key = type + '-' + id;
+                        if (checked) { this.selected[key] = { type, id }; } else { delete this.selected[key]; }
+                    },
+                    async bulkSend() {
+                        const entries = Object.values(this.selected);
+                        if (entries.length === 0) return;
+
+                        for (const e of entries) {
+                            const el = document.getElementById('qty-' + e.type + '-' + e.id);
+                            if (!el.value || Number(el.value) < 1) {
+                                alert('Isi qty untuk semua item yang dicentang dulu.');
+                                el.focus();
+                                return;
+                            }
+                        }
+
+                        if (!confirm(`Kirim ${entries.length} item terpilih ke Cetak?`)) return;
+
+                        this.sending = true;
+                        try {
+                            for (const e of entries) {
+                                const el = document.getElementById('qty-' + e.type + '-' + e.id);
+                                await axios.post(`/order-desain/progress/${e.type}/${e.id}`, { qty: el.value });
+                            }
+                            window.location.reload();
+                        } catch (err) {
+                            alert('Gagal mengirim sebagian item. Muat ulang halaman lalu cek lagi.');
+                            this.sending = false;
+                        }
+                    },
+                 }">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--space-3);">
+                    <div style="display: flex;">
+                        @foreach ($tabs as $key => $t)
+                            <button type="button" @click="switchTab('{{ $key }}')" class="seg-tab" :class="tab === '{{ $key }}' ? 'active' : ''">
+                                {{ $t['label'] }} ({{ $t['count'] }})
+                            </button>
+                        @endforeach
+                    </div>
+                    <button type="button" class="in-btn" :disabled="selectedCount === 0 || sending" @click="bulkSend()"
+                            :style="(selectedCount === 0 || sending) ? 'opacity:0.5; cursor:not-allowed;' : ''">
+                        <span x-text="sending ? 'Mengirim...' : 'Kirim Terpilih (' + selectedCount + ') ke Cetak'"></span>
+                    </button>
                 </div>
 
                 {{-- Indoor: 1 card per order (order bisa muncul di sini dengan
@@ -56,17 +99,17 @@
                             @php $order = $items->first()->order; @endphp
                             <div class="order-card">
                                 <div class="order-card-head">
-                                    <div style="display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-heading); font-weight: 600;">
+                                    <div style="display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-heading); font-weight: 700; font-size: 16px;">
                                         <x-order-number :number="$order->NoOrder" />
                                         <x-macet-badge :show="$order->isMacet()" />
-                                        <span class="text-muted" style="font-weight: 400; font-size: 13px; line-height: 1.6;">
+                                        <span style="font-weight: 400; font-size: 16px; line-height: 1.6; color: color-mix(in srgb, var(--color-text) 82%, transparent);">
                                             {{ is_string($order->TglOrder) ? $order->TglOrder : $order->TglOrder?->format('Y-m-d') }}
                                             &middot; {{ $order->customer?->NmCust ? ucwords(mb_strtolower($order->customer->NmCust)) : '-' }}
                                         </span>
                                     </div>
                                     <div style="display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: flex-end;">
                                         <x-order-rework type="indoor" :order-id="$order->id" :no-order="$order->NoOrder"
-                                                         current-stage="desain"
+                                                         current-stage="desain" :max-qty="$items->sum(fn ($i) => $i->qtyAt('desain'))"
                                                          :pending="$pendingRework->get('indoor-'.$order->id)"
                                                          :can-approve="$canApproveRework" :compact="true" />
                                         @if ($order->cancel_requested_at)
@@ -99,7 +142,7 @@
                                         <div>
                                             {{ $item->Judul }}
                                             @if ((float) $item->Panjang > 0 && (float) $item->Lebar > 0)
-                                                <span class="text-muted" style="font-size: 12px;">
+                                                <span style="font-size: 14px; color: color-mix(in srgb, var(--color-text) 82%, transparent);">
                                                     ({{ rtrim(rtrim(number_format((float) $item->Panjang, 2), '0'), '.') }} x {{ rtrim(rtrim(number_format((float) $item->Lebar, 2), '0'), '.') }} cm)
                                                 </span>
                                             @endif
@@ -107,9 +150,10 @@
                                         <div style="display: inline-flex; align-items: center; gap: var(--space-3);">
                                             <span class="progress-tag">Progres di Desain: {{ $item->Qty - $item->qtyAt('desain') }}/{{ $item->Qty }}</span>
                                             @can('order-desain.manage')
+                                                <input type="checkbox" @change="toggle('indoor', {{ $item->id }}, $event.target.checked)" title="Pilih untuk kirim massal">
                                                 <form method="POST" action="{{ route('order-desain.progress', ['indoor', $item->id]) }}" style="display: flex; align-items: center; gap: 4px;">
                                                     @csrf
-                                                    <input type="number" name="qty" min="1" max="{{ $item->qtyAt('desain') }}" value="{{ $item->qtyAt('desain') }}" required
+                                                    <input type="number" id="qty-indoor-{{ $item->id }}" name="qty" min="1" max="{{ $item->qtyAt('desain') }}" value="{{ $item->qtyAt('desain') }}" required
                                                            class="in-input no-spinner" style="width: 70px;">
                                                     <button type="submit" class="in-btn">Kirim ke Cetak</button>
                                                 </form>
@@ -131,10 +175,10 @@
                             @php $order = $items->first()->order; @endphp
                             <div class="order-card">
                                 <div class="order-card-head">
-                                    <div style="display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-heading); font-weight: 600;">
+                                    <div style="display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-heading); font-weight: 700; font-size: 16px;">
                                         <x-order-number :number="$order->NoOrder" />
                                         <x-macet-badge :show="$order->isMacet()" />
-                                        <span class="text-muted" style="font-weight: 400; font-size: 13px; line-height: 1.6;">
+                                        <span style="font-weight: 400; font-size: 16px; line-height: 1.6; color: color-mix(in srgb, var(--color-text) 82%, transparent);">
                                             {{ \Carbon\Carbon::parse($order->TglOrder)->format('d-m-y') }}
                                             &middot; {{ $order->customer?->NmCust ? ucwords(mb_strtolower($order->customer->NmCust)) : '-' }}
                                             &middot; {{ $order->createdBy?->name ?? '-' }}
@@ -145,7 +189,7 @@
                                                              :comments="$outdoorComments->get($order->id, collect())"
                                                              :unread="$outdoorUnread->get($order->id, 0)" :compact="true" />
                                         <x-order-rework type="outdoor" :order-id="$order->id" :no-order="$order->NoOrder"
-                                                         current-stage="desain"
+                                                         current-stage="desain" :max-qty="$items->sum(fn ($i) => $i->qtyAt('desain'))"
                                                          :pending="$pendingRework->get('outdoor-'.$order->id)"
                                                          :can-approve="$canApproveRework" :compact="true" />
                                         @if ($order->cancel_requested_at)
@@ -177,7 +221,7 @@
                                     <div class="item-row">
                                         <div>
                                             <x-printer-badge :code="$item->printerCode()" :name="$printerNames[$item->printerCode()] ?? null" />
-                                            <span class="text-muted" style="font-size: 12px;">
+                                            <span style="font-size: 14px; color: color-mix(in srgb, var(--color-text) 82%, transparent);">
                                                 {{ $bahanNames[$item->bahanCode()] ?? '-' }}
                                                 @if ((float) $item->Panjang > 0 && (float) $item->Lebar > 0)
                                                     &middot; {{ rtrim(rtrim(number_format((float) $item->Panjang, 2), '0'), '.') }} x {{ rtrim(rtrim(number_format((float) $item->Lebar, 2), '0'), '.') }}
@@ -202,9 +246,10 @@
                                             @endcan
                                             <span class="progress-tag">Progres di Desain: {{ $item->Qty - $item->qtyAt('desain') }}/{{ $item->Qty }}</span>
                                             @can('order-desain.manage')
+                                                <input type="checkbox" @change="toggle('outdoor', {{ $item->id }}, $event.target.checked)" title="Pilih untuk kirim massal">
                                                 <form method="POST" action="{{ route('order-desain.progress', ['outdoor', $item->id]) }}" style="display: flex; align-items: center; gap: 4px;">
                                                     @csrf
-                                                    <input type="number" name="qty" min="1" max="{{ $item->qtyAt('desain') }}" placeholder="qty" required
+                                                    <input type="number" id="qty-outdoor-{{ $item->id }}" name="qty" min="1" max="{{ $item->qtyAt('desain') }}" placeholder="qty" required
                                                            oninput="this.setCustomValidity('')"
                                                            oninvalid="this.setCustomValidity(this.validity.valueMissing ? 'Isi jumlah qty dulu.' : (this.validity.rangeOverflow ? 'Maksimal {{ $item->qtyAt('desain') }} (sisa di Desain).' : (this.validity.rangeUnderflow ? 'Qty minimal 1.' : 'Qty tidak valid.')))"
                                                            class="in-input no-spinner" style="width: 70px;">
@@ -225,10 +270,10 @@
                         @foreach ($outdoorNeedsReply as $order)
                             <div class="order-card" style="background: color-mix(in srgb, var(--color-accent) 6%, transparent);">
                                 <div class="order-card-head">
-                                    <div style="display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-heading); font-weight: 600;">
+                                    <div style="display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-heading); font-weight: 700; font-size: 16px;">
                                         <x-order-number :number="$order->NoOrder" />
                                         <x-macet-badge :show="$order->isMacet()" />
-                                        <span class="text-muted" style="font-weight: 400; font-size: 13px; line-height: 1.6;">
+                                        <span style="font-weight: 400; font-size: 16px; line-height: 1.6; color: color-mix(in srgb, var(--color-text) 82%, transparent);">
                                             {{ \Carbon\Carbon::parse($order->TglOrder)->format('d-m-y') }}
                                             &middot; {{ $order->customer?->NmCust ? ucwords(mb_strtolower($order->customer->NmCust)) : '-' }}
                                         </span>
@@ -244,7 +289,7 @@
                                     <div class="item-row">
                                         <div>
                                             <x-printer-badge :code="$item->printerCode()" :name="$printerNames[$item->printerCode()] ?? null" />
-                                            <span class="text-muted" style="font-size: 12px;">File: {{ $item->NmFile ?: '-' }}</span>
+                                            <span style="font-size: 14px; color: color-mix(in srgb, var(--color-text) 82%, transparent);">File: {{ $item->NmFile ?: '-' }}</span>
                                         </div>
                                         <span class="text-muted">
                                             @if ($item->qtyAt('desain') > 0)

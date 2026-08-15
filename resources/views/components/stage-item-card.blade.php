@@ -17,10 +17,10 @@
 
 <div class="order-card">
     <div class="order-card-head">
-        <div style="display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-heading); font-weight: 600;">
+        <div style="display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-heading); font-weight: 700; font-size: 16px;">
             <x-order-number :number="$order->NoOrder" />
             <x-macet-badge :show="$order->isMacet()" />
-            <span class="text-muted" style="font-weight: 400; font-size: 13px; line-height: 1.6;">
+            <span style="font-weight: 400; font-size: 16px; line-height: 1.6; color: color-mix(in srgb, var(--color-text) 82%, transparent);">
                 {{ is_string($order->TglOrder) ? $order->TglOrder : $order->TglOrder?->format('d-m-y') }}
                 &middot; {{ $order->customer?->NmCust ? ucwords(mb_strtolower($order->customer->NmCust)) : '-' }}
             </span>
@@ -32,7 +32,7 @@
                                      :unread="$outdoorUnread->get($order->id, 0)" :compact="true" />
             @endif
             <x-order-rework :type="$type" :order-id="$order->id" :no-order="$order->NoOrder"
-                             :current-stage="$stage"
+                             :current-stage="$stage" :max-qty="$items->sum(fn ($i) => $i->qtyAt($stage))"
                              :pending="$pendingRework->get($type.'-'.$order->id)"
                              :can-approve="$canApproveRework" :compact="true" />
             @if ($order->cancel_requested_at)
@@ -46,13 +46,13 @@
             <div>
                 @if ($type === 'outdoor')
                     <x-printer-badge :code="$item->printerCode()" :name="$printerNames[$item->printerCode()] ?? null" />
-                    <span class="text-muted" style="font-size: 12px;">
+                    <span style="font-size: 14px; color: color-mix(in srgb, var(--color-text) 82%, transparent);">
                         {{ $item->gabungan ?: ($item->NmFile ?: '-') }}
                     </span>
                 @else
                     {{ $item->Judul }}
                     @if ((float) $item->Panjang > 0 && (float) $item->Lebar > 0)
-                        <span class="text-muted" style="font-size: 12px;">
+                        <span style="font-size: 14px; color: color-mix(in srgb, var(--color-text) 82%, transparent);">
                             ({{ rtrim(rtrim(number_format((float) $item->Panjang, 2), '0'), '.') }} x {{ rtrim(rtrim(number_format((float) $item->Lebar, 2), '0'), '.') }} cm)
                         </span>
                     @endif

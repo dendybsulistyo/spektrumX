@@ -1,4 +1,4 @@
-@props(['type', 'orderId', 'noOrder', 'currentStage', 'pending' => null, 'canApprove' => false, 'compact' => false])
+@props(['type', 'orderId', 'noOrder', 'currentStage', 'maxQty' => null, 'pending' => null, 'canApprove' => false, 'compact' => false])
 
 @php
     $stageOptions = collect(\App\Models\OrderReworkRequest::STAGE_LABELS)
@@ -32,7 +32,7 @@
         @elseif ($canApprove)
             <div class="mt-1 text-xs bg-amber-50 border border-amber-200 rounded-md p-2 max-w-xs">
                 <p class="text-amber-800">
-                    <span class="font-semibold">Ulang ke {{ \App\Models\OrderReworkRequest::STAGE_LABELS[$pending->target_stage] ?? $pending->target_stage }}</span>
+                    <span class="font-semibold">{{ $pending->qty ?? 'Semua' }} unit &rarr; {{ \App\Models\OrderReworkRequest::STAGE_LABELS[$pending->target_stage] ?? $pending->target_stage }}</span>
                     — {{ $pending->reason }}
                     <span class="text-amber-500">({{ $pending->requestedBy->name ?? '-' }})</span>
                 </p>
@@ -76,6 +76,7 @@
                 <form method="POST" action="{{ route('order-rework.store', [$type, $orderId]) }}" class="p-5 space-y-4">
                     @csrf
                     <input type="hidden" name="action" value="ulang">
+                    <input type="hidden" name="from_stage" value="{{ $currentStage }}">
 
                     <div>
                         <label class="block text-xs font-medium text-gray-600 mb-1">Ulang dari tahap</label>
@@ -85,6 +86,15 @@
                             @endforeach
                         </select>
                     </div>
+
+                    @if ($maxQty !== null)
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Jumlah unit diulang</label>
+                            <input type="number" name="qty" min="1" max="{{ $maxQty }}" value="{{ $maxQty }}" required
+                                   class="w-full rounded-md border-gray-300 text-sm">
+                            <p class="text-xs text-gray-400 mt-1">Maksimal {{ $maxQty }} unit yang sedang ada di tahap ini.</p>
+                        </div>
+                    @endif
 
                     <div>
                         <label class="block text-xs font-medium text-gray-600 mb-1">Alasan</label>

@@ -53,16 +53,38 @@ class OrderReworkController extends Controller
 
         $data = $request->validate([
             'action' => ['required', 'in:ulang,batal'],
+            'from_stage' => ['required_if:action,ulang', 'nullable', 'in:desain,cetak,finishing,qc,bungkus'],
             'target_stage' => ['required_if:action,ulang', 'nullable', 'in:desain,cetak,finishing,qc,bungkus'],
+            'qty' => ['nullable', 'integer', 'min:1'],
             'reason' => ['required', 'string', 'max:255'],
         ]);
+
+        // Qty can now sit at several stages of the same order at once (see
+        // HasStageProgress::recalculateStatus()), so $order->status — the
+        // LEAST advanced stage across all items — is not necessarily the
+        // stage the operator is actually looking at. Trust which stage
+        // page the "Ulang" button was clicked from (from_stage, submitted
+        // by the order-rework component) instead, but only if that order
+        // genuinely still has qty sitting there — guards against a stale
+        // page (qty already moved on) or a tampered request.
+        $qty = null;
+
+        if ($data['action'] === 'ulang') {
+            $totalAtFromStage = $order->detailItems()->sum(fn ($item) => $item->qtyAt($data['from_stage']));
+            abort_if($totalAtFromStage === 0, 422, 'Order ini sudah tidak punya qty di tahap tersebut — halaman mungkin sudah berubah, muat ulang dulu.');
+
+            // Not submitted (older/plain clients) defaults to "everything
+            // sitting there", matching the previous whole-order behavior.
+            $qty = min($data['qty'] ?? $totalAtFromStage, $totalAtFromStage);
+        }
 
         OrderReworkRequest::create([
             'order_type' => $type,
             'order_id' => $order->id,
-            'current_stage' => $order->status,
+            'current_stage' => $data['action'] === 'ulang' ? $data['from_stage'] : $order->status,
             'action' => $data['action'],
             'target_stage' => $data['action'] === 'ulang' ? $data['target_stage'] : null,
+            'qty' => $qty,
             'reason' => $data['reason'],
             'requested_by' => auth()->id(),
             'requested_at' => now(),
@@ -80,10 +102,45 @@ class OrderReworkController extends Controller
         $newStatus = $orderReworkRequest->action === 'batal' ? 'batal' : $orderReworkRequest->target_stage;
 
         DB::transaction(function () use ($order, $orderReworkRequest, $newStatus) {
-            $order->update(['status' => $newStatus]);
-
             if ($orderReworkRequest->action === 'batal') {
+                $order->update(['status' => $newStatus]);
                 $this->refundCancelledOrder($order, $orderReworkRequest->order_type);
+            } else {
+                // Header `status` is derived from item-level qty buckets
+                // (see HasStageProgress::recalculateStatus()) — moving an
+                // order "back a stage" means actually pulling whatever qty
+                // is still sitting at current_stage's bucket back into
+                // target_stage's bucket, not just overwriting the header
+                // column (which recalculateStatus() would silently
+                // overwrite again on the next item advance anyway).
+                $fromCol = "qty_{$orderReworkRequest->current_stage}";
+                $toCol = "qty_{$newStatus}";
+
+                // A request's qty may be less than everything sitting at
+                // this stage (partial rework) — null means "everything"
+                // (pending requests raised before this column existed).
+                // With more than one line item, whichever items still have
+                // qty here get filled first-come-first-served until the
+                // requested amount is used up; a single-item order (by far
+                // the common case) just moves exactly what was asked.
+                $remaining = $orderReworkRequest->qty ?? PHP_INT_MAX;
+
+                foreach ($order->detailItems() as $item) {
+                    if ($remaining <= 0) {
+                        break;
+                    }
+
+                    $available = (int) $item->{$fromCol};
+                    $move = min($available, $remaining);
+
+                    if ($move > 0) {
+                        $item->decrement($fromCol, $move);
+                        $item->increment($toCol, $move);
+                        $remaining -= $move;
+                    }
+                }
+
+                $order->recalculateStatus();
             }
 
             $orderReworkRequest->update([
@@ -95,11 +152,12 @@ class OrderReworkController extends Controller
             OrderStatusNote::create([
                 'order_type' => $orderReworkRequest->order_type,
                 'order_id' => $order->id,
+                'qty' => $orderReworkRequest->action === 'ulang' ? $orderReworkRequest->qty : null,
                 'stage' => $orderReworkRequest->current_stage,
                 'action' => $orderReworkRequest->action === 'batal' ? 'dibatalkan' : 'diulang',
                 'catatan' => $orderReworkRequest->action === 'batal'
                     ? "Order dibatalkan, uang dikembalikan ke customer (alasan: {$orderReworkRequest->reason})"
-                    : "Order diulang ke tahap ".(OrderReworkRequest::STAGE_LABELS[$orderReworkRequest->target_stage] ?? $orderReworkRequest->target_stage)." (alasan: {$orderReworkRequest->reason})",
+                    : ($orderReworkRequest->qty ?? 'Semua').' unit diulang ke tahap '.(OrderReworkRequest::STAGE_LABELS[$orderReworkRequest->target_stage] ?? $orderReworkRequest->target_stage)." (alasan: {$orderReworkRequest->reason})",
                 'user_id' => auth()->id(),
                 'created_at' => now(),
             ]);

@@ -27,6 +27,7 @@ class OrderReworkRequest extends Model
         'current_stage',
         'action',
         'target_stage',
+        'qty',
         'reason',
         'requested_by',
         'requested_at',
@@ -40,6 +41,7 @@ class OrderReworkRequest extends Model
         return [
             'requested_at' => 'datetime',
             'resolved_at' => 'datetime',
+            'qty' => 'integer',
         ];
     }
 
