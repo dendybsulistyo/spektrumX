@@ -564,10 +564,10 @@
                         </svg>
                     </button>
                 </div>
-            </div>
             <p class="text-xs text-gray-400 mb-3 px-3" x-show="item.KdProd">
                 Estimasi subtotal: <span x-text="'Rp ' + lineTotal(item).toLocaleString('id-ID')"></span>
             </p>
+            </div>
         </template>
 
         <x-input-error :messages="$errors->get('items')" class="mt-1" />

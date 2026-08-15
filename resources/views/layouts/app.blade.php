@@ -14,63 +14,86 @@
         @vite(['resources/css/app.css', 'resources/js/app.js'])
         @stack('styles')
 
-        {{-- Navbar digaya ulang ke palet "Industry" (steel-blue, sudut kotak,
-             Barlow) — di-scope ke .industry-nav lewat descendant selector +
-             !important supaya cuma nav yang berubah, konten halaman lain yang
-             belum ikut migrasi (Master Data dll, masih Tailwind indigo) tidak
-             ikut kena. --}}
+        {{-- Navbar + semua halaman Tailwind yang belum ditulis ulang manual ke
+             markup Industry di-reskin dari sini juga (bareng dengan
+             public/_ds/industry-.../styles.css yang menangani halaman yang
+             SUDAH ditulis ulang manual) — palet indigo tegas, font Figtree
+             (self-hosted, lihat komentar di atas), radius kecil (maks 4px,
+             kecuali .rounded-full — avatar/badge bulat dibiarkan bulat, tidak
+             ikut dikotakkan). Di-scope ke .industry-nav / body.font-sans
+             lewat !important supaya konsisten tanpa perlu tulis ulang tiap
+             file satu-satu. --}}
         <style>
             .industry-nav {
-                background: #f2f2f3 !important;
-                border-bottom: 1px solid color-mix(in srgb, #1d1f20 16%, transparent) !important;
-                font-family: 'Barlow', system-ui, sans-serif;
+                background: #ffffff !important;
+                border-bottom: 1px solid #e3e5ee !important;
+                font-family: 'Figtree', system-ui, sans-serif;
+                box-shadow: 0 1px 2px color-mix(in srgb, #16181d 6%, transparent) !important;
             }
-            .industry-nav [class*="rounded"] { border-radius: 0 !important; }
-            .industry-nav .brand-mark { background: #5980a6 !important; }
+            .industry-nav [class*="rounded"]:not([class*="rounded-full"]) { border-radius: 4px !important; }
+            .industry-nav .brand-mark { background: #4f46e5 !important; border-radius: 4px !important; }
             .industry-nav a, .industry-nav button, .industry-nav span, .industry-nav div {
-                font-family: 'Barlow Condensed', system-ui, sans-serif;
+                font-family: 'Figtree', system-ui, sans-serif;
             }
-            .industry-nav input { font-family: 'Barlow', system-ui, sans-serif; }
-            .industry-nav .bg-indigo-50 { background: #eef6ff !important; }
-            .industry-nav .bg-indigo-100 { background: #eef6ff !important; }
-            .industry-nav .bg-indigo-600 { background: #5980a6 !important; }
+            .industry-nav input { font-family: 'Figtree', system-ui, sans-serif; }
+            .industry-nav .bg-indigo-50 { background: #eef2ff !important; }
+            .industry-nav .bg-indigo-100 { background: #eef2ff !important; }
+            .industry-nav .bg-indigo-600 { background: #4f46e5 !important; }
             .industry-nav .text-indigo-600,
-            .industry-nav .text-indigo-700 { color: #416180 !important; }
-            .industry-nav .border-gray-200 { border-color: color-mix(in srgb, #1d1f20 16%, transparent) !important; }
-            .industry-nav .hover\:bg-gray-100:hover { background: color-mix(in srgb, #1d1f20 7%, transparent) !important; }
-            .industry-nav .shadow-lg { box-shadow: 0 12px 32px color-mix(in srgb, #2b2b2d 22%, transparent) !important; }
+            .industry-nav .text-indigo-700 { color: #4338ca !important; }
+            .industry-nav .border-gray-200 { border-color: #e3e5ee !important; }
+            .industry-nav .hover\:bg-gray-100:hover { background: #f2f3f9 !important; }
+            .industry-nav .shadow-lg { box-shadow: 0 12px 32px color-mix(in srgb, #16181d 18%, transparent) !important; }
 
             /* Reskin global untuk halaman yang belum ditulis ulang manual ke
                markup Industry (Master Data, Order Indoor/Outdoor/Artwork,
                dsb) — override class Tailwind yang sudah ada supaya ikut
-               palet/font/sudut-kotak Industry tanpa perlu tulis ulang tiap
-               file satu-satu. Halaman yang SUDAH ditulis ulang manual (pakai
+               palet/font/radius Industry tanpa perlu tulis ulang tiap file
+               satu-satu. Halaman yang SUDAH ditulis ulang manual (pakai
                wrapper #industry-page dsb) tidak kepakai class Tailwind lama
                ini lagi, jadi aman tidak dobel. */
-            body.font-sans { font-family: 'Barlow', system-ui, sans-serif !important; background: #f2f2f3 !important; }
-            body.font-sans h1, body.font-sans h2, body.font-sans h3, body.font-sans h4 { font-family: 'Barlow Condensed', system-ui, sans-serif !important; }
+            body.font-sans { font-family: 'Figtree', system-ui, sans-serif !important; background: #f4f5f8 !important; }
+            body.font-sans h1, body.font-sans h2, body.font-sans h3, body.font-sans h4 { font-family: 'Figtree', system-ui, sans-serif !important; font-weight: 700 !important; }
             body.font-sans .rounded, body.font-sans .rounded-sm, body.font-sans .rounded-md,
             body.font-sans .rounded-lg, body.font-sans .rounded-xl, body.font-sans .rounded-2xl,
-            body.font-sans .rounded-3xl, body.font-sans .rounded-full { border-radius: 0 !important; }
-            body.font-sans .bg-gray-900 { background: #1d2d3d !important; }
+            body.font-sans .rounded-3xl { border-radius: 4px !important; }
+            body.font-sans .bg-gray-900 { background: #1e1b4b !important; }
             body.font-sans .bg-gray-700, body.font-sans .bg-gray-800,
-            body.font-sans .hover\:bg-gray-700:hover { background: #2c455d !important; }
-            body.font-sans .bg-indigo-600, body.font-sans .bg-indigo-500 { background: #5980a6 !important; }
-            body.font-sans .bg-indigo-50, body.font-sans .bg-indigo-100 { background: #eef6ff !important; }
+            body.font-sans .hover\:bg-gray-700:hover { background: #312e81 !important; }
+            body.font-sans .bg-indigo-600, body.font-sans .bg-indigo-500 { background: #4f46e5 !important; }
+            body.font-sans .bg-indigo-50, body.font-sans .bg-indigo-100 { background: #eef2ff !important; }
             body.font-sans .text-indigo-600, body.font-sans .text-indigo-700,
-            body.font-sans .text-blue-600, body.font-sans .text-blue-700 { color: #416180 !important; }
+            body.font-sans .text-blue-600, body.font-sans .text-blue-700 { color: #4338ca !important; }
             body.font-sans .text-blue-800,
-            body.font-sans .hover\:text-blue-800:hover { color: #2c455d !important; }
+            body.font-sans .hover\:text-blue-800:hover { color: #312e81 !important; }
             body.font-sans .border-indigo-500,
-            body.font-sans .focus\:border-indigo-500:focus { border-color: #5980a6 !important; }
+            body.font-sans .focus\:border-indigo-500:focus { border-color: #4f46e5 !important; }
             body.font-sans .ring-indigo-500,
-            body.font-sans .focus\:ring-indigo-500:focus { --tw-ring-color: #5980a6 !important; }
-            body.font-sans .border-gray-300, body.font-sans .border-gray-200 { border-color: color-mix(in srgb, #1d1f20 16%, transparent) !important; }
-            body.font-sans .bg-gray-50 { background: #f5f5f8 !important; }
+            body.font-sans .focus\:ring-indigo-500:focus { --tw-ring-color: #4f46e5 !important; }
+            body.font-sans .border-gray-300, body.font-sans .border-gray-200 { border-color: #e3e5ee !important; }
+            body.font-sans .bg-gray-50 { background: #f8f9fc !important; }
             body.font-sans .bg-gray-100, body.font-sans .hover\:bg-gray-100:hover,
-            body.font-sans .hover\:bg-gray-200:hover { background: #eaeaec !important; }
-            body.font-sans .shadow-sm { box-shadow: 0 1px 2px color-mix(in srgb, #2b2b2d 14%, transparent) !important; }
-            body.font-sans .shadow-lg { box-shadow: 0 12px 32px color-mix(in srgb, #2b2b2d 22%, transparent) !important; }
+            body.font-sans .hover\:bg-gray-200:hover { background: #eef0f5 !important; }
+            body.font-sans .shadow-sm { box-shadow: 0 1px 2px color-mix(in srgb, #16181d 12%, transparent) !important; }
+            body.font-sans .shadow-lg { box-shadow: 0 12px 32px color-mix(in srgb, #16181d 20%, transparent) !important; }
+
+            /* Tinggi input & select disamakan — beda default browser antara
+               <input> dan <select> (dan antar Tailwind size/padding yang
+               tidak konsisten di berbagai form) bikin baris form kelihatan
+               "loncat-loncat". Dipaksa sama di sini, satu tempat, untuk
+               semua form Tailwind app ini. Elemen ber-class .input dikecualikan
+               (:not(.input)) karena itu sudah diatur sendiri tingginya oleh
+               design system Industry (styles.css) — tanpa pengecualian ini,
+               !important di sini menang dan bikin tinggi .input beda lagi
+               dari tombol .btn di sebelahnya di halaman Industry. */
+            body.font-sans input[type="text"]:not(.input), body.font-sans input[type="number"]:not(.input),
+            body.font-sans input[type="email"]:not(.input), body.font-sans input[type="password"]:not(.input),
+            body.font-sans input[type="date"]:not(.input), body.font-sans input[type="tel"]:not(.input),
+            body.font-sans input[type="search"]:not(.input), body.font-sans select:not(.input) {
+                height: 2.375rem !important; padding-top: 0 !important; padding-bottom: 0 !important;
+                line-height: 2.375rem !important; box-sizing: border-box !important;
+            }
+            body.font-sans select:not(.input) { padding-top: 0 !important; padding-bottom: 0 !important; }
         </style>
 
         @php
@@ -155,7 +178,9 @@
                                             Keuangan
                                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3 h-3 transition-transform" :class="open ? 'rotate-180' : ''">{!! $navIcon('chevron-down') !!}</svg>
                                         </button>
-                                        <div x-show="open" x-cloak x-transition
+                                        <div x-show="open" x-cloak
+                                             x-transition:enter="transition ease-out duration-100" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+                                             x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
                                              class="absolute left-0 mt-2 w-56 bg-white border border-gray-200 rounded-lg shadow-lg py-2 z-50">
                                             @can('keuangan.view')
                                                 <a href="{{ route('keuangan.kas-harian') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.kas-harian')) }}">Kas Harian</a>
@@ -204,7 +229,9 @@
                                             Master Data
                                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3 h-3 transition-transform" :class="open ? 'rotate-180' : ''">{!! $navIcon('chevron-down') !!}</svg>
                                         </button>
-                                        <div x-show="open" x-cloak x-transition
+                                        <div x-show="open" x-cloak
+                                             x-transition:enter="transition ease-out duration-100" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+                                             x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
                                              class="absolute left-0 mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-lg py-2 z-50 max-h-[75vh] overflow-y-auto">
                                             @can('customers.view')
                                                 <a href="{{ route('customers.index') }}" class="{{ $dropdownLink(request()->routeIs('customers.index') || request()->routeIs('customers.edit')) }}">Customer</a>
@@ -259,7 +286,9 @@
                                             Transaksi
                                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3 h-3 transition-transform" :class="open ? 'rotate-180' : ''">{!! $navIcon('chevron-down') !!}</svg>
                                         </button>
-                                        <div x-show="open" x-cloak x-transition
+                                        <div x-show="open" x-cloak
+                                             x-transition:enter="transition ease-out duration-100" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+                                             x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
                                              class="absolute left-0 mt-2 w-56 bg-white border border-gray-200 rounded-lg shadow-lg py-2 z-50">
                                             @can('order-indoor.view')
                                                 <a href="{{ route('order-indoor.index') }}" class="{{ $dropdownLink(request()->routeIs('order-indoor.*')) }}">Order Indoor</a>
@@ -280,7 +309,9 @@
                                             Dashboard Operator
                                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3 h-3 transition-transform" :class="open ? 'rotate-180' : ''">{!! $navIcon('chevron-down') !!}</svg>
                                         </button>
-                                        <div x-show="open" x-cloak x-transition
+                                        <div x-show="open" x-cloak
+                                             x-transition:enter="transition ease-out duration-100" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+                                             x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
                                              class="absolute left-0 mt-2 w-56 bg-white border border-gray-200 rounded-lg shadow-lg py-2 z-50">
                                             @can('file-monitor.view')
                                                 <a href="{{ route('file.index') }}" class="{{ $dropdownLink(request()->routeIs('file.*')) }}">Penerima File</a>
@@ -316,7 +347,9 @@
                                             Analitik
                                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3 h-3 transition-transform" :class="open ? 'rotate-180' : ''">{!! $navIcon('chevron-down') !!}</svg>
                                         </button>
-                                        <div x-show="open" x-cloak x-transition
+                                        <div x-show="open" x-cloak
+                                             x-transition:enter="transition ease-out duration-100" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+                                             x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
                                              class="absolute left-0 mt-2 w-56 bg-white border border-gray-200 rounded-lg shadow-lg py-2 z-50">
                                             @can('data-warehouse.view')
                                                 <a href="{{ route('data-warehouse.index') }}" class="{{ $dropdownLink(request()->routeIs('data-warehouse.*')) }}">Data Warehouse</a>
@@ -340,7 +373,9 @@
                                             Pengaturan
                                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3 h-3 transition-transform" :class="open ? 'rotate-180' : ''">{!! $navIcon('chevron-down') !!}</svg>
                                         </button>
-                                        <div x-show="open" x-cloak x-transition
+                                        <div x-show="open" x-cloak
+                                             x-transition:enter="transition ease-out duration-100" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+                                             x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
                                              class="absolute left-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg py-2 z-50">
                                             @can('roles.manage')
                                                 <a href="{{ route('roles.index') }}" class="{{ $dropdownLink(request()->routeIs('roles.*')) }}">Role & Akses</a>
@@ -371,7 +406,9 @@
                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3 h-3 text-gray-400 transition-transform" :class="open ? 'rotate-180' : ''">{!! $navIcon('chevron-down') !!}</svg>
                                 </button>
 
-                                <div x-show="open" x-cloak x-transition
+                                <div x-show="open" x-cloak
+                                             x-transition:enter="transition ease-out duration-100" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+                                             x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
                                      class="absolute right-0 mt-2 w-44 bg-white border border-gray-200 rounded-lg shadow-lg py-1 text-[13px] z-50">
                                     <a href="{{ route('profile.edit') }}" class="block px-3 py-2 text-gray-600 hover:bg-gray-50">Profil</a>
                                     <form method="POST" action="{{ route('logout') }}">

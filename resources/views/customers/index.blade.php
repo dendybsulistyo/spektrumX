@@ -26,7 +26,7 @@
                         <label>Cari</label>
                         <input type="text" name="search" value="{{ request('search') }}" placeholder="Nama atau kode customer..." class="input">
                     </div>
-                    <button type="submit" class="btn btn-secondary" style="height: 36px;">Cari</button>
+                    <button type="submit" class="btn btn-primary" style="height: 36px;">Cari</button>
                     @if (request('search'))
                         <a href="{{ route('customers.index') }}" class="btn btn-ghost" style="height: 36px;">Reset</a>
                     @endif

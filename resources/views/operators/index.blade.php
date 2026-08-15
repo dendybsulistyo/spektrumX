@@ -16,7 +16,7 @@
                 <input type="text" name="search" value="{{ request('search') }}"
                        placeholder="Cari nama atau kode operator..."
                        class="w-full max-w-sm rounded-md border-gray-300 text-sm">
-                <button type="submit" class="px-4 py-2 bg-gray-100 text-gray-700 text-sm rounded-md hover:bg-gray-200">Cari</button>
+                <button type="submit" class="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md hover:bg-indigo-700">Cari</button>
                 @if (request('search'))
                     <a href="{{ route('operators.index') }}" class="px-4 py-2 text-sm text-gray-500 hover:underline">Reset</a>
                 @endif

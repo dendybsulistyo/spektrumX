@@ -352,7 +352,7 @@
                     <label class="block text-xs text-gray-500 mb-1">Printer Outdoor</label>
                     <input type="hidden" :name="`items[${index}][KdPrn]`" :value="item.KdPrn">
                     <button type="button" @click="printerOpen = !printerOpen" @click.outside="printerOpen = false"
-                            class="w-full flex items-center justify-between gap-1 rounded-md border border-gray-300 text-sm px-2 py-1.5 bg-white">
+                            class="w-full h-[2.375rem] flex items-center justify-between gap-1 rounded-md border border-gray-300 text-sm px-2 bg-white">
                         <span x-show="item.KdPrn" class="inline-flex items-center px-2 py-0.5 text-xs font-semibold whitespace-nowrap"
                               :class="printerColorMap[item.KdPrn] || 'bg-gray-100 text-gray-600'" x-text="printerNameFor(item.KdPrn)"></span>
                         <span x-show="!item.KdPrn" class="text-gray-400">-- Printer --</span>
