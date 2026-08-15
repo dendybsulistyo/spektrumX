@@ -229,19 +229,22 @@
                                             </span>
                                         </div>
                                         <div style="display: inline-flex; align-items: center; gap: var(--space-3); flex-wrap: wrap;">
-                                            @can('order-desain.manage')
+                                            @can('order-desain.nmfile-manage')
                                                 <form method="POST" action="{{ route('order-desain.nmfile', $item) }}">
                                                     @csrf
                                                     <input type="text" name="NmFile" value="{{ $item->NmFile }}" maxlength="255"
                                                            placeholder="Nama file" onchange="this.form.submit()" class="in-input" style="width: 140px;">
                                                 </form>
+                                            @else
+                                                <span class="text-muted" style="white-space: nowrap;" title="Hanya Operator File yang bisa ubah nama file">{{ $item->NmFile ?: '-' }}</span>
+                                            @endcan
+                                            @can('order-desain.manage')
                                                 <form method="POST" action="{{ route('order-desain.gabungan', $item) }}">
                                                     @csrf
                                                     <input type="text" name="gabungan" value="{{ $item->gabungan }}" maxlength="255"
                                                            placeholder="Gabungan" onchange="this.form.submit()" class="in-input" style="width: 140px;">
                                                 </form>
                                             @else
-                                                <span class="text-muted" style="white-space: nowrap;">{{ $item->NmFile ?: '-' }}</span>
                                                 <span class="text-muted" style="white-space: nowrap;">{{ $item->gabungan ?: '-' }}</span>
                                             @endcan
                                             <span class="progress-tag">Progres di Desain: {{ $item->Qty - $item->qtyAt('desain') }}/{{ $item->Qty }}</span>

@@ -306,8 +306,10 @@ Route::middleware('auth')->group(function () {
     });
     Route::middleware('permission:order-desain.manage')->group(function () {
         Route::post('/order-desain/gabungan/{item}', [OrderDesainController::class, 'updateGabungan'])->name('order-desain.gabungan');
-        Route::post('/order-desain/nmfile/{item}', [OrderDesainController::class, 'updateNmFile'])->name('order-desain.nmfile');
         Route::post('/order-desain/progress/{type}/{id}', [OrderDesainController::class, 'updateItem'])->name('order-desain.progress');
+    });
+    Route::middleware('permission:order-desain.nmfile-manage')->group(function () {
+        Route::post('/order-desain/nmfile/{item}', [OrderDesainController::class, 'updateNmFile'])->name('order-desain.nmfile');
     });
 
     Route::middleware('permission:order-cetak.view')->group(function () {

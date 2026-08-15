@@ -77,6 +77,7 @@ class Role extends Model
         'Operator Desain' => [
             'order-desain.view' => 'Lihat antrian desain',
             'order-desain.manage' => 'Update status desain',
+            'order-desain.nmfile-manage' => 'Ubah nama file desain outdoor (khusus Operator File)',
         ],
         'Operator Cetak' => [
             'order-cetak.view' => 'Lihat antrian cetak',
