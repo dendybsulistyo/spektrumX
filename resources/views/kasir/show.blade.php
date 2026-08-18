@@ -199,7 +199,7 @@
                 },
                 dpMin: {{ (int) ceil(($diskonStatus === 'approved' ? $order->totalSetelahDiskon() : $order->total ?? 0) * 0.5) }},
                 dpMax: {{ max((int) ($diskonStatus === 'approved' ? $order->totalSetelahDiskon() : $order->total ?? 0) - 1, 0) }},
-                // DP no longer has its own "Jumlah DP" input — that was the
+                // DP no longer has its own 'Jumlah DP' input — that was the
                 // same amount typed twice, once here and once in the rincian
                 // row below. The rincian total below now IS the DP amount.
                 get dpError() {
@@ -215,7 +215,7 @@
                 },
                 // DP has no fixed target to match — the operator types
                 // whatever the customer is paying now and dpError checks it
-                // against the 50% minimum instead. Only "lunas" (fixed-price)
+                // against the 50% minimum instead. Only 'lunas' (fixed-price)
                 // payment must add up to the exact total.
                 get rincianDiff() {
                     if (this.metode === 'dp') return 0;
