@@ -17,6 +17,14 @@ class OrderReworkController extends Controller
 {
     use ResolvesOrderType;
 
+    /**
+     * Pipeline order for the "Ulang" (rework) target — lower index is
+     * earlier in production. Used to block picking a target_stage that's
+     * further along than from_stage; going backward (or resubmitting the
+     * same stage) is the whole point of "Ulang", going forward isn't.
+     */
+    private const STAGE_ORDER = ['desain' => 0, 'cetak' => 1, 'finishing' => 2, 'qc' => 3, 'bungkus' => 4];
+
     public function __construct(
         private readonly AccountingService $accounting,
         private readonly CustomerCreditService $creditService,
@@ -54,7 +62,21 @@ class OrderReworkController extends Controller
         $data = $request->validate([
             'action' => ['required', 'in:ulang,batal'],
             'from_stage' => ['required_if:action,ulang', 'nullable', 'in:desain,cetak,finishing,qc,bungkus'],
-            'target_stage' => ['required_if:action,ulang', 'nullable', 'in:desain,cetak,finishing,qc,bungkus'],
+            'target_stage' => [
+                'required_if:action,ulang', 'nullable', 'in:desain,cetak,finishing,qc,bungkus',
+                function ($attribute, $value, $fail) use ($request) {
+                    if ($request->input('action') !== 'ulang') {
+                        return;
+                    }
+
+                    $from = self::STAGE_ORDER[$request->input('from_stage')] ?? null;
+                    $target = self::STAGE_ORDER[$value] ?? null;
+
+                    if ($from !== null && $target !== null && $target > $from) {
+                        $fail('Ulang hanya boleh mundur ke tahap sebelumnya, tidak boleh maju.');
+                    }
+                },
+            ],
             'qty' => ['nullable', 'integer', 'min:1'],
             'reason' => ['required', 'string', 'max:255'],
         ]);

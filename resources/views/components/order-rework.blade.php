@@ -1,8 +1,14 @@
 @props(['type', 'orderId', 'noOrder', 'currentStage', 'maxQty' => null, 'pending' => null, 'canApprove' => false, 'compact' => false])
 
 @php
+    // "Ulang" can only send an order backward in the pipeline — a stage
+    // page's own currentStage is where it currently sits, so only the
+    // stages before it (in STAGE_LABELS' pipeline order) are valid targets.
+    // See OrderReworkController::STAGE_ORDER for the matching server-side check.
+    $stageKeys = array_keys(\App\Models\OrderReworkRequest::STAGE_LABELS);
+    $currentIndex = array_search($currentStage, $stageKeys, true);
     $stageOptions = collect(\App\Models\OrderReworkRequest::STAGE_LABELS)
-        ->except($currentStage);
+        ->only($currentIndex !== false ? array_slice($stageKeys, 0, $currentIndex) : []);
 @endphp
 
 <div x-data="{ open: false }" class="inline-block mr-1">
@@ -50,7 +56,7 @@
                 </div>
             </div>
         @endif
-    @else
+    @elseif ($stageOptions->isNotEmpty())
         <button type="button" @click="open = true" title="Ulang Proses"
                 class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md border border-red-300 text-red-600 text-xs font-semibold hover:bg-red-50">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-3.5 h-3.5">
