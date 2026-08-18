@@ -62,6 +62,7 @@ class DashboardController extends Controller
             ->map(fn ($note) => [
                 'created_at' => $note->created_at?->format('d M Y H:i'),
                 'stage' => self::STAGE_LABELS[$note->stage] ?? ucfirst($note->stage),
+                'stage_key' => $note->stage,
                 'qty' => $note->qty,
                 'action' => $note->action,
                 'user' => $note->user?->name ?? '-',

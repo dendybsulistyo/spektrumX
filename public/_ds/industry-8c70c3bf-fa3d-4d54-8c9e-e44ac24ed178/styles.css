@@ -300,7 +300,11 @@ textarea.input { height: auto; min-height: 90px; line-height: 1.4; padding: 8px 
      kept harmless — corner brackets are hidden and .blueprint gets the
      same card treatment — so no other template needed to change for this. */
 .blueprint > .corner { display: none; }
-.blueprint {
+/* :not(.btn) — .blueprint is also used purely decoratively on buttons (for
+   the corner-bracket markup); without this exclusion its surface background
+   here would override .btn-primary/.btn-secondary's own background, since
+   this rule comes later in the cascade at equal specificity. */
+.blueprint:not(.btn) {
   background: var(--color-surface); border-radius: var(--radius-md);
   box-shadow: var(--shadow-sm);
 }

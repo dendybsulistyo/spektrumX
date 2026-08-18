@@ -185,6 +185,46 @@
                                  .then(r => { this.historyData = r.data; })
                                  .finally(() => { this.historyLoading = false; });
                          },
+                         // Ikon + warna per tahap/aksi untuk timeline riwayat proses.
+                         // Aksi (diulang/dibatalkan/dst) menang atas ikon tahap biasa
+                         // karena lebih penting disorot sekilas dibanding tahapnya.
+                         historyIcons: {
+                             kasir:  '<rect x=\'2\' y=\'6\' width=\'16\' height=\'9\' rx=\'1.3\'/><circle cx=\'10\' cy=\'10.5\' r=\'2\'/>',
+                             pencil: '<path d=\'M3 17l1-4.2L12.8 4l3.2 3.2L7.2 16 3 17z\'/><path d=\'M11.3 5.5l3.2 3.2\'/>',
+                             printer:'<rect x=\'4\' y=\'7\' width=\'12\' height=\'6\' rx=\'1\'/><path d=\'M6.5 7V3.5h7V7\'/><path d=\'M6.5 16.5h7V19h-7z\'/>',
+                             scissors:'<circle cx=\'5\' cy=\'5\' r=\'2\'/><circle cx=\'5\' cy=\'15\' r=\'2\'/><path d=\'M6.4 6.4L17 17\'/><path d=\'M6.4 13.6L17 3\'/>',
+                             shield: '<path d=\'M10 2.5l6.5 2.7v4.3c0 4.6-3.1 6.9-6.5 7.5-3.4-.6-6.5-2.9-6.5-7.5V5.2L10 2.5z\'/><path d=\'M7 10l2 2 4-4\'/>',
+                             box:    '<path d=\'M3 6.3L10 3l7 3.3-7 3.2-7-3.2z\'/><path d=\'M3 6.3v7.4L10 17l7-3.3V6.3\'/><path d=\'M10 9.5V17\'/>',
+                             checkcircle: '<circle cx=\'10\' cy=\'10\' r=\'7.2\'/><path d=\'M6.5 10.3l2.4 2.4 4.6-4.6\'/>',
+                             bag:    '<path d=\'M5.3 7h9.4l-.9 9.3a1.1 1.1 0 01-1.1 1H7.3a1.1 1.1 0 01-1.1-1L5.3 7z\'/><path d=\'M7.7 7V5.3a2.3 2.3 0 014.6 0V7\'/>',
+                             x:      '<circle cx=\'10\' cy=\'10\' r=\'7.2\'/><path d=\'M7.5 7.5l5 5\'/><path d=\'M12.5 7.5l-5 5\'/>',
+                             rotate: '<path d=\'M5.5 4.8v4h4\'/><path d=\'M5.6 8.8a5.6 5.6 0 115.4 6.7\'/>',
+                             check:  '<path d=\'M4.5 10.3l3.5 3.5 7.5-7.5\'/>',
+                             clock:  '<circle cx=\'10\' cy=\'10\' r=\'7.2\'/><path d=\'M10 6.2v4l3 1.8\'/>',
+                             dot:    '<circle cx=\'10\' cy=\'10\' r=\'2.2\'/>',
+                         },
+                         historyIconFor(h) {
+                             const byAction = {
+                                 dibatalkan: { icon: 'x', color: '#dc2626' },
+                                 ditolak: { icon: 'x', color: '#dc2626' },
+                                 diulang: { icon: 'rotate', color: '#b45309' },
+                                 disetujui: { icon: 'check', color: '#059669' },
+                                 diajukan: { icon: 'clock', color: '#6b7280' },
+                                 nota_pengganti: { icon: 'kasir', color: '#475569' },
+                             };
+                             const byStage = {
+                                 kasir: { icon: 'kasir', color: '#475569' },
+                                 desain: { icon: 'pencil', color: '#4f46e5' },
+                                 cetak: { icon: 'printer', color: '#0891b2' },
+                                 finishing: { icon: 'scissors', color: '#d97706' },
+                                 qc: { icon: 'shield', color: '#7c3aed' },
+                                 bungkus: { icon: 'box', color: '#db2777' },
+                                 siap_diambil: { icon: 'checkcircle', color: '#0d9488' },
+                                 selesai: { icon: 'bag', color: '#059669' },
+                                 pembatalan: { icon: 'x', color: '#dc2626' },
+                             };
+                             return byAction[h.action] || byStage[h.stage_key] || { icon: 'dot', color: '#6b7280' };
+                         },
                      }">
                 <div style="display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-4); flex-wrap: wrap; margin-bottom: var(--space-4);">
                     <div>
@@ -320,24 +360,39 @@
                                 </div>
 
                                 <div>
-                                    <div class="label" style="margin-bottom: 6px;">Riwayat proses (terbaru dulu)</div>
-                                    <div style="display: flex; flex-direction: column; gap: 6px; max-height: 320px; overflow-y: auto; padding-right: 12px;">
+                                    <div class="label" style="margin-bottom: 10px;">Riwayat proses (terbaru dulu)</div>
+                                    <div style="display: flex; flex-direction: column; max-height: 340px; overflow-y: auto; padding-right: 12px;">
                                         <template x-for="(h, idx) in historyData.history" :key="idx">
-                                            <div style="display: flex; justify-content: space-between; gap: var(--space-4); padding: 8px 0; border-bottom: 1px solid var(--color-divider); font-size: 13px;">
-                                                <div>
-                                                    <div>
-                                                        <span style="font-weight: 600;" x-text="h.stage"></span>
-                                                        <span class="text-muted"> &middot; </span>
-                                                        <span x-text="(h.qty !== null ? h.qty + ' unit' : h.action)"></span>
-                                                        <span class="text-muted" x-show="h.action === 'selesai'"> (tuntas di tahap ini)</span>
+                                            <div style="display: flex; gap: 12px;">
+                                                <!-- Kolom ikon + garis panah penghubung ke entri berikutnya -->
+                                                <div style="display: flex; flex-direction: column; align-items: center; width: 28px; flex-shrink: 0;">
+                                                    <div :style="`width:26px; height:26px; border-radius:9999px; display:flex; align-items:center; justify-content:center; flex-shrink:0; border:1.5px solid ${historyIconFor(h).color}; background:color-mix(in srgb, ${historyIconFor(h).color} 12%, white); color:${historyIconFor(h).color};`">
+                                                        <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" x-html="historyIcons[historyIconFor(h).icon]"></svg>
                                                     </div>
-                                                    <template x-if="h.catatan">
-                                                        <div class="text-muted" style="margin-top: 2px;" x-text="h.catatan"></div>
+                                                    <template x-if="idx < historyData.history.length - 1">
+                                                        <div style="position: relative; width: 2px; flex: 1; min-height: 28px; background: var(--color-divider);">
+                                                            <span style="position: absolute; left: 50%; bottom: -3px; transform: translateX(-50%); color: var(--color-divider); font-size: 11px; line-height: 1;">&#9662;</span>
+                                                        </div>
                                                     </template>
                                                 </div>
-                                                <div class="text-muted" style="white-space: nowrap; text-align: right; line-height: 1.5;">
-                                                    <div x-text="h.created_at"></div>
-                                                    <div style="margin-top: 2px;" x-text="h.user"></div>
+
+                                                <!-- Konten entri -->
+                                                <div style="flex: 1; display: flex; justify-content: space-between; gap: var(--space-4); padding-bottom: 18px; font-size: 13px;">
+                                                    <div>
+                                                        <div>
+                                                            <span style="font-weight: 600;" x-text="h.stage"></span>
+                                                            <span class="text-muted"> &middot; </span>
+                                                            <span x-text="(h.qty !== null ? h.qty + ' unit' : h.action)"></span>
+                                                            <span class="text-muted" x-show="h.action === 'selesai'"> (tuntas di tahap ini)</span>
+                                                        </div>
+                                                        <template x-if="h.catatan">
+                                                            <div class="text-muted" style="margin-top: 2px;" x-text="h.catatan"></div>
+                                                        </template>
+                                                    </div>
+                                                    <div class="text-muted" style="white-space: nowrap; text-align: right; line-height: 1.5;">
+                                                        <div x-text="h.created_at"></div>
+                                                        <div style="margin-top: 2px;" x-text="h.user"></div>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </template>
