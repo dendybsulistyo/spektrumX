@@ -43,10 +43,15 @@
                 <p class="font-semibold text-gray-900">{{ $order->customer?->NmCust ?? '-' }}</p>
                 @if ($order->customer?->isVip)
                     <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-purple-50 text-purple-700 mt-1">VIP</span>
+                    @if ($order->withinHutangPlafon())
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-green-50 text-green-700 mt-1 ml-1">Dalam plafon hutang</span>
+                    @else
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-red-50 text-red-700 mt-1 ml-1">Melebihi plafon hutang</span>
+                    @endif
                     <p class="text-xs text-gray-500 mt-1">
                         Limit: Rp {{ number_format($order->customer->limit->Batas, 0, ',', '.') }} —
                         Piutang berjalan: Rp {{ number_format($order->customer->limit->Total, 0, ',', '.') }} —
-                        Sisa: Rp {{ number_format($order->customer->limit->Batas - $order->customer->limit->Total, 0, ',', '.') }}
+                        Sisa Plafon: Rp {{ number_format($order->customer->limit->Batas - $order->customer->limit->Total, 0, ',', '.') }}
                     </p>
                 @endif
             </div>
@@ -149,6 +154,34 @@
                         </div>
                     @endif
                 </div>
+
+                @if ($order->hutangApprovalStatus() === 'pending')
+                    <div class="mt-3 rounded-md bg-red-50 border border-red-200 p-3 text-xs text-red-800">
+                        <p class="font-semibold">Menunggu persetujuan hutang — melebihi plafon (Rp {{ number_format($order->hutangAmount(), 0, ',', '.') }})</p>
+                        @if ($order->hutang_catatan)
+                            <p class="mt-0.5">Catatan: {{ $order->hutang_catatan }}</p>
+                        @endif
+                        <p class="mt-0.5 text-red-600">Diajukan oleh {{ $order->hutangRequestedBy?->name ?? '-' }}</p>
+                        @can('kasir.approve-hutang')
+                            <div class="mt-2 flex gap-2">
+                                <form method="POST" action="{{ route('kasir.hutang.approve', ['type' => $type, 'id' => $order->id]) }}"
+                                      onsubmit="return confirm('Setujui hutang Rp {{ number_format($order->hutangAmount(), 0, ',', '.') }} untuk order {{ $order->NoOrder }}?')">
+                                    @csrf
+                                    <button type="submit" class="px-2.5 py-1 bg-green-600 text-white text-xs font-semibold rounded hover:bg-green-700">Setujui</button>
+                                </form>
+                                <form method="POST" action="{{ route('kasir.hutang.reject', ['type' => $type, 'id' => $order->id]) }}"
+                                      onsubmit="return confirm('Tolak pengajuan hutang untuk order {{ $order->NoOrder }}?')">
+                                    @csrf
+                                    <button type="submit" class="px-2.5 py-1 bg-gray-200 text-gray-700 text-xs font-semibold rounded hover:bg-gray-300">Tolak</button>
+                                </form>
+                            </div>
+                        @endcan
+                    </div>
+                @elseif ($order->hutangApprovalStatus() === 'rejected')
+                    <div class="mt-3 rounded-md bg-gray-50 border border-gray-200 p-3 text-xs text-gray-600">
+                        <p>Pengajuan hutang ditolak oleh {{ $order->hutangRejectedBy?->name ?? '-' }}. Pilih metode pembayaran lain, atau ajukan hutang lagi jika situasinya sudah berubah.</p>
+                    </div>
+                @endif
 
                 @if ($order->cancel_requested_at)
                     <div class="mt-3 rounded-md bg-amber-50 border border-amber-200 p-3 text-xs text-amber-800">
@@ -329,7 +362,7 @@
                                 <div class="flex items-start gap-2 rounded-md border border-gray-200 p-2">
                                     <div class="flex-1 space-y-1.5">
                                         <div class="flex gap-2">
-                                            <select :name="`rincian[${idx}][cara_bayar]`" x-model="row.cara_bayar"
+                                            <select :name="`rincian[${idx}][cara_bayar]`" x-model="row.cara_bayar" :disabled="metode === 'hutang'"
                                                     class="rounded-md border-gray-300 text-sm py-1.5 w-28">
                                                 <option value="tunai">Tunai</option>
                                                 <option value="qris">QRIS</option>
@@ -339,12 +372,12 @@
                                                    :value="row.jumlah ? Number(row.jumlah).toLocaleString('id-ID') : ''"
                                                    @input="row.jumlah = $event.target.value.replace(/\D/g, '')"
                                                    placeholder="Jumlah" class="flex-1 rounded-md border-gray-300 text-sm py-1.5">
-                                            <input type="hidden" :name="`rincian[${idx}][jumlah]`" :value="row.jumlah">
+                                            <input type="hidden" :name="`rincian[${idx}][jumlah]`" :value="row.jumlah" :disabled="metode === 'hutang'">
                                             <button type="button" x-show="rincian.length > 1" @click="removeRincian(idx)"
                                                     class="text-gray-400 hover:text-red-600 px-1">&times;</button>
                                         </div>
                                         <input type="text" x-show="row.cara_bayar !== 'tunai'" x-cloak
-                                               :name="`rincian[${idx}][no_referensi]`" x-model="row.no_referensi"
+                                               :name="`rincian[${idx}][no_referensi]`" x-model="row.no_referensi" :disabled="metode === 'hutang'"
                                                maxlength="50" placeholder="No. referensi QRIS/transfer"
                                                class="w-full rounded-md border-gray-300 text-xs py-1.5">
                                     </div>

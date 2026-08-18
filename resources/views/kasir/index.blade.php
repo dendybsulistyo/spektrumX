@@ -74,6 +74,13 @@
                                 @elseif ($order->diskonStatus() === 'approved')
                                     <span class="ml-1 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-700">Diskon {{ $order->diskonApprovedLabel() }}</span>
                                 @endif
+                                @if ($order->customer?->isVip)
+                                    @if ($order->withinHutangPlafon())
+                                        <span class="ml-1 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-700" title="VIP dalam plafon hutang">VIP</span>
+                                    @else
+                                        <span class="ml-1 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-700" title="VIP melebihi plafon hutang">VIP</span>
+                                    @endif
+                                @endif
                             </td>
                             <td class="px-3 py-2 text-gray-600">{{ $order->TglOrder }}</td>
                             <td class="px-3 py-2 text-gray-600">{{ $order->customer?->NmCust ? ucwords(mb_strtolower($order->customer->NmCust)) : '-' }}</td>
@@ -115,6 +122,13 @@
                                 @elseif ($order->diskonStatus() === 'approved')
                                     <span class="ml-1 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-700">Diskon {{ $order->diskonApprovedLabel() }}</span>
                                 @endif
+                                @if ($order->customer?->isVip)
+                                    @if ($order->withinHutangPlafon())
+                                        <span class="ml-1 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-700" title="VIP dalam plafon hutang">VIP</span>
+                                    @else
+                                        <span class="ml-1 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-700" title="VIP melebihi plafon hutang">VIP</span>
+                                    @endif
+                                @endif
                             </td>
                             <td class="px-3 py-2 text-gray-600">{{ $order->TglOrder?->format('Y-m-d') }}</td>
                             <td class="px-3 py-2 text-gray-600">{{ $order->customer?->NmCust ? ucwords(mb_strtolower($order->customer->NmCust)) : '-' }}</td>
@@ -155,6 +169,13 @@
                                     <span class="ml-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">Diskon pending</span>
                                 @elseif ($order->diskonStatus() === 'approved')
                                     <span class="ml-1 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-700">Diskon {{ $order->diskonApprovedLabel() }}</span>
+                                @endif
+                                @if ($order->customer?->isVip)
+                                    @if ($order->withinHutangPlafon())
+                                        <span class="ml-1 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-700" title="VIP dalam plafon hutang">VIP</span>
+                                    @else
+                                        <span class="ml-1 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-700" title="VIP melebihi plafon hutang">VIP</span>
+                                    @endif
                                 @endif
                             </td>
                             <td class="px-3 py-2 text-gray-600">{{ is_string($order->TglOrder) ? $order->TglOrder : $order->TglOrder?->format('Y-m-d') }}</td>
@@ -226,6 +247,13 @@
                                     <span class="ml-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">Diskon pending</span>
                                 @elseif ($order->diskonStatus() === 'approved')
                                     <span class="ml-1 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-700">Diskon {{ $order->diskonApprovedLabel() }}</span>
+                                @endif
+                                @if ($order->customer?->isVip)
+                                    @if ($order->withinHutangPlafon())
+                                        <span class="ml-1 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-700" title="VIP dalam plafon hutang">VIP</span>
+                                    @else
+                                        <span class="ml-1 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-700" title="VIP melebihi plafon hutang">VIP</span>
+                                    @endif
                                 @endif
                             </td>
                             <td class="px-3 py-2 text-gray-600">{{ is_string($order->TglOrder) ? $order->TglOrder : $order->TglOrder?->format('Y-m-d') }}</td>

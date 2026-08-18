@@ -14,6 +14,7 @@ use App\Http\Controllers\FileMonitorController;
 use App\Http\Controllers\HargaArtworkController;
 use App\Http\Controllers\HargaCetakOutdoorController;
 use App\Http\Controllers\HargaCetakOutdoorKhususController;
+use App\Http\Controllers\HutangApprovalController;
 use App\Http\Controllers\JasaPotongArtworkController;
 use App\Http\Controllers\JasaPotongController;
 use App\Http\Controllers\PengeluaranController;
@@ -304,6 +305,10 @@ Route::middleware('auth')->group(function () {
         Route::post('/kasir/{type}/{id}/diskon/approve', [KasirController::class, 'approveDiskon'])->name('kasir.diskon.approve');
         Route::post('/kasir/{type}/{id}/diskon/reject', [KasirController::class, 'rejectDiskon'])->name('kasir.diskon.reject');
     });
+    Route::middleware('permission:kasir.approve-hutang')->group(function () {
+        Route::post('/kasir/{type}/{id}/hutang/approve', [KasirController::class, 'approveHutang'])->name('kasir.hutang.approve');
+        Route::post('/kasir/{type}/{id}/hutang/reject', [KasirController::class, 'rejectHutang'])->name('kasir.hutang.reject');
+    });
 
     Route::middleware('permission:order-desain.view')->group(function () {
         Route::get('/order-desain', [OrderDesainController::class, 'index'])->name('order-desain.index');
@@ -340,6 +345,9 @@ Route::middleware('auth')->group(function () {
 
     // Access controlled inside the controller (kasir.approve-diskon).
     Route::get('/approval-diskon', [DiskonApprovalController::class, 'index'])->name('diskon-approval.index');
+
+    // Access controlled inside the controller (kasir.approve-hutang).
+    Route::get('/approval-hutang', [HutangApprovalController::class, 'index'])->name('hutang-approval.index');
 
     Route::middleware('permission:order-finishing.view')->group(function () {
         Route::get('/order-finishing', [OrderFinishingController::class, 'index'])->name('order-finishing.index');

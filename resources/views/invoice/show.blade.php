@@ -66,7 +66,7 @@
         .link-back { color: #6b7280; text-decoration: none; font-size: 14px; }
         .link-back:hover { text-decoration: underline; }
         @media print {
-            @page { size: A5; margin: 5cm 4cm 3cm 4cm; }
+            @page { size: A4; margin: 1cm; }
             body { background: #fff; padding: 0; font-size: 12px; }
             .card { box-shadow: none; border: none; max-width: none; padding: 0; }
             .no-print { display: none; }
@@ -96,7 +96,7 @@
 
         [$badgeClass, $badgeLabel, $statusNote] = $order->invoice_voided_at ? ['badge-void', 'HANGUS', 'Nota dibatalkan dan tidak berlaku sebagai tagihan.'] : match ($order->status_bayar) {
             'lunas' => ['badge-lunas', 'Lunas', 'Dibayar '.$caraBayarNote],
-            'hutang' => ['badge-hutang', 'Hutang', 'Piutang berjalan — belum lunas.'],
+            'hutang' => ['badge-hutang', 'Customer VIP', 'belum lunas.'],
             'dp' => ['badge-dp', 'DP (Belum Lunas)', 'Sudah bayar uang muka via '.$caraBayarNote],
             default => ['badge-belum', 'Belum Bayar', 'Menunggu pembayaran di kasir.'],
         };
@@ -222,13 +222,29 @@
     </div>
 
     <div class="actions no-print" id="standaloneActions">
-        <a href="javascript:history.back()" class="link-back">← Kembali</a>
+        <a href="#" id="backLink" class="link-back">← Kembali</a>
         <button class="btn btn-primary" onclick="window.print()">Cetak Surat Pesanan</button>
     </div>
 
     <script>
         if (window.self !== window.top) {
             document.getElementById('standaloneActions').style.display = 'none';
+        } else {
+            // Opened in its own tab (e.g. target="_blank" from Pengambilan)
+            // rather than navigated to — that tab has no browser history for
+            // history.back() to return to, so it silently did nothing.
+            // document.referrer still points at whichever page linked here.
+            const backLink = document.getElementById('backLink');
+            if (history.length > 1) {
+                backLink.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    history.back();
+                });
+            } else if (document.referrer) {
+                backLink.href = document.referrer;
+            } else {
+                backLink.style.display = 'none';
+            }
         }
     </script>
 </body>

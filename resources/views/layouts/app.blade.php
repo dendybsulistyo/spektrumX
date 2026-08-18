@@ -124,12 +124,14 @@
             $transaksiActive = request()->routeIs('order-indoor.*', 'order-outdoor.*', 'order-artwork.*');
             $operatorActive = request()->routeIs('file.*', 'kasir.*', 'order-desain.*', 'order-cetak.*', 'order-finishing.*', 'order-qc.*', 'order-bungkus.*', 'pengambilan.*');
             $analitikActive = request()->routeIs('data-warehouse.*', 'monitoring-kinerja.*', 'monitoring-transaksi.*', 'papan-pantau.*');
-            $keuanganActive = request()->routeIs('keuangan.*', 'pengeluaran.*', 'payroll.*', 'pembatalan.*', 'diskon-approval.*');
+            $keuanganActive = request()->routeIs('keuangan.*', 'pengeluaran.*', 'payroll.*', 'pembatalan.*', 'diskon-approval.*', 'hutang-approval.*');
             $canApproveCancel = Auth::user()->hasPermission('order-indoor.approve-cancel') || Auth::user()->hasPermission('order-outdoor.approve-cancel') || Auth::user()->hasPermission('order-artwork.approve-cancel');
             $pendingApprovalCount = $canApproveCancel ? \App\Http\Controllers\PembatalanController::pendingCount() : 0;
             $canApproveDiskon = Auth::user()->hasPermission('kasir.approve-diskon');
             $pendingDiskonCount = $canApproveDiskon ? \App\Http\Controllers\DiskonApprovalController::pendingCount() : 0;
-            $showKeuangan = Auth::user()->hasPermission('keuangan.view') || Auth::user()->hasPermission('pengeluaran.view') || Auth::user()->hasPermission('payroll.view') || Auth::user()->hasPermission('keuangan.pengaturan') || $canApproveCancel || $canApproveDiskon;
+            $canApproveHutang = Auth::user()->hasPermission('kasir.approve-hutang');
+            $pendingHutangCount = $canApproveHutang ? \App\Http\Controllers\HutangApprovalController::pendingCount() : 0;
+            $showKeuangan = Auth::user()->hasPermission('keuangan.view') || Auth::user()->hasPermission('pengeluaran.view') || Auth::user()->hasPermission('payroll.view') || Auth::user()->hasPermission('keuangan.pengaturan') || $canApproveCancel || $canApproveDiskon || $canApproveHutang;
             $pengaturanActive = request()->routeIs('roles.*', 'users.*', 'jasa-potong.*', 'jasa-potong-artwork.*');
 
             $showMasterData = Auth::user()->hasPermission('customers.view') || Auth::user()->hasPermission('produk.view') || Auth::user()->hasPermission('harga-artwork.view') || Auth::user()->hasPermission('printers.view') || Auth::user()->hasPermission('printer-outdoor.view') || Auth::user()->hasPermission('bahan-cetak-outdoor.view') || Auth::user()->hasPermission('harga-cetak-outdoor.view') || Auth::user()->hasPermission('kategori-produk-indoor.view');
@@ -216,6 +218,14 @@
                                                     Approval Diskon
                                                     @if ($pendingDiskonCount > 0)
                                                         <span class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-white text-[11px] font-bold leading-none">{{ $pendingDiskonCount }}</span>
+                                                    @endif
+                                                </a>
+                                            @endif
+                                            @if ($canApproveHutang)
+                                                <a href="{{ route('hutang-approval.index') }}" class="{{ $dropdownLink(request()->routeIs('hutang-approval.*')) }} flex items-center gap-1.5">
+                                                    Approval Hutang
+                                                    @if ($pendingHutangCount > 0)
+                                                        <span class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-white text-[11px] font-bold leading-none">{{ $pendingHutangCount }}</span>
                                                     @endif
                                                 </a>
                                             @endif
@@ -479,6 +489,14 @@
                                     Approval Diskon
                                     @if ($pendingDiskonCount > 0)
                                         <span class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-white text-[11px] font-bold leading-none">{{ $pendingDiskonCount }}</span>
+                                    @endif
+                                </a>
+                            @endif
+                            @if ($canApproveHutang)
+                                <a href="{{ route('hutang-approval.index') }}" class="{{ $mobileLink(request()->routeIs('hutang-approval.*')) }} flex items-center gap-1.5">
+                                    Approval Hutang
+                                    @if ($pendingHutangCount > 0)
+                                        <span class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-white text-[11px] font-bold leading-none">{{ $pendingHutangCount }}</span>
                                     @endif
                                 </a>
                             @endif

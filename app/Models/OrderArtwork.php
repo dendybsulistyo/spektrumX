@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Traits\HasCancelAndNotaPengganti;
 use App\Traits\HasDiskonNota;
+use App\Traits\HasHutangApproval;
 use App\Traits\HasStageProgress;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -11,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class OrderArtwork extends Model
 {
-    use HasCancelAndNotaPengganti, HasDiskonNota, HasStageProgress;
+    use HasCancelAndNotaPengganti, HasDiskonNota, HasHutangApproval, HasStageProgress;
 
     protected $table = 'order_artwork';
 
@@ -60,6 +61,13 @@ class OrderArtwork extends Model
         'diskon_approved_by',
         'diskon_rejected_at',
         'diskon_rejected_by',
+        'hutang_catatan',
+        'hutang_requested_at',
+        'hutang_requested_by',
+        'hutang_approved_at',
+        'hutang_approved_by',
+        'hutang_rejected_at',
+        'hutang_rejected_by',
         'cancel_requested_at',
         'cancel_requested_by',
         'cancel_reason',
@@ -94,6 +102,9 @@ class OrderArtwork extends Model
             'diskon_requested_at' => 'datetime',
             'diskon_approved_at' => 'datetime',
             'diskon_rejected_at' => 'datetime',
+            'hutang_requested_at' => 'datetime',
+            'hutang_approved_at' => 'datetime',
+            'hutang_rejected_at' => 'datetime',
             'cancel_requested_at' => 'datetime',
             'cancel_approved_at' => 'datetime',
             'invoice_voided_at' => 'datetime',

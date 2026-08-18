@@ -38,21 +38,21 @@ class KasirController extends Controller
             : 'indoor';
 
         $indoorOrders = OrderIndoor::query()
-            ->with('customer')
+            ->with('customer.limit')
             ->where('status_bayar', 'belum_bayar')
             ->orderByDesc('TglOrder')
             ->orderByDesc('NoOrder')
             ->get();
 
         $outdoorOrders = OrderOutdoor::query()
-            ->with('customer')
+            ->with('customer.limit')
             ->where('status_bayar', 'belum_bayar')
             ->orderByDesc('TglOrder')
             ->orderByDesc('NoOrder')
             ->get();
 
         $artworkOrders = OrderArtwork::query()
-            ->with('customer')
+            ->with('customer.limit')
             ->where('status_bayar', 'belum_bayar')
             ->orderByDesc('TglOrder')
             ->orderByDesc('NoOrder')
@@ -61,7 +61,7 @@ class KasirController extends Controller
         // Outdoor orders paid via DP still owe a balance — surfaced here so
         // kasir can record the pelunasan (settlement) whenever it comes in.
         $dpOrders = OrderOutdoor::query()
-            ->with('customer')
+            ->with('customer.limit')
             ->where('status_bayar', 'dp')
             ->where('jumlah_piutang', '>', 0)
             ->orderByDesc('TglOrder')
@@ -149,10 +149,13 @@ class KasirController extends Controller
                 'jumlah_bayar' => ['nullable', 'numeric', 'min:0'],
             ]
             : [
-                'rincian' => ['required_if:metode_bayar,tunai,dp', 'array'],
-                'rincian.*.cara_bayar' => ['required_with:rincian', 'in:tunai,qris,transfer'],
-                'rincian.*.jumlah' => ['required_with:rincian', 'numeric', 'min:1'],
-                'rincian.*.no_referensi' => ['nullable', 'string', 'max:50'],
+                // Rincian belongs only to cash/DP payments. The UI hides it
+                // for hutang, but clients can still submit stale fields, so
+                // exclude it here instead of validating an irrelevant value.
+                'rincian' => ['exclude_unless:metode_bayar,tunai,dp', 'required', 'array'],
+                'rincian.*.cara_bayar' => ['exclude_unless:metode_bayar,tunai,dp', 'required_with:rincian', 'in:tunai,qris,transfer'],
+                'rincian.*.jumlah' => ['exclude_unless:metode_bayar,tunai,dp', 'required_with:rincian', 'numeric', 'min:1'],
+                'rincian.*.no_referensi' => ['exclude_unless:metode_bayar,tunai,dp', 'nullable', 'string', 'max:50'],
             ];
 
         $data = $request->validate($rules);
@@ -256,10 +259,42 @@ class KasirController extends Controller
                 ->with('autoPrintInvoice', true);
         }
 
+        if ($order->hutangApprovalStatus() === 'pending') {
+            return back()->with('error', 'Order ini sedang menunggu persetujuan hutang — tidak bisa diproses dulu.');
+        }
+
+        // Hutang is handled entirely on its own — no rincian split, no
+        // shared DB::transaction with tunai/DP below, since a VIP over
+        // plafon doesn't commit anything yet (see commitHutang()).
         if ($data['metode_bayar'] === 'hutang') {
-            if (! $this->creditService->canTakeHutang($order->customer, $total)) {
-                return back()->with('error', 'Customer tidak bisa hutang: bukan VIP atau melebihi sisa limit piutang.');
+            if (! $order->customer?->isVip) {
+                return back()->with('error', 'Customer bukan VIP, tidak bisa hutang.');
             }
+
+            if ($order->withinHutangPlafon()) {
+                $this->commitHutang($order, $type, $total, $data['catatan'] ?? null, auth()->id());
+
+                return redirect()->route('kasir.show', ['type' => $type, 'id' => $order->id])
+                    ->with('status', 'Pembayaran berhasil diproses.')
+                    ->with('autoPrintInvoice', true);
+            }
+
+            // Over plafon — held for Admin/Admin Kasir sign-off instead of
+            // an outright rejection. See approveHutang()/rejectHutang().
+            $order->update([
+                'hutang_catatan' => $data['catatan'] ?? null,
+                'hutang_requested_at' => now(),
+                'hutang_requested_by' => auth()->id(),
+                'hutang_approved_at' => null,
+                'hutang_approved_by' => null,
+                'hutang_rejected_at' => null,
+                'hutang_rejected_by' => null,
+            ]);
+
+            $this->notifyHutangApprovers($order, $total);
+
+            return redirect()->route('kasir.show', ['type' => $type, 'id' => $order->id])
+                ->with('status', 'Pembayaran melebihi plafon hutang — pengajuan terkirim, menunggu persetujuan Admin/Admin Kasir.');
         }
 
         // The DP amount used to be its own "Jumlah DP" input, entered
@@ -290,45 +325,27 @@ class KasirController extends Controller
         }
 
         $rincian = $data['rincian'] ?? [];
-        $kembalian = 0.0;
+        $target = $data['metode_bayar'] === 'dp' ? $jumlahDp : $total;
 
-        if ($data['metode_bayar'] !== 'hutang') {
-            $target = $data['metode_bayar'] === 'dp' ? $jumlahDp : $total;
-
-            if ($rincianError = $this->checkRincian($rincian, $target)) {
-                return back()->with('error', $rincianError)->withInput();
-            }
-
-            [$rincian, $kembalian] = $this->capRincianToTarget($rincian, $target);
+        if ($rincianError = $this->checkRincian($rincian, $target)) {
+            return back()->with('error', $rincianError)->withInput();
         }
 
+        [$rincian, $kembalian] = $this->capRincianToTarget($rincian, $target);
+
         DB::transaction(function () use ($order, $type, $data, $total, $rincian, $jumlahDp) {
-            $caraBayar = $rincian ? $this->dominantCaraBayar($rincian) : null;
-            $noReferensi = $rincian ? $this->dominantNoReferensi($rincian) : null;
+            $caraBayar = $this->dominantCaraBayar($rincian);
+            $noReferensi = $this->dominantNoReferensi($rincian);
 
             match ($data['metode_bayar']) {
-                'hutang' => (function () use ($order, $total) {
-                    $this->creditService->addHutang($order->customer, $total);
-
-                    $order->update([
-                        'status_bayar' => 'hutang',
-                        'metode_bayar' => 'hutang',
-                        'cara_bayar' => null,
-                        'no_referensi' => null,
-                        'jumlah_dibayar' => 0,
-                        'jumlah_piutang' => $total,
-                    ]);
-                })(),
-                'dp' => (function () use ($order, $total, $caraBayar, $noReferensi, $jumlahDp) {
-                    $order->update([
-                        'status_bayar' => 'dp',
-                        'metode_bayar' => 'dp',
-                        'cara_bayar' => $caraBayar,
-                        'no_referensi' => $noReferensi,
-                        'jumlah_dibayar' => $jumlahDp,
-                        'jumlah_piutang' => $total - $jumlahDp,
-                    ]);
-                })(),
+                'dp' => $order->update([
+                    'status_bayar' => 'dp',
+                    'metode_bayar' => 'dp',
+                    'cara_bayar' => $caraBayar,
+                    'no_referensi' => $noReferensi,
+                    'jumlah_dibayar' => $jumlahDp,
+                    'jumlah_piutang' => $total - $jumlahDp,
+                ]),
                 default => $order->update([
                     'status_bayar' => 'lunas',
                     'metode_bayar' => 'tunai',
@@ -347,7 +364,7 @@ class KasirController extends Controller
 
             $catatan = trim(collect([
                 $data['catatan'] ?? null,
-                $data['metode_bayar'] !== 'hutang' ? $this->caraBayarLabel($caraBayar, $noReferensi) : null,
+                $this->caraBayarLabel($caraBayar, $noReferensi),
             ])->filter()->implode(' — '));
 
             OrderStatusNote::create([
@@ -360,27 +377,11 @@ class KasirController extends Controller
                 'created_at' => now(),
             ]);
 
-            // Hutang doesn't move any cash — nothing to log in the payment
-            // ledger until it's actually paid off.
-            if ($data['metode_bayar'] !== 'hutang') {
-                $this->createPaymentRows($type, $order->id, $data['metode_bayar'] === 'dp' ? 'dp' : 'lunas', $rincian);
-            }
+            $this->createPaymentRows($type, $order->id, $data['metode_bayar'] === 'dp' ? 'dp' : 'lunas', $rincian);
 
-            // Revenue is recognized in full at the moment of sale — goods go
-            // into production right away regardless of arrangement — so
-            // hutang and DP both credit the full sale price, just split
-            // across Kas/Piutang differently depending on what's actually
-            // in hand yet.
             $kdBantu = $order->customer?->KdCust ?? '';
 
             match ($data['metode_bayar']) {
-                'hutang' => $this->accounting->post(
-                    now()->format('Y-m-d'), $order->NoOrder, 'Penjualan hutang '.$order->NoOrder,
-                    [
-                        ['akun' => AccountingService::AKUN_PIUTANG_DAGANG, 'debet' => $total, 'kd_bantu' => $kdBantu],
-                        ['akun' => AccountingService::AKUN_PENJUALAN, 'kredit' => $total],
-                    ]
-                ),
                 'dp' => $this->accounting->post(
                     now()->format('Y-m-d'), $order->NoOrder, 'Penjualan DP '.$order->NoOrder,
                     [
@@ -402,6 +403,80 @@ class KasirController extends Controller
         return redirect()->route('kasir.show', ['type' => $type, 'id' => $order->id])
             ->with('status', 'Pembayaran berhasil diproses.'.($kembalian > 0 ? ' Kembalian: Rp '.number_format($kembalian, 0, ',', '.').'.' : ''))
             ->with('autoPrintInvoice', true);
+    }
+
+    /**
+     * Actually commits an order as hutang — addHutang() plus the note/
+     * accounting trail. Shared by bayar() (VIP still within plafon, commits
+     * immediately) and approveHutang() (VIP was over plafon, commits once
+     * Admin/Admin Kasir signs off) so the money-moving code only lives once.
+     */
+    private function commitHutang(Model $order, string $type, float $total, ?string $catatan, int $kasirUserId, ?int $approvedBy = null): void
+    {
+        DB::transaction(function () use ($order, $type, $total, $catatan, $kasirUserId, $approvedBy) {
+            $this->creditService->addHutang($order->customer, $total);
+
+            $order->update([
+                'status_bayar' => 'hutang',
+                'metode_bayar' => 'hutang',
+                'cara_bayar' => null,
+                'no_referensi' => null,
+                'jumlah_dibayar' => 0,
+                'jumlah_piutang' => $total,
+                'kasir_user_id' => $kasirUserId,
+                'dibayar_at' => now(),
+                'status' => 'desain',
+                'hutang_approved_at' => $approvedBy ? now() : null,
+                'hutang_approved_by' => $approvedBy,
+            ]);
+
+            OrderStatusNote::create([
+                'order_type' => $type,
+                'order_id' => $order->id,
+                'stage' => 'kasir',
+                'action' => 'selesai',
+                'catatan' => $catatan ?: null,
+                'user_id' => auth()->id(),
+                'created_at' => now(),
+            ]);
+
+            $this->accounting->post(
+                now()->format('Y-m-d'), $order->NoOrder, 'Penjualan hutang '.$order->NoOrder,
+                [
+                    ['akun' => AccountingService::AKUN_PIUTANG_DAGANG, 'debet' => $total, 'kd_bantu' => $order->customer?->KdCust ?? ''],
+                    ['akun' => AccountingService::AKUN_PENJUALAN, 'kredit' => $total],
+                ]
+            );
+        });
+    }
+
+    /**
+     * Admin/Admin Kasir sign-off for a hutang that would push a VIP customer
+     * past their plafon — gated at the route level by kasir.approve-hutang.
+     */
+    public function approveHutang(string $type, int $id): RedirectResponse
+    {
+        $order = $this->resolveOrder($type, $id);
+        abort_if($order->hutangApprovalStatus() !== 'pending', 422, 'Tidak ada pengajuan hutang yang menunggu persetujuan untuk order ini.');
+
+        $order->load('customer.limit');
+
+        $this->commitHutang($order, $type, $order->hutangAmount(), $order->hutang_catatan, (int) $order->hutang_requested_by, auth()->id());
+
+        return back()->with('status', "Pengajuan hutang order {$order->NoOrder} disetujui.");
+    }
+
+    public function rejectHutang(string $type, int $id): RedirectResponse
+    {
+        $order = $this->resolveOrder($type, $id);
+        abort_if($order->hutangApprovalStatus() !== 'pending', 422, 'Tidak ada pengajuan hutang yang menunggu persetujuan untuk order ini.');
+
+        $order->update([
+            'hutang_rejected_at' => now(),
+            'hutang_rejected_by' => auth()->id(),
+        ]);
+
+        return back()->with('status', "Pengajuan hutang order {$order->NoOrder} ditolak.");
     }
 
     /**
@@ -644,6 +719,38 @@ class KasirController extends Controller
         $body = "Pengajuan diskon {$label} untuk order {$order->NoOrder}"
             .($order->customer?->NmCust ? ' ('.ucwords(mb_strtolower($order->customer->NmCust)).')' : '')
             ." — alasan: {$alasan}. Menunggu persetujuan.";
+
+        foreach ($approvers as $approver) {
+            ChatMessage::create([
+                'sender_id' => auth()->id(),
+                'recipient_id' => $approver->id,
+                'body' => $body,
+            ]);
+        }
+    }
+
+    /**
+     * Same pattern as notifyDiskonApprovers() — pings every Admin/Admin
+     * Kasir via the 1:1 chat system when a hutang would push a VIP customer
+     * past their plafon.
+     */
+    private function notifyHutangApprovers(Model $order, float $total): void
+    {
+        $approverRoleIds = Role::query()
+            ->whereJsonContains('permissions', 'kasir.approve-hutang')
+            ->pluck('id');
+
+        $approvers = User::query()
+            ->whereIn('role_id', $approverRoleIds)
+            ->where('id', '!=', auth()->id())
+            ->get();
+
+        $sisa = (float) $order->customer->limit->Batas - (float) $order->customer->limit->Total;
+
+        $body = "Pengajuan hutang melebihi plafon untuk order {$order->NoOrder}"
+            .($order->customer?->NmCust ? ' ('.ucwords(mb_strtolower($order->customer->NmCust)).')' : '')
+            .' — total Rp '.number_format($total, 0, ',', '.')
+            .', sisa plafon Rp '.number_format($sisa, 0, ',', '.').'. Menunggu persetujuan.';
 
         foreach ($approvers as $approver) {
             ChatMessage::create([
