@@ -275,10 +275,14 @@ Route::middleware('auth')->group(function () {
         Route::get('/file', [FileMonitorController::class, 'index'])->name('file.index');
     });
 
+    // Not gated to a single permission group — Kasir and Pengambilan operators
+    // both need to check the nota; InvoiceController::show() checks the
+    // permission itself (kasir.view OR pengambilan.view).
+    Route::get('/invoice/{type}/{id}', [InvoiceController::class, 'show'])->name('invoice.show');
+
     Route::middleware('permission:kasir.view')->group(function () {
         Route::get('/kasir', [KasirController::class, 'index'])->name('kasir.index');
         Route::get('/kasir/{type}/{id}', [KasirController::class, 'show'])->name('kasir.show');
-        Route::get('/invoice/{type}/{id}', [InvoiceController::class, 'show'])->name('invoice.show');
     });
     Route::middleware('permission:kasir.manage')->group(function () {
         Route::post('/kasir/{type}/{id}/bayar', [KasirController::class, 'bayar'])->name('kasir.bayar');

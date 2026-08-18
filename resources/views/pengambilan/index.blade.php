@@ -68,7 +68,7 @@
                                             stage="siap_diambil" stage-label="Siap Diambil" route-name="pengambilan.serahkan" next-label="ke Customer"
                                             :pending-rework="$pendingRework" :can-approve-rework="$canApproveRework"
                                             :printer-names="$printerNames" :outdoor-comments="$outdoorComments" :outdoor-unread="$outdoorUnread"
-                                            manage-ability="pengambilan.manage" :capture-penerima="true" />
+                                            manage-ability="pengambilan.manage" :capture-penerima="true" :show-invoice-link="true" />
                     @empty
                         <div class="blueprint text-muted" style="padding: var(--space-6); text-align: center;">Tidak ada order di antrian pengambilan.</div>
                     @endforelse

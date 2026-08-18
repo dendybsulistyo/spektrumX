@@ -139,7 +139,6 @@ class KasirController extends Controller
 
         $rules = [
             'metode_bayar' => ['required', 'in:tunai,hutang,dp'],
-            'jumlah_dp' => ['nullable', 'numeric', 'min:0'],
             'catatan' => ['nullable', 'string', 'max:255'],
         ];
 
@@ -263,6 +262,13 @@ class KasirController extends Controller
             }
         }
 
+        // The DP amount used to be its own "Jumlah DP" input, entered
+        // separately from — and required to match — the rincian
+        // split-payment total below. That was the same number typed twice;
+        // rincian's total is now the only source of truth for how much DP
+        // was paid.
+        $jumlahDp = 0.0;
+
         if ($data['metode_bayar'] === 'dp') {
             // DP is an Outdoor-only facility — the goods still get produced
             // and handed over, but the balance must be settled (via lunasi())
@@ -271,7 +277,7 @@ class KasirController extends Controller
                 return back()->with('error', 'DP hanya berlaku untuk order outdoor.');
             }
 
-            $jumlahDp = (float) ($data['jumlah_dp'] ?? 0);
+            $jumlahDp = (float) collect($data['rincian'] ?? [])->sum('jumlah');
             $minimumDp = $total * 0.5;
 
             if ($jumlahDp < $minimumDp) {
@@ -287,7 +293,7 @@ class KasirController extends Controller
         $kembalian = 0.0;
 
         if ($data['metode_bayar'] !== 'hutang') {
-            $target = $data['metode_bayar'] === 'dp' ? (float) $data['jumlah_dp'] : $total;
+            $target = $data['metode_bayar'] === 'dp' ? $jumlahDp : $total;
 
             if ($rincianError = $this->checkRincian($rincian, $target)) {
                 return back()->with('error', $rincianError)->withInput();
@@ -296,7 +302,7 @@ class KasirController extends Controller
             [$rincian, $kembalian] = $this->capRincianToTarget($rincian, $target);
         }
 
-        DB::transaction(function () use ($order, $type, $data, $total, $rincian) {
+        DB::transaction(function () use ($order, $type, $data, $total, $rincian, $jumlahDp) {
             $caraBayar = $rincian ? $this->dominantCaraBayar($rincian) : null;
             $noReferensi = $rincian ? $this->dominantNoReferensi($rincian) : null;
 
@@ -313,9 +319,7 @@ class KasirController extends Controller
                         'jumlah_piutang' => $total,
                     ]);
                 })(),
-                'dp' => (function () use ($order, $data, $total, $caraBayar, $noReferensi) {
-                    $jumlahDp = (float) $data['jumlah_dp'];
-
+                'dp' => (function () use ($order, $total, $caraBayar, $noReferensi, $jumlahDp) {
                     $order->update([
                         'status_bayar' => 'dp',
                         'metode_bayar' => 'dp',
@@ -381,7 +385,7 @@ class KasirController extends Controller
                     now()->format('Y-m-d'), $order->NoOrder, 'Penjualan DP '.$order->NoOrder,
                     [
                         ...$this->kasLines($rincian, $kdBantu),
-                        ['akun' => AccountingService::AKUN_PIUTANG_DAGANG, 'debet' => $total - (float) $data['jumlah_dp'], 'kd_bantu' => $kdBantu],
+                        ['akun' => AccountingService::AKUN_PIUTANG_DAGANG, 'debet' => $total - $jumlahDp, 'kd_bantu' => $kdBantu],
                         ['akun' => AccountingService::AKUN_PENJUALAN, 'kredit' => $total],
                     ]
                 ),

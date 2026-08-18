@@ -13,6 +13,7 @@
     'outdoorUnread' => null,
     'manageAbility',
     'capturePenerima' => false,
+    'showInvoiceLink' => false,
 ])
 
 <div class="order-card">
@@ -26,6 +27,12 @@
             </span>
         </div>
         <div style="display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: flex-end;">
+            @if ($showInvoiceLink)
+                <a href="{{ route('invoice.show', [$type, $order->id]) }}" target="_blank" rel="noopener"
+                   class="tag tag-outline" title="Cek Nota Pemesanan">
+                    Nota Pemesanan
+                </a>
+            @endif
             @if ($type === 'outdoor' && $outdoorComments !== null)
                 <x-order-discussion type="outdoor" :order-id="$order->id" :no-order="$order->NoOrder"
                                      :comments="$outdoorComments->get($order->id, collect())"

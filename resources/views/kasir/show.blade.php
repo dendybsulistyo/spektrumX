@@ -197,26 +197,29 @@
                     if (val + 0.5 < this.replacementTarget) return `Kurang Rp ${Math.round(this.replacementTarget - val).toLocaleString('id-ID')}.`;
                     return '';
                 },
-                jumlahDp: '{{ old('jumlah_dp') }}',
                 dpMin: {{ (int) ceil(($diskonStatus === 'approved' ? $order->totalSetelahDiskon() : $order->total ?? 0) * 0.5) }},
                 dpMax: {{ max((int) ($diskonStatus === 'approved' ? $order->totalSetelahDiskon() : $order->total ?? 0) - 1, 0) }},
+                // DP no longer has its own "Jumlah DP" input — that was the
+                // same amount typed twice, once here and once in the rincian
+                // row below. The rincian total below now IS the DP amount.
                 get dpError() {
-                    if (this.metode !== 'dp' || this.jumlahDp === '') return '';
-                    const val = Number(this.jumlahDp);
-                    if (val < this.dpMin) return `Jumlah DP minimal Rp ${this.dpMin.toLocaleString('id-ID')}.`;
-                    if (val > this.dpMax) return `Jumlah DP tidak boleh melebihi Rp ${this.dpMax.toLocaleString('id-ID')}.`;
+                    if (this.metode !== 'dp' || this.rincianTotal === 0) return '';
+                    if (this.rincianTotal < this.dpMin) return `Jumlah DP minimal Rp ${this.dpMin.toLocaleString('id-ID')}.`;
+                    if (this.rincianTotal > this.dpMax) return `Jumlah DP tidak boleh melebihi Rp ${this.dpMax.toLocaleString('id-ID')}.`;
                     return '';
                 },
                 rincian: [{ cara_bayar: 'tunai', jumlah: '', no_referensi: '' }],
                 totalBayar: {{ (float) ($diskonStatus === 'approved' ? $order->totalSetelahDiskon() : ($order->total ?? 0)) }},
-                get targetRincian() {
-                    return this.metode === 'dp' ? Number(this.jumlahDp || 0) : this.totalBayar;
-                },
                 get rincianTotal() {
                     return this.rincian.reduce((sum, r) => sum + Number(r.jumlah || 0), 0);
                 },
+                // DP has no fixed target to match — the operator types
+                // whatever the customer is paying now and dpError checks it
+                // against the 50% minimum instead. Only "lunas" (fixed-price)
+                // payment must add up to the exact total.
                 get rincianDiff() {
-                    return Math.round((this.targetRincian - this.rincianTotal) * 100) / 100;
+                    if (this.metode === 'dp') return 0;
+                    return Math.round((this.totalBayar - this.rincianTotal) * 100) / 100;
                 },
                 // POS-style: paying more than the bill is fine — the excess
                 // is change handed back, not an error.
@@ -228,7 +231,7 @@
                     // UI at all (still the old single cara_bayar radios
                     // below) — nothing to validate here, or Proses
                     // Pembayaran would stay permanently blocked for it.
-                    if (this.isReplacement || this.metode === 'hutang' || this.rincianDiff <= 0) return '';
+                    if (this.isReplacement || this.metode === 'hutang' || this.metode === 'dp' || this.rincianDiff <= 0) return '';
                     return `Kurang Rp ${this.rincianDiff.toLocaleString('id-ID')}.`;
                 },
                 addRincian() { this.rincian.push({ cara_bayar: 'tunai', jumlah: '', no_referensi: '' }); },
@@ -315,7 +318,11 @@
                 @else
                     <div x-show="metode !== 'hutang'" x-cloak>
                         <x-input-label value="Rincian Pembayaran" />
-                        <p class="text-xs text-gray-500 mt-0.5">Bisa dibagi ke beberapa metode sekaligus, misalnya sebagian QRIS sebagian transfer.</p>
+                        <p class="text-xs text-gray-500 mt-0.5" x-show="metode !== 'dp'">Bisa dibagi ke beberapa metode sekaligus, misalnya sebagian QRIS sebagian transfer.</p>
+                        @php $dpBasis = $diskonStatus === 'approved' ? $order->totalSetelahDiskon() : ($order->total ?? 0); @endphp
+                        <p class="text-xs text-gray-500 mt-0.5" x-show="metode === 'dp'" x-cloak>
+                            Jumlah yang diisi di bawah menjadi jumlah DP — minimal Rp {{ number_format($dpBasis * 0.5, 0, ',', '.') }} (50% dari total {{ $diskonStatus === 'approved' ? 'setelah diskon ' : '' }}Rp {{ number_format($dpBasis, 0, ',', '.') }}).
+                        </p>
 
                         <div class="mt-2 space-y-2">
                             <template x-for="(row, idx) in rincian" :key="idx">
@@ -349,31 +356,24 @@
                             + Tambah metode pembayaran
                         </button>
 
-                        <p class="text-xs mt-2" :class="rincianError ? 'text-red-600 font-semibold' : (rincianKembalian > 0 ? 'text-green-600 font-semibold' : 'text-gray-400')">
-                            Total rincian: <span x-text="rincianTotal.toLocaleString('id-ID')"></span>
-                            / <span x-text="targetRincian.toLocaleString('id-ID')"></span>
-                            <span x-show="rincianError" x-text="'— ' + rincianError"></span>
-                            <span x-show="rincianKembalian > 0" x-text="'— Kembalian: Rp ' + rincianKembalian.toLocaleString('id-ID')"></span>
+                        <p class="text-xs mt-2" :class="(rincianError || dpError) ? 'text-red-600 font-semibold' : (rincianKembalian > 0 ? 'text-green-600 font-semibold' : 'text-gray-400')">
+                            <template x-if="metode === 'dp'">
+                                <span>Jumlah DP: Rp <span x-text="rincianTotal.toLocaleString('id-ID')"></span>
+                                    <span x-show="dpError" x-text="'— ' + dpError"></span>
+                                </span>
+                            </template>
+                            <template x-if="metode !== 'dp'">
+                                <span>
+                                    Total rincian: <span x-text="rincianTotal.toLocaleString('id-ID')"></span>
+                                    / <span x-text="totalBayar.toLocaleString('id-ID')"></span>
+                                    <span x-show="rincianError" x-text="'— ' + rincianError"></span>
+                                    <span x-show="rincianKembalian > 0" x-text="'— Kembalian: Rp ' + rincianKembalian.toLocaleString('id-ID')"></span>
+                                </span>
+                            </template>
                         </p>
                         <x-input-error :messages="$errors->get('rincian')" class="mt-1" />
                     </div>
                 @endif
-
-                @if ($type === 'outdoor')
-                    <div x-show="metode === 'dp'" x-cloak>
-                        <x-input-label for="jumlah_dp" value="Jumlah DP" />
-                        <x-text-input id="jumlah_dp" name="jumlah_dp" type="number" step="100"
-                                      x-model="jumlahDp"
-                                      class="mt-1 block w-full" />
-                        @php $dpBasis = $diskonStatus === 'approved' ? $order->totalSetelahDiskon() : ($order->total ?? 0); @endphp
-                        <p class="text-xs text-gray-500 mt-1">
-                            Minimal Rp {{ number_format($dpBasis * 0.5, 0, ',', '.') }} (50% dari total {{ $diskonStatus === 'approved' ? 'setelah diskon ' : '' }}Rp {{ number_format($dpBasis, 0, ',', '.') }})
-                        </p>
-                        <x-input-error :messages="$errors->get('jumlah_dp')" class="mt-1" />
-                    </div>
-                @endif
-
-                <p x-show="dpError" x-cloak x-text="dpError" class="text-sm text-red-600"></p>
 
                 <div>
                     <x-input-label for="catatan" value="Catatan (opsional)" />
