@@ -9,7 +9,9 @@ use App\Models\OrderOutdoorDetail;
 use App\Models\OrderReworkRequest;
 use App\Models\PrinterOutdoor;
 use App\Services\StageProgressService;
+use App\Support\PageVersion;
 use App\Support\ResolvesOrderDetailType;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -20,11 +22,20 @@ class OrderDesainController extends Controller
 
     private const STAGE = 'desain';
 
+    private const PAGE_VERSION_KEY = 'order-desain';
+
     public function __construct(private StageProgressService $stageProgress) {}
 
     public function index(): View
     {
-        return view('order-desain.index', $this->loadData());
+        return view('order-desain.index', $this->loadData() + [
+            'pageVersion' => PageVersion::get(self::PAGE_VERSION_KEY),
+        ]);
+    }
+
+    public function version(): JsonResponse
+    {
+        return response()->json(['version' => PageVersion::get(self::PAGE_VERSION_KEY)]);
     }
 
     /**
@@ -100,6 +111,8 @@ class OrderDesainController extends Controller
 
         $result = $this->stageProgress->advance($item, self::STAGE, $qty, $data['catatan'] ?? null, auth()->id());
 
+        PageVersion::touch(self::PAGE_VERSION_KEY);
+
         $message = "{$result['moved']} unit dipindahkan ke antrian Cetak.".($result['stageCleared'] ? ' Baris item ini tuntas di Desain.' : '');
 
         return redirect()->route('order-desain.index', ['tab' => $type])->with('status', $message);
@@ -108,14 +121,24 @@ class OrderDesainController extends Controller
     /**
      * Free-text "Gabungan" note per outdoor item — catatan manual operator
      * desain, tidak terikat validasi/format tertentu.
+     *
+     * Untuk order 1 pcs, field ini terkunci begitu sudah terisi supaya
+     * tidak tertimpa operator lain — lihat updateNmFile().
      */
     public function updateGabungan(Request $request, OrderOutdoorDetail $item): RedirectResponse
     {
+        if ((int) $item->Qty === 1 && filled($item->gabungan)) {
+            return redirect()->route('order-desain.index', ['tab' => 'outdoor'])
+                ->with('error', 'Gabungan sudah terisi dan tidak bisa diubah untuk order 1 pcs.');
+        }
+
         $data = $request->validate([
             'gabungan' => ['nullable', 'string', 'max:255'],
         ]);
 
         $item->update(['gabungan' => $data['gabungan'] ?? null]);
+
+        PageVersion::touch(self::PAGE_VERSION_KEY);
 
         return redirect()->route('order-desain.index', ['tab' => 'outdoor'])->with('status', 'Gabungan disimpan.');
     }
@@ -123,14 +146,24 @@ class OrderDesainController extends Controller
     /**
      * Nama file desain per outdoor item — sama pola simpan/submit dengan
      * updateGabungan() (auto-submit onchange di view).
+     *
+     * Untuk order 1 pcs, field ini terkunci begitu sudah terisi supaya
+     * tidak tertimpa operator lain.
      */
     public function updateNmFile(Request $request, OrderOutdoorDetail $item): RedirectResponse
     {
+        if ((int) $item->Qty === 1 && filled($item->NmFile)) {
+            return redirect()->route('order-desain.index', ['tab' => 'outdoor'])
+                ->with('error', 'Nama file sudah terisi dan tidak bisa diubah untuk order 1 pcs.');
+        }
+
         $data = $request->validate([
             'NmFile' => ['nullable', 'string', 'max:255'],
         ]);
 
         $item->update(['NmFile' => $data['NmFile'] ?? '']);
+
+        PageVersion::touch(self::PAGE_VERSION_KEY);
 
         return redirect()->route('order-desain.index', ['tab' => 'outdoor'])->with('status', 'Nama file disimpan.');
     }

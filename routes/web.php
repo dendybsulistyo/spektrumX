@@ -303,6 +303,7 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware('permission:order-desain.view')->group(function () {
         Route::get('/order-desain', [OrderDesainController::class, 'index'])->name('order-desain.index');
+        Route::get('/order-desain/version', [OrderDesainController::class, 'version'])->name('order-desain.version');
     });
     Route::middleware('permission:order-desain.manage')->group(function () {
         Route::post('/order-desain/gabungan/{item}', [OrderDesainController::class, 'updateGabungan'])->name('order-desain.gabungan');

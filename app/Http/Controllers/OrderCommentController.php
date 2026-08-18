@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\OrderComment;
 use App\Models\OrderCommentRead;
+use App\Support\PageVersion;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -40,6 +41,10 @@ class OrderCommentController extends Controller
             'pesan' => $data['pesan'],
             'created_at' => now(),
         ]);
+
+        // order-desain polls this to auto-refresh when a new reply lands —
+        // see OrderDesainController::version().
+        PageVersion::touch('order-desain');
 
         return back()->with('status', 'Pesan terkirim.');
     }

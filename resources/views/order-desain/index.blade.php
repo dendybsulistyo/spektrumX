@@ -42,7 +42,23 @@
                     tab: '{{ $initialTab }}',
                     selected: {},
                     sending: false,
+                    pageVersion: '{{ $pageVersion }}',
                     get selectedCount() { return Object.keys(this.selected).length; },
+                    init() {
+                        setInterval(() => this.pollVersion(), 7000);
+                    },
+                    pollVersion() {
+                        const active = document.activeElement;
+                        if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) return;
+
+                        fetch('{{ route('order-desain.version') }}')
+                            .then(r => r.json())
+                            .then(data => {
+                                if (data.version !== this.pageVersion) {
+                                    window.location.reload();
+                                }
+                            });
+                    },
                     switchTab(key) { this.tab = key; this.selected = {}; },
                     toggle(type, id, checked) {
                         const key = type + '-' + id;
@@ -229,21 +245,33 @@
                                             </span>
                                         </div>
                                         <div style="display: inline-flex; align-items: center; gap: var(--space-3); flex-wrap: wrap;">
+                                            @php
+                                                $nmFileLocked = (int) $item->Qty === 1 && filled($item->NmFile);
+                                                $gabunganLocked = (int) $item->Qty === 1 && filled($item->gabungan);
+                                            @endphp
                                             @can('order-desain.nmfile-manage')
-                                                <form method="POST" action="{{ route('order-desain.nmfile', $item) }}">
-                                                    @csrf
-                                                    <input type="text" name="NmFile" value="{{ $item->NmFile }}" maxlength="255"
-                                                           placeholder="Nama file" onchange="this.form.submit()" class="in-input" style="width: 140px;">
-                                                </form>
+                                                @if ($nmFileLocked)
+                                                    <span class="text-muted" style="white-space: nowrap;" title="Order 1 pcs — nama file sudah terisi dan terkunci">{{ $item->NmFile }}</span>
+                                                @else
+                                                    <form method="POST" action="{{ route('order-desain.nmfile', $item) }}">
+                                                        @csrf
+                                                        <input type="text" name="NmFile" value="{{ $item->NmFile }}" maxlength="255"
+                                                               placeholder="Nama file" onchange="this.form.submit()" class="in-input" style="width: 140px;">
+                                                    </form>
+                                                @endif
                                             @else
                                                 <span class="text-muted" style="white-space: nowrap;" title="Hanya Operator File yang bisa ubah nama file">{{ $item->NmFile ?: '-' }}</span>
                                             @endcan
                                             @can('order-desain.manage')
-                                                <form method="POST" action="{{ route('order-desain.gabungan', $item) }}">
-                                                    @csrf
-                                                    <input type="text" name="gabungan" value="{{ $item->gabungan }}" maxlength="255"
-                                                           placeholder="Gabungan" onchange="this.form.submit()" class="in-input" style="width: 140px;">
-                                                </form>
+                                                @if ($gabunganLocked)
+                                                    <span class="text-muted" style="white-space: nowrap;" title="Order 1 pcs — gabungan sudah terisi dan terkunci">{{ $item->gabungan }}</span>
+                                                @else
+                                                    <form method="POST" action="{{ route('order-desain.gabungan', $item) }}">
+                                                        @csrf
+                                                        <input type="text" name="gabungan" value="{{ $item->gabungan }}" maxlength="255"
+                                                               placeholder="Gabungan" onchange="this.form.submit()" class="in-input" style="width: 140px;">
+                                                    </form>
+                                                @endif
                                             @else
                                                 <span class="text-muted" style="white-space: nowrap;">{{ $item->gabungan ?: '-' }}</span>
                                             @endcan
