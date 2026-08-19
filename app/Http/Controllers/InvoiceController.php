@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\PengaturanKeuangan;
 use App\Services\OrderPricingService;
 use App\Support\ResolvesOrderType;
 use Illuminate\View\View;
@@ -37,6 +38,11 @@ class InvoiceController extends Controller
 
         $items = $this->pricingService->detailedLineItems($type, $order, $rawItems);
 
-        return view('invoice.show', ['type' => $type, 'order' => $order, 'items' => $items]);
+        return view('invoice.show', [
+            'type' => $type,
+            'order' => $order,
+            'items' => $items,
+            'pengaturan' => PengaturanKeuangan::query()->first(),
+        ]);
     }
 }

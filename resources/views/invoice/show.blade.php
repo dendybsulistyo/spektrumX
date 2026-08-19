@@ -5,245 +5,159 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Surat Pesanan {{ $order->NoOrder }}</title>
     <style>
-        * { box-sizing: border-box; }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
-            font-size: 14px;
-            color: #111827;
-            background: #f3f4f6;
-            margin: 0;
-            padding: 32px 16px;
-        }
-        .card {
-            max-width: 720px;
-            margin: 0 auto;
-            background: #fff;
-            border-radius: 12px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 8px 24px rgba(0,0,0,0.06);
-            border-top: 4px solid #4f46e5;
-            padding: 32px;
-        }
-        .muted { color: #6b7280; }
-        .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #9ca3af; font-weight: 600; }
-        .header { display: flex; justify-content: space-between; align-items: flex-start; }
-        .company-name { font-size: 22px; font-weight: 700; margin: 0; }
-        .header .right { text-align: right; }
-        .header .right p { margin: 2px 0; }
-        .divider { border: none; border-top: 1px solid #e5e7eb; margin: 24px 0; }
-        .bill-to { display: flex; justify-content: space-between; align-items: flex-start; }
-        .bill-to .customer-name { font-weight: 700; font-size: 16px; margin: 4px 0 2px; }
-        .badge {
-            display: inline-flex; align-items: center; padding: 4px 12px; border-radius: 999px;
-            font-size: 12px; font-weight: 700;
-        }
-        .badge-lunas { background: #d1fae5; color: #065f46; }
-        .badge-hutang { background: #fef3c7; color: #92400e; }
-        .badge-belum { background: #fee2e2; color: #991b1b; }
-        .badge-dp { background: #dbeafe; color: #1e40af; }
-        .badge-void { background: #fee2e2; color: #991b1b; }
-        .dp-summary { margin-top: 16px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px 16px; }
-        .dp-summary .row { display: flex; justify-content: space-between; padding: 2px 0; }
-        .dp-summary .row.sisa { font-weight: 700; color: #991b1b; }
-        table { width: 100%; border-collapse: collapse; margin-top: 24px; }
-        th, td { text-align: left; padding: 10px 8px; }
-        thead th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #9ca3af; border-bottom: 2px solid #e5e7eb; white-space: nowrap; }
-        tbody td { border-bottom: 1px solid #f3f4f6; }
-        .text-right { text-align: right; }
-        .item-name { font-weight: 600; color: #111827; }
-        .item-breakdown { margin: 3px 0 0; font-size: 11px; font-weight: 400; color: #9ca3af; }
-        .total-row td { padding-top: 16px; border-bottom: none; }
-        .total-label { font-size: 14px; color: #6b7280; }
-        .total-amount { font-size: 20px; font-weight: 700; color: #4f46e5; white-space: nowrap; }
-        .footer-note { margin-top: 32px; padding-top: 16px; border-top: 1px solid #e5e7eb; font-size: 13px; color: #6b7280; }
-        .print-time { margin-top: 6px; font-size: 10px; color: #9ca3af; }
-        .signature-row { margin-top: 40px; display: flex; justify-content: space-between; }
-        .signature { text-align: center; }
-        .signature .line { display: inline-block; min-width: 180px; border-top: 1px solid #9ca3af; margin-top: 48px; padding-top: 4px; }
-        .actions { max-width: 720px; margin: 20px auto 0; display: flex; justify-content: space-between; align-items: center; }
-        .btn { padding: 10px 20px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; text-decoration: none; }
-        .btn-primary { background: #4f46e5; color: #fff; }
-        .btn-primary:hover { background: #4338ca; }
-        .link-back { color: #6b7280; text-decoration: none; font-size: 14px; }
-        .link-back:hover { text-decoration: underline; }
+        :root { --ink:#155f60; --line:#5f7474; --muted:#536b6b; }
+        * { box-sizing:border-box; }
+        body { margin:0; padding:24px; background:#edf0f0; color:#173b3b; font-family:Arial,Helvetica,sans-serif; font-size:10pt; }
+        .sheet { width:21.6cm; min-height:13.9cm; margin:0 auto; background:#fff; box-shadow:0 2px 16px rgba(0,0,0,.14); display:flex; flex-direction:column; overflow:hidden; }
+        .sheet + .sheet { margin-top:18px; }
+        .invoice-header { height:4.8cm; min-height:4.8cm; display:grid; grid-template-columns:12.6cm 9cm; border-bottom:1px dashed var(--line); }
+        .company-invoice { display:grid; grid-template-columns:7cm 5.6cm; border-right:1px dashed var(--line); }
+        .company { padding:.72cm .5cm .28cm .75cm; }
+        .brand { color:var(--ink); font-style:italic; font-weight:800; line-height:.82; letter-spacing:.045em; }
+        .brand .small { display:block; font-size:7pt; letter-spacing:.28em; margin-left:.3cm; }
+        .brand .name { display:block; font-size:25pt; transform:scaleX(1.08); transform-origin:left; }
+        .brand .legal { display:block; margin:.16cm 0 .14cm .1cm; font-style:normal; font-size:10pt; letter-spacing:.02em; }
+        .company-detail { margin:0; color:var(--ink); font-size:6.8pt; line-height:1.28; font-weight:600; }
+        .document-title { border-left:1px dashed var(--line); display:flex; align-items:flex-start; justify-content:center; padding-top:1.13cm; }
+        .document-title h1 { margin:0; color:var(--ink); font-size:21pt; letter-spacing:.03em; }
+        .customer-block { padding:.62cm .55cm .3cm .2cm; font-size:9pt; line-height:1.45; }
+        .customer-row { display:grid; grid-template-columns:1.85cm 1fr; gap:.12cm; }
+        .customer-row .key { color:var(--ink); font-weight:700; white-space:nowrap; }
+        .customer-row .value { font-weight:600; overflow-wrap:anywhere; }
+        .customer-row.title-row { margin-bottom:.1cm; }
+        .order-status { margin:.12cm 0 0 1.97cm; color:#714d00; font-size:8pt; font-weight:700; }
+        .page-info { margin:.08cm 0 0 1.97cm; color:var(--muted); font-size:8pt; font-weight:700; }
+        .content { flex:1; display:flex; flex-direction:column; padding:.3cm .55cm 0; }
+        table { width:100%; border-collapse:collapse; font-size:8pt; }
+        thead th { padding:.12cm .1cm; color:var(--ink); border-bottom:1px solid var(--line); font-size:7pt; letter-spacing:.025em; text-align:left; white-space:nowrap; }
+        tbody td { padding:.12cm .1cm; border-bottom:1px solid #c9d3d3; vertical-align:top; }
+        .text-right { text-align:right; }
+        .item-name { font-weight:700; }
+        .item-breakdown { margin:.04cm 0 0; color:var(--muted); font-size:6.7pt; font-weight:400; }
+        .total-row td { border-bottom:0; padding-top:.18cm; }
+        .total-label { color:var(--ink); font-weight:700; }
+        .total-amount { color:var(--ink); font-size:10pt; font-weight:800; white-space:nowrap; }
+        .payment-summary { align-self:flex-end; width:8.5cm; margin-top:.08cm; font-size:7.5pt; }
+        .payment-summary .row { display:flex; justify-content:space-between; gap:.3cm; padding:.03cm 0; }
+        .payment-summary .sisa { color:#8b330f; font-weight:700; }
+        .spacer { flex:1; min-height:.3cm; }
+        .actions { width:21.6cm; margin:14px auto 0; display:flex; justify-content:space-between; align-items:center; }
+        .btn { padding:10px 18px; border:0; border-radius:7px; background:var(--ink); color:#fff; cursor:pointer; font-weight:700; text-decoration:none; }
+        .link-back { color:#506363; font-size:14px; text-decoration:none; }
         @media print {
-            @page { size: A4; margin: 1cm; }
-            body { background: #fff; padding: 0; font-size: 12px; }
-            .card { box-shadow: none; border: none; max-width: none; padding: 0; }
-            .no-print { display: none; }
-            .header { display: none; }
-            .company-name { font-size: 18px; }
-            .total-amount { font-size: 18px; }
-            table { margin-top: 16px; }
-            th, td { padding: 6px 4px; }
-            .item-breakdown { font-size: 9px; }
-            .signature-row { margin-top: 24px; }
-            .signature .line { margin-top: 32px; }
-            .footer-note { margin-top: 20px; padding-top: 10px; }
+            @page { size:21.6cm 13.9cm; margin:0; }
+            html, body { width:21.6cm; height:13.9cm; background:#fff; }
+            body { padding:0; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+            .sheet { width:21.6cm; min-height:13.9cm; height:13.9cm; margin:0; box-shadow:none; break-after:page; page-break-after:always; }
+            main.sheet:last-of-type { break-after:auto; page-break-after:auto; }
+            .no-print { display:none !important; }
         }
     </style>
 </head>
 <body>
     @php
         $caraBayarLabel = match ($order->cara_bayar) {
-            'qris' => 'QRIS',
-            'transfer' => 'Transfer',
-            'campuran' => 'Campuran',
-            default => 'Tunai',
+            'qris' => 'QRIS', 'transfer' => 'Transfer', 'campuran' => 'Campuran', default => 'Tunai',
         };
-        $caraBayarNote = $order->cara_bayar
-            ? $caraBayarLabel.($order->no_referensi ? " (Ref: {$order->no_referensi})" : '').' di kasir.'
-            : 'di kasir.';
-
-        [$badgeClass, $badgeLabel, $statusNote] = $order->invoice_voided_at ? ['badge-void', 'HANGUS', 'Nota dibatalkan dan tidak berlaku sebagai tagihan.'] : match ($order->status_bayar) {
-            'lunas' => ['badge-lunas', 'Lunas', 'Dibayar '.$caraBayarNote],
-            'hutang' => ['badge-hutang', 'Customer VIP', 'belum lunas.'],
-            'dp' => ['badge-dp', 'DP (Belum Lunas)', 'Sudah bayar uang muka via '.$caraBayarNote],
-            default => ['badge-belum', 'Belum Bayar', 'Menunggu pembayaran di kasir.'],
+        $caraBayarNote = $order->cara_bayar ? $caraBayarLabel.($order->no_referensi ? " (Ref: {$order->no_referensi})" : '') : '-';
+        $statusNote = $order->invoice_voided_at ? 'HANGUS' : match ($order->status_bayar) {
+            'lunas' => 'LUNAS · '.$caraBayarNote, 'hutang' => 'CUSTOMER VIP · BELUM LUNAS',
+            'dp' => 'DP · BELUM LUNAS', default => 'BELUM DIBAYAR',
         };
-
         $diskonStatus = $order->diskonStatus();
         $totalTagihan = $diskonStatus === 'approved' ? $order->totalSetelahDiskon() : (float) ($order->total ?? 0);
-
         $jumlahPiutang = (float) ($order->jumlah_piutang ?? 0);
         $jumlahDpDibayar = $totalTagihan - $jumlahPiutang;
+        $companyName = $pengaturan?->nama_perusahaan ?: config('app.name', 'Spektrum');
+        $companyAddress = $pengaturan?->alamat_perusahaan ?: 'Yogyakarta';
+        $companyNpwp = $pengaturan?->npwp_perusahaan;
+        $tanggalOrder = is_string($order->TglOrder) ? $order->TglOrder : $order->TglOrder?->format('d-m-Y');
+        $customerAddress = trim(collect([$order->customer?->Alamat, $order->customer?->Kota])->filter()->implode(', '));
+        // A form sheet has limited usable height. Keep item rows together
+        // and repeat the document header on subsequent printed sheets.
+        $itemPages = $items->chunk(7);
+        if ($itemPages->isEmpty()) {
+            $itemPages = collect([collect()]);
+        }
+        $totalPages = $itemPages->count();
     @endphp
 
-    <div class="card">
-        <div class="header">
-            <div>
-                <p class="company-name">{{ config('app.name', 'SpektrumX') }}</p>
-                <p class="muted">Admin Percetakan</p>
+    @foreach ($itemPages as $pageIndex => $pageItems)
+        @php $isLastPage = $pageIndex === $totalPages - 1; @endphp
+    <main class="sheet">
+        <header class="invoice-header">
+            <div class="company-invoice">
+                <section class="company">
+                    <div class="brand">
+                        <span class="small">GRAPHIC STUDIO</span>
+                        <span class="name">{{ strtoupper($companyName) }}</span>
+                        <span class="legal">CV. {{ $companyName }}</span>
+                    </div>
+                    <p class="company-detail">{{ $companyAddress }}<br>@if ($companyNpwp) No. NPWP : {{ $companyNpwp }} @endif</p>
+                </section>
+                <section class="document-title"><h1>INVOICE</h1></section>
             </div>
-            <div class="right">
-                <p class="label">No Order</p>
-                <p style="font-weight:700;">{{ $order->NoOrder }}</p>
-                <p class="label" style="margin-top:8px;">Tanggal</p>
-                <p>{{ is_string($order->TglOrder) ? $order->TglOrder : $order->TglOrder?->format('d M Y') }}</p>
-            </div>
-        </div>
+            <section class="customer-block">
+                <div class="customer-row title-row"><span class="key">Yogyakarta,</span><span class="value">{{ $tanggalOrder }}</span></div>
+                <div class="customer-row"><span class="key">Kepada Yth,</span><span class="value">{{ $order->customer?->NmCust ?? '-' }}</span></div>
+                <div class="customer-row"><span class="key">Alamat</span><span class="value">{{ $customerAddress ?: '-' }}</span></div>
+                <div class="customer-row"><span class="key">No. Order</span><span class="value">{{ $order->NoOrder }}</span></div>
+                <div class="customer-row"><span class="key">No. NPWP</span><span class="value">{{ $order->customer?->NPWP ?: '-' }}</span></div>
+                <p class="order-status">{{ $statusNote }}</p>
+                <p class="page-info">Cetakan ke {{ $pageIndex + 1 }} dari {{ $totalPages }} halaman</p>
+            </section>
+        </header>
 
-        <hr class="divider">
-
-        <div class="bill-to">
-            <div>
-                <p class="label">Ditagihkan Kepada</p>
-                <p class="customer-name">{{ $order->customer?->NmCust ?? '-' }}</p>
-                <p class="muted">{{ $order->customer?->Alamat }}{{ $order->customer?->Kota ? ', '.$order->customer->Kota : '' }}</p>
-            </div>
-            <div style="text-align:right;">
-                <span class="badge {{ $badgeClass }}">{{ $badgeLabel }}</span>
-                <p class="muted" style="margin-top:6px;">{{ $statusNote }}</p>
-            </div>
-        </div>
-
-        <table>
-            <thead>
-                <tr>
-                    <th>Item</th>
-                    <th>Bahan</th>
-                    <th>Printer</th>
-                    <th class="text-right">PJ</th>
-                    <th class="text-right">LB</th>
-                    <th class="text-right">Qty</th>
-                    <th class="text-right">Hrg. Satuan</th>
-                    <th class="text-right">Subtotal</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach ($items as $item)
-                    <tr>
-                        <td class="item-name">
-                            {{ $item->name }}
-                            @if ($item->breakdown)
-                                <p class="item-breakdown">{{ $item->breakdown }}</p>
-                            @endif
-                        </td>
-                        <td>{{ $item->bahan ?? '-' }}</td>
-                        <td>{{ $item->printer ?? '-' }}</td>
-                        <td class="text-right">{{ $item->panjang }}</td>
-                        <td class="text-right">{{ $item->lebar }}</td>
-                        <td class="text-right">{{ $item->qty }}</td>
-                        <td class="text-right">{{ $item->harga_satuan !== null ? 'Rp '.number_format($item->harga_satuan, 0, ',', '.') : '-' }}</td>
-                        <td class="text-right">Rp {{ number_format($item->subtotal, 0, ',', '.') }}</td>
-                    </tr>
-                @endforeach
-                @if ($diskonStatus === 'approved')
-                    <tr class="total-row">
-                        <td colspan="7" class="text-right total-label">Subtotal</td>
-                        <td class="text-right">Rp {{ number_format($order->total ?? 0, 0, ',', '.') }}</td>
-                    </tr>
-                    <tr>
-                        <td colspan="7" class="text-right total-label">Diskon {{ $order->diskonApprovedLabel() }}</td>
-                        <td class="text-right" style="color:#991b1b;">- Rp {{ number_format($order->diskonNominal(), 0, ',', '.') }}</td>
-                    </tr>
-                @endif
-                <tr class="total-row">
-                    <td colspan="7" class="text-right total-label">Total Tagihan</td>
-                    <td class="text-right total-amount">Rp {{ number_format($totalTagihan, 0, ',', '.') }}</td>
-                </tr>
-            </tbody>
-        </table>
-
-        @if ($order->status_bayar === 'dp')
-            <div class="dp-summary">
-                <div class="row">
-                    <span class="muted">Uang Muka (DP) Dibayar</span>
-                    <span>Rp {{ number_format($jumlahDpDibayar, 0, ',', '.') }}</span>
+        <section class="content">
+            <table>
+                <thead><tr><th>Item</th><th>Bahan</th><th>Printer</th><th class="text-right">PJ</th><th class="text-right">LB</th><th class="text-right">Qty</th><th class="text-right">Hrg. Satuan</th><th class="text-right">Subtotal</th></tr></thead>
+                <tbody>
+                    @foreach ($pageItems as $item)
+                        <tr>
+                            <td class="item-name">{{ $item->name }} @if ($item->breakdown)<p class="item-breakdown">{{ $item->breakdown }}</p>@endif</td>
+                            <td>{{ $item->bahan ?? '-' }}</td><td>{{ $item->printer ?? '-' }}</td>
+                            <td class="text-right">{{ $item->panjang }}</td><td class="text-right">{{ $item->lebar }}</td><td class="text-right">{{ $item->qty }}</td>
+                            <td class="text-right">{{ $item->harga_satuan !== null ? 'Rp '.number_format($item->harga_satuan, 0, ',', '.') : '-' }}</td>
+                            <td class="text-right">Rp {{ number_format($item->subtotal, 0, ',', '.') }}</td>
+                        </tr>
+                    @endforeach
+                    @if ($isLastPage && $diskonStatus === 'approved')
+                        <tr><td colspan="7" class="text-right total-label">Subtotal</td><td class="text-right">Rp {{ number_format($order->total ?? 0, 0, ',', '.') }}</td></tr>
+                        <tr><td colspan="7" class="text-right total-label">Diskon {{ $order->diskonApprovedLabel() }}</td><td class="text-right">- Rp {{ number_format($order->diskonNominal(), 0, ',', '.') }}</td></tr>
+                    @endif
+                    @if ($isLastPage)
+                        <tr class="total-row"><td colspan="7" class="text-right total-label">Total Tagihan</td><td class="text-right total-amount">Rp {{ number_format($totalTagihan, 0, ',', '.') }}</td></tr>
+                    @endif
+                </tbody>
+            </table>
+            @if ($isLastPage && $order->status_bayar === 'dp')
+                <div class="payment-summary"><div class="row"><span>Uang Muka (DP) Dibayar</span><span>Rp {{ number_format($jumlahDpDibayar, 0, ',', '.') }}</span></div><div class="row sisa"><span>Sisa yang Harus Dilunasi</span><span>Rp {{ number_format($jumlahPiutang, 0, ',', '.') }}</span></div></div>
+            @endif
+            @if ($isLastPage && $order->replacement_order_id)
+                <div class="payment-summary">
+                    <div class="row"><span>Nota asal hangus</span><span>{{ $order->replaces?->NoOrder ?? '-' }}</span></div>
+                    <div class="row"><span>Kredit nota lama</span><span>Rp {{ number_format($order->replacement_credit ?? 0, 0, ',', '.') }}</span></div>
+                    @if (($order->topup_amount ?? 0) > 0)<div class="row sisa"><span>Tambahan pembayaran</span><span>Rp {{ number_format($order->topup_amount, 0, ',', '.') }}</span></div>@endif
+                    @if (($order->cashback_amount ?? 0) > 0)<div class="row sisa"><span>Cashback</span><span>Rp {{ number_format($order->cashback_amount, 0, ',', '.') }}</span></div>@endif
                 </div>
-                <div class="row sisa">
-                    <span>Sisa yang Harus Dilunasi</span>
-                    <span>Rp {{ number_format($jumlahPiutang, 0, ',', '.') }}</span>
-                </div>
-            </div>
-        @endif
+            @endif
+            <div class="spacer"></div>
+        </section>
 
-        @if ($order->replacement_order_id)
-            <div class="dp-summary">
-                <div class="row"><span class="muted">Nota asal yang hangus</span><span>{{ $order->replaces?->NoOrder ?? '-' }}</span></div>
-                <div class="row"><span class="muted">Kredit dari nota lama</span><span>Rp {{ number_format($order->replacement_credit ?? 0, 0, ',', '.') }}</span></div>
-                @if (($order->topup_amount ?? 0) > 0)<div class="row sisa"><span>Tambahan pembayaran</span><span>Rp {{ number_format($order->topup_amount, 0, ',', '.') }}</span></div>@endif
-                @if (($order->cashback_amount ?? 0) > 0)<div class="row sisa"><span>Cashback</span><span>Rp {{ number_format($order->cashback_amount, 0, ',', '.') }}</span></div>@endif
-            </div>
-        @endif
-
-        <div class="signature-row">
-            <div class="signature">
-                <span class="line">Customer</span>
-            </div>
-            <div class="signature">
-                <span class="line">Kasir</span>
-            </div>
-        </div>
-
-        <div class="footer-note">
-            Terima kasih atas pesanan Anda. Simpan surat pesanan ini sebagai bukti transaksi.
-            <p class="print-time">Dicetak: {{ now()->translatedFormat('d M Y, H:i') }}</p>
-        </div>
-    </div>
+    </main>
+    @endforeach
 
     <div class="actions no-print" id="standaloneActions">
         <a href="#" id="backLink" class="link-back">← Kembali</a>
-        <button class="btn btn-primary" onclick="window.print()">Cetak Surat Pesanan</button>
+        <button class="btn" onclick="window.print()">Cetak Surat Pesanan</button>
     </div>
-
     <script>
-        if (window.self !== window.top) {
-            document.getElementById('standaloneActions').style.display = 'none';
-        } else {
-            // Normally this page is opened from an in-app link, so history
-            // returns to the originating queue in the same browser tab. If
-            // it was opened directly, document.referrer is the fallback.
+        if (window.self !== window.top) document.getElementById('standaloneActions').style.display = 'none';
+        else {
             const backLink = document.getElementById('backLink');
-            if (history.length > 1) {
-                backLink.addEventListener('click', function (e) {
-                    e.preventDefault();
-                    history.back();
-                });
-            } else if (document.referrer) {
-                backLink.href = document.referrer;
-            } else {
-                backLink.style.display = 'none';
-            }
+            if (history.length > 1) backLink.addEventListener('click', (event) => { event.preventDefault(); history.back(); });
+            else if (document.referrer) backLink.href = document.referrer;
+            else backLink.style.display = 'none';
         }
     </script>
 </body>
