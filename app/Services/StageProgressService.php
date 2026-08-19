@@ -9,6 +9,7 @@ use App\Models\OrderReworkRequest;
 use App\Models\OrderStatusNote;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Moves N qty from one line item's qty_<stage> bucket to the next one, so
@@ -42,7 +43,19 @@ class StageProgressService
             422,
             'Order ini sedang menunggu persetujuan pembatalan/ulang proses.'
         );
-        abort_if($qty < 1 || $qty > $item->qtyAt($fromStage), 422, 'Qty tidak valid.');
+        $availableQty = $item->qtyAt($fromStage);
+
+        // The amount can become stale between rendering the queue and an
+        // operator submitting it (for example after another operator moves
+        // part of the same item). Treat it as normal form validation, not a
+        // server exception page.
+        if ($qty < 1 || $qty > $availableQty) {
+            $message = $availableQty > 0
+                ? "Qty tidak valid. Sisa Qty di tahap {$fromStage}: {$availableQty}."
+                : "Item ini sudah tidak memiliki sisa Qty di tahap {$fromStage}. Muat ulang halaman.";
+
+            throw ValidationException::withMessages(['qty' => $message]);
+        }
 
         $item->decrement("qty_{$fromStage}", $qty);
         $item->increment("qty_{$nextStage}", $qty);

@@ -650,6 +650,16 @@
                     </div>
                 @endif
 
+                @if ($errors->any())
+                    <div class="mb-4 rounded-md bg-red-50 text-red-700 px-4 py-3 text-sm" role="alert">
+                        <ul class="list-disc pl-5 space-y-1">
+                            @foreach ($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
+
                 {{ $slot }}
             </main>
         </div>
