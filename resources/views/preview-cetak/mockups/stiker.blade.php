@@ -13,7 +13,7 @@
     <g clip-path="url(#clip-stiker)">
         <rect x="100" y="116" width="200" height="184" fill="#eef0f3" />
         <text x="200" y="212" text-anchor="middle" font-size="11" fill="#9ca3af" x-show="!designUrl">Area Cetak</text>
-        <image :href="designUrl" x="100" y="116" width="200" height="184" preserveAspectRatio="xMidYMid slice" x-show="designUrl" />
+        <image :href="designUrl" x="100" y="116" width="200" height="184" :preserveAspectRatio="imageFit" x-show="designUrl" />
     </g>
 
     <path d="M100,116 L284,116 Q300,116 300,132 L300,284 Q300,300 284,300 L116,300 Q100,300 100,284 Z"

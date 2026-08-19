@@ -22,6 +22,7 @@ class CustomerController extends Controller
                 $q->where('NmCust', 'like', "%{$search}%")
                     ->orWhere('KdCust', 'like', "%{$search}%");
             })
+            ->when($request->boolean('vip'), fn ($q) => $q->whereHas('limit'))
             ->orderBy('NmCust')
             ->paginate(15)
             ->withQueryString();

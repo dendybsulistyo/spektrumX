@@ -26,8 +26,12 @@
                         <label>Cari</label>
                         <input type="text" name="search" value="{{ request('search') }}" placeholder="Nama atau kode customer..." class="input">
                     </div>
+                    <label style="display: inline-flex; align-items: center; gap: 8px; height: 36px; cursor: pointer; font-size: 14px; color: var(--color-text);">
+                        <input type="checkbox" name="vip" value="1" @checked(request()->boolean('vip')) style="width: 16px; height: 16px; accent-color: var(--color-accent);">
+                        Hanya customer VIP
+                    </label>
                     <button type="submit" class="btn btn-primary" style="height: 36px;">Cari</button>
-                    @if (request('search'))
+                    @if (request('search') || request()->boolean('vip'))
                         <a href="{{ route('customers.index') }}" class="btn btn-ghost" style="height: 36px;">Reset</a>
                     @endif
                 </form>

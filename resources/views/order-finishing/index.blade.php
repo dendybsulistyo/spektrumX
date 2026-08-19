@@ -25,7 +25,6 @@
         $tabs = [
             'indoor' => ['label' => 'Indoor', 'count' => $indoorItems->count()],
             'outdoor' => ['label' => 'Outdoor', 'count' => $outdoorItems->count()],
-            'artwork' => ['label' => 'Artwork', 'count' => $artworkItems->count()],
         ];
         $initialTab = array_key_exists(request('tab'), $tabs) ? request('tab') : 'indoor';
     @endphp
@@ -40,7 +39,7 @@
                 @endforeach
             </div>
 
-            @foreach (['indoor' => $indoorItems, 'outdoor' => $outdoorItems, 'artwork' => $artworkItems] as $tabKey => $itemGroups)
+            @foreach (['indoor' => $indoorItems, 'outdoor' => $outdoorItems] as $tabKey => $itemGroups)
                 <div x-show="tab === '{{ $tabKey }}'" @if($tabKey!=='indoor') x-cloak @endif style="margin-top: var(--space-4);">
                     @forelse ($itemGroups as $items)
                         <x-stage-item-card :type="$tabKey" :order="$items->first()->order" :items="$items"

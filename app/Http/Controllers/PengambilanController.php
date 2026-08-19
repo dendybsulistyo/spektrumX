@@ -30,12 +30,11 @@ class PengambilanController extends Controller
     private function loadData(): array
     {
         $itemsByType = $this->stageProgress->itemsAtStage(self::STAGE, [
-            'indoor' => true, 'outdoor' => true, 'artwork' => true,
+            'indoor' => true, 'outdoor' => true,
         ], outdoorWith: ['order.customer', 'order.cancelRequestedBy']);
 
         $indoorItems = $itemsByType['indoor'] ?? collect();
         $outdoorItems = $itemsByType['outdoor'] ?? collect();
-        $artworkItems = $itemsByType['artwork'] ?? collect();
 
         $outdoorIds = $outdoorItems->keys();
 
@@ -50,7 +49,7 @@ class PengambilanController extends Controller
         $pendingRework = OrderReworkRequest::pendingMap();
         $canApproveRework = auth()->user()->hasPermission('order-rework.approve');
 
-        return compact('indoorItems', 'outdoorItems', 'artworkItems', 'outdoorComments', 'outdoorUnread', 'printerNames', 'pendingRework', 'canApproveRework');
+        return compact('indoorItems', 'outdoorItems', 'outdoorComments', 'outdoorUnread', 'printerNames', 'pendingRework', 'canApproveRework');
     }
 
     /**

@@ -23,7 +23,7 @@
     <g clip-path="url(#clip-baliho)">
         <rect x="60" y="40" width="480" height="240" fill="#eef0f3" />
         <text x="300" y="165" text-anchor="middle" font-size="14" fill="#9ca3af" x-show="!designUrl">Area Cetak</text>
-        <image :href="designUrl" x="60" y="40" width="480" height="240" preserveAspectRatio="xMidYMid slice" x-show="designUrl" />
+        <image :href="designUrl" x="60" y="40" width="480" height="240" :preserveAspectRatio="imageFit" x-show="designUrl" />
     </g>
 
     <rect x="60" y="40" width="480" height="240" rx="4" fill="none" stroke="#9ca3af" stroke-width="2" />

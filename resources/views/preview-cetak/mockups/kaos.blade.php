@@ -16,7 +16,7 @@
     <g clip-path="url(#clip-kaos)">
         <rect x="150" y="175" width="100" height="130" fill="#eef0f3" />
         <text x="200" y="245" text-anchor="middle" font-size="11" fill="#9ca3af" x-show="!designUrl">Area Cetak</text>
-        <image :href="designUrl" x="150" y="175" width="100" height="130" preserveAspectRatio="xMidYMid slice" x-show="designUrl" />
+        <image :href="designUrl" x="150" y="175" width="100" height="130" :preserveAspectRatio="imageFit" x-show="designUrl" />
         <rect x="150" y="175" width="100" height="130" fill="url(#shade-kaos)" />
     </g>
 

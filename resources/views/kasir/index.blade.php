@@ -31,10 +31,6 @@
                     class="px-4 py-2 rounded-md font-medium transition">
                 Outdoor ({{ $outdoorOrders->count() }})
             </button>
-            <button @click="tab = 'artwork'" :class="tab === 'artwork' ? 'bg-violet-100 text-violet-800' : 'text-gray-500 hover:bg-violet-50 hover:text-violet-700'"
-                    class="px-4 py-2 rounded-md font-medium transition">
-                Artwork ({{ $artworkOrders->count() }})
-            </button>
             @can('kasir.replacement.manage')
                 <button @click="tab = 'replacement'" :class="tab === 'replacement' ? 'bg-rose-100 text-rose-800' : 'text-gray-500 hover:bg-rose-50 hover:text-rose-700'"
                         class="px-4 py-2 rounded-md font-medium transition">
@@ -142,54 +138,6 @@
                         </tr>
                     @empty
                         <tr><td colspan="6" class="px-4 py-6 text-center text-gray-400">Tidak ada order outdoor yang menunggu pembayaran.</td></tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
-
-        <div x-show="tab === 'artwork'" x-cloak class="overflow-x-auto">
-            <table class="w-full text-[13px] min-w-[640px]">
-                <thead class="bg-gray-50 text-left text-xs uppercase text-gray-500">
-                    <tr>
-                        <th class="px-3 py-2 w-12">No</th>
-                        <th class="px-3 py-2">No Order</th>
-                        <th class="px-3 py-2">Tanggal</th>
-                        <th class="px-3 py-2">Customer</th>
-                        <th class="px-3 py-2 text-right">Total</th>
-                        <th class="px-3 py-2 text-right">Aksi</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y">
-                    @forelse ($artworkOrders as $order)
-                        <tr>
-                            <td class="px-3 py-2 text-gray-400">{{ $loop->iteration }}</td>
-                            <td class="px-3 py-2 font-semibold text-gray-900">
-                                {{ $order->NoOrder }}
-                                @if ($order->diskonStatus() === 'pending')
-                                    <span class="ml-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">Diskon pending</span>
-                                @elseif ($order->diskonStatus() === 'approved')
-                                    <span class="ml-1 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-700">Diskon {{ $order->diskonApprovedLabel() }}</span>
-                                @endif
-                                @if ($order->customer?->isVip)
-                                    @if ($order->withinHutangPlafon())
-                                        <span class="ml-1 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-700" title="VIP dalam plafon hutang">VIP</span>
-                                    @else
-                                        <span class="ml-1 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-700" title="VIP melebihi plafon hutang">VIP</span>
-                                    @endif
-                                @endif
-                            </td>
-                            <td class="px-3 py-2 text-gray-600">{{ is_string($order->TglOrder) ? $order->TglOrder : $order->TglOrder?->format('Y-m-d') }}</td>
-                            <td class="px-3 py-2 text-gray-600">{{ $order->customer?->NmCust ? ucwords(mb_strtolower($order->customer->NmCust)) : '-' }}</td>
-                            <td class="px-3 py-2 text-right text-gray-900">Rp {{ number_format($order->total ?? 0, 0, ',', '.') }}</td>
-                            <td class="px-3 py-2 text-right">
-                                <a href="{{ route('kasir.show', ['type' => 'artwork', 'id' => $order->id]) }}"
-                                   class="inline-flex items-center px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-md hover:bg-blue-700">
-                                    Bayar
-                                </a>
-                            </td>
-                        </tr>
-                    @empty
-                        <tr><td colspan="6" class="px-4 py-6 text-center text-gray-400">Tidak ada order artwork yang menunggu pembayaran.</td></tr>
                     @endforelse
                 </tbody>
             </table>

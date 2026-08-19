@@ -16,6 +16,6 @@
     <g clip-path="url(#clip-id-card)">
         <rect x="55" y="145" width="190" height="270" fill="#eef0f3" />
         <text x="150" y="285" text-anchor="middle" font-size="12" fill="#9ca3af" x-show="!designUrl">Area Cetak</text>
-        <image :href="designUrl" x="55" y="145" width="190" height="270" preserveAspectRatio="xMidYMid slice" x-show="designUrl" />
+        <image :href="designUrl" x="55" y="145" width="190" height="270" :preserveAspectRatio="imageFit" x-show="designUrl" />
     </g>
 </svg>

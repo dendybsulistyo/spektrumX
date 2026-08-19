@@ -16,7 +16,7 @@
         <g clip-path="url(#clip-kartu-nama)">
             <rect x="0" y="0" width="360" height="220" fill="#eef0f3" />
             <text x="180" y="115" text-anchor="middle" font-size="13" fill="#9ca3af" x-show="!designUrl">Area Cetak</text>
-            <image :href="designUrl" x="0" y="0" width="360" height="220" preserveAspectRatio="xMidYMid slice" x-show="designUrl" />
+            <image :href="designUrl" x="0" y="0" width="360" height="220" :preserveAspectRatio="imageFit" x-show="designUrl" />
             <rect x="0" y="0" width="360" height="220" fill="url(#gloss-kartu)" />
         </g>
         <rect x="0" y="0" width="360" height="220" rx="14" fill="none" stroke="#d1d5db" stroke-width="1.5" />

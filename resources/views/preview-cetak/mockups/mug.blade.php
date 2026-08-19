@@ -24,7 +24,7 @@
     <g clip-path="url(#clip-mug)">
         <rect x="140" y="140" width="120" height="140" fill="#eef0f3" />
         <text x="200" y="215" text-anchor="middle" font-size="11" fill="#9ca3af" x-show="!designUrl">Area Cetak</text>
-        <image :href="designUrl" x="140" y="140" width="120" height="140" preserveAspectRatio="xMidYMid slice" x-show="designUrl" />
+        <image :href="designUrl" x="140" y="140" width="120" height="140" :preserveAspectRatio="imageFit" x-show="designUrl" />
         <rect x="140" y="140" width="120" height="140" fill="url(#shade-mug)" />
         <rect x="140" y="140" width="120" height="140" fill="url(#gloss-mug)" />
     </g>

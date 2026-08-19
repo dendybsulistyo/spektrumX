@@ -32,7 +32,7 @@
             <div class="blueprint" style="padding: var(--space-4);">
                 <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
                 <p class="text-muted" style="font-size: 14px; margin: 0;">
-                    Semua <b>pengajuan hutang customer VIP yang melebihi plafon</b> (Indoor/Outdoor/Artwork) yang menunggu persetujuan.
+                    Semua <b>pengajuan hutang customer VIP yang melebihi plafon</b> (Indoor/Outdoor) yang menunggu persetujuan.
                 </p>
             </div>
 

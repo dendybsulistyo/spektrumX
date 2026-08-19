@@ -33,7 +33,7 @@ class KasirController extends Controller
 
     public function index(Request $request): View
     {
-        $initialTab = in_array($request->query('tab'), ['indoor', 'outdoor', 'artwork', 'replacement', 'dp', 'lunas'], true)
+        $initialTab = in_array($request->query('tab'), ['indoor', 'outdoor', 'replacement', 'dp', 'lunas'], true)
             ? $request->query('tab')
             : 'indoor';
 
@@ -45,13 +45,6 @@ class KasirController extends Controller
             ->get();
 
         $outdoorOrders = OrderOutdoor::query()
-            ->with('customer.limit')
-            ->where('status_bayar', 'belum_bayar')
-            ->orderByDesc('TglOrder')
-            ->orderByDesc('NoOrder')
-            ->get();
-
-        $artworkOrders = OrderArtwork::query()
             ->with('customer.limit')
             ->where('status_bayar', 'belum_bayar')
             ->orderByDesc('TglOrder')
@@ -112,7 +105,7 @@ class KasirController extends Controller
         // store() rejects a second one for the same order regardless of kind.
         $pendingRework = OrderReworkRequest::pendingMap();
 
-        return view('kasir.index', compact('indoorOrders', 'outdoorOrders', 'artworkOrders', 'dpOrders', 'replacementOrders', 'lunasOrders', 'pendingRework', 'initialTab'));
+        return view('kasir.index', compact('indoorOrders', 'outdoorOrders', 'dpOrders', 'replacementOrders', 'lunasOrders', 'pendingRework', 'initialTab'));
     }
 
     public function show(string $type, int $id): View

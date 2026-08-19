@@ -20,7 +20,7 @@
     <g clip-path="url(#clip-spanduk)">
         <rect x="60" y="70" width="480" height="180" fill="#eef0f3" />
         <text x="300" y="165" text-anchor="middle" font-size="13" fill="#9ca3af" x-show="!designUrl">Area Cetak</text>
-        <image :href="designUrl" x="60" y="70" width="480" height="180" preserveAspectRatio="xMidYMid slice" x-show="designUrl" />
+        <image :href="designUrl" x="60" y="70" width="480" height="180" :preserveAspectRatio="imageFit" x-show="designUrl" />
     </g>
 
     <circle cx="72" cy="82" r="6" fill="#e5e7eb" stroke="#9ca3af" stroke-width="1.5" />
