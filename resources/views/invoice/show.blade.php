@@ -230,10 +230,9 @@
         if (window.self !== window.top) {
             document.getElementById('standaloneActions').style.display = 'none';
         } else {
-            // Opened in its own tab (e.g. target="_blank" from Pengambilan)
-            // rather than navigated to — that tab has no browser history for
-            // history.back() to return to, so it silently did nothing.
-            // document.referrer still points at whichever page linked here.
+            // Normally this page is opened from an in-app link, so history
+            // returns to the originating queue in the same browser tab. If
+            // it was opened directly, document.referrer is the fallback.
             const backLink = document.getElementById('backLink');
             if (history.length > 1) {
                 backLink.addEventListener('click', function (e) {

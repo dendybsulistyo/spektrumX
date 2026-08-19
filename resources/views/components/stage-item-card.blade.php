@@ -28,7 +28,7 @@
         </div>
         <div style="display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: flex-end;">
             @if ($showInvoiceLink)
-                <a href="{{ route('invoice.show', [$type, $order->id]) }}" target="_blank" rel="noopener"
+                <a href="{{ route('invoice.show', [$type, $order->id]) }}"
                    class="tag tag-outline" title="Cek Nota Pemesanan">
                     Nota Pemesanan
                 </a>
