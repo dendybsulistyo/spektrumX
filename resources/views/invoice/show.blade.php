@@ -10,16 +10,11 @@
         body { margin:0; padding:24px; background:#edf0f0; color:#173b3b; font-family:Arial,Helvetica,sans-serif; font-size:10pt; }
         .sheet { width:21.6cm; min-height:13.9cm; margin:0 auto; background:#fff; box-shadow:0 2px 16px rgba(0,0,0,.14); display:flex; flex-direction:column; overflow:hidden; }
         .sheet + .sheet { margin-top:18px; }
-        .invoice-header { height:4.8cm; min-height:4.8cm; display:grid; grid-template-columns:12.6cm 9cm; border-bottom:1px dashed var(--line); }
-        .company-invoice { display:grid; grid-template-columns:7cm 5.6cm; border-right:1px dashed var(--line); }
-        .company { padding:.72cm .5cm .28cm .75cm; }
-        .brand { color:var(--ink); font-style:italic; font-weight:800; line-height:.82; letter-spacing:.045em; }
-        .brand .small { display:block; font-size:7pt; letter-spacing:.28em; margin-left:.3cm; }
-        .brand .name { display:block; font-size:25pt; transform:scaleX(1.08); transform-origin:left; }
-        .brand .legal { display:block; margin:.16cm 0 .14cm .1cm; font-style:normal; font-size:10pt; letter-spacing:.02em; }
-        .company-detail { margin:0; color:var(--ink); font-size:6.8pt; line-height:1.28; font-weight:600; }
-        .document-title { border-left:1px dashed var(--line); display:flex; align-items:flex-start; justify-content:center; padding-top:1.13cm; }
-        .document-title h1 { margin:0; color:var(--ink); font-size:21pt; letter-spacing:.03em; }
+        .invoice-header { height:4.8cm; min-height:4.8cm; display:grid; grid-template-columns:12.6cm 9cm; }
+        /* The left two-thirds and the labels in the customer area are
+           pre-printed on the continuous form, so this page only supplies
+           the transaction values in their matching positions. */
+        .preprinted-header-space { min-width:0; }
         .customer-block { padding:.62cm .55cm .3cm .2cm; font-size:9pt; line-height:1.45; }
         .customer-row { display:grid; grid-template-columns:1.85cm 1fr; gap:.12cm; }
         .customer-row .key { color:var(--ink); font-weight:700; white-space:nowrap; }
@@ -78,9 +73,6 @@
         $jumlahDpDibayar = $totalTagihan - $jumlahPiutang;
         $uangMuka = $totalTagihan * 0.5;
         $kurangBayarDp = max($uangMuka - $jumlahDpDibayar, 0);
-        $companyName = $pengaturan?->nama_perusahaan ?: config('app.name', 'Spektrum');
-        $companyAddress = $pengaturan?->alamat_perusahaan ?: 'Yogyakarta';
-        $companyNpwp = $pengaturan?->npwp_perusahaan;
         $tanggalOrder = is_string($order->TglOrder) ? $order->TglOrder : $order->TglOrder?->format('d-m-Y');
         $customerAddress = trim(collect([$order->customer?->Alamat, $order->customer?->Kota])->filter()->implode(', '));
         // A form sheet has limited usable height. Keep item rows together
@@ -96,23 +88,13 @@
         @php $isLastPage = $pageIndex === $totalPages - 1; @endphp
     <main class="sheet">
         <header class="invoice-header">
-            <div class="company-invoice">
-                <section class="company">
-                    <div class="brand">
-                        <span class="small">GRAPHIC STUDIO</span>
-                        <span class="name">{{ strtoupper($companyName) }}</span>
-                        <span class="legal">CV. {{ $companyName }}</span>
-                    </div>
-                    <p class="company-detail">{{ $companyAddress }}<br>@if ($companyNpwp) No. NPWP : {{ $companyNpwp }} @endif</p>
-                </section>
-                <section class="document-title"><h1>INVOICE</h1></section>
-            </div>
+            <div class="preprinted-header-space" aria-hidden="true"></div>
             <section class="customer-block">
-                <div class="customer-row title-row"><span class="key">Yogyakarta,</span><span class="value">{{ $tanggalOrder }}</span></div>
-                <div class="customer-row"><span class="key">Kepada Yth,</span><span class="value">{{ $order->customer?->NmCust ?? '-' }}</span></div>
-                <div class="customer-row"><span class="key">Alamat</span><span class="value">{{ $customerAddress ?: '-' }}</span></div>
-                <div class="customer-row"><span class="key">No. Order</span><span class="value">{{ $order->NoOrder }}</span></div>
-                <div class="customer-row"><span class="key">No. NPWP</span><span class="value">{{ $order->customer?->NPWP ?: '-' }}</span></div>
+                <div class="customer-row title-row"><span class="key"></span><span class="value">{{ $tanggalOrder }}</span></div>
+                <div class="customer-row"><span class="key"></span><span class="value">{{ $order->customer?->NmCust ?? '-' }}</span></div>
+                <div class="customer-row"><span class="key"></span><span class="value">{{ $customerAddress ?: '-' }}</span></div>
+                <div class="customer-row"><span class="key"></span><span class="value">{{ $order->NoOrder }}</span></div>
+                <div class="customer-row"><span class="key"></span><span class="value">{{ $order->customer?->NPWP ?: '-' }}</span></div>
                 <p class="order-status">{{ $statusNote }}</p>
                 <p class="page-info">Cetakan ke {{ $pageIndex + 1 }} dari {{ $totalPages }} halaman</p>
             </section>

@@ -6,7 +6,7 @@
     <div class="bg-white rounded-lg border border-gray-200 overflow-hidden"
          x-data="{
             tab: '{{ $initialTab }}',
-            lunasiModalOpen: false, lunasiId: null, lunasiNoOrder: '', lunasiSisa: '', lunasiSisaRaw: 0,
+            lunasiModalOpen: false, lunasiType: '', lunasiId: null, lunasiNoOrder: '', lunasiSisa: '', lunasiSisaRaw: 0,
             lunasiRincian: [{ cara_bayar: 'tunai', jumlah: '', no_referensi: '' }],
             get lunasiRincianTotal() { return this.lunasiRincian.reduce((sum, r) => sum + Number(r.jumlah || 0), 0); },
             get lunasiRincianDiff() { return Math.round((this.lunasiSisaRaw - this.lunasiRincianTotal) * 100) / 100; },
@@ -14,6 +14,7 @@
             // change handed back, not an error.
             get lunasiRincianKembalian() { return this.lunasiRincianDiff < 0 ? Math.abs(this.lunasiRincianDiff) : 0; },
             get lunasiRincianError() {
+                if (this.lunasiRincian.some((row) => Number(row.jumlah || 0) % 100 !== 0)) return 'Setiap nominal pembayaran harus kelipatan Rp100.';
                 if (this.lunasiRincianDiff <= 0) return '';
                 return `Kurang Rp ${this.lunasiRincianDiff.toLocaleString('id-ID')}.`;
             },
@@ -101,6 +102,7 @@
                     <tr>
                         <th class="px-3 py-2 w-12">No</th>
                         <th class="px-3 py-2">No Order</th>
+                        <th class="px-3 py-2">Tipe</th>
                         <th class="px-3 py-2">Tanggal</th>
                         <th class="px-3 py-2">Customer</th>
                         <th class="px-3 py-2 text-right">Total</th>
@@ -177,6 +179,7 @@
                     <tr>
                         <th class="px-3 py-2 w-12">No</th>
                         <th class="px-3 py-2">No Order</th>
+                        <th class="px-3 py-2">Tipe</th>
                         <th class="px-3 py-2">Tanggal</th>
                         <th class="px-3 py-2">Customer</th>
                         <th class="px-3 py-2 text-right">Total</th>
@@ -204,6 +207,7 @@
                                     @endif
                                 @endif
                             </td>
+                            <td class="px-3 py-2 text-gray-600 capitalize">{{ $order->order_type }}</td>
                             <td class="px-3 py-2 text-gray-600">{{ is_string($order->TglOrder) ? $order->TglOrder : $order->TglOrder?->format('Y-m-d') }}</td>
                             <td class="px-3 py-2 text-gray-600">{{ $order->customer?->NmCust ? ucwords(mb_strtolower($order->customer->NmCust)) : '-' }}</td>
                             <td class="px-3 py-2 text-right text-gray-900">Rp {{ number_format($order->total ?? 0, 0, ',', '.') }}</td>
@@ -211,14 +215,14 @@
                             <td class="px-3 py-2 text-right text-amber-700 font-semibold">Rp {{ number_format($order->jumlah_piutang ?? 0, 0, ',', '.') }}</td>
                             <td class="px-3 py-2 text-right">
                                 <button type="button"
-                                        @click="lunasiModalOpen = true; lunasiId = {{ $order->id }}; lunasiNoOrder = '{{ $order->NoOrder }}'; lunasiSisa = '{{ number_format($order->jumlah_piutang ?? 0, 0, ',', '.') }}'; lunasiSisaRaw = {{ (float) ($order->jumlah_piutang ?? 0) }}; lunasiRincian = [{ cara_bayar: 'tunai', jumlah: '', no_referensi: '' }]"
+                                        @click="lunasiModalOpen = true; lunasiType = '{{ $order->order_type }}'; lunasiId = {{ $order->id }}; lunasiNoOrder = '{{ $order->NoOrder }}'; lunasiSisa = '{{ number_format($order->jumlah_piutang ?? 0, 0, ',', '.') }}'; lunasiSisaRaw = {{ (float) ($order->jumlah_piutang ?? 0) }}; lunasiRincian = [{ cara_bayar: 'tunai', jumlah: '', no_referensi: '' }]"
                                         class="inline-flex items-center px-3 py-1.5 bg-green-600 text-white text-xs font-semibold rounded-md hover:bg-green-700">
                                     Lunasi
                                 </button>
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="8" class="px-4 py-6 text-center text-gray-400">Tidak ada order outdoor dengan sisa DP.</td></tr>
+                        <tr><td colspan="9" class="px-4 py-6 text-center text-gray-400">Tidak ada order indoor atau outdoor dengan sisa DP.</td></tr>
                     @endforelse
                 </tbody>
             </table>
@@ -294,7 +298,7 @@
             <div @click="lunasiModalOpen = false" class="absolute inset-0 bg-gray-900/50"></div>
 
             <div class="relative bg-white rounded-lg shadow-lg w-full max-w-sm">
-                <form method="POST" :action="`/kasir/outdoor/${lunasiId}/lunasi`" class="p-5 space-y-4"
+                <form method="POST" :action="`/kasir/${lunasiType}/${lunasiId}/lunasi`" class="p-5 space-y-4"
                       @submit="if (lunasiRincianError) { $event.preventDefault(); }">
                     @csrf
                     <h3 class="font-semibold text-gray-900">Pelunasan DP — <span x-text="lunasiNoOrder"></span></h3>

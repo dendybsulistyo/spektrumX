@@ -52,15 +52,23 @@ class KasirController extends Controller
             ->orderByDesc('NoOrder')
             ->get();
 
-        // Outdoor orders paid via DP still owe a balance — surfaced here so
-        // kasir can record the pelunasan (settlement) whenever it comes in.
-        $dpOrders = OrderOutdoor::query()
-            ->with('customer.limit')
-            ->where('status_bayar', 'dp')
-            ->where('jumlah_piutang', '>', 0)
-            ->orderByDesc('TglOrder')
-            ->orderByDesc('NoOrder')
-            ->get();
+        // Indoor and Outdoor orders paid via DP still owe a balance —
+        // surfaced together so kasir can record the pelunasan at any time.
+        $dpOrders = collect();
+        foreach (['indoor' => OrderIndoor::class, 'outdoor' => OrderOutdoor::class] as $orderType => $model) {
+            $model::query()
+                ->with('customer.limit')
+                ->where('status_bayar', 'dp')
+                ->where('jumlah_piutang', '>', 0)
+                ->orderByDesc('TglOrder')
+                ->orderByDesc('NoOrder')
+                ->get()
+                ->each(function ($order) use (&$dpOrders, $orderType) {
+                    $order->order_type = $orderType;
+                    $dpOrders->push($order);
+                });
+        }
+        $dpOrders = $dpOrders->sortByDesc('TglOrder')->values();
 
         // Voided invoices across all 3 order types, waiting for a kasir to
         // issue their nota pengganti — tagged with order_type so the view
@@ -299,11 +307,11 @@ class KasirController extends Controller
         $jumlahDp = 0.0;
 
         if ($data['metode_bayar'] === 'dp') {
-            // DP is an Outdoor-only facility — the goods still get produced
+            // DP applies to Indoor and Outdoor. The goods still get produced
             // and handed over, but the balance must be settled (via lunasi())
             // before Pengambilan will release them to the customer.
-            if ($type !== 'outdoor') {
-                return back()->with('error', 'DP hanya berlaku untuk order outdoor.');
+            if (! in_array($type, ['indoor', 'outdoor'], true)) {
+                return back()->with('error', 'DP hanya berlaku untuk order indoor atau outdoor.');
             }
 
             $jumlahDp = (float) collect($data['rincian'] ?? [])->sum('jumlah');
@@ -407,6 +415,8 @@ class KasirController extends Controller
      */
     private function commitHutang(Model $order, string $type, float $total, ?string $catatan, int $kasirUserId, ?int $approvedBy = null): void
     {
+        $total = Rupiah::bulatkan($total);
+
         DB::transaction(function () use ($order, $type, $total, $catatan, $kasirUserId, $approvedBy) {
             $this->creditService->addHutang($order->customer, $total);
 
@@ -474,17 +484,17 @@ class KasirController extends Controller
     }
 
     /**
-     * Settle the remaining balance of a DP order. Can happen any time after
-     * the DP itself — the only hard gate is that Pengambilan won't release
-     * goods until this has been done.
+     * Settle the remaining balance of an Indoor or Outdoor DP order. Can
+     * happen any time after the DP itself — Pengambilan won't release goods
+     * until this has been done.
      */
     public function lunasi(Request $request, string $type, int $id): RedirectResponse
     {
-        if ($type !== 'outdoor') {
+        if (! in_array($type, ['indoor', 'outdoor'], true)) {
             abort(404);
         }
 
-        $order = OrderOutdoor::findOrFail($id);
+        $order = $this->resolveOrder($type, $id);
 
         if ($order->status_bayar !== 'dp' || (float) $order->jumlah_piutang <= 0) {
             return back()->with('error', 'Order ini tidak sedang menunggu pelunasan DP.');

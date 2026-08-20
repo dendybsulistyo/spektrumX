@@ -293,7 +293,7 @@
                                 Hutang (khusus VIP){{ $order->customer?->isVip ? '' : ' — customer bukan VIP' }}
                             </span>
                         </label>
-                        @if ($type === 'outdoor')
+                        @if (in_array($type, ['indoor', 'outdoor'], true))
                             <label class="flex items-center gap-2">
                                 <input type="radio" name="metode_bayar" value="dp" x-model="metode" class="text-gray-900 focus:ring-gray-900">
                                 <span class="text-sm text-gray-700">DP (minimal 50%)</span>
