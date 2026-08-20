@@ -9,6 +9,7 @@ use App\Models\OrderReworkRequest;
 use App\Models\OrderStatusNote;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -32,52 +33,54 @@ class StageProgressService
      */
     public function advance(Model $item, string $fromStage, int $qty, ?string $catatan, int $userId): array
     {
-        $nextStage = $item::nextStage($fromStage);
-        abort_if($nextStage === null, 500, "Tidak ada tahap berikutnya dari {$fromStage}.");
+        return DB::transaction(function () use ($item, $fromStage, $qty, $catatan, $userId) {
+            // Read the latest row under a lock so two operators can never
+            // both move the same remaining Qty past the order's quantity.
+            $item = $item->newQuery()->lockForUpdate()->findOrFail($item->getKey());
+            $nextStage = $item::nextStage($fromStage);
+            abort_if($nextStage === null, 500, "Tidak ada tahap berikutnya dari {$fromStage}.");
 
-        $order = $item->order;
+            $order = $item->order;
 
-        abort_if($order->cancel_requested_at, 422, 'Order ini sedang menunggu persetujuan pembatalan.');
-        abort_if(
-            OrderReworkRequest::forOrder($item->orderTypeSlug(), $order->id)->pending()->exists(),
-            422,
-            'Order ini sedang menunggu persetujuan pembatalan/ulang proses.'
-        );
-        $availableQty = $item->qtyAt($fromStage);
+            abort_if($order->cancel_requested_at, 422, 'Order ini sedang menunggu persetujuan pembatalan.');
+            abort_if(
+                OrderReworkRequest::forOrder($item->orderTypeSlug(), $order->id)->pending()->exists(),
+                422,
+                'Order ini sedang menunggu persetujuan pembatalan/ulang proses.'
+            );
 
-        // The amount can become stale between rendering the queue and an
-        // operator submitting it (for example after another operator moves
-        // part of the same item). Treat it as normal form validation, not a
-        // server exception page.
-        if ($qty < 1 || $qty > $availableQty) {
-            $message = $availableQty > 0
-                ? "Qty tidak valid. Sisa Qty di tahap {$fromStage}: {$availableQty}."
-                : "Item ini sudah tidak memiliki sisa Qty di tahap {$fromStage}. Muat ulang halaman.";
+            $availableQty = $item->qtyAt($fromStage);
 
-            throw ValidationException::withMessages(['qty' => $message]);
-        }
+            if ($qty < 1 || $qty > $availableQty || $qty > (int) $item->Qty) {
+                $message = $availableQty > 0
+                    ? "Qty tidak valid. Sisa Qty di tahap {$fromStage}: {$availableQty}."
+                    : "Item ini sudah tidak memiliki sisa Qty di tahap {$fromStage}. Muat ulang halaman.";
 
-        $item->decrement("qty_{$fromStage}", $qty);
-        $item->increment("qty_{$nextStage}", $qty);
-        $item->refresh();
+                throw ValidationException::withMessages(['qty' => $message]);
+            }
 
-        $stageCleared = $item->qtyAt($fromStage) === 0;
+            $item->decrement("qty_{$fromStage}", $qty);
+            $item->increment("qty_{$nextStage}", $qty);
+            $item->refresh();
 
-        OrderStatusNote::create([
-            'order_type' => $item->orderTypeSlug(),
-            'order_id' => $order->id,
-            'order_detail_id' => $item->id,
-            'qty' => $qty,
-            'stage' => $fromStage,
-            'action' => $stageCleared ? 'selesai' : 'progress',
-            'catatan' => $catatan,
-            'user_id' => $userId,
-            'created_at' => now(),
-        ]);
+            $stageCleared = $item->qtyAt($fromStage) === 0;
 
-        $order->recalculateStatus();
+            OrderStatusNote::create([
+                'order_type' => $item->orderTypeSlug(),
+                'order_id' => $order->id,
+                'order_detail_id' => $item->id,
+                'qty' => $qty,
+                'stage' => $fromStage,
+                'action' => $stageCleared ? 'selesai' : 'progress',
+                'catatan' => $catatan,
+                'user_id' => $userId,
+                'created_at' => now(),
+            ]);
 
-        return ['order' => $order, 'item' => $item, 'moved' => $qty, 'stageCleared' => $stageCleared];
+            $order->recalculateStatus();
+
+            return ['order' => $order, 'item' => $item, 'moved' => $qty, 'stageCleared' => $stageCleared];
+        });
     }
 
     /**

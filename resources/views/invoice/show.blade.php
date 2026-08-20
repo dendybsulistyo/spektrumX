@@ -41,6 +41,14 @@
         .payment-summary .row { display:flex; justify-content:space-between; gap:.3cm; padding:.03cm 0; }
         .payment-summary .sisa { color:#8b330f; font-weight:700; }
         .spacer { flex:1; min-height:.3cm; }
+        .bottom-area { min-height:2.05cm; padding:0 1.5cm .42cm; display:grid; grid-template-columns:1fr 5.2cm 1fr; column-gap:.45cm; }
+        .print-meta { align-self:end; color:var(--muted); font-size:10pt; line-height:1.55; }
+        .print-meta .key { display:inline-block; min-width:1.85cm; color:var(--ink); font-weight:700; }
+        .dp-breakdown { align-self:end; font-size:9pt; }
+        .dp-breakdown .row { display:flex; justify-content:space-between; gap:.45cm; padding:.06cm 0; }
+        .dp-breakdown .label { color:var(--ink); font-weight:700; }
+        .dp-breakdown .amount { min-width:2.25cm; text-align:right; font-weight:700; }
+        .dp-breakdown .balance { border-top:1px solid var(--line); margin-top:.05cm; padding-top:.1cm; }
         .actions { width:21.6cm; margin:14px auto 0; display:flex; justify-content:space-between; align-items:center; }
         .btn { padding:10px 18px; border:0; border-radius:7px; background:var(--ink); color:#fff; cursor:pointer; font-weight:700; text-decoration:none; }
         .link-back { color:#506363; font-size:14px; text-decoration:none; }
@@ -68,6 +76,8 @@
         $totalTagihan = $diskonStatus === 'approved' ? $order->totalSetelahDiskon() : (float) ($order->total ?? 0);
         $jumlahPiutang = (float) ($order->jumlah_piutang ?? 0);
         $jumlahDpDibayar = $totalTagihan - $jumlahPiutang;
+        $uangMuka = $totalTagihan * 0.5;
+        $kurangBayarDp = max($uangMuka - $jumlahDpDibayar, 0);
         $companyName = $pengaturan?->nama_perusahaan ?: config('app.name', 'Spektrum');
         $companyAddress = $pengaturan?->alamat_perusahaan ?: 'Yogyakarta';
         $companyNpwp = $pengaturan?->npwp_perusahaan;
@@ -130,9 +140,6 @@
                     @endif
                 </tbody>
             </table>
-            @if ($isLastPage && $order->status_bayar === 'dp')
-                <div class="payment-summary"><div class="row"><span>Uang Muka (DP) Dibayar</span><span>Rp {{ number_format($jumlahDpDibayar, 0, ',', '.') }}</span></div><div class="row sisa"><span>Sisa yang Harus Dilunasi</span><span>Rp {{ number_format($jumlahPiutang, 0, ',', '.') }}</span></div></div>
-            @endif
             @if ($isLastPage && $order->replacement_order_id)
                 <div class="payment-summary">
                     <div class="row"><span>Nota asal hangus</span><span>{{ $order->replaces?->NoOrder ?? '-' }}</span></div>
@@ -144,6 +151,20 @@
             <div class="spacer"></div>
         </section>
 
+        <section class="bottom-area">
+            <div class="print-meta">
+                <div><span class="key">Operator Kasir</span>: {{ $order->kasir?->name ?? '-' }}</div>
+                <div><span class="key">Tanggal Order</span>: {{ $tanggalOrder ?? '-' }}</div>
+            </div>
+            @if ($isLastPage && $order->status_bayar === 'dp')
+                <div class="dp-breakdown">
+                    <div class="row"><span class="label">Total</span><span class="amount">Rp {{ number_format($totalTagihan, 0, ',', '.') }}</span></div>
+                    <div class="row"><span class="label">Uang Muka</span><span class="amount">Rp {{ number_format($uangMuka, 0, ',', '.') }}</span></div>
+                    <div class="row"><span class="label">Sudah Bayar</span><span class="amount">Rp {{ number_format($jumlahDpDibayar, 0, ',', '.') }}</span></div>
+                    <div class="row balance"><span class="label">Kurang Bayar</span><span class="amount">Rp {{ number_format($kurangBayarDp, 0, ',', '.') }}</span></div>
+                </div>
+            @endif
+        </section>
     </main>
     @endforeach
 

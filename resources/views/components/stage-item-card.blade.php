@@ -66,9 +66,16 @@
                 @endif
             </div>
             <div style="display: inline-flex; align-items: center; gap: var(--space-3);">
-                {{-- Qty yang SUDAH dikirim maju dari tahap ini (0 di awal,
-                     naik seiring diproses) — bukan qty yang masih tersisa. --}}
-                <span class="progress-tag">Progres di {{ $stageLabel }}: {{ $item->Qty - $item->qtyAt($stage) }}/{{ $item->Qty }}</span>
+                @if ($capturePenerima)
+                    {{-- Pengambilan perlu menampilkan Qty yang benar-benar
+                         tersedia untuk diserahkan, bukan Qty yang sudah
+                         keluar dari tahap Siap Diambil. --}}
+                    <span class="progress-tag">Siap Diserahkan: {{ $item->qtyAt($stage) }}/{{ $item->Qty }}</span>
+                @else
+                    {{-- Qty yang SUDAH dikirim maju dari tahap ini (0 di awal,
+                         naik seiring diproses) — bukan qty yang masih tersisa. --}}
+                    <span class="progress-tag">Progres di {{ $stageLabel }}: {{ $item->Qty - $item->qtyAt($stage) }}/{{ $item->Qty }}</span>
+                @endif
                 @can($manageAbility)
                     @if ($capturePenerima)
                         {{-- Pengambilan butuh nama & kontak penerima dulu sebelum
@@ -78,12 +85,13 @@
                             Kirim {{ $nextLabel }}
                         </button>
                     @else
-                        {{-- Qty di sini murni apa yang sudah dikirim maju dari tahap
-                             sebelumnya — operator di tahap ini cuma meneruskan
-                             semuanya, tidak membagi lagi, jadi inputnya read-only. --}}
+                        {{-- Operator boleh meneruskan sebagian Qty. Batas di browser
+                             dan server sama-sama memakai sisa Qty di tahap ini. --}}
                         <form method="POST" action="{{ route($routeName, [$type, $item->id]) }}" style="display: flex; align-items: center; gap: 4px;">
                             @csrf
-                            <input type="number" value="{{ $item->qtyAt($stage) }}" disabled
+                            <input type="number" name="qty" min="1" max="{{ $item->qtyAt($stage) }}" value="{{ $item->qtyAt($stage) }}" required
+                                   oninput="this.setCustomValidity('')"
+                                   oninvalid="this.setCustomValidity(this.validity.valueMissing ? 'Isi jumlah Qty dulu.' : (this.validity.rangeOverflow ? 'Maksimal {{ $item->qtyAt($stage) }} sesuai sisa Qty di {{ $stageLabel }}.' : (this.validity.rangeUnderflow ? 'Qty minimal 1.' : 'Qty tidak valid.')))"
                                    class="in-input no-spinner" style="width: 70px;">
                             <button type="submit" class="in-btn">Kirim {{ $nextLabel }}</button>
                         </form>
