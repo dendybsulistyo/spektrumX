@@ -36,7 +36,8 @@
         .payment-summary .row { display:flex; justify-content:space-between; gap:.3cm; padding:.03cm 0; }
         .payment-summary .sisa { color:#8b330f; font-weight:700; }
         .spacer { flex:1; min-height:.3cm; }
-        .bottom-area { min-height:2.05cm; padding:0 1.5cm .42cm; display:grid; grid-template-columns:1fr 5.2cm 1fr; column-gap:.45cm; }
+        .bottom-area { min-height:2.05cm; padding:0 1.5cm .42cm; display:grid; grid-template-columns:1fr 5.2cm 1fr; column-gap:.45cm; break-inside:avoid; page-break-inside:avoid; }
+        .bottom-area--dp { min-height:2.7cm; }
         .print-meta { align-self:end; color:var(--muted); font-size:10pt; line-height:1.55; }
         .print-meta .key { display:inline-block; min-width:1.85cm; color:var(--ink); font-weight:700; }
         .dp-breakdown { align-self:end; font-size:9pt; }
@@ -77,7 +78,11 @@
         $customerAddress = trim(collect([$order->customer?->Alamat, $order->customer?->Kota])->filter()->implode(', '));
         // A form sheet has limited usable height. Keep item rows together
         // and repeat the document header on subsequent printed sheets.
-        $itemPages = $items->chunk(7);
+        // The DP breakdown is four rows tall. CForm pages need a little more
+        // reserved space for it so the last “Kurang Bayar” row never moves
+        // on to a separate sheet.
+        $itemsPerPage = $order->status_bayar === 'dp' ? 5 : 7;
+        $itemPages = $items->chunk($itemsPerPage);
         if ($itemPages->isEmpty()) {
             $itemPages = collect([collect()]);
         }
@@ -131,7 +136,7 @@
             <div class="spacer"></div>
         </section>
 
-        <section class="bottom-area">
+        <section class="bottom-area {{ $isLastPage && $order->status_bayar === 'dp' ? 'bottom-area--dp' : '' }}">
             <div>
                 @if ($pageIndex === 0)
                     <div class="print-meta">
