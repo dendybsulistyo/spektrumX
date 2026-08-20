@@ -117,9 +117,7 @@
                         <tr><td colspan="7" class="text-right total-label">Subtotal</td><td class="text-right">Rp {{ number_format($order->total ?? 0, 0, ',', '.') }}</td></tr>
                         <tr><td colspan="7" class="text-right total-label">Diskon {{ $order->diskonApprovedLabel() }}</td><td class="text-right">- Rp {{ number_format($order->diskonNominal(), 0, ',', '.') }}</td></tr>
                     @endif
-                    @if ($isLastPage)
-                        <tr class="total-row"><td colspan="7" class="text-right total-label">Total Tagihan</td><td class="text-right total-amount">Rp {{ number_format($totalTagihan, 0, ',', '.') }}</td></tr>
-                    @endif
+                    <tr class="total-row"><td colspan="7" class="text-right total-label">Total Tagihan</td><td class="text-right total-amount">Rp {{ number_format($totalTagihan, 0, ',', '.') }}</td></tr>
                 </tbody>
             </table>
             @if ($isLastPage && $order->replacement_order_id)
@@ -134,9 +132,13 @@
         </section>
 
         <section class="bottom-area">
-            <div class="print-meta">
-                <div><span class="key">Operator Kasir</span>: {{ $order->kasir?->name ?? '-' }}</div>
-                <div><span class="key">Tanggal Order</span>: {{ $tanggalOrder ?? '-' }}</div>
+            <div>
+                @if ($pageIndex === 0)
+                    <div class="print-meta">
+                        <div><span class="key">Operator Kasir</span>: {{ $order->kasir?->name ?? '-' }}</div>
+                        <div><span class="key">Tanggal Order</span>: {{ $tanggalOrder ?? '-' }}</div>
+                    </div>
+                @endif
             </div>
             @if ($isLastPage && $order->status_bayar === 'dp')
                 <div class="dp-breakdown">
