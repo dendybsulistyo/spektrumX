@@ -60,6 +60,8 @@ class OrderIndoorController extends Controller
      * customer/items so a kasir can issue its nota pengganti — the same
      * pattern as OrderOutdoorController::createReplacement().
      */
+
+    
     public function createReplacement(OrderIndoor $orderIndoor): View
     {
         abort_unless(
