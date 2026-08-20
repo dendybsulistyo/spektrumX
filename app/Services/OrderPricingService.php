@@ -77,10 +77,8 @@ class OrderPricingService
         }
 
         // Area-based pricing (harga per m²) almost never lands on a round
-        // Rupiah amount once Panjang/Lebar aren't whole meters — round to
-        // the nearest Rp 100 so subtotal/total never show a sub-100
-        // remainder, same convention HasDiskonNota::diskonNominal() already
-        // uses for discount amounts.
+        // Rupiah amount once Panjang/Lebar aren't whole meters — always
+        // round up to Rp100 so subtotal/total never show a sub-100 remainder.
         return Rupiah::bulatkan($hargaStd * $areaM2 * $qty);
     }
 
