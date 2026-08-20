@@ -53,6 +53,11 @@
             html, body { width:21.6cm; height:13.9cm; background:#fff; }
             body { padding:0; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
             .sheet { width:21.6cm; min-height:13.9cm; height:13.9cm; margin:0; box-shadow:none; break-after:page; page-break-after:always; }
+            /* LQ-310 CForm calibration: the tractor feed advances one
+               1/6-inch line farther than the printed form from page two.
+               Offset each subsequent rendered page cumulatively while
+               keeping the first page as the alignment reference. */
+            .sheet { transform:translateY(var(--cform-page-offset, 0cm)); }
             main.sheet:last-of-type { break-after:auto; page-break-after:auto; }
             .no-print { display:none !important; }
         }
@@ -91,7 +96,7 @@
 
     @foreach ($itemPages as $pageIndex => $pageItems)
         @php $isLastPage = $pageIndex === $totalPages - 1; @endphp
-    <main class="sheet">
+    <main class="sheet" style="--cform-page-offset: -{{ number_format($pageIndex * 0.423, 3, '.', '') }}cm;">
         <header class="invoice-header">
             <div class="preprinted-header-space" aria-hidden="true"></div>
             <section class="customer-block">
