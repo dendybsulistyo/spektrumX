@@ -230,8 +230,8 @@
                     if (val + 0.5 < this.replacementTarget) return `Kurang Rp ${Math.round(this.replacementTarget - val).toLocaleString('id-ID')}.`;
                     return '';
                 },
-                dpMin: {{ (int) ceil(($diskonStatus === 'approved' ? $order->totalSetelahDiskon() : $order->total ?? 0) * 0.5) }},
-                dpMax: {{ max((int) ($diskonStatus === 'approved' ? $order->totalSetelahDiskon() : $order->total ?? 0) - 1, 0) }},
+                dpMin: {{ (int) (ceil((($diskonStatus === 'approved' ? $order->totalSetelahDiskon() : $order->total ?? 0) * 0.5) / 100) * 100) }},
+                dpMax: {{ max((int) (round(($diskonStatus === 'approved' ? $order->totalSetelahDiskon() : $order->total ?? 0) / 100) * 100) - 100, 0) }},
                 // DP no longer has its own 'Jumlah DP' input — that was the
                 // same amount typed twice, once here and once in the rincian
                 // row below. The rincian total below now IS the DP amount.
@@ -242,7 +242,7 @@
                     return '';
                 },
                 rincian: [{ cara_bayar: 'tunai', jumlah: '', no_referensi: '' }],
-                totalBayar: {{ (float) ($diskonStatus === 'approved' ? $order->totalSetelahDiskon() : ($order->total ?? 0)) }},
+                totalBayar: {{ (float) (round(($diskonStatus === 'approved' ? $order->totalSetelahDiskon() : ($order->total ?? 0)) / 100) * 100) }},
                 get rincianTotal() {
                     return this.rincian.reduce((sum, r) => sum + Number(r.jumlah || 0), 0);
                 },
@@ -264,7 +264,9 @@
                     // UI at all (still the old single cara_bayar radios
                     // below) — nothing to validate here, or Proses
                     // Pembayaran would stay permanently blocked for it.
-                    if (this.isReplacement || this.metode === 'hutang' || this.metode === 'dp' || this.rincianDiff <= 0) return '';
+                    if (this.isReplacement || this.metode === 'hutang') return '';
+                    if (this.rincian.some((row) => Number(row.jumlah || 0) % 100 !== 0)) return 'Setiap nominal pembayaran harus kelipatan Rp100.';
+                    if (this.metode === 'dp' || this.rincianDiff <= 0) return '';
                     return `Kurang Rp ${this.rincianDiff.toLocaleString('id-ID')}.`;
                 },
                 addRincian() { this.rincian.push({ cara_bayar: 'tunai', jumlah: '', no_referensi: '' }); },
@@ -352,9 +354,12 @@
                     <div x-show="metode !== 'hutang'" x-cloak>
                         <x-input-label value="Rincian Pembayaran" />
                         <p class="text-xs text-gray-500 mt-0.5" x-show="metode !== 'dp'">Bisa dibagi ke beberapa metode sekaligus, misalnya sebagian QRIS sebagian transfer.</p>
-                        @php $dpBasis = $diskonStatus === 'approved' ? $order->totalSetelahDiskon() : ($order->total ?? 0); @endphp
+                        @php
+                            $dpBasis = $diskonStatus === 'approved' ? $order->totalSetelahDiskon() : ($order->total ?? 0);
+                            $minimumDp = ceil(($dpBasis * 0.5) / 100) * 100;
+                        @endphp
                         <p class="text-xs text-gray-500 mt-0.5" x-show="metode === 'dp'" x-cloak>
-                            Jumlah yang diisi di bawah menjadi jumlah DP — minimal Rp {{ number_format($dpBasis * 0.5, 0, ',', '.') }} (50% dari total {{ $diskonStatus === 'approved' ? 'setelah diskon ' : '' }}Rp {{ number_format($dpBasis, 0, ',', '.') }}).
+                            Jumlah yang diisi di bawah menjadi jumlah DP — minimal Rp {{ number_format($minimumDp, 0, ',', '.') }} (50% dari total {{ $diskonStatus === 'approved' ? 'setelah diskon ' : '' }}Rp {{ number_format($dpBasis, 0, ',', '.') }}, dibulatkan ke atas per Rp100).
                         </p>
 
                         <div class="mt-2 space-y-2">
@@ -494,7 +499,7 @@
 
                 <div x-show="diskonTipe === 'nominal'" x-cloak>
                     <x-input-label for="diskon_nominal" value="Diskon (Rp)" />
-                    <x-text-input id="diskon_nominal" name="diskon_nominal" type="number" min="1" max="{{ (int) $order->total }}"
+                    <x-text-input id="diskon_nominal" name="diskon_nominal" type="number" min="100" step="100" max="{{ (int) $order->total }}"
                                   class="mt-1 block w-full no-spinner" />
                     <p class="text-xs text-gray-400 mt-1">Maksimal Rp {{ number_format($order->total, 0, ',', '.') }} (total nota).</p>
                     <x-input-error :messages="$errors->get('diskon_nominal')" class="mt-1" />

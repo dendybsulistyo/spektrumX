@@ -3,6 +3,7 @@
 namespace App\Traits;
 
 use App\Models\User;
+use App\Support\Rupiah;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
@@ -52,7 +53,7 @@ trait HasDiskonNota
     public function diskonNominal(): float
     {
         if ($this->diskon_tipe === 'nominal') {
-            return round((float) $this->diskon_nominal_tetap, 2);
+            return Rupiah::bulatkan((float) $this->diskon_nominal_tetap);
         }
 
         if (! $this->diskon_persen) {
@@ -65,12 +66,12 @@ trait HasDiskonNota
         // bill never needs coins smaller than that.
         $raw = (float) $this->total * ((float) $this->diskon_persen / 100);
 
-        return round($raw / 100) * 100;
+        return Rupiah::bulatkan($raw);
     }
 
     public function totalSetelahDiskon(): float
     {
-        return round((float) $this->total - $this->diskonNominal(), 2);
+        return Rupiah::bulatkan((float) $this->total - $this->diskonNominal());
     }
 
     /**

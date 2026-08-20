@@ -13,6 +13,7 @@ use App\Models\OrderIndoor;
 use App\Models\OrderOutdoor;
 use App\Models\PrinterOutdoor;
 use App\Models\Produk;
+use App\Support\Rupiah;
 use Illuminate\Support\Collection;
 
 class OrderPricingService
@@ -44,14 +45,14 @@ class OrderPricingService
         if ($produk->isPjLb === Produk::PJLB_QTY_ALT && $pisauTurun !== null && $jumlahKertas !== null && $tebalKertas !== null) {
             $raw = (($pisauTurun * $jumlahKertas * $tebalKertas) / 10) + KonfigurasiJasaPotong::current()->nilai_x;
 
-            return max($raw, $produk->HargaMin);
+            return Rupiah::bulatkan(max($raw, $produk->HargaMin));
         }
 
         $raw = $produk->isAreaPriced()
             ? $produk->HargaStd * $panjang * $lebar * $qty
             : $produk->HargaStd * $qty;
 
-        return max($raw, $produk->HargaMin);
+        return Rupiah::bulatkan(max($raw, $produk->HargaMin));
     }
 
     /**
@@ -80,7 +81,7 @@ class OrderPricingService
         // the nearest Rp 100 so subtotal/total never show a sub-100
         // remainder, same convention HasDiskonNota::diskonNominal() already
         // uses for discount amounts.
-        return round($hargaStd * $areaM2 * $qty / 100) * 100;
+        return Rupiah::bulatkan($hargaStd * $areaM2 * $qty);
     }
 
     /**
@@ -90,7 +91,7 @@ class OrderPricingService
      */
     public function totalIndoor(OrderIndoor $order): float
     {
-        return $order->detailItems()->sum(function ($item) {
+        return Rupiah::bulatkan($order->detailItems()->sum(function ($item) {
             if ($item->isArtwork()) {
                 $harga = HargaArtwork::where('KdProd', $item->KdProd)->first();
 
@@ -110,16 +111,16 @@ class OrderPricingService
                     $item->PisauTurun, $item->JumlahKertas, $item->TebalKertas,
                 )
                 : 0;
-        });
+        }));
     }
 
     public function totalOutdoor(OrderOutdoor $order): float
     {
-        return $order->items->sum(function ($item) use ($order) {
+        return Rupiah::bulatkan($order->items->sum(function ($item) use ($order) {
             $harga = $item->hargaCetak;
 
             return $harga ? $this->lineTotalOutdoor($harga, $item->Panjang, $item->Lebar, $item->Qty, $order->KdCust) : 0;
-        });
+        }));
     }
 
     /**
@@ -142,19 +143,19 @@ class OrderPricingService
         if ($harga->isJasaPotong() && $pisauTurun !== null && $jumlahKertas !== null && $tebalKertas !== null) {
             $raw = (($pisauTurun * $jumlahKertas * $tebalKertas) / 10) + KonfigurasiJasaPotongArtwork::current()->nilai_x;
 
-            return max($raw, $harga->HargaMin);
+            return Rupiah::bulatkan(max($raw, $harga->HargaMin));
         }
 
         $raw = $harga->isAreaPriced()
             ? $harga->HargaStd * $panjang * $lebar * $qty
             : $harga->HargaStd * $qty;
 
-        return max($raw, $harga->HargaMin);
+        return Rupiah::bulatkan(max($raw, $harga->HargaMin));
     }
 
     public function totalArtwork(OrderArtwork $order): float
     {
-        return $order->items->sum(function ($item) {
+        return Rupiah::bulatkan($order->items->sum(function ($item) {
             $harga = HargaArtwork::where('KdProd', $item->KdProd)->first();
 
             return $harga
@@ -163,7 +164,7 @@ class OrderPricingService
                     $item->PisauTurun, $item->JumlahKertas, $item->TebalKertas,
                 )
                 : 0;
-        });
+        }));
     }
 
     /**

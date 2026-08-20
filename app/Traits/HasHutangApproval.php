@@ -3,6 +3,7 @@
 namespace App\Traits;
 
 use App\Models\User;
+use App\Support\Rupiah;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
@@ -53,7 +54,7 @@ trait HasHutangApproval
      */
     public function hutangAmount(): float
     {
-        return $this->diskonStatus() === 'approved' ? $this->totalSetelahDiskon() : (float) $this->total;
+        return Rupiah::bulatkan($this->diskonStatus() === 'approved' ? $this->totalSetelahDiskon() : (float) $this->total);
     }
 
     /**

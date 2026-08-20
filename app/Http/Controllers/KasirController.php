@@ -14,6 +14,7 @@ use App\Models\User;
 use App\Services\AccountingService;
 use App\Services\CustomerCreditService;
 use App\Services\OrderPricingService;
+use App\Support\Rupiah;
 use App\Support\ResolvesOrderType;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\RedirectResponse;
@@ -139,7 +140,7 @@ class KasirController extends Controller
             ? [
                 'cara_bayar' => ['required_if:metode_bayar,tunai,dp', 'nullable', 'in:tunai,qris,transfer'],
                 'no_referensi' => ['required_if:cara_bayar,qris,transfer', 'nullable', 'string', 'max:50'],
-                'jumlah_bayar' => ['nullable', 'numeric', 'min:0'],
+                'jumlah_bayar' => ['nullable', 'numeric', 'min:0', 'multiple_of:100'],
             ]
             : [
                 // Rincian belongs only to cash/DP payments. The UI hides it
@@ -147,7 +148,7 @@ class KasirController extends Controller
                 // exclude it here instead of validating an irrelevant value.
                 'rincian' => ['exclude_unless:metode_bayar,tunai,dp', 'required', 'array'],
                 'rincian.*.cara_bayar' => ['exclude_unless:metode_bayar,tunai,dp', 'required_with:rincian', 'in:tunai,qris,transfer'],
-                'rincian.*.jumlah' => ['exclude_unless:metode_bayar,tunai,dp', 'required_with:rincian', 'numeric', 'min:1'],
+                'rincian.*.jumlah' => ['exclude_unless:metode_bayar,tunai,dp', 'required_with:rincian', 'numeric', 'min:100', 'multiple_of:100'],
                 'rincian.*.no_referensi' => ['exclude_unless:metode_bayar,tunai,dp', 'nullable', 'string', 'max:50'],
             ];
 
@@ -159,7 +160,7 @@ class KasirController extends Controller
             return back()->with('error', 'Order ini sedang menunggu persetujuan diskon — tidak bisa diproses dulu.');
         }
 
-        $total = $order->diskonStatus() === 'approved' ? $order->totalSetelahDiskon() : (float) $order->total;
+        $total = Rupiah::bulatkan($order->diskonStatus() === 'approved' ? $order->totalSetelahDiskon() : (float) $order->total);
 
         // A replacement keeps the old invoice as history. Money actually
         // received on it becomes credit; its difference is the only cash
@@ -306,7 +307,7 @@ class KasirController extends Controller
             }
 
             $jumlahDp = (float) collect($data['rincian'] ?? [])->sum('jumlah');
-            $minimumDp = $total * 0.5;
+            $minimumDp = Rupiah::bulatkanKeAtas($total * 0.5);
 
             if ($jumlahDp < $minimumDp) {
                 return back()->with('error', 'DP minimal 50% dari total order (Rp '.number_format($minimumDp, 0, ',', '.').').');
@@ -492,7 +493,7 @@ class KasirController extends Controller
         $data = $request->validate([
             'rincian' => ['required', 'array'],
             'rincian.*.cara_bayar' => ['required_with:rincian', 'in:tunai,qris,transfer'],
-            'rincian.*.jumlah' => ['required_with:rincian', 'numeric', 'min:1'],
+            'rincian.*.jumlah' => ['required_with:rincian', 'numeric', 'min:100', 'multiple_of:100'],
             'rincian.*.no_referensi' => ['nullable', 'string', 'max:50'],
         ]);
 
@@ -559,7 +560,7 @@ class KasirController extends Controller
         $data = $request->validate([
             'rincian' => ['required', 'array'],
             'rincian.*.cara_bayar' => ['required_with:rincian', 'in:tunai,qris,transfer'],
-            'rincian.*.jumlah' => ['required_with:rincian', 'numeric', 'min:1'],
+            'rincian.*.jumlah' => ['required_with:rincian', 'numeric', 'min:100', 'multiple_of:100'],
             'rincian.*.no_referensi' => ['nullable', 'string', 'max:50'],
         ]);
 
@@ -633,7 +634,7 @@ class KasirController extends Controller
         $data = $request->validate([
             'diskon_tipe' => ['required', 'in:persen,nominal'],
             'diskon_persen' => ['required_if:diskon_tipe,persen', 'nullable', 'numeric', 'min:0.01', 'max:100'],
-            'diskon_nominal' => ['required_if:diskon_tipe,nominal', 'nullable', 'numeric', 'min:1', 'max:'.(float) $order->total],
+            'diskon_nominal' => ['required_if:diskon_tipe,nominal', 'nullable', 'numeric', 'min:100', 'multiple_of:100', 'max:'.(float) $order->total],
             'diskon_alasan' => ['required', 'string', 'max:255'],
         ]);
 
