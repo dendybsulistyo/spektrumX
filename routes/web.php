@@ -48,6 +48,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\JurnalManualController;
 use App\Http\Controllers\PengaturanKeuanganController;
 use App\Http\Controllers\RoleController;
+use App\Http\Controllers\ServerMonitorController;
 use App\Http\Controllers\TutupBukuController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
@@ -70,6 +71,10 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware('permission:preview-cetak.view')->group(function () {
         Route::get('/preview-cetak', [PreviewCetakController::class, 'index'])->name('preview-cetak.index');
+    });
+
+    Route::middleware('permission:roles.manage')->group(function () {
+        Route::get('/monitor-server', [ServerMonitorController::class, 'index'])->name('server-monitor.index');
     });
 
     Route::middleware('permission:data-warehouse.view')->group(function () {

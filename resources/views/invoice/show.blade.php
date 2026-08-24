@@ -51,7 +51,21 @@
         @media print {
             @page { size:21.6cm 13.9cm; margin:0; }
             html, body { width:21.6cm; height:13.9cm; background:#fff; }
+            /* Dot-matrix printers reproduce the standard fixed-pitch font
+               much more clearly than the styled screen font. This only
+               affects the data printed by the application; the existing
+               graphic/header on the CForm remains the paper's own print. */
+            body, .sheet, table, th, td, .customer-block, .print-meta,
+            .dp-breakdown, .payment-summary, .order-status, .page-info {
+                font-family:"Courier New", Courier, monospace !important;
+                color:#000 !important;
+                letter-spacing:0 !important;
+                text-shadow:none !important;
+            }
             body { padding:0; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+            .customer-row .value, .item-name, .total-label,
+            .total-amount, .print-meta .key, .dp-breakdown .label,
+            .dp-breakdown .amount { font-weight:400 !important; }
             .sheet { width:21.6cm; min-height:13.9cm; height:13.9cm; margin:0; box-shadow:none; break-after:page; page-break-after:always; }
             /* LQ-310 CForm calibration: the tractor feed advances one
                1/6-inch line farther than the printed form from page two.
