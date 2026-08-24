@@ -63,6 +63,15 @@
                 text-shadow:none !important;
             }
             body { padding:0; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+            /* Keep the type large enough for a 9-pin dot-matrix head. */
+            .customer-block { font-size:10pt; line-height:1.35; }
+            .order-status, .page-info { font-size:8.5pt; }
+            table { font-size:8.5pt; line-height:1.2; }
+            thead th { font-size:8pt; }
+            .item-breakdown { font-size:7.5pt; }
+            .total-amount { font-size:10pt; }
+            .payment-summary { font-size:8.5pt; }
+            .print-meta, .dp-breakdown { font-size:10pt; line-height:1.35; }
             .customer-row .value, .item-name, .total-label,
             .total-amount, .print-meta .key, .dp-breakdown .label,
             .dp-breakdown .amount { font-weight:400 !important; }
