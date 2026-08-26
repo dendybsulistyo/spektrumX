@@ -2,6 +2,11 @@
 
 use App\Http\Controllers\BahanCetakOutdoorController;
 use App\Http\Controllers\BahanOutdoorController;
+use App\Http\Controllers\AkunController;
+use App\Http\Controllers\AccountingFixedAssetController;
+use App\Http\Controllers\AccountingSupplierController;
+use App\Http\Controllers\AccountingPurchaseController;
+use App\Http\Controllers\InventoryHppController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DashboardController;
@@ -11,6 +16,8 @@ use App\Http\Controllers\MonitoringKinerjaController;
 use App\Http\Controllers\MonitoringTransaksiController;
 use App\Http\Controllers\DetailIndoorController;
 use App\Http\Controllers\FileMonitorController;
+use App\Http\Controllers\GunggunganController;
+use App\Http\Controllers\GunggunganHistoricalJournalController;
 use App\Http\Controllers\HargaArtworkController;
 use App\Http\Controllers\HargaCetakOutdoorController;
 use App\Http\Controllers\HargaCetakOutdoorKhususController;
@@ -22,6 +29,7 @@ use App\Http\Controllers\PayrollController;
 use App\Http\Controllers\KeuanganController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\KasirController;
+use App\Http\Controllers\LaporanAkuntansiController;
 use App\Http\Controllers\KategoriBahanOutdoorController;
 use App\Http\Controllers\KategoriController;
 use App\Http\Controllers\KategoriProdukIndoorController;
@@ -94,6 +102,24 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::middleware('permission:keuangan.view')->group(function () {
+        Route::get('/akuntansi/akun', [AkunController::class, 'index'])->name('akuntansi.akun.index');
+        Route::get('/akuntansi/suppliers', [AccountingSupplierController::class, 'index'])->name('akuntansi.suppliers.index');
+        Route::get('/akuntansi/pembelian', [AccountingPurchaseController::class, 'index'])->name('akuntansi.purchases.index');
+        Route::get('/akuntansi/laporan-pembelian', [AccountingPurchaseController::class, 'report'])->name('akuntansi.purchases.report');
+        Route::get('/akuntansi/gunggungan', [GunggunganController::class, 'index'])->name('akuntansi.gunggungan');
+        Route::get('/akuntansi/rekap-omset', [GunggunganController::class, 'rekapOmset'])->name('akuntansi.rekap-omset');
+        Route::get('/akuntansi/import-gunggungan', [GunggunganHistoricalJournalController::class, 'index'])->name('akuntansi.import-gunggungan');
+        Route::get('/akuntansi/jurnal-umum', [LaporanAkuntansiController::class, 'jurnalUmum'])->name('akuntansi.jurnal-umum');
+        Route::get('/akuntansi/buku-besar', [LaporanAkuntansiController::class, 'bukuBesar'])->name('akuntansi.buku-besar');
+        Route::get('/akuntansi/neraca-saldo', [LaporanAkuntansiController::class, 'neracaSaldo'])->name('akuntansi.neraca-saldo');
+        Route::get('/akuntansi/hutang-supplier', [LaporanAkuntansiController::class, 'hutangSupplier'])->name('akuntansi.hutang-supplier');
+        Route::get('/akuntansi/piutang-customer', [LaporanAkuntansiController::class, 'piutangCustomer'])->name('akuntansi.piutang-customer');
+        Route::get('/akuntansi/kas-bank', [LaporanAkuntansiController::class, 'kasBank'])->name('akuntansi.kas-bank');
+        Route::get('/akuntansi/neraca', [LaporanAkuntansiController::class, 'neraca'])->name('akuntansi.neraca');
+        Route::get('/akuntansi/perubahan-modal', [LaporanAkuntansiController::class, 'perubahanModal'])->name('akuntansi.perubahan-modal');
+        Route::get('/akuntansi/persediaan-hpp', [InventoryHppController::class, 'index'])->name('akuntansi.inventory-hpp');
+        Route::get('/akuntansi/laporan-hpp', [InventoryHppController::class, 'report'])->name('akuntansi.hpp-report');
+        Route::get('/akuntansi/aset-tetap', [AccountingFixedAssetController::class, 'index'])->name('akuntansi.fixed-assets.index');
         Route::get('/keuangan/kas-harian', [KeuanganController::class, 'kasHarian'])->name('keuangan.kas-harian');
         Route::get('/keuangan/rekap-kasir', [KeuanganController::class, 'rekapKasir'])->name('keuangan.rekap-kasir');
         Route::get('/keuangan/rekap-kasir/{kasir}/customer', [KeuanganController::class, 'rekapKasirCustomer'])->name('keuangan.rekap-kasir.customer');
@@ -118,6 +144,20 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::middleware('permission:keuangan.pengaturan')->group(function () {
+        Route::post('/akuntansi/pembelian', [AccountingPurchaseController::class, 'store'])->name('akuntansi.purchases.store');
+        Route::post('/akuntansi/pembelian/{purchase}/pelunasan', [AccountingPurchaseController::class, 'pay'])->name('akuntansi.purchases.pay');
+        Route::post('/akuntansi/pembelian/{purchase}/retur', [AccountingPurchaseController::class, 'return'])->name('akuntansi.purchases.return');
+        Route::post('/akuntansi/persediaan', [InventoryHppController::class, 'storeItem'])->name('akuntansi.inventory.store-item');
+        Route::post('/akuntansi/persediaan/{item}/opname', [InventoryHppController::class, 'storeCount'])->name('akuntansi.inventory.store-count');
+        Route::post('/akuntansi/suppliers', [AccountingSupplierController::class, 'store'])->name('akuntansi.suppliers.store');
+        Route::put('/akuntansi/suppliers/{supplier}', [AccountingSupplierController::class, 'update'])->name('akuntansi.suppliers.update');
+        Route::delete('/akuntansi/suppliers/{supplier}', [AccountingSupplierController::class, 'destroy'])->name('akuntansi.suppliers.destroy');
+        Route::post('/akuntansi/import-gunggungan', [GunggunganHistoricalJournalController::class, 'store'])->name('akuntansi.import-gunggungan.store');
+        Route::post('/akuntansi/akun', [AkunController::class, 'store'])->name('akuntansi.akun.store');
+        Route::put('/akuntansi/akun/{akun}', [AkunController::class, 'update'])->name('akuntansi.akun.update');
+        Route::delete('/akuntansi/akun/{akun}', [AkunController::class, 'destroy'])->name('akuntansi.akun.destroy');
+        Route::post('/akuntansi/aset-tetap', [AccountingFixedAssetController::class, 'store'])->name('akuntansi.fixed-assets.store');
+        Route::delete('/akuntansi/aset-tetap/{fixedAsset}', [AccountingFixedAssetController::class, 'destroy'])->name('akuntansi.fixed-assets.destroy');
         Route::get('/keuangan/pengaturan', [PengaturanKeuanganController::class, 'edit'])->name('keuangan.pengaturan.edit');
         Route::put('/keuangan/pengaturan', [PengaturanKeuanganController::class, 'update'])->name('keuangan.pengaturan.update');
     });

@@ -16,6 +16,19 @@ html { font-size: 110%; }
     -moz-appearance: textfield;
 }
 
+dialog.pelunasan-modal {
+    width: min(20rem, calc(100vw - 2rem));
+    margin: auto;
+    border: 0;
+    border-radius: .75rem;
+    padding: 0;
+    box-shadow: 0 25px 50px -12px rgb(15 23 42 / .35);
+}
+
+dialog.pelunasan-modal::backdrop {
+    background: rgb(15 23 42 / .45);
+}
+
 /* Warna hover baris tabel berganti-ganti per baris (siklus 6 warna), supaya
    baris yang sedang di-hover lebih gampang dibedakan dari baris sekitarnya.
    Berlaku otomatis di semua tabel (<tbody><tr>) tanpa perlu ubah tiap view. */
@@ -28,3 +41,160 @@ tbody tr:nth-child(6n+3):hover { background-color: #faf5ff; } /* violet-50 */
 tbody tr:nth-child(6n+4):hover { background-color: #fff1f2; } /* rose-50 */
 tbody tr:nth-child(6n+5):hover { background-color: #f0f9ff; } /* sky-50 */
 tbody tr:nth-child(6n):hover   { background-color: #ecfdf5; } /* emerald-50 */
+
+/* Master supplier uses six data columns; keep it readable without horizontal scrolling. */
+body:has(form[action*="/akuntansi/suppliers"]) .max-w-6xl {
+    max-width: none;
+}
+
+body:has(form[action*="/akuntansi/suppliers"]) .overflow-x-auto > table {
+    table-layout: fixed;
+    font-size: .75rem;
+}
+
+body:has(form[action*="/akuntansi/suppliers"]) .overflow-x-auto > table th,
+body:has(form[action*="/akuntansi/suppliers"]) .overflow-x-auto > table td {
+    padding: .5rem .625rem;
+}
+
+body:has(form[action*="/akuntansi/suppliers"]) .overflow-x-auto > table th {
+    font-size: .625rem;
+    letter-spacing: .025em;
+    line-height: 1.1;
+}
+
+body:has(form[action*="/akuntansi/suppliers"]) .overflow-x-auto > table td {
+    overflow-wrap: anywhere;
+}
+
+/* Keep the purchase actions in view by allocating a compact, fixed table layout. */
+body:has(form[action*="/akuntansi/purchases"]) .overflow-x-auto > table {
+    width: 100% !important;
+    min-width: 0 !important;
+    table-layout: fixed;
+    font-size: .7rem;
+}
+
+body:has(form[action*="/akuntansi/purchases"]) .overflow-x-auto > table th,
+body:has(form[action*="/akuntansi/purchases"]) .overflow-x-auto > table td {
+    min-width: 0;
+    padding: .5rem .4rem;
+}
+
+body:has(form[action*="/akuntansi/purchases"]) .overflow-x-auto > table th:nth-child(1),
+body:has(form[action*="/akuntansi/purchases"]) .overflow-x-auto > table td:nth-child(1) { width: 8%; }
+body:has(form[action*="/akuntansi/purchases"]) .overflow-x-auto > table th:nth-child(2),
+body:has(form[action*="/akuntansi/purchases"]) .overflow-x-auto > table td:nth-child(2) { width: 15%; }
+body:has(form[action*="/akuntansi/purchases"]) .overflow-x-auto > table th:nth-child(3),
+body:has(form[action*="/akuntansi/purchases"]) .overflow-x-auto > table td:nth-child(3) { width: 9%; }
+body:has(form[action*="/akuntansi/purchases"]) .overflow-x-auto > table th:nth-child(4),
+body:has(form[action*="/akuntansi/purchases"]) .overflow-x-auto > table td:nth-child(4) { width: 5%; }
+body:has(form[action*="/akuntansi/purchases"]) .overflow-x-auto > table th:nth-child(5),
+body:has(form[action*="/akuntansi/purchases"]) .overflow-x-auto > table td:nth-child(5),
+body:has(form[action*="/akuntansi/purchases"]) .overflow-x-auto > table th:nth-child(6),
+body:has(form[action*="/akuntansi/purchases"]) .overflow-x-auto > table td:nth-child(6),
+body:has(form[action*="/akuntansi/purchases"]) .overflow-x-auto > table th:nth-child(7),
+body:has(form[action*="/akuntansi/purchases"]) .overflow-x-auto > table td:nth-child(7),
+body:has(form[action*="/akuntansi/purchases"]) .overflow-x-auto > table th:nth-child(8),
+body:has(form[action*="/akuntansi/purchases"]) .overflow-x-auto > table td:nth-child(8),
+body:has(form[action*="/akuntansi/purchases"]) .overflow-x-auto > table th:nth-child(9),
+body:has(form[action*="/akuntansi/purchases"]) .overflow-x-auto > table td:nth-child(9) { width: 8%; }
+body:has(form[action*="/akuntansi/purchases"]) .overflow-x-auto > table th:nth-child(10),
+body:has(form[action*="/akuntansi/purchases"]) .overflow-x-auto > table td:nth-child(10) { width: 6%; }
+body:has(form[action*="/akuntansi/purchases"]) .overflow-x-auto > table th:nth-child(11),
+body:has(form[action*="/akuntansi/purchases"]) .overflow-x-auto > table td:nth-child(11) { width: 11%; }
+
+body:has(form[action*="/akuntansi/purchases"]) .overflow-x-auto {
+    overflow-x: hidden;
+}
+
+body:has(form[action*="/akuntansi/purchases"]) .overflow-x-auto > table td:nth-child(2) p:last-child {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+}
+
+/* Purchase list is the only 11-column table: its actions must remain on screen. */
+.overflow-x-auto:has(> table > thead > tr > th:nth-child(11)) {
+    overflow-x: hidden;
+    padding: .625rem .75rem .75rem;
+}
+
+.overflow-x-auto > table:has(> thead > tr > th:nth-child(11)) {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    table-layout: fixed !important;
+    font-size: .7rem;
+}
+
+.overflow-x-auto > table:has(> thead > tr > th:nth-child(11)) th,
+.overflow-x-auto > table:has(> thead > tr > th:nth-child(11)) td {
+    min-width: 0 !important;
+    padding: .45rem .35rem !important;
+}
+
+.overflow-x-auto > table:has(> thead > tr > th:nth-child(11)) th:nth-child(1),
+.overflow-x-auto > table:has(> thead > tr > th:nth-child(11)) td:nth-child(1) { width: 8%; }
+.overflow-x-auto > table:has(> thead > tr > th:nth-child(11)) th:nth-child(2),
+.overflow-x-auto > table:has(> thead > tr > th:nth-child(11)) td:nth-child(2) { width: 12% !important; }
+.overflow-x-auto > table:has(> thead > tr > th:nth-child(11)) th:nth-child(3),
+.overflow-x-auto > table:has(> thead > tr > th:nth-child(11)) td:nth-child(3) { width: 9%; }
+.overflow-x-auto > table:has(> thead > tr > th:nth-child(11)) th:nth-child(4),
+.overflow-x-auto > table:has(> thead > tr > th:nth-child(11)) td:nth-child(4) { width: 5%; }
+.overflow-x-auto > table:has(> thead > tr > th:nth-child(11)) th:nth-child(n+5):nth-child(-n+9),
+.overflow-x-auto > table:has(> thead > tr > th:nth-child(11)) td:nth-child(n+5):nth-child(-n+9) { width: 8%; }
+.overflow-x-auto > table:has(> thead > tr > th:nth-child(11)) th:nth-child(10),
+.overflow-x-auto > table:has(> thead > tr > th:nth-child(11)) td:nth-child(10) { width: 6%; }
+.overflow-x-auto > table:has(> thead > tr > th:nth-child(11)) th:nth-child(11),
+.overflow-x-auto > table:has(> thead > tr > th:nth-child(11)) td:nth-child(11) { width: 12%; }
+
+.overflow-x-auto > table:has(> thead > tr > th:nth-child(11)) td:nth-child(2) p:last-child {
+    display: -webkit-box !important;
+    overflow: hidden !important;
+    white-space: normal !important;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+}
+
+/* The detailed purchase report has 14 columns and must scroll, not compress. */
+.overflow-x-auto:has(> table > thead > tr > th:nth-child(14)) {
+    overflow-x: auto;
+    padding: 0;
+}
+
+.overflow-x-auto > table:has(> thead > tr > th:nth-child(14)) {
+    width: max-content !important;
+    min-width: 1500px !important;
+    max-width: none !important;
+    table-layout: auto !important;
+    font-size: .875rem;
+}
+
+.overflow-x-auto > table:has(> thead > tr > th:nth-child(14)) th,
+.overflow-x-auto > table:has(> thead > tr > th:nth-child(14)) td {
+    min-width: auto !important;
+    padding: .75rem 1rem !important;
+}
+
+/* Prevent Fixed Asset table from inheriting 11-column Purchases layout */
+.no-fixed-layout {
+    table-layout: auto !important;
+    font-size: 0.875rem !important; /* matches text-sm */
+    width: 100% !important;
+    min-width: max-content !important;
+}
+.no-fixed-layout th,
+.no-fixed-layout td {
+    width: auto !important;
+    min-width: auto !important;
+    padding: 0.75rem 1.25rem !important; /* matches px-5 py-3 */
+}
+.no-fixed-layout th.w-12,
+.no-fixed-layout td.w-12 {
+    width: 3rem !important; /* matches w-12 */
+    padding-left: 1rem !important; /* matches px-4 */
+    padding-right: 1rem !important;
+}
+

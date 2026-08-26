@@ -205,7 +205,7 @@ class OrderReworkController extends Controller
                 $this->creditService->reduceHutang($order->customer, $piutang);
             }
         } elseif ($dibayar > 0 && $order->cara_bayar) {
-            $kdBantu = $order->customer?->KdCust ?? '';
+            $kdBantu = AccountingService::kodeBantuCustomer($order->customer?->KdCust);
 
             // 'campuran' means the original payment was split across
             // methods — reverse it out of the same real methods (tunai/
@@ -228,7 +228,7 @@ class OrderReworkController extends Controller
                 $order->NoOrder,
                 'Refund pembatalan order '.$order->NoOrder,
                 [
-                    ['akun' => AccountingService::AKUN_PENJUALAN, 'debet' => $dibayar],
+                    ...$this->accounting->salesDebitLines($dibayar),
                     ...$kasLines,
                 ]
             );

@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\JurnalEntry;
+use App\Models\PengaturanKeuangan;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
@@ -18,15 +19,28 @@ use InvalidArgumentException;
  */
 class AccountingService
 {
-    public const AKUN_KAS_TUNAI = '11101';
+    private ?float $salesTaxRate = null;
 
-    public const AKUN_KAS_BANK = '11102'; // QRIS/Transfer — both are bank-mediated, not physical cash
+    /** @var \Illuminate\Support\Collection<int, string>|null */
+    private ?\Illuminate\Support\Collection $postableAccounts = null;
 
-    public const AKUN_PIUTANG_DAGANG = '11301';
+    public const AKUN_KAS_TUNAI = '11100';
 
-    public const AKUN_PENJUALAN = '40001';
+    public const AKUN_KAS_BANK = '11101'; // QRIS/Transfer — both are bank-mediated, not physical cash
 
-    public const AKUN_GAJI = '60001';
+    public const AKUN_PIUTANG_DAGANG = '11102';
+
+    public const AKUN_HUTANG_DAGANG = '21100';
+
+    public const AKUN_PPN_MASUKAN = '11600';
+
+    public const AKUN_UANG_MUKA_PENJUALAN = '27100';
+
+    public const AKUN_PENJUALAN = '41000';
+
+    public const AKUN_PPN_KELUARAN = '22105';
+
+    public const AKUN_GAJI = '61001';
 
     /**
      * Pengeluaran kategori => account code. bahan_baku goes to COGS (51001)
@@ -34,18 +48,61 @@ class AccountingService
      * production cost, not overhead.
      */
     public const AKUN_PENGELUARAN_KATEGORI = [
-        'bahan_baku' => '51001',
-        'gaji' => '60001',
-        'listrik_air' => '60004',
-        'sewa' => '60007',
-        'transportasi' => '60003',
-        'perawatan_alat' => '60099',
-        'lain_lain' => '60099',
+        'bahan_baku' => '53000',
+        'gaji' => '61001',
+        'listrik_air' => '63004',
+        'sewa' => '63014',
+        'transportasi' => '62002',
+        'perawatan_alat' => '63012',
+        'lain_lain' => '63014',
     ];
 
     public static function akunKasFor(?string $caraBayar): string
     {
         return $caraBayar === 'tunai' ? self::AKUN_KAS_TUNAI : self::AKUN_KAS_BANK;
+    }
+
+    public static function kodeBantuCustomer(?string $customerCode): string
+    {
+        if (! $customerCode) {
+            return '';
+        }
+
+        return (string) (DB::table('accounting_customer_profiles')
+            ->where('customer_kd', $customerCode)
+            ->value('kode_bantu') ?: $customerCode);
+    }
+
+    /**
+     * Break a selling price that already includes PPN into the exact DPP and
+     * PPN Keluaran posting required by the Ledger Spektra chart of accounts.
+     * The tax rate remains configurable; the workbook's January 2026 rate is
+     * the default 11% carried by PengaturanKeuangan.
+     *
+     * @return array<int, array{akun: string, debet?: float, kredit?: float}>
+     */
+    public function salesCreditLines(float $total): array
+    {
+        $rate = $this->salesTaxRate ??= (float) PengaturanKeuangan::current()->tarif_ppn_default;
+        $dpp = $rate > 0 ? round($total / (1 + $rate / 100)) : $total;
+        $ppn = round($total - $dpp);
+
+        $lines = [['akun' => self::AKUN_PENJUALAN, 'kredit' => $dpp]];
+
+        if ($ppn > 0) {
+            $lines[] = ['akun' => self::AKUN_PPN_KELUARAN, 'kredit' => $ppn];
+        }
+
+        return $lines;
+    }
+
+    /** @return array<int, array{akun: string, debet?: float, kredit?: float}> */
+    public function salesDebitLines(float $total): array
+    {
+        return array_map(static fn (array $line) => [
+            'akun' => $line['akun'],
+            'debet' => $line['kredit'],
+        ], $this->salesCreditLines($total));
     }
 
     /**
@@ -94,6 +151,16 @@ class AccountingService
 
         if ($totalDebet <= 0) {
             throw new InvalidArgumentException('Jurnal tidak boleh bernilai nol.');
+        }
+
+        $postableAccounts = $this->postableAccounts ??= DB::table('am__')
+            ->whereIn('TipeDK', ['D', 'K'])
+            ->pluck('NoAkun');
+
+        $invalidAccount = collect($lines)->pluck('akun')->first(fn (string $account) => ! $postableAccounts->contains($account));
+
+        if ($invalidAccount) {
+            throw new InvalidArgumentException("Kode akun {$invalidAccount} tidak ditemukan atau bukan akun yang dapat diposting.");
         }
 
         // Fits the legacy column's varchar(14) exactly: 6-digit date +

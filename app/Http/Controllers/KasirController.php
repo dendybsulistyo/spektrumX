@@ -237,7 +237,7 @@ class KasirController extends Controller
                     ]);
 
                     $akunKas = AccountingService::akunKasFor($data['cara_bayar']);
-                    $kdBantu = $order->customer?->KdCust ?? '';
+                    $kdBantu = AccountingService::kodeBantuCustomer($order->customer?->KdCust);
 
                     $this->accounting->post(
                         now()->format('Y-m-d'),
@@ -246,10 +246,10 @@ class KasirController extends Controller
                         $topup > 0
                             ? [
                                 ['akun' => $akunKas, 'debet' => $topup, 'kd_bantu' => $kdBantu],
-                                ['akun' => AccountingService::AKUN_PENJUALAN, 'kredit' => $topup],
+                                ...$this->accounting->salesCreditLines($topup),
                             ]
                             : [
-                                ['akun' => AccountingService::AKUN_PENJUALAN, 'debet' => $cashback],
+                                ...$this->accounting->salesDebitLines($cashback),
                                 ['akun' => $akunKas, 'kredit' => $cashback, 'kd_bantu' => $kdBantu],
                             ]
                     );
@@ -381,22 +381,21 @@ class KasirController extends Controller
 
             $this->createPaymentRows($type, $order->id, $data['metode_bayar'] === 'dp' ? 'dp' : 'lunas', $rincian);
 
-            $kdBantu = $order->customer?->KdCust ?? '';
+            $kdBantu = AccountingService::kodeBantuCustomer($order->customer?->KdCust);
 
             match ($data['metode_bayar']) {
                 'dp' => $this->accounting->post(
                     now()->format('Y-m-d'), $order->NoOrder, 'Penjualan DP '.$order->NoOrder,
                     [
                         ...$this->kasLines($rincian, $kdBantu),
-                        ['akun' => AccountingService::AKUN_PIUTANG_DAGANG, 'debet' => $total - $jumlahDp, 'kd_bantu' => $kdBantu],
-                        ['akun' => AccountingService::AKUN_PENJUALAN, 'kredit' => $total],
+                        ['akun' => AccountingService::AKUN_UANG_MUKA_PENJUALAN, 'kredit' => $jumlahDp, 'kd_bantu' => $kdBantu],
                     ]
                 ),
                 default => $this->accounting->post(
                     now()->format('Y-m-d'), $order->NoOrder, 'Penjualan lunas '.$order->NoOrder,
                     [
                         ...$this->kasLines($rincian, $kdBantu),
-                        ['akun' => AccountingService::AKUN_PENJUALAN, 'kredit' => $total],
+                        ...$this->accounting->salesCreditLines($total),
                     ]
                 ),
             };
@@ -447,8 +446,8 @@ class KasirController extends Controller
             $this->accounting->post(
                 now()->format('Y-m-d'), $order->NoOrder, 'Penjualan hutang '.$order->NoOrder,
                 [
-                    ['akun' => AccountingService::AKUN_PIUTANG_DAGANG, 'debet' => $total, 'kd_bantu' => $order->customer?->KdCust ?? ''],
-                    ['akun' => AccountingService::AKUN_PENJUALAN, 'kredit' => $total],
+                    ['akun' => AccountingService::AKUN_PIUTANG_DAGANG, 'debet' => $total, 'kd_bantu' => AccountingService::kodeBantuCustomer($order->customer?->KdCust)],
+                    ...$this->accounting->salesCreditLines($total),
                 ]
             );
         });
@@ -542,8 +541,9 @@ class KasirController extends Controller
             $this->accounting->post(
                 now()->format('Y-m-d'), $order->NoOrder, 'Pelunasan DP '.$order->NoOrder,
                 [
-                    ...$this->kasLines($rincian, $order->customer?->KdCust ?? ''),
-                    ['akun' => AccountingService::AKUN_PIUTANG_DAGANG, 'kredit' => $sisaPiutang, 'kd_bantu' => $order->customer?->KdCust ?? ''],
+                    ...$this->kasLines($rincian, AccountingService::kodeBantuCustomer($order->customer?->KdCust)),
+                    ['akun' => AccountingService::AKUN_UANG_MUKA_PENJUALAN, 'debet' => (float) $order->total - $sisaPiutang, 'kd_bantu' => AccountingService::kodeBantuCustomer($order->customer?->KdCust)],
+                    ...$this->accounting->salesCreditLines((float) $order->total),
                 ]
             );
         });
@@ -613,8 +613,8 @@ class KasirController extends Controller
             $this->accounting->post(
                 now()->format('Y-m-d'), $order->NoOrder, 'Pelunasan hutang '.$order->NoOrder,
                 [
-                    ...$this->kasLines($rincian, $order->customer?->KdCust ?? ''),
-                    ['akun' => AccountingService::AKUN_PIUTANG_DAGANG, 'kredit' => $sisaPiutang, 'kd_bantu' => $order->customer?->KdCust ?? ''],
+                    ...$this->kasLines($rincian, AccountingService::kodeBantuCustomer($order->customer?->KdCust)),
+                    ['akun' => AccountingService::AKUN_PIUTANG_DAGANG, 'kredit' => $sisaPiutang, 'kd_bantu' => AccountingService::kodeBantuCustomer($order->customer?->KdCust)],
                 ]
             );
         });

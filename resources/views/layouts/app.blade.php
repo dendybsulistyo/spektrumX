@@ -124,14 +124,17 @@
             $transaksiActive = request()->routeIs('order-indoor.*', 'order-outdoor.*', 'order-artwork.*');
             $operatorActive = request()->routeIs('file.*', 'kasir.*', 'order-desain.*', 'order-cetak.*', 'order-finishing.*', 'order-qc.*', 'order-bungkus.*', 'pengambilan.*');
             $analitikActive = request()->routeIs('data-warehouse.*', 'monitoring-kinerja.*', 'monitoring-transaksi.*', 'papan-pantau.*');
-            $keuanganActive = request()->routeIs('keuangan.*', 'pengeluaran.*', 'payroll.*', 'pembatalan.*', 'diskon-approval.*', 'hutang-approval.*');
+            $keuanganActive = request()->routeIs('akuntansi.*', 'keuangan.*', 'pengeluaran.*', 'payroll.*');
             $canApproveCancel = Auth::user()->hasPermission('order-indoor.approve-cancel') || Auth::user()->hasPermission('order-outdoor.approve-cancel') || Auth::user()->hasPermission('order-artwork.approve-cancel');
             $pendingApprovalCount = $canApproveCancel ? \App\Http\Controllers\PembatalanController::pendingCount() : 0;
             $canApproveDiskon = Auth::user()->hasPermission('kasir.approve-diskon');
             $pendingDiskonCount = $canApproveDiskon ? \App\Http\Controllers\DiskonApprovalController::pendingCount() : 0;
             $canApproveHutang = Auth::user()->hasPermission('kasir.approve-hutang');
             $pendingHutangCount = $canApproveHutang ? \App\Http\Controllers\HutangApprovalController::pendingCount() : 0;
-            $showKeuangan = Auth::user()->hasPermission('keuangan.view') || Auth::user()->hasPermission('pengeluaran.view') || Auth::user()->hasPermission('payroll.view') || Auth::user()->hasPermission('keuangan.pengaturan') || $canApproveCancel || $canApproveDiskon || $canApproveHutang;
+            $approvalActive = request()->routeIs('pembatalan.*', 'diskon-approval.*', 'hutang-approval.*');
+            $pendingApprovalTotal = $pendingApprovalCount + $pendingDiskonCount + $pendingHutangCount;
+            $showApproval = $canApproveCancel || $canApproveDiskon || $canApproveHutang;
+            $showKeuangan = Auth::user()->hasPermission('keuangan.view') || Auth::user()->hasPermission('pengeluaran.view') || Auth::user()->hasPermission('payroll.view') || Auth::user()->hasPermission('keuangan.pengaturan');
             $pengaturanActive = request()->routeIs('roles.*', 'users.*', 'jasa-potong.*', 'jasa-potong-artwork.*', 'server-monitor.*');
 
             $showMasterData = Auth::user()->hasPermission('customers.view') || Auth::user()->hasPermission('produk.view') || Auth::user()->hasPermission('harga-artwork.view') || Auth::user()->hasPermission('printers.view') || Auth::user()->hasPermission('printer-outdoor.view') || Auth::user()->hasPermission('bahan-cetak-outdoor.view') || Auth::user()->hasPermission('harga-cetak-outdoor.view') || Auth::user()->hasPermission('kategori-produk-indoor.view');
@@ -166,29 +169,41 @@
                                     Dashboard
                                 </a>
 
-                                @can('preview-cetak.view')
+                                {{-- @can('preview-cetak.view')
                                     <a href="{{ route('preview-cetak.index') }}" class="{{ $navTopLink(request()->routeIs('preview-cetak.*')) }}">
                                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">{!! $navIcon('printer') !!}</svg>
                                         Preview Cetak
                                     </a>
-                                @endcan
+                                @endcan --}}
 
                                 @if ($showKeuangan)
                                     <div class="relative" x-data="{ open: false }" @click.outside="open = false" @keydown.escape="open = false">
                                         <button type="button" @click="open = !open" class="{{ $navTopLink($keuanganActive) }}">
                                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">{!! $navIcon('banknotes') !!}</svg>
-                                            Keuangan
+                                            Akuntansi
                                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3 h-3 transition-transform" :class="open ? 'rotate-180' : ''">{!! $navIcon('chevron-down') !!}</svg>
                                         </button>
                                         <div x-show="open" x-cloak
                                              x-transition:enter="transition ease-out duration-100" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
                                              x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
-                                             class="absolute left-0 mt-2 w-56 bg-white border border-gray-200 rounded-lg shadow-lg py-2 z-50">
+                                             style="width: 580px; max-width: calc(100vw - 2rem)"
+                                             class="absolute left-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg p-2 z-50">
+                                            <div class="grid grid-cols-2 gap-2">
+                                            <div class="space-y-1">
                                             @can('keuangan.view')
+                                                <p class="mx-2 mt-1 rounded-md border border-slate-200 bg-slate-100 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-600">Penjualan & Pajak</p>
+                                                <a href="{{ route('akuntansi.gunggungan') }}" class="{{ $dropdownLink(request()->routeIs('akuntansi.gunggungan')) }}">Gunggungan</a>
+                                                <a href="{{ route('akuntansi.rekap-omset') }}" class="{{ $dropdownLink(request()->routeIs('akuntansi.rekap-omset')) }}">Rekap Omset</a>
+                                                <a href="{{ route('keuangan.laporan-ppn') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.laporan-ppn')) }}">Rekap PPN</a>
+                                                <div class="mx-2 my-2 border-t border-slate-200"></div>
+                                                <p class="mx-2 rounded-md border border-slate-200 bg-slate-100 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-600">Kas, Pembelian & Piutang</p>
                                                 <a href="{{ route('keuangan.kas-harian') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.kas-harian')) }}">Kas Harian</a>
-                                                <a href="{{ route('keuangan.rekap-kasir') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.rekap-kasir')) }}">Rekap per Kasir</a>
-                                                <a href="{{ route('keuangan.rekap-customer') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.rekap-customer')) }}">Total Order per Customer</a>
+                                                <a href="{{ route('akuntansi.kas-bank') }}" class="{{ $dropdownLink(request()->routeIs('akuntansi.kas-bank')) }}">Buku Kas & Bank</a>
+                                                <a href="{{ route('akuntansi.purchases.index') }}" class="{{ $dropdownLink(request()->routeIs('akuntansi.purchases.*')) }}">Pembelian & Hutang Supplier</a>
+                                                <a href="{{ route('akuntansi.purchases.report') }}" class="{{ $dropdownLink(request()->routeIs('akuntansi.purchases.report')) }}">Laporan Pembelian</a>
+                                                <a href="{{ route('akuntansi.hutang-supplier') }}" class="{{ $dropdownLink(request()->routeIs('akuntansi.hutang-supplier')) }}">Laporan Hutang Supplier</a>
                                                 <a href="{{ route('keuangan.piutang') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.piutang')) }}">Piutang</a>
+                                                <a href="{{ route('akuntansi.piutang-customer') }}" class="{{ $dropdownLink(request()->routeIs('akuntansi.piutang-customer')) }}">Buku Piutang Customer</a>
                                             @endcan
                                             @can('pengeluaran.view')
                                                 <a href="{{ route('pengeluaran.index') }}" class="{{ $dropdownLink(request()->routeIs('pengeluaran.*')) }}">Pengeluaran</a>
@@ -196,39 +211,50 @@
                                             @can('payroll.view')
                                                 <a href="{{ route('payroll.index') }}" class="{{ $dropdownLink(request()->routeIs('payroll.*')) }}">Payroll</a>
                                             @endcan
+                                            </div>
+                                            <div class="space-y-1 border-l border-gray-100 pl-2">
                                             @can('keuangan.view')
-                                                <a href="{{ route('keuangan.laba-rugi') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.laba-rugi')) }}">Laba Rugi</a>
+                                                <div class="mx-2 my-2 border-t border-slate-200"></div>
+                                                <p class="mx-2 rounded-md border border-slate-200 bg-slate-100 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-600">Jurnal & Laporan</p>
+                                                <a href="{{ route('akuntansi.jurnal-umum') }}" class="{{ $dropdownLink(request()->routeIs('akuntansi.jurnal-umum')) }}">Jurnal Umum</a>
+                                                <a href="{{ route('akuntansi.buku-besar') }}" class="{{ $dropdownLink(request()->routeIs('akuntansi.buku-besar')) }}">Buku Besar</a>
+                                                <a href="{{ route('akuntansi.neraca-saldo') }}" class="{{ $dropdownLink(request()->routeIs('akuntansi.neraca-saldo')) }}">Neraca Saldo</a>
+                                                <a href="{{ route('akuntansi.inventory-hpp') }}" class="{{ $dropdownLink(request()->routeIs('akuntansi.inventory-hpp')) }}">Persediaan & HPP</a>
+                                                <a href="{{ route('akuntansi.fixed-assets.index') }}" class="{{ $dropdownLink(request()->routeIs('akuntansi.fixed-assets.*')) }}">Penyusutan Aset</a>
+                                                <a href="{{ route('akuntansi.hpp-report') }}" class="{{ $dropdownLink(request()->routeIs('akuntansi.hpp-report')) }} font-bold">Laporan HPP</a>
+                                                <a href="{{ route('keuangan.laba-rugi') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.laba-rugi')) }} font-bold">Laba Rugi</a>
+                                                <a href="{{ route('akuntansi.neraca') }}" class="{{ $dropdownLink(request()->routeIs('akuntansi.neraca')) }} font-bold">Neraca</a>
+                                                <a href="{{ route('akuntansi.perubahan-modal') }}" class="{{ $dropdownLink(request()->routeIs('akuntansi.perubahan-modal')) }} font-bold">Perubahan Modal</a>
                                                 <a href="{{ route('keuangan.jurnal-manual') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.jurnal-manual')) }}">Jurnal Manual</a>
-                                                <a href="{{ route('keuangan.laporan-ppn') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.laporan-ppn')) }}">Laporan PPN</a>
+                                                <a href="{{ route('akuntansi.import-gunggungan') }}" class="{{ $dropdownLink(request()->routeIs('akuntansi.import-gunggungan')) }}">Impor Jurnal Historis</a>
                                                 <a href="{{ route('keuangan.tutup-buku') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.tutup-buku*')) }}">Tutup Buku</a>
                                             @endcan
                                             @can('keuangan.pengaturan')
-                                                <a href="{{ route('keuangan.pengaturan.edit') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.pengaturan.edit')) }}">Pengaturan</a>
+                                                <div class="mx-2 my-2 border-t border-slate-200"></div>
+                                                <p class="mx-2 rounded-md border border-slate-200 bg-slate-100 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-600">Master</p>
+                                                <a href="{{ route('akuntansi.akun.index') }}" class="{{ $dropdownLink(request()->routeIs('akuntansi.akun.*')) }}">Kode Akun</a>
+                                                <a href="{{ route('akuntansi.suppliers.index') }}" class="{{ $dropdownLink(request()->routeIs('akuntansi.suppliers.*')) }}">Supplier</a>
+                                                <a href="{{ route('keuangan.pengaturan.edit') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.pengaturan.edit')) }}">Pengaturan Data GL</a>
                                             @endcan
-                                            @if ($canApproveCancel)
-                                                <a href="{{ route('pembatalan.index') }}" class="{{ $dropdownLink(request()->routeIs('pembatalan.*')) }} flex items-center gap-1.5">
-                                                    Approval Batal
-                                                    @if ($pendingApprovalCount > 0)
-                                                        <span class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-white text-[11px] font-bold leading-none">{{ $pendingApprovalCount }}</span>
-                                                    @endif
-                                                </a>
-                                            @endif
-                                            @if ($canApproveDiskon)
-                                                <a href="{{ route('diskon-approval.index') }}" class="{{ $dropdownLink(request()->routeIs('diskon-approval.*')) }} flex items-center gap-1.5">
-                                                    Approval Diskon
-                                                    @if ($pendingDiskonCount > 0)
-                                                        <span class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-white text-[11px] font-bold leading-none">{{ $pendingDiskonCount }}</span>
-                                                    @endif
-                                                </a>
-                                            @endif
-                                            @if ($canApproveHutang)
-                                                <a href="{{ route('hutang-approval.index') }}" class="{{ $dropdownLink(request()->routeIs('hutang-approval.*')) }} flex items-center gap-1.5">
-                                                    Approval Hutang
-                                                    @if ($pendingHutangCount > 0)
-                                                        <span class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-white text-[11px] font-bold leading-none">{{ $pendingHutangCount }}</span>
-                                                    @endif
-                                                </a>
-                                            @endif
+                                            </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                @endif
+
+                                @if ($showApproval)
+                                    <div class="relative" x-data="{ open: false }" @click.outside="open = false" @keydown.escape="open = false">
+                                        <button type="button" @click="open = !open" class="{{ $navTopLink($approvalActive) }}">
+                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">{!! $navIcon('shield') !!}</svg>
+                                            Approval
+                                            @if ($pendingApprovalTotal > 0)<span class="inline-flex min-w-[18px] h-[18px] items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white">{{ $pendingApprovalTotal }}</span>@endif
+                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3 h-3 transition-transform" :class="open ? 'rotate-180' : ''">{!! $navIcon('chevron-down') !!}</svg>
+                                        </button>
+                                        <div x-show="open" x-cloak class="absolute left-0 mt-2 w-56 rounded-lg border border-gray-200 bg-white py-2 shadow-lg z-50">
+                                            <p class="mx-2 mb-1 rounded-md border border-amber-200 bg-amber-50 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-amber-700">Menunggu Persetujuan</p>
+                                            @if ($canApproveCancel)<a href="{{ route('pembatalan.index') }}" class="{{ $dropdownLink(request()->routeIs('pembatalan.*')) }} flex items-center justify-between">Pembatalan Order @if($pendingApprovalCount>0)<span class="rounded-full bg-red-600 px-1.5 py-0.5 text-[10px] text-white">{{ $pendingApprovalCount }}</span>@endif</a>@endif
+                                            @if ($canApproveDiskon)<a href="{{ route('diskon-approval.index') }}" class="{{ $dropdownLink(request()->routeIs('diskon-approval.*')) }} flex items-center justify-between">Diskon @if($pendingDiskonCount>0)<span class="rounded-full bg-red-600 px-1.5 py-0.5 text-[10px] text-white">{{ $pendingDiskonCount }}</span>@endif</a>@endif
+                                            @if ($canApproveHutang)<a href="{{ route('hutang-approval.index') }}" class="{{ $dropdownLink(request()->routeIs('hutang-approval.*')) }} flex items-center justify-between">Hutang VIP @if($pendingHutangCount>0)<span class="rounded-full bg-red-600 px-1.5 py-0.5 text-[10px] text-white">{{ $pendingHutangCount }}</span>@endif</a>@endif
                                         </div>
                                     </div>
                                 @endif
@@ -450,17 +476,33 @@
                     <div class="px-3 py-3 space-y-0.5 text-[13px]" @click="mobileMenuOpen = false">
                         @php $active = request()->routeIs('dashboard'); @endphp
                         <a href="{{ route('dashboard') }}" class="{{ $mobileLink($active) }}">Dashboard</a>
-                        @can('preview-cetak.view')
+                        {{-- @can('preview-cetak.view')
                             <a href="{{ route('preview-cetak.index') }}" class="{{ $mobileLink(request()->routeIs('preview-cetak.*')) }}">Preview Cetak</a>
-                        @endcan
+                        @endcan --}}
+
+                        @if ($showApproval)
+                            <p class="px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">Approval</p>
+                            <div class="mx-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-amber-700">Menunggu Persetujuan</div>
+                            @if ($canApproveCancel)<a href="{{ route('pembatalan.index') }}" class="{{ $mobileLink(request()->routeIs('pembatalan.*')) }} flex items-center justify-between">Pembatalan Order @if($pendingApprovalCount>0)<span class="rounded-full bg-red-600 px-1.5 py-0.5 text-[10px] text-white">{{ $pendingApprovalCount }}</span>@endif</a>@endif
+                            @if ($canApproveDiskon)<a href="{{ route('diskon-approval.index') }}" class="{{ $mobileLink(request()->routeIs('diskon-approval.*')) }} flex items-center justify-between">Diskon @if($pendingDiskonCount>0)<span class="rounded-full bg-red-600 px-1.5 py-0.5 text-[10px] text-white">{{ $pendingDiskonCount }}</span>@endif</a>@endif
+                            @if ($canApproveHutang)<a href="{{ route('hutang-approval.index') }}" class="{{ $mobileLink(request()->routeIs('hutang-approval.*')) }} flex items-center justify-between">Hutang VIP @if($pendingHutangCount>0)<span class="rounded-full bg-red-600 px-1.5 py-0.5 text-[10px] text-white">{{ $pendingHutangCount }}</span>@endif</a>@endif
+                        @endif
 
                         @if ($showKeuangan)
-                            <p class="px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">Keuangan</p>
+                            <p class="px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">Akuntansi</p>
                             @can('keuangan.view')
+                                <p class="mx-2 mt-2 rounded-md border border-slate-200 bg-slate-100 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-600">Penjualan & Pajak</p>
+                                <a href="{{ route('akuntansi.gunggungan') }}" class="{{ $mobileLink(request()->routeIs('akuntansi.gunggungan')) }}">Gunggungan</a>
+                                <a href="{{ route('akuntansi.rekap-omset') }}" class="{{ $mobileLink(request()->routeIs('akuntansi.rekap-omset')) }}">Rekap Omset</a>
+                                <a href="{{ route('keuangan.laporan-ppn') }}" class="{{ $mobileLink(request()->routeIs('keuangan.laporan-ppn')) }}">Rekap PPN</a>
+                                <div class="mx-2 my-2 border-t border-slate-200"></div><p class="mx-2 rounded-md border border-slate-200 bg-slate-100 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-600">Kas, Pembelian & Piutang</p>
                                 <a href="{{ route('keuangan.kas-harian') }}" class="{{ $mobileLink(request()->routeIs('keuangan.kas-harian')) }}">Kas Harian</a>
-                                <a href="{{ route('keuangan.rekap-kasir') }}" class="{{ $mobileLink(request()->routeIs('keuangan.rekap-kasir')) }}">Rekap per Kasir</a>
-                                <a href="{{ route('keuangan.rekap-customer') }}" class="{{ $mobileLink(request()->routeIs('keuangan.rekap-customer')) }}">Total Order per Customer</a>
+                                <a href="{{ route('akuntansi.kas-bank') }}" class="{{ $mobileLink(request()->routeIs('akuntansi.kas-bank')) }}">Buku Kas & Bank</a>
+                                <a href="{{ route('akuntansi.purchases.index') }}" class="{{ $mobileLink(request()->routeIs('akuntansi.purchases.*')) }}">Pembelian & Hutang Supplier</a>
+                                <a href="{{ route('akuntansi.purchases.report') }}" class="{{ $mobileLink(request()->routeIs('akuntansi.purchases.report')) }}">Laporan Pembelian</a>
+                                <a href="{{ route('akuntansi.hutang-supplier') }}" class="{{ $mobileLink(request()->routeIs('akuntansi.hutang-supplier')) }}">Laporan Hutang Supplier</a>
                                 <a href="{{ route('keuangan.piutang') }}" class="{{ $mobileLink(request()->routeIs('keuangan.piutang')) }}">Piutang</a>
+                                <a href="{{ route('akuntansi.piutang-customer') }}" class="{{ $mobileLink(request()->routeIs('akuntansi.piutang-customer')) }}">Buku Piutang Customer</a>
                             @endcan
                             @can('pengeluaran.view')
                                 <a href="{{ route('pengeluaran.index') }}" class="{{ $mobileLink(request()->routeIs('pengeluaran.*')) }}">Pengeluaran</a>
@@ -469,38 +511,26 @@
                                 <a href="{{ route('payroll.index') }}" class="{{ $mobileLink(request()->routeIs('payroll.*')) }}">Payroll</a>
                             @endcan
                             @can('keuangan.view')
-                                <a href="{{ route('keuangan.laba-rugi') }}" class="{{ $mobileLink(request()->routeIs('keuangan.laba-rugi')) }}">Laba Rugi</a>
+                                <div class="mx-2 my-2 border-t border-slate-200"></div><p class="mx-2 rounded-md border border-slate-200 bg-slate-100 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-600">Jurnal & Laporan</p>
+                                <a href="{{ route('akuntansi.jurnal-umum') }}" class="{{ $mobileLink(request()->routeIs('akuntansi.jurnal-umum')) }}">Jurnal Umum</a>
+                                <a href="{{ route('akuntansi.buku-besar') }}" class="{{ $mobileLink(request()->routeIs('akuntansi.buku-besar')) }}">Buku Besar</a>
+                                <a href="{{ route('akuntansi.neraca-saldo') }}" class="{{ $mobileLink(request()->routeIs('akuntansi.neraca-saldo')) }}">Neraca Saldo</a>
+                                <a href="{{ route('akuntansi.inventory-hpp') }}" class="{{ $mobileLink(request()->routeIs('akuntansi.inventory-hpp')) }}">Persediaan & HPP</a>
+                                <a href="{{ route('akuntansi.fixed-assets.index') }}" class="{{ $mobileLink(request()->routeIs('akuntansi.fixed-assets.*')) }}">Penyusutan Aset</a>
+                                <a href="{{ route('akuntansi.hpp-report') }}" class="{{ $mobileLink(request()->routeIs('akuntansi.hpp-report')) }} font-bold">Laporan HPP</a>
+                                <a href="{{ route('keuangan.laba-rugi') }}" class="{{ $mobileLink(request()->routeIs('keuangan.laba-rugi')) }} font-bold">Laba Rugi</a>
+                                <a href="{{ route('akuntansi.neraca') }}" class="{{ $mobileLink(request()->routeIs('akuntansi.neraca')) }} font-bold">Neraca</a>
+                                <a href="{{ route('akuntansi.perubahan-modal') }}" class="{{ $mobileLink(request()->routeIs('akuntansi.perubahan-modal')) }} font-bold">Perubahan Modal</a>
                                 <a href="{{ route('keuangan.jurnal-manual') }}" class="{{ $mobileLink(request()->routeIs('keuangan.jurnal-manual')) }}">Jurnal Manual</a>
-                                <a href="{{ route('keuangan.laporan-ppn') }}" class="{{ $mobileLink(request()->routeIs('keuangan.laporan-ppn')) }}">Laporan PPN</a>
+                                <a href="{{ route('akuntansi.import-gunggungan') }}" class="{{ $mobileLink(request()->routeIs('akuntansi.import-gunggungan')) }}">Impor Jurnal Historis</a>
                                 <a href="{{ route('keuangan.tutup-buku') }}" class="{{ $mobileLink(request()->routeIs('keuangan.tutup-buku*')) }}">Tutup Buku</a>
                             @endcan
                             @can('keuangan.pengaturan')
-                                <a href="{{ route('keuangan.pengaturan.edit') }}" class="{{ $mobileLink(request()->routeIs('keuangan.pengaturan.edit')) }}">Pengaturan</a>
+                                <div class="mx-2 my-2 border-t border-slate-200"></div><p class="mx-2 rounded-md border border-slate-200 bg-slate-100 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-600">Master</p>
+                                <a href="{{ route('akuntansi.akun.index') }}" class="{{ $mobileLink(request()->routeIs('akuntansi.akun.*')) }}">Kode Akun</a>
+                                <a href="{{ route('akuntansi.suppliers.index') }}" class="{{ $mobileLink(request()->routeIs('akuntansi.suppliers.*')) }}">Supplier</a>
+                                <a href="{{ route('keuangan.pengaturan.edit') }}" class="{{ $mobileLink(request()->routeIs('keuangan.pengaturan.edit')) }}">Pengaturan Data GL</a>
                             @endcan
-                            @if ($canApproveCancel)
-                                <a href="{{ route('pembatalan.index') }}" class="{{ $mobileLink(request()->routeIs('pembatalan.*')) }} flex items-center gap-1.5">
-                                    Approval Batal
-                                    @if ($pendingApprovalCount > 0)
-                                        <span class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-white text-[11px] font-bold leading-none">{{ $pendingApprovalCount }}</span>
-                                    @endif
-                                </a>
-                            @endif
-                            @if ($canApproveDiskon)
-                                <a href="{{ route('diskon-approval.index') }}" class="{{ $mobileLink(request()->routeIs('diskon-approval.*')) }} flex items-center gap-1.5">
-                                    Approval Diskon
-                                    @if ($pendingDiskonCount > 0)
-                                        <span class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-white text-[11px] font-bold leading-none">{{ $pendingDiskonCount }}</span>
-                                    @endif
-                                </a>
-                            @endif
-                            @if ($canApproveHutang)
-                                <a href="{{ route('hutang-approval.index') }}" class="{{ $mobileLink(request()->routeIs('hutang-approval.*')) }} flex items-center gap-1.5">
-                                    Approval Hutang
-                                    @if ($pendingHutangCount > 0)
-                                        <span class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-white text-[11px] font-bold leading-none">{{ $pendingHutangCount }}</span>
-                                    @endif
-                                </a>
-                            @endif
                         @endif
 
                         @if ($showMasterData)

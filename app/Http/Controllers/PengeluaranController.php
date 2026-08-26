@@ -89,7 +89,7 @@ class PengeluaranController extends Controller
 
     private function postJurnal(Pengeluaran $pengeluaran): string
     {
-        $akunBiaya = AccountingService::AKUN_PENGELUARAN_KATEGORI[$pengeluaran->kategori] ?? '60099';
+        $akunBiaya = AccountingService::AKUN_PENGELUARAN_KATEGORI[$pengeluaran->kategori] ?? '63014';
 
         return $this->accounting->post(
             $pengeluaran->tanggal->format('Y-m-d'),

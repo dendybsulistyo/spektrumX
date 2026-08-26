@@ -383,11 +383,7 @@ class KeuanganController extends Controller
             ->get()
             ->keyBy('NoAkun');
 
-        // Biaya Lain (70002) is named/used as an expense account even though
-        // its TipeDK happens to be 'K' in the legacy COA data — treat it by
-        // its actual role (D-normal) rather than trusting that field for
-        // this one account.
-        $biayaLainKodes = ['70002'];
+        $biayaLainKodes = ['74000'];
 
         $buildGroup = function (string $prefix) use ($akunLabaRugi, $saldo, $biayaLainKodes) {
             return $akunLabaRugi->filter(fn (Akun $a) => str_starts_with($a->NoAkun, $prefix))

@@ -72,7 +72,7 @@
                     <table class="table" style="min-width: 1080px;">
                         <thead>
                             <tr>
-                                <th>Waktu</th><th>No order</th><th>Tipe</th><th>Customer</th><th>Jenis</th><th>Cara bayar</th><th>No. referensi</th><th style="text-align: right;">Debit (masuk)</th><th style="text-align: right;">Kredit (keluar)</th><th>Kasir</th>
+                                <th>Waktu</th><th>No order</th><th>Tipe</th><th>Customer</th><th>Jenis</th><th>Cara bayar</th><th>No. referensi</th><th style="text-align: right;">Debet (masuk)</th><th style="text-align: right;">Kredit (keluar)</th><th>Kasir</th>
                             </tr>
                         </thead>
                         <tbody>

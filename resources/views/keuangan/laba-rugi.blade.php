@@ -22,6 +22,11 @@
 
             <div class="blueprint" style="padding: var(--space-4);">
                 <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+                <div style="text-align:center; border-bottom: 2px solid var(--color-divider); padding-bottom: var(--space-3); margin-bottom: var(--space-4);">
+                    <div style="font-family: var(--font-heading); font-weight: 700;">{{ config('app.name', 'CV. SPEKTRA DIGITAL ARTWORK') }}</div>
+                    <div style="font-family: var(--font-heading); font-weight: 700; text-transform: uppercase;">Laporan Laba Rugi</div>
+                    <div class="text-muted" style="font-size: 12px;">Periode {{ \Carbon\Carbon::parse($dari)->translatedFormat('d F Y') }} — {{ \Carbon\Carbon::parse($sampai)->translatedFormat('d F Y') }}</div>
+                </div>
                 <form method="GET" style="display: flex; align-items: flex-end; gap: var(--space-3); flex-wrap: wrap;">
                     <div class="field" style="width: 180px;">
                         <label>Dari</label>

@@ -1,6 +1,6 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800">Pengaturan Keuangan</h2>
+        <h2 class="font-semibold text-xl text-gray-800">Pengaturan Data GL</h2>
     </x-slot>
 
     @push('styles')

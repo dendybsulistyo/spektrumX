@@ -1,0 +1,12 @@
+<x-app-layout>
+ <x-slot name="header"><h2 class="font-semibold text-xl text-gray-800">Rekap Omset Sederhana</h2></x-slot>
+ @php($rp=fn($n)=>number_format($n,0,',','.'))
+ <div class="py-8"><div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+  <form method="GET" style="display:flex;gap:10px;align-items:end;flex-wrap:wrap;margin-bottom:16px"><div><label style="display:block;font-size:12px;margin-bottom:4px">Bulan</label><select name="bulan" style="padding:8px;border:1px solid #cbd5e1;border-radius:6px">@foreach(range(1,12) as $n)<option value="{{ $n }}" @selected($month===$n)>{{ \Carbon\Carbon::create($year,$n,1)->translatedFormat('F') }}</option>@endforeach</select></div><div><label style="display:block;font-size:12px;margin-bottom:4px">Tahun</label><input name="tahun" type="number" value="{{ $year }}" style="width:90px;padding:8px;border:1px solid #cbd5e1;border-radius:6px"></div><button style="padding:9px 16px;border:0;border-radius:6px;background:#4f46e5;color:#fff;font-weight:700">Tampilkan</button></form>
+  <section style="overflow:auto;background:#fff;border:2px solid #2563eb"><table style="width:100%;border-collapse:collapse;font-size:14px"><thead><tr style="background:#f8fafc"><th style="padding:5px;border:1px dotted #64748b">Tanggal</th><th style="padding:5px;border:1px dotted #64748b">DPP</th><th style="padding:5px;border:1px dotted #64748b">PPN 11%</th><th style="padding:5px;border:1px dotted #64748b">NILAI NOTA</th></tr></thead><tbody>@foreach ($daily as $row)
+    @if ($row->total == 0)<tr style="background:#d1d5db"><td style="padding:3px 6px;border:1px dotted #64748b;text-align:right">{{ $row->day }}</td><td colspan="3" style="padding:3px 6px;border:1px dotted #64748b;text-align:center;font-weight:700">LIBUR</td></tr>
+    @else <tr><td style="padding:3px 6px;border:1px dotted #64748b;text-align:right">{{ $row->day }}</td><td style="padding:3px 6px;border:1px dotted #64748b;text-align:right">{{ $rp($row->dpp) }}</td><td style="padding:3px 6px;border:1px dotted #64748b;text-align:right">{{ $rp($row->ppn) }}</td><td style="padding:3px 6px;border:1px dotted #64748b;text-align:right">{{ $rp($row->total) }}</td></tr>
+    @endif
+  @endforeach</tbody><tfoot><tr style="font-weight:800"><td style="padding:4px 6px;text-align:right">TOTAL</td><td style="padding:4px 6px;text-align:right">{{ $rp($totals->dpp) }}</td><td style="padding:4px 6px;text-align:right">{{ $rp($totals->ppn) }}</td><td style="padding:4px 6px;text-align:right">{{ $rp($totals->total) }}</td></tr></tfoot></table></section>
+ </div></div>
+</x-app-layout>
