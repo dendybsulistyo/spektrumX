@@ -62,23 +62,27 @@ class CustomerController extends Controller
     }
 
     /**
-     * Read-only customer history. This lets kasir check every invoice a
-     * customer has made without granting access to edit customer data.
+     * Read-only queue of a customer's orders that are not yet fully paid.
+     * This lets kasir check both unpaid and DP orders without granting
+     * access to edit customer data or showing completed transactions.
      */
     public function show(Customer $customer): View
     {
         $orders = DB::query()->fromSub(
             DB::table('order_indoor')
                 ->where('KdCust', $customer->KdCust)
+                ->whereIn('status_bayar', ['belum_bayar', 'dp'])
                 ->select('id', 'NoOrder', 'TglOrder', 'total', 'status_bayar', 'status', DB::raw("'indoor' as order_type"))
                 ->unionAll(
                     DB::table('order_outdoor')
                         ->where('KdCust', $customer->KdCust)
+                        ->whereIn('status_bayar', ['belum_bayar', 'dp'])
                         ->select('id', 'NoOrder', 'TglOrder', 'total', 'status_bayar', 'status', DB::raw("'outdoor' as order_type"))
                 )
                 ->unionAll(
                     DB::table('order_artwork')
                         ->where('KdCust', $customer->KdCust)
+                        ->whereIn('status_bayar', ['belum_bayar', 'dp'])
                         ->select('id', 'NoOrder', 'TglOrder', 'total', 'status_bayar', 'status', DB::raw("'artwork' as order_type"))
                 ),
             'orders'

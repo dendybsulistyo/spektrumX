@@ -2,7 +2,7 @@
     <x-slot name="header">
         <div class="flex items-center justify-between gap-3">
             <div>
-                <h2 class="font-semibold text-xl text-gray-800">Riwayat Order Customer</h2>
+                <h2 class="font-semibold text-xl text-gray-800">Order Belum Lunas</h2>
                 <p class="mt-1 text-sm text-gray-500">{{ $customer->NmCust }} · {{ $customer->KdCust }}</p>
             </div>
             <a href="{{ route('customers.index') }}" class="text-sm text-indigo-600 hover:underline">← Data Customer</a>
@@ -39,7 +39,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="7" class="px-4 py-8 text-center text-gray-400">Belum ada order untuk customer ini.</td></tr>
+                        <tr><td colspan="7" class="px-4 py-8 text-center text-gray-400">Tidak ada order yang belum lunas untuk customer ini.</td></tr>
                     @endforelse
                 </tbody>
             </table>
