@@ -183,6 +183,7 @@ Route::middleware('auth')->group(function () {
     Route::middleware('permission:customers.view')->group(function () {
         Route::resource('customers', CustomerController::class)->only(['index', 'edit'])->names('customers');
         Route::get('/customers-aktif', [CustomerController::class, 'aktif'])->name('customers.aktif');
+        Route::get('/customers/{customer:KdCust}', [CustomerController::class, 'show'])->name('customers.show');
     });
     Route::middleware('permission:customers.manage')->group(function () {
         Route::resource('customers', CustomerController::class)->only(['create', 'store', 'update', 'destroy'])->names('customers');

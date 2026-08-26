@@ -61,6 +61,36 @@ class CustomerController extends Controller
         return view('customers.aktif', compact('customers'));
     }
 
+    /**
+     * Read-only customer history. This lets kasir check every invoice a
+     * customer has made without granting access to edit customer data.
+     */
+    public function show(Customer $customer): View
+    {
+        $orders = DB::query()->fromSub(
+            DB::table('order_indoor')
+                ->where('KdCust', $customer->KdCust)
+                ->select('id', 'NoOrder', 'TglOrder', 'total', 'status_bayar', 'status', DB::raw("'indoor' as order_type"))
+                ->unionAll(
+                    DB::table('order_outdoor')
+                        ->where('KdCust', $customer->KdCust)
+                        ->select('id', 'NoOrder', 'TglOrder', 'total', 'status_bayar', 'status', DB::raw("'outdoor' as order_type"))
+                )
+                ->unionAll(
+                    DB::table('order_artwork')
+                        ->where('KdCust', $customer->KdCust)
+                        ->select('id', 'NoOrder', 'TglOrder', 'total', 'status_bayar', 'status', DB::raw("'artwork' as order_type"))
+                ),
+            'orders'
+        )
+            ->orderByDesc('TglOrder')
+            ->orderByDesc('NoOrder')
+            ->paginate(20)
+            ->withQueryString();
+
+        return view('customers.show', compact('customer', 'orders'));
+    }
+
     public function create(): View
     {
         return view('customers.create');

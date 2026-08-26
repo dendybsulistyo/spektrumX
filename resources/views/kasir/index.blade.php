@@ -83,6 +83,9 @@
                             <td class="px-3 py-2 text-gray-600">{{ $order->customer?->NmCust ? ucwords(mb_strtolower($order->customer->NmCust)) : '-' }}</td>
                             <td class="px-3 py-2 text-right text-gray-900">Rp {{ number_format($order->total ?? 0, 0, ',', '.') }}</td>
                             <td class="px-3 py-2 text-right">
+                                <x-order-discussion type="indoor" :order-id="$order->id" :no-order="$order->NoOrder"
+                                                     :comments="$orderComments->get('indoor-'.$order->id, collect())"
+                                                     :unread="$orderUnread->get('indoor-'.$order->id, 0)" />
                                 <a href="{{ route('kasir.show', ['type' => 'indoor', 'id' => $order->id]) }}"
                                    class="inline-flex items-center px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-md hover:bg-blue-700">
                                     Bayar
@@ -132,6 +135,9 @@
                             <td class="px-3 py-2 text-gray-600">{{ $order->customer?->NmCust ? ucwords(mb_strtolower($order->customer->NmCust)) : '-' }}</td>
                             <td class="px-3 py-2 text-right text-gray-900">Rp {{ number_format($order->total ?? 0, 0, ',', '.') }}</td>
                             <td class="px-3 py-2 text-right">
+                                <x-order-discussion type="outdoor" :order-id="$order->id" :no-order="$order->NoOrder"
+                                                     :comments="$orderComments->get('outdoor-'.$order->id, collect())"
+                                                     :unread="$orderUnread->get('outdoor-'.$order->id, 0)" />
                                 <a href="{{ route('kasir.show', ['type' => 'outdoor', 'id' => $order->id]) }}"
                                    class="inline-flex items-center px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-md hover:bg-blue-700">
                                     Bayar
@@ -214,6 +220,9 @@
                             <td class="px-3 py-2 text-right text-green-700">Rp {{ number_format($order->jumlah_dibayar ?? 0, 0, ',', '.') }}</td>
                             <td class="px-3 py-2 text-right text-amber-700 font-semibold">Rp {{ number_format($order->jumlah_piutang ?? 0, 0, ',', '.') }}</td>
                             <td class="px-3 py-2 text-right">
+                                <x-order-discussion :type="$order->order_type" :order-id="$order->id" :no-order="$order->NoOrder"
+                                                     :comments="$orderComments->get($order->order_type.'-'.$order->id, collect())"
+                                                     :unread="$orderUnread->get($order->order_type.'-'.$order->id, 0)" />
                                 <button type="button"
                                         @click="lunasiModalOpen = true; lunasiType = '{{ $order->order_type }}'; lunasiId = {{ $order->id }}; lunasiNoOrder = '{{ $order->NoOrder }}'; lunasiSisa = '{{ number_format($order->jumlah_piutang ?? 0, 0, ',', '.') }}'; lunasiSisaRaw = {{ (float) ($order->jumlah_piutang ?? 0) }}; lunasiRincian = [{ cara_bayar: 'tunai', jumlah: '', no_referensi: '' }]"
                                         class="inline-flex items-center px-3 py-1.5 bg-green-600 text-white text-xs font-semibold rounded-md hover:bg-green-700">
@@ -268,6 +277,9 @@
                             <td class="px-3 py-2 text-gray-600">{{ $stageLabels[$order->status] ?? ucfirst($order->status) }}</td>
                             <td class="px-3 py-2 text-right text-gray-900">Rp {{ number_format($order->total ?? 0, 0, ',', '.') }}</td>
                             <td class="px-3 py-2 text-right">
+                                <x-order-discussion :type="$order->order_type" :order-id="$order->id" :no-order="$order->NoOrder"
+                                                     :comments="$orderComments->get($order->order_type.'-'.$order->id, collect())"
+                                                     :unread="$orderUnread->get($order->order_type.'-'.$order->id, 0)" />
                                 @can('kasir.manage')
                                     @if (! $order->cancel_requested_at && ! $pendingRework->has($order->order_type.'-'.$order->id) && $order->status === 'desain')
                                         <div class="inline-flex gap-1.5">

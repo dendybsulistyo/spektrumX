@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\ChatMessage;
+use App\Models\OrderComment;
 use App\Models\OrderArtwork;
 use App\Models\OrderIndoor;
 use App\Models\OrderOutdoor;
@@ -114,7 +115,39 @@ class KasirController extends Controller
         // store() rejects a second one for the same order regardless of kind.
         $pendingRework = OrderReworkRequest::pendingMap();
 
-        return view('kasir.index', compact('indoorOrders', 'outdoorOrders', 'dpOrders', 'replacementOrders', 'lunasOrders', 'pendingRework', 'initialTab'));
+        // Kasir works across all order types, so preload each thread once
+        // for the chat buttons instead of querying from every table row.
+        $orderComments = collect();
+        $orderUnread = collect();
+        foreach (['indoor', 'outdoor', 'artwork'] as $orderType) {
+            $orders = collect()
+                ->merge($orderType === 'indoor' ? $indoorOrders : collect())
+                ->merge($orderType === 'outdoor' ? $outdoorOrders : collect())
+                ->merge($dpOrders->where('order_type', $orderType))
+                ->merge($lunasOrders->where('order_type', $orderType));
+            $orderIds = $orders->pluck('id')->unique()->values();
+
+            if ($orderIds->isEmpty()) {
+                continue;
+            }
+
+            $comments = OrderComment::with('user')
+                ->where('order_type', $orderType)
+                ->whereIn('order_id', $orderIds)
+                ->orderBy('created_at')
+                ->get()
+                ->groupBy('order_id');
+
+            foreach ($comments as $orderId => $thread) {
+                $orderComments->put("{$orderType}-{$orderId}", $thread);
+            }
+
+            foreach (OrderComment::unreadCountsFor($orderType, $orderIds) as $orderId => $count) {
+                $orderUnread->put("{$orderType}-{$orderId}", $count);
+            }
+        }
+
+        return view('kasir.index', compact('indoorOrders', 'outdoorOrders', 'dpOrders', 'replacementOrders', 'lunasOrders', 'pendingRework', 'initialTab', 'orderComments', 'orderUnread'));
     }
 
     public function show(string $type, int $id): View

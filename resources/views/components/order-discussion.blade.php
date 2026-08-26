@@ -10,8 +10,11 @@
         @unless ($compact)
             Chat ({{ $comments->count() }})
         @endunless
-        <span x-show="unread > 0" x-cloak x-text="unread"
-              class="absolute -top-1.5 -right-1.5 inline-flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full bg-red-600 text-white text-[10px] font-bold leading-none"></span>
+        <span x-show="unread > 0" x-cloak
+              class="absolute -top-2 -right-2 inline-flex items-center justify-center gap-0.5 h-4 px-1.5 rounded-full bg-red-600 text-white text-[10px] font-bold leading-none shadow-sm">
+            <span>Baru</span>
+            <span x-text="unread"></span>
+        </span>
     </button>
 
     <div x-show="open" x-cloak @keydown.escape.window="open = false"

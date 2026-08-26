@@ -26,7 +26,8 @@ class OrderCommentController extends Controller
                 || auth()->user()->hasPermission('order-finishing.view')
                 || auth()->user()->hasPermission('order-qc.view')
                 || auth()->user()->hasPermission('order-bungkus.view')
-                || auth()->user()->hasPermission('pengambilan.view'),
+                || auth()->user()->hasPermission('pengambilan.view')
+                || auth()->user()->hasPermission('kasir.view'),
             403
         );
 
