@@ -68,31 +68,36 @@ class CustomerController extends Controller
      */
     public function show(Customer $customer): View
     {
-        $orders = DB::query()->fromSub(
+        $ordersQuery = DB::query()->fromSub(
             DB::table('order_indoor')
                 ->where('KdCust', $customer->KdCust)
                 ->whereIn('status_bayar', ['belum_bayar', 'dp'])
-                ->select('id', 'NoOrder', 'TglOrder', 'total', 'status_bayar', 'status', DB::raw("'indoor' as order_type"))
+                ->select('id', 'NoOrder', 'TglOrder', 'total', 'jumlah_piutang', 'status_bayar', 'status', DB::raw("'indoor' as order_type"))
                 ->unionAll(
                     DB::table('order_outdoor')
                         ->where('KdCust', $customer->KdCust)
                         ->whereIn('status_bayar', ['belum_bayar', 'dp'])
-                        ->select('id', 'NoOrder', 'TglOrder', 'total', 'status_bayar', 'status', DB::raw("'outdoor' as order_type"))
+                        ->select('id', 'NoOrder', 'TglOrder', 'total', 'jumlah_piutang', 'status_bayar', 'status', DB::raw("'outdoor' as order_type"))
                 )
                 ->unionAll(
                     DB::table('order_artwork')
                         ->where('KdCust', $customer->KdCust)
                         ->whereIn('status_bayar', ['belum_bayar', 'dp'])
-                        ->select('id', 'NoOrder', 'TglOrder', 'total', 'status_bayar', 'status', DB::raw("'artwork' as order_type"))
+                        ->select('id', 'NoOrder', 'TglOrder', 'total', 'jumlah_piutang', 'status_bayar', 'status', DB::raw("'artwork' as order_type"))
                 ),
             'orders'
-        )
+        );
+
+        $totalBelumLunas = (clone $ordersQuery)
+            ->sum(DB::raw('CASE WHEN status_bayar = \'dp\' THEN jumlah_piutang ELSE total END'));
+
+        $orders = $ordersQuery
             ->orderByDesc('TglOrder')
             ->orderByDesc('NoOrder')
             ->paginate(20)
             ->withQueryString();
 
-        return view('customers.show', compact('customer', 'orders'));
+        return view('customers.show', compact('customer', 'orders', 'totalBelumLunas'));
     }
 
     public function create(): View

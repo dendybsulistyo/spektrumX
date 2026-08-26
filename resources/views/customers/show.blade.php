@@ -5,7 +5,11 @@
                 <h2 class="font-semibold text-xl text-gray-800">Order Belum Lunas</h2>
                 <p class="mt-1 text-sm text-gray-500">{{ $customer->NmCust }} · {{ $customer->KdCust }}</p>
             </div>
-            <a href="{{ route('customers.index') }}" class="text-sm text-indigo-600 hover:underline">← Data Customer</a>
+            <div class="text-right">
+                <p class="text-xs font-medium uppercase tracking-wide text-gray-500">Total belum lunas</p>
+                <p class="mt-1 text-lg font-bold text-amber-700">Rp {{ number_format($totalBelumLunas, 0, ',', '.') }}</p>
+                <a href="{{ route('customers.index') }}" class="mt-1 inline-block text-sm text-indigo-600 hover:underline">← Data Customer</a>
+            </div>
         </div>
     </x-slot>
 
@@ -18,6 +22,7 @@
                         <th class="px-4 py-3">Tipe</th>
                         <th class="px-4 py-3">Tanggal</th>
                         <th class="px-4 py-3 text-right">Total</th>
+                        <th class="px-4 py-3 text-right">Sisa Tagihan</th>
                         <th class="px-4 py-3">Pembayaran</th>
                         <th class="px-4 py-3">Status Produksi</th>
                         <th class="px-4 py-3 text-right">Aksi</th>
@@ -30,6 +35,7 @@
                             <td class="px-4 py-3 capitalize text-gray-600">{{ $order->order_type }}</td>
                             <td class="px-4 py-3 text-gray-600">{{ \Carbon\Carbon::parse($order->TglOrder)->format('d M Y') }}</td>
                             <td class="px-4 py-3 text-right text-gray-900">Rp {{ number_format($order->total ?? 0, 0, ',', '.') }}</td>
+                            <td class="px-4 py-3 text-right font-semibold text-amber-700">Rp {{ number_format($order->status_bayar === 'dp' ? $order->jumlah_piutang : $order->total, 0, ',', '.') }}</td>
                             <td class="px-4 py-3 capitalize text-gray-600">{{ str_replace('_', ' ', $order->status_bayar ?? '-') }}</td>
                             <td class="px-4 py-3 capitalize text-gray-600">{{ str_replace('_', ' ', $order->status ?? '-') }}</td>
                             <td class="px-4 py-3 text-right">
@@ -39,7 +45,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="7" class="px-4 py-8 text-center text-gray-400">Tidak ada order yang belum lunas untuk customer ini.</td></tr>
+                        <tr><td colspan="8" class="px-4 py-8 text-center text-gray-400">Tidak ada order yang belum lunas untuk customer ini.</td></tr>
                     @endforelse
                 </tbody>
             </table>
