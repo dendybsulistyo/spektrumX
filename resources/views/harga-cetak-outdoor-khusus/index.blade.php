@@ -73,7 +73,7 @@
                                             {{ $standar ? 'Rp '.number_format($standar->HargaStd, 0, ',', '.') : '-' }}
                                         </td>
                                         <td class="px-1 py-1.5">
-                                            <input type="number" step="100" min="0"
+                                            <input type="number" step="100" min="0" data-rupiah
                                                    name="harga[{{ $bahan->NoCetak }}]"
                                                    value="{{ old('harga.'.$bahan->NoCetak, $khusus?->HargaStd) }}"
                                                    placeholder="{{ $standar ? number_format($standar->HargaStd, 0, ',', '.') : '-' }}"

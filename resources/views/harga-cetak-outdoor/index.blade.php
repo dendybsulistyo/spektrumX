@@ -60,14 +60,14 @@
                                         $harga = $prices->get($kdCtk);
                                     @endphp
                                     <td class="px-1 py-1.5">
-                                        <input type="number" step="100" min="0"
+                                        <input type="number" step="100" min="0" data-rupiah
                                                name="harga[{{ $bahan->NoCetak }}][{{ $printer->KdPrn }}][std]"
                                                value="{{ old('harga.'.$bahan->NoCetak.'.'.$printer->KdPrn.'.std', $harga?->HargaStd) }}"
                                                placeholder="-"
                                                class="w-24 text-right rounded-md border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500">
                                     </td>
                                     <td class="px-1 py-1.5">
-                                        <input type="number" step="100" min="0"
+                                        <input type="number" step="100" min="0" data-rupiah
                                                name="harga[{{ $bahan->NoCetak }}][{{ $printer->KdPrn }}][min]"
                                                value="{{ old('harga.'.$bahan->NoCetak.'.'.$printer->KdPrn.'.min', $harga?->HargaMin) }}"
                                                placeholder="-"

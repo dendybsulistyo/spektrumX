@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Akun;
 use App\Models\Customer;
 use App\Models\JurnalEntry;
+use App\Models\LaporanPpnFinal;
 use App\Models\OrderArtwork;
 use App\Models\OrderIndoor;
 use App\Models\OrderOutdoor;
@@ -449,6 +450,26 @@ class KeuanganController extends Controller
     public function laporanPpn(Request $request): View
     {
         [$dari, $sampai, $rate, $rows] = $this->ppnData($request);
+        $periode = substr($dari, 0, 7);
+        $laporanFinal = LaporanPpnFinal::with('items')->where('periode', $periode)->first();
+
+        // A locked report is a historical snapshot: later edits to an order
+        // or changing the default PPN rate must never alter its contents.
+        if ($laporanFinal?->status === 'final') {
+            $rate = (float) $laporanFinal->tarif_ppn;
+            $rows = $laporanFinal->items->map(fn ($item) => [
+                'id' => $item->order_id,
+                'type_key' => $item->order_type,
+                'key' => $item->order_type.'-'.$item->order_id,
+                'tanggal' => $item->tanggal_lunas,
+                'tipe' => ucfirst($item->order_type),
+                'no_order' => $item->no_order,
+                'customer' => $item->customer ?: '-',
+                'total' => $item->total,
+                'dpp' => $item->dpp,
+                'ppn' => $item->ppn,
+            ])->values();
+        }
 
         return view('keuangan.laporan-ppn', [
             'dari' => $dari,
@@ -458,7 +479,56 @@ class KeuanganController extends Controller
             'totalOmzet' => $rows->sum('total'),
             'totalDpp' => $rows->sum('dpp'),
             'totalPpn' => $rows->sum('ppn'),
+            'periode' => $periode,
+            'laporanFinal' => $laporanFinal,
+            'selectedKeys' => $laporanFinal?->items->map(fn ($item) => $item->order_type.'-'.$item->order_id)->all() ?? [],
         ]);
+    }
+
+    public function simpanDraftPpn(Request $request): \Illuminate\Http\RedirectResponse
+    {
+        $data = $request->validate([
+            'dari' => ['required', 'date'],
+            'sampai' => ['required', 'date'],
+            'rate' => ['required', 'numeric', 'min:0', 'max:100'],
+            'selected' => ['nullable', 'array'],
+            'selected.*' => ['string'],
+        ]);
+
+        $periode = substr($data['dari'], 0, 7);
+        abort_unless(substr($data['sampai'], 0, 7) === $periode, 422, 'Draft PPN harus dibuat untuk satu bulan yang sama.');
+
+        [$dari, $sampai, $rate, $rows] = $this->ppnData(Request::create('/', 'GET', $data));
+        $rowsByKey = $rows->keyBy('key');
+        $selectedRows = collect($data['selected'] ?? [])->unique()->map(fn ($key) => $rowsByKey->get($key))->filter();
+
+        $report = LaporanPpnFinal::firstOrCreate(
+            ['periode' => $periode],
+            ['tarif_ppn' => $rate, 'status' => 'draft', 'created_by' => auth()->id()],
+        );
+        abort_if($report->status === 'final', 422, 'Laporan PPN Final sudah dikunci dan tidak dapat diubah.');
+
+        DB::transaction(function () use ($report, $rate, $selectedRows) {
+            $report->update(['tarif_ppn' => $rate]);
+            $report->items()->delete();
+            $report->items()->createMany($selectedRows->map(fn ($row) => [
+                'order_type' => $row['type_key'], 'order_id' => $row['id'],
+                'tanggal_lunas' => $row['tanggal'], 'no_order' => $row['no_order'],
+                'customer' => $row['customer'], 'total' => $row['total'], 'dpp' => $row['dpp'], 'ppn' => $row['ppn'],
+            ])->all());
+        });
+
+        return redirect()->route('keuangan.laporan-ppn', compact('dari', 'sampai', 'rate'))->with('status', 'Draft Laporan PPN disimpan.');
+    }
+
+    public function finalkanPpn(LaporanPpnFinal $laporanPpnFinal): \Illuminate\Http\RedirectResponse
+    {
+        abort_if($laporanPpnFinal->status === 'final', 422, 'Laporan ini sudah dikunci.');
+        abort_if(! $laporanPpnFinal->items()->exists(), 422, 'Pilih minimal satu transaksi sebelum mengunci laporan.');
+
+        $laporanPpnFinal->update(['status' => 'final', 'finalized_at' => now(), 'finalized_by' => auth()->id()]);
+
+        return redirect()->route('keuangan.laporan-ppn', ['dari' => $laporanPpnFinal->periode.'-01', 'sampai' => \Illuminate\Support\Carbon::parse($laporanPpnFinal->periode.'-01')->endOfMonth()->format('Y-m-d'), 'rate' => $laporanPpnFinal->tarif_ppn])->with('status', 'Laporan PPN Final dikunci sebagai histori.');
     }
 
     /**
@@ -471,6 +541,16 @@ class KeuanganController extends Controller
     public function exportPpn(Request $request): \Symfony\Component\HttpFoundation\StreamedResponse
     {
         [$dari, $sampai, $rate, $rows] = $this->ppnData($request);
+        $laporanFinal = LaporanPpnFinal::with('items')->where('periode', substr($dari, 0, 7))->where('status', 'final')->first();
+
+        if ($laporanFinal) {
+            $rate = (float) $laporanFinal->tarif_ppn;
+            $rows = $laporanFinal->items->map(fn ($item) => [
+                'tanggal' => $item->tanggal_lunas, 'tipe' => ucfirst($item->order_type),
+                'no_order' => $item->no_order, 'customer' => $item->customer ?: '-',
+                'total' => $item->total, 'dpp' => $item->dpp, 'ppn' => $item->ppn,
+            ]);
+        }
 
         $filename = "laporan-ppn_{$dari}_{$sampai}.csv";
 
@@ -507,8 +587,10 @@ class KeuanganController extends Controller
      */
     private function ppnData(Request $request): array
     {
-        $dari = $request->filled('dari') ? $request->string('dari')->toString() : now()->startOfMonth()->format('Y-m-d');
-        $sampai = $request->filled('sampai') ? $request->string('sampai')->toString() : now()->format('Y-m-d');
+        $periode = $request->string('periode')->toString();
+        $isMonthlyPeriod = preg_match('/^\d{4}-\d{2}$/', $periode) === 1;
+        $dari = $isMonthlyPeriod ? $periode.'-01' : ($request->filled('dari') ? $request->string('dari')->toString() : now()->startOfMonth()->format('Y-m-d'));
+        $sampai = $isMonthlyPeriod ? \Illuminate\Support\Carbon::parse($dari)->endOfMonth()->format('Y-m-d') : ($request->filled('sampai') ? $request->string('sampai')->toString() : now()->format('Y-m-d'));
         $rate = $request->filled('rate') ? (float) $request->input('rate') : PengaturanKeuangan::current()->tarif_ppn_default;
 
         $rows = collect();
@@ -526,6 +608,9 @@ class KeuanganController extends Controller
                     $ppn = $total - $dpp;
 
                     $rows->push([
+                        'id' => $order->id,
+                        'type_key' => $type,
+                        'key' => $type.'-'.$order->id,
                         'tanggal' => $order->dibayar_at,
                         'tipe' => ucfirst($type),
                         'no_order' => $order->NoOrder,

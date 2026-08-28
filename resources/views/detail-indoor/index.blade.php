@@ -31,6 +31,8 @@
             saving: false,
             errors: {},
             form: { bertingkat: [] },
+            rupiah(value) { return value === null || value === '' ? '' : Number(value).toLocaleString('id-ID'); },
+            angka(value) { return Number(String(value).replace(/\D/g, '')) || 0; },
             openEdit(row) {
                 this.form = { ...row };
                 this.form.bertingkat = (this.bertingkat[row.KdProd] || []).map(t => ({ ...t }));
@@ -204,13 +206,13 @@
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700">Harga Standar (Rp)</label>
-                            <input type="number" step="0.01" x-model.number="form.HargaStd" required
+                            <input type="text" inputmode="numeric" :value="rupiah(form.HargaStd)" @input="form.HargaStd = angka($event.target.value)" required
                                    class="mt-1 block w-full rounded-md border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500">
                             <p class="mt-1 text-xs text-red-600" x-show="errors.HargaStd" x-text="errors.HargaStd?.[0]"></p>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700">Harga Minimum (Rp)</label>
-                            <input type="number" step="0.01" x-model.number="form.HargaMin" required
+                            <input type="text" inputmode="numeric" :value="rupiah(form.HargaMin)" @input="form.HargaMin = angka($event.target.value)" required
                                    class="mt-1 block w-full rounded-md border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500">
                             <p class="mt-1 text-xs text-red-600" x-show="errors.HargaMin" x-text="errors.HargaMin?.[0]"></p>
                         </div>
@@ -273,7 +275,7 @@
                                                class="block w-full rounded-md border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500">
                                     </div>
                                     <div class="col-span-4">
-                                        <input type="number" min="0" step="0.01" x-model.number="tier.Harga"
+                                        <input type="text" inputmode="numeric" :value="rupiah(tier.Harga)" @input="tier.Harga = angka($event.target.value)"
                                                class="block w-full rounded-md border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500">
                                     </div>
                                     <div class="col-span-2 text-right">

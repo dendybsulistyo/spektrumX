@@ -28,6 +28,8 @@
             tanggal: '{{ now()->format('Y-m-d') }}',
             keterangan: '',
             lines: [{ akun: '', posisi: 'debet', jumlah: '' }, { akun: '', posisi: 'kredit', jumlah: '' }],
+            rupiah(value) { return value === null || value === '' ? '' : Number(value).toLocaleString('id-ID'); },
+            angka(value) { return Number(String(value).replace(/\D/g, '')) || 0; },
             addLine() { this.lines.push({ akun: '', posisi: 'debet', jumlah: '' }); },
             removeLine(idx) { if (this.lines.length > 2) this.lines.splice(idx, 1); },
             totalDebet() { return this.lines.filter(l => l.posisi === 'debet').reduce((s, l) => s + (parseFloat(l.jumlah) || 0), 0); },
@@ -153,7 +155,7 @@
                                             <option value="debet">Debet</option>
                                             <option value="kredit">Kredit</option>
                                         </select>
-                                        <input type="number" :name="`lines[${idx}][jumlah]`" x-model="line.jumlah" min="1" required
+                                        <input type="text" inputmode="numeric" :name="`lines[${idx}][jumlah]`" :value="rupiah(line.jumlah)" @input="line.jumlah = angka($event.target.value)" required
                                                placeholder="Jumlah" class="rounded-md border-gray-300 text-sm w-32 shrink-0 no-spinner">
                                         <button type="button" @click="removeLine(idx)" x-show="lines.length > 2"
                                                 class="text-red-600 text-sm px-1 shrink-0">&times;</button>

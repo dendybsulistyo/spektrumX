@@ -11,6 +11,58 @@ const formatRupiah = (input) => {
     input.value = nominal ? new Intl.NumberFormat('id-ID').format(nominal) : '';
 };
 
+// Fields marked data-rupiah show thousands separators while the user types.
+// Immediately before submit we restore the raw digits, so request validation
+// and the values persisted in the database remain unchanged.
+const initializeRupiahInputs = () => {
+    document.querySelectorAll('input[data-rupiah]').forEach((input) => {
+        if (input.dataset.rupiahReady) return;
+
+        input.dataset.rupiahReady = 'true';
+        input.type = 'text';
+        input.inputMode = 'numeric';
+        input.pattern = '[0-9.]*';
+        formatRupiah(input);
+        input.addEventListener('input', () => formatRupiah(input));
+
+        input.form?.addEventListener('submit', () => {
+            input.value = input.value.replace(/\D/g, '');
+        });
+    });
+};
+
+// Some accounting forms accept decimal values, written in the Indonesian
+// style (for example 1.250,5). Keep that familiar display while submitting
+// the database-friendly decimal form (1250.5).
+const formatRupiahDecimal = (input) => {
+    const cleaned = input.value.replace(/[^\d,]/g, '');
+    const [whole, ...decimal] = cleaned.split(',');
+    const formattedWhole = whole ? new Intl.NumberFormat('id-ID').format(whole) : '';
+    input.value = decimal.length ? `${formattedWhole},${decimal.join('').slice(0, 2)}` : formattedWhole;
+};
+
+const initializeRupiahDecimalInputs = () => {
+    document.querySelectorAll('input[data-rupiah-decimal]').forEach((input) => {
+        if (input.dataset.rupiahDecimalReady) return;
+
+        input.dataset.rupiahDecimalReady = 'true';
+        input.type = 'text';
+        input.inputMode = 'decimal';
+        formatRupiahDecimal(input);
+        input.addEventListener('input', () => formatRupiahDecimal(input));
+        input.form?.addEventListener('submit', () => {
+            input.value = input.value.replace(/\./g, '').replace(',', '.');
+        });
+    });
+};
+
+const observeRupiahInputs = () => {
+    new MutationObserver(() => {
+        initializeRupiahInputs();
+        initializeRupiahDecimalInputs();
+    }).observe(document.body, { childList: true, subtree: true });
+};
+
 const initializePurchasePaymentModals = () => {
     document.querySelectorAll('details').forEach((details) => {
         const form = details.querySelector('form[action*="/pelunasan"]');
@@ -86,9 +138,15 @@ document.addEventListener('keydown', (event) => {
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
         initializePurchasePaymentModals();
+        initializeRupiahInputs();
+        initializeRupiahDecimalInputs();
+        observeRupiahInputs();
         normalizePurchaseReportQuantities();
     });
 } else {
     initializePurchasePaymentModals();
+    initializeRupiahInputs();
+    initializeRupiahDecimalInputs();
+    observeRupiahInputs();
     normalizePurchaseReportQuantities();
 }

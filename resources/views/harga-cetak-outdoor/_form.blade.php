@@ -13,14 +13,14 @@
 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
     <div>
         <x-input-label for="HargaStd" value="Harga Standar (Rp)" />
-        <x-text-input id="HargaStd" name="HargaStd" type="number" step="0.01" class="mt-1 block w-full"
+        <x-text-input id="HargaStd" name="HargaStd" type="number" step="0.01" data-rupiah class="mt-1 block w-full"
             value="{{ old('HargaStd', $hargaCetakOutdoor?->HargaStd) }}" required />
         <x-input-error :messages="$errors->get('HargaStd')" class="mt-1" />
     </div>
 
     <div>
         <x-input-label for="HargaMin" value="Harga Minimum (Rp)" />
-        <x-text-input id="HargaMin" name="HargaMin" type="number" step="0.01" class="mt-1 block w-full"
+        <x-text-input id="HargaMin" name="HargaMin" type="number" step="0.01" data-rupiah class="mt-1 block w-full"
             value="{{ old('HargaMin', $hargaCetakOutdoor?->HargaMin) }}" required />
         <x-input-error :messages="$errors->get('HargaMin')" class="mt-1" />
     </div>

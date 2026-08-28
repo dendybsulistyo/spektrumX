@@ -23,6 +23,8 @@
             formOpen: false, editId: null,
             tanggal: '{{ now()->format('Y-m-d') }}', kategoriInput: 'bahan_baku', keterangan: '', jumlah: '',
             caraBayarInput: 'tunai', noReferensiInput: '',
+            rupiah(value) { return value === null || value === '' ? '' : Number(value).toLocaleString('id-ID'); },
+            angka(value) { return Number(String(value).replace(/\D/g, '')) || 0; },
             formAction() { return this.editId ? `/pengeluaran/${this.editId}` : '/pengeluaran'; },
          }">
         <div style="max-width: 1480px; margin: 0 auto; display: flex; flex-direction: column; gap: var(--space-6);">
@@ -156,7 +158,7 @@
 
                         <div>
                             <x-input-label value="Jumlah (Rp)" />
-                            <input type="number" name="jumlah" x-model="jumlah" required min="1" step="1"
+                            <input type="text" inputmode="numeric" name="jumlah" :value="rupiah(jumlah)" @input="jumlah = angka($event.target.value)" required
                                    class="mt-1 block w-full rounded-md border-gray-300 text-sm no-spinner">
                         </div>
 

@@ -144,6 +144,11 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::middleware('permission:keuangan.pengaturan')->group(function () {
+        Route::post('/keuangan/laporan-ppn/draft', [KeuanganController::class, 'simpanDraftPpn'])->name('keuangan.laporan-ppn.draft');
+        Route::post('/keuangan/laporan-ppn/{laporanPpnFinal}/finalkan', [KeuanganController::class, 'finalkanPpn'])->name('keuangan.laporan-ppn.finalkan');
+    });
+
+    Route::middleware('permission:keuangan.pengaturan')->group(function () {
         Route::post('/akuntansi/pembelian', [AccountingPurchaseController::class, 'store'])->name('akuntansi.purchases.store');
         Route::post('/akuntansi/pembelian/{purchase}/pelunasan', [AccountingPurchaseController::class, 'pay'])->name('akuntansi.purchases.pay');
         Route::post('/akuntansi/pembelian/{purchase}/retur', [AccountingPurchaseController::class, 'return'])->name('akuntansi.purchases.return');

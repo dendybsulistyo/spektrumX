@@ -86,7 +86,7 @@
 
     <div id="batas-wrapper" class="mt-3 {{ $isVip ? '' : 'hidden' }}">
         <x-input-label for="Batas" value="Limit Piutang (Rp)" />
-        <x-text-input id="Batas" name="Batas" type="number" step="0.01" class="mt-1 block w-full max-w-xs"
+        <x-text-input id="Batas" name="Batas" type="number" step="0.01" data-rupiah class="mt-1 block w-full max-w-xs"
             value="{{ old('Batas', $customer?->limit?->Batas) }}" />
         <x-input-error :messages="$errors->get('Batas')" class="mt-1" />
         @if ($customer?->limit)
