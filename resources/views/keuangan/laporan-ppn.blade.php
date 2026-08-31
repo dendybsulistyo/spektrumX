@@ -115,7 +115,7 @@
                                     <th style="width: 62px; text-align: center;">
                                         <label title="Check All" style="display: inline-flex; align-items: center; gap: 4px; cursor: pointer;">
                                             <input type="checkbox" :checked="selected.length > 0 && selected.length === Object.keys(entries).length" @change="toggleAll($event.target.checked)">
-                                            All
+                                            
                                         </label>
                                     </th>
                                 @endunless

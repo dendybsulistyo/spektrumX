@@ -95,6 +95,7 @@ class KasirController extends Controller
         // after paying), and doing it from here keeps the cancellation tied
         // to the same place the payment itself was recorded, so the
         // financial reports stay consistent.
+
         $lunasOrders = collect();
         foreach (['indoor' => OrderIndoor::class, 'outdoor' => OrderOutdoor::class, 'artwork' => OrderArtwork::class] as $orderType => $model) {
             $model::query()
@@ -117,6 +118,8 @@ class KasirController extends Controller
 
         // Kasir works across all order types, so preload each thread once
         // for the chat buttons instead of querying from every table row.
+
+
         $orderComments = collect();
         $orderUnread = collect();
         foreach (['indoor', 'outdoor', 'artwork'] as $orderType) {
@@ -170,6 +173,7 @@ class KasirController extends Controller
         // Nota pengganti only ever moves the topup/cashback difference in
         // one go, via the untouched single cara_bayar path below — splitting
         // across methods is only offered for a normal lunas/DP collection.
+        
         $isReplacement = (bool) $order->replacement_order_id;
 
         $rules = [

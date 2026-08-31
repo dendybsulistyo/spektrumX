@@ -187,7 +187,9 @@
 
     <div class="actions no-print" id="standaloneActions">
         <a href="#" id="backLink" class="link-back">← Kembali</a>
-        <button class="btn" onclick="window.print()">Cetak Surat Pesanan</button>
+        @if (request('source') !== 'pengambilan' || ($order->status_bayar === 'lunas' && ! $order->invoice_voided_at))
+            <button class="btn" onclick="window.print()">Cetak Surat Pesanan</button>
+        @endif
     </div>
     <script>
         if (window.self !== window.top) document.getElementById('standaloneActions').style.display = 'none';
