@@ -18,6 +18,7 @@
             #industry-pengambilan .item-row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--color-divider); flex-wrap: wrap; }
             #industry-pengambilan .item-row:last-child { border-bottom: none; }
             #industry-pengambilan .progress-tag { font-family: var(--font-heading); font-weight: 600; font-size: 13px; color: var(--color-text-muted, #666); }
+            #industry-pengambilan .signature-pad { display:block; width:100%; height:160px; border:1px dashed var(--color-divider); background:#fff; touch-action:none; cursor:crosshair; }
         </style>
     @endpush
 
@@ -96,6 +97,16 @@
                             <input type="text" name="kontak_penerima" required maxlength="50" class="in-input" style="width: 100%;" placeholder="No. HP / kontak">
                         </div>
 
+                        <div>
+                            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;">
+                                <label class="label">Tanda Tangan Penerima</label>
+                                <button type="button" id="clear-signature" class="btn btn-secondary" style="height:28px;padding:0 9px;font-size:12px;">Hapus</button>
+                            </div>
+                            <canvas id="pickup-signature-pad" class="signature-pad" width="600" height="220" aria-label="Area tanda tangan penerima"></canvas>
+                            <input type="hidden" name="signature_strokes" id="signature-strokes">
+                            <p class="text-muted" style="margin:4px 0 0;font-size:11px;">Minta penerima membubuhkan tanda tangan menggunakan jari atau stylus.</p>
+                        </div>
+
                         <div class="text-muted" style="font-size: 12px;">
                             Qty diserahkan: <span x-text="penerimaQty"></span> unit
                         </div>
@@ -110,3 +121,29 @@
         </div>
     </div>
 </x-app-layout>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const canvas = document.getElementById('pickup-signature-pad');
+    const form = canvas?.closest('form');
+    const field = document.getElementById('signature-strokes');
+    const clear = document.getElementById('clear-signature');
+    if (!canvas || !form || !field) return;
+
+    const context = canvas.getContext('2d');
+    let strokes = [], drawing = false;
+    const reset = () => { strokes = []; context.clearRect(0, 0, canvas.width, canvas.height); };
+    const point = (event) => {
+        const box = canvas.getBoundingClientRect();
+        return [Math.max(0, Math.min(600, (event.clientX - box.left) * 600 / box.width)), Math.max(0, Math.min(220, (event.clientY - box.top) * 220 / box.height))];
+    };
+    const draw = (from, to) => { context.strokeStyle = '#111827'; context.lineWidth = 3; context.lineCap = 'round'; context.lineJoin = 'round'; context.beginPath(); context.moveTo(...from); context.lineTo(...to); context.stroke(); };
+    canvas.addEventListener('pointerdown', event => { event.preventDefault(); canvas.setPointerCapture(event.pointerId); drawing = true; strokes.push([point(event)]); });
+    canvas.addEventListener('pointermove', event => { if (!drawing) return; const stroke = strokes[strokes.length - 1]; const next = point(event); draw(stroke[stroke.length - 1], next); stroke.push(next); });
+    canvas.addEventListener('pointerup', () => drawing = false);
+    canvas.addEventListener('pointercancel', () => drawing = false);
+    clear.addEventListener('click', reset);
+    window.addEventListener('open-penerima-modal', reset);
+    form.addEventListener('submit', event => { if (!strokes.some(stroke => stroke.length > 1)) { event.preventDefault(); alert('Tanda tangan penerima wajib diisi.'); return; } field.value = JSON.stringify(strokes); });
+});
+</script>
