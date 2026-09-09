@@ -622,8 +622,8 @@ class KeuanganController extends Controller
                 $rows->push([
                     'id' => $invoice->order_id, 'type_key' => $invoice->order_type,
                     'key' => $invoice->order_type.'-'.$invoice->order_id,
-                    'tanggal' => $invoice->issued_at, 'tipe' => ucfirst($invoice->order_type),
-                    'no_order' => $invoice->number, 'customer' => $snapshot['customer'] ?: '-',
+                    'tanggal' => Carbon::parse($invoice->issued_at), 'tipe' => ucfirst($invoice->order_type),
+                    'no_order' => $invoice->number, 'customer' => ($snapshot['customer'] ?? null) ?: '-',
                     'total' => $total, 'dpp' => $dpp, 'ppn' => $total - $dpp,
                 ]);
             });
