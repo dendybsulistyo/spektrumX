@@ -44,13 +44,15 @@
                  penerimaType: '',
                  penerimaId: null,
                  penerimaQty: 0,
+                 penerimaItems: [],
                  penerimaNoOrder: '',
              }"
              @open-penerima-modal="
                  penerimaOpen = true;
                  penerimaType = $event.detail.type;
                  penerimaId = $event.detail.id;
-                 penerimaQty = $event.detail.qty;
+                 penerimaItems = $event.detail.items;
+                 penerimaQty = penerimaItems[0]?.qty ?? 0;
                  penerimaNoOrder = $event.detail.noOrder;
              ">
             <div style="display: flex;">
@@ -89,6 +91,26 @@
                         <input type="hidden" name="qty" :value="penerimaQty">
 
                         <div>
+                            <label class="label" style="display: block; margin-bottom: 4px;">Barang yang diserahkan dalam DO ini</label>
+                            <div style="display: flex; flex-direction: column; gap: 6px;">
+                                <template x-for="(item, index) in penerimaItems" :key="item.id">
+                                    <div style="display: grid; grid-template-columns: minmax(0, 1fr) 90px; align-items: center; gap: 8px;">
+                                        <span class="text-muted" style="font-size: 12px; overflow-wrap: anywhere;" x-text="item.label"></span>
+                                        <div>
+                                            <input type="hidden" :name="`items[${index}][id]`" :value="item.id">
+                                            <input type="number" :name="`items[${index}][qty]`" x-model.number="item.qty"
+                                                   min="1" :max="item.max" required class="in-input no-spinner" style="width: 90px;"
+                                                   :aria-label="`Qty ${item.label}`">
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                            <p class="text-muted" style="margin: 4px 0 0; font-size: 11px;">
+                                Semua rincian di atas diterbitkan sebagai satu Delivery Order.
+                            </p>
+                        </div>
+
+                        <div>
                             <label class="label" style="display: block; margin-bottom: 4px;">Nama Penerima</label>
                             <input type="text" name="nama_penerima" required maxlength="100" class="in-input" style="width: 100%;" placeholder="Nama yang mengambil">
                         </div>
@@ -109,7 +131,7 @@
                         </div>
 
                         <div class="text-muted" style="font-size: 12px;">
-                            Qty diserahkan: <span x-text="penerimaQty"></span> unit
+                            Jumlah rincian dalam DO: <span x-text="penerimaItems.length"></span>
                         </div>
 
                         <div style="display: flex; justify-content: flex-end; gap: var(--space-2); margin-top: var(--space-2);">

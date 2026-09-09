@@ -16,6 +16,19 @@
     'showInvoiceLink' => false,
 ])
 
+@php
+    $pickupItems = $capturePenerima
+        ? $items->map(fn ($item) => [
+            'id' => $item->id,
+            'label' => $type === 'outdoor'
+                ? ($item->gabungan ?: ($item->NmFile ?: 'Item'))
+                : ($item->Judul ?: 'Item'),
+            'qty' => $item->qtyAt($stage),
+            'max' => $item->qtyAt($stage),
+        ])->values()
+        : collect();
+@endphp
+
 <div class="order-card">
     <div class="order-card-head">
         <div style="display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-heading); font-weight: 700; font-size: 16px;">
@@ -32,6 +45,14 @@
                    class="tag tag-outline" title="Cek Nota Pemesanan">
                     Nota Pemesanan
                 </a>
+            @endif
+            @if ($capturePenerima && $type === 'indoor')
+                @can($manageAbility)
+                    <button type="button" class="in-btn"
+                            @click="$dispatch('open-penerima-modal', { type: 'indoor', id: {{ $pickupItems->first()['id'] }}, noOrder: '{{ $order->NoOrder }}', items: {{ Illuminate\Support\Js::from($pickupItems) }} })">
+                        Serahkan Pesanan
+                    </button>
+                @endcan
             @endif
             @if ($type === 'outdoor' && $outdoorComments !== null)
                 <x-order-discussion type="outdoor" :order-id="$order->id" :no-order="$order->NoOrder"
@@ -77,14 +98,14 @@
                     <span class="progress-tag">Progres di {{ $stageLabel }}: {{ $item->Qty - $item->qtyAt($stage) }}/{{ $item->Qty }}</span>
                 @endif
                 @can($manageAbility)
-                    @if ($capturePenerima)
+                    @if ($capturePenerima && $type !== 'indoor')
                         {{-- Pengambilan butuh nama & kontak penerima dulu sebelum
                              diserahkan — tangkap lewat modal di halaman induk. --}}
                         <button type="button" class="in-btn"
-                                @click="$dispatch('open-penerima-modal', { type: '{{ $type }}', id: {{ $item->id }}, qty: {{ $item->qtyAt($stage) }}, noOrder: '{{ $order->NoOrder }}' })">
+                                @click="$dispatch('open-penerima-modal', { type: '{{ $type }}', id: {{ $item->id }}, noOrder: '{{ $order->NoOrder }}', items: {{ Illuminate\Support\Js::from($pickupItems->where('id', $item->id)->values()) }} })">
                             Kirim {{ $nextLabel }}
                         </button>
-                    @else
+                    @elseif (! $capturePenerima)
                         {{-- Operator boleh meneruskan sebagian Qty. Batas di browser
                              dan server sama-sama memakai sisa Qty di tahap ini. --}}
                         <form method="POST" action="{{ route($routeName, [$type, $item->id]) }}" style="display: flex; align-items: center; gap: 4px;">
