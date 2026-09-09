@@ -10,7 +10,8 @@
         body { margin:0; padding:28px 16px; background:#e9eeed; color:var(--ink); font:12px Arial,Helvetica,sans-serif; }
         .toolbar { width:216mm; max-width:100%; margin:0 auto 12px; display:flex; align-items:center; justify-content:space-between; gap:12px; }
         .toolbar a { color:var(--green-dark); text-decoration:none; }
-        .toolbar button { border:0; border-radius:6px; padding:9px 15px; background:var(--green); color:#fff; font-weight:700; cursor:pointer; }
+        .toolbar-actions { display:flex; align-items:center; gap:8px; }
+        .toolbar button,.toolbar .button { border:0; border-radius:6px; padding:9px 15px; background:var(--green); color:#fff; font-weight:700; cursor:pointer; text-decoration:none; }
         .sheet { width:216mm; min-height:139mm; max-width:100%; margin:auto; padding:8mm 10mm 6mm; background:#fff; box-shadow:0 3px 20px rgba(28,45,42,.16); display:flex; flex-direction:column; overflow:hidden; }
         .sheet + .sheet { margin-top:16px; }
         .header { display:grid; grid-template-columns:1.15fr .85fr; gap:10mm; align-items:start; padding-bottom:3mm; border-bottom:1px solid var(--line); }
@@ -102,7 +103,12 @@
 
     <div class="toolbar">
         <a href="{{ route('order-documents.index') }}">← Daftar dokumen</a>
-        <button type="button" onclick="window.print()">Cetak / Simpan PDF</button>
+        <div class="toolbar-actions">
+            @if ($document->kind === 'inv')
+                <a class="button" href="{{ route('order-documents.receipt', $document) }}">Kwitansi</a>
+            @endif
+            <button type="button" onclick="window.print()">Cetak / Simpan PDF</button>
+        </div>
     </div>
 
     @foreach ($itemPages as $pageIndex => $pageItems)

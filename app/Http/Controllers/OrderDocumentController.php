@@ -46,4 +46,21 @@ class OrderDocumentController extends Controller
             'pengaturan' => PengaturanKeuangan::current(),
         ]);
     }
+
+    public function receipt(OrderDocument $document)
+    {
+        $this->authorizeAccess();
+        abort_unless($document->kind === 'inv', 404);
+
+        $document->load('issuedBy');
+        $snapshot = $document->snapshot;
+        $receiptNumber = preg_replace('/^INV\./', 'KWT.', $document->number);
+
+        return view('order-documents.receipt', [
+            'document' => $document,
+            'snapshot' => $snapshot,
+            'receiptNumber' => $receiptNumber,
+            'pengaturan' => PengaturanKeuangan::current(),
+        ]);
+    }
 }

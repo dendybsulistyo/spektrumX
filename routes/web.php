@@ -1,20 +1,17 @@
 <?php
 
+use App\Http\Controllers\AccountingFixedAssetController;
+use App\Http\Controllers\AccountingPurchaseController;
+use App\Http\Controllers\AccountingSupplierController;
+use App\Http\Controllers\AkunController;
 use App\Http\Controllers\BahanCetakOutdoorController;
 use App\Http\Controllers\BahanOutdoorController;
-use App\Http\Controllers\AkunController;
-use App\Http\Controllers\AccountingFixedAssetController;
-use App\Http\Controllers\AccountingSupplierController;
-use App\Http\Controllers\AccountingPurchaseController;
-use App\Http\Controllers\InventoryHppController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DataWarehouseController;
-use App\Http\Controllers\PreviewCetakController;
-use App\Http\Controllers\MonitoringKinerjaController;
-use App\Http\Controllers\MonitoringTransaksiController;
 use App\Http\Controllers\DetailIndoorController;
+use App\Http\Controllers\DiskonApprovalController;
 use App\Http\Controllers\FileMonitorController;
 use App\Http\Controllers\GunggunganController;
 use App\Http\Controllers\GunggunganHistoricalJournalController;
@@ -22,39 +19,44 @@ use App\Http\Controllers\HargaArtworkController;
 use App\Http\Controllers\HargaCetakOutdoorController;
 use App\Http\Controllers\HargaCetakOutdoorKhususController;
 use App\Http\Controllers\HutangApprovalController;
+use App\Http\Controllers\InventoryHppController;
+use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\JasaPotongArtworkController;
 use App\Http\Controllers\JasaPotongController;
-use App\Http\Controllers\PengeluaranController;
-use App\Http\Controllers\PayrollController;
-use App\Http\Controllers\KeuanganController;
-use App\Http\Controllers\InvoiceController;
+use App\Http\Controllers\JurnalManualController;
 use App\Http\Controllers\KasirController;
-use App\Http\Controllers\LaporanAkuntansiController;
 use App\Http\Controllers\KategoriBahanOutdoorController;
 use App\Http\Controllers\KategoriController;
 use App\Http\Controllers\KategoriProdukIndoorController;
+use App\Http\Controllers\KeuanganController;
+use App\Http\Controllers\LaporanAkuntansiController;
+use App\Http\Controllers\MonitoringKinerjaController;
+use App\Http\Controllers\MonitoringTransaksiController;
 use App\Http\Controllers\OperatorController;
 use App\Http\Controllers\OrderArtworkController;
 use App\Http\Controllers\OrderBungkusController;
-use App\Http\Controllers\ReportController;
 use App\Http\Controllers\OrderCetakController;
+use App\Http\Controllers\OrderCommentController;
 use App\Http\Controllers\OrderDesainController;
+use App\Http\Controllers\OrderDocumentController;
 use App\Http\Controllers\OrderFinishingController;
 use App\Http\Controllers\OrderIndoorController;
-use App\Http\Controllers\OrderCommentController;
 use App\Http\Controllers\OrderOutdoorController;
 use App\Http\Controllers\OrderQcController;
 use App\Http\Controllers\OrderReworkController;
 use App\Http\Controllers\PapanPantauController;
-use App\Http\Controllers\DiskonApprovalController;
+use App\Http\Controllers\PayrollController;
 use App\Http\Controllers\PembatalanController;
 use App\Http\Controllers\PengambilanController;
+use App\Http\Controllers\PengaturanCetakController;
+use App\Http\Controllers\PengaturanKeuanganController;
+use App\Http\Controllers\PengeluaranController;
+use App\Http\Controllers\PreviewCetakController;
 use App\Http\Controllers\PrinterController;
 use App\Http\Controllers\PrinterOutdoorController;
 use App\Http\Controllers\ProdukController;
 use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\JurnalManualController;
-use App\Http\Controllers\PengaturanKeuanganController;
+use App\Http\Controllers\ReportController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\ServerMonitorController;
 use App\Http\Controllers\TutupBukuController;
@@ -163,8 +165,8 @@ Route::middleware('auth')->group(function () {
         Route::delete('/akuntansi/akun/{akun}', [AkunController::class, 'destroy'])->name('akuntansi.akun.destroy');
         Route::post('/akuntansi/aset-tetap', [AccountingFixedAssetController::class, 'store'])->name('akuntansi.fixed-assets.store');
         Route::delete('/akuntansi/aset-tetap/{fixedAsset}', [AccountingFixedAssetController::class, 'destroy'])->name('akuntansi.fixed-assets.destroy');
-        Route::get('/pengaturan/cetak-sales-order', [\App\Http\Controllers\PengaturanCetakController::class, 'edit'])->name('pengaturan.cetak-sales-order.edit');
-        Route::put('/pengaturan/cetak-sales-order', [\App\Http\Controllers\PengaturanCetakController::class, 'update'])->name('pengaturan.cetak-sales-order.update');
+        Route::get('/pengaturan/cetak-sales-order', [PengaturanCetakController::class, 'edit'])->name('pengaturan.cetak-sales-order.edit');
+        Route::put('/pengaturan/cetak-sales-order', [PengaturanCetakController::class, 'update'])->name('pengaturan.cetak-sales-order.update');
         Route::get('/keuangan/pengaturan', [PengaturanKeuanganController::class, 'edit'])->name('keuangan.pengaturan.edit');
         Route::put('/keuangan/pengaturan', [PengaturanKeuanganController::class, 'update'])->name('keuangan.pengaturan.update');
     });
@@ -332,8 +334,9 @@ Route::middleware('auth')->group(function () {
     // Not gated to a single permission group — Kasir and Pengambilan operators
     // both need to check the nota; InvoiceController::show() checks the
     // permission itself (kasir.view OR pengambilan.view).
-    Route::get('/order-documents', [\App\Http\Controllers\OrderDocumentController::class, 'index'])->name('order-documents.index');
-    Route::get('/order-documents/{document}', [\App\Http\Controllers\OrderDocumentController::class, 'show'])->name('order-documents.show');
+    Route::get('/order-documents', [OrderDocumentController::class, 'index'])->name('order-documents.index');
+    Route::get('/order-documents/{document}/kwitansi', [OrderDocumentController::class, 'receipt'])->name('order-documents.receipt');
+    Route::get('/order-documents/{document}', [OrderDocumentController::class, 'show'])->name('order-documents.show');
     Route::get('/invoice/{type}/{id}', [InvoiceController::class, 'show'])->name('invoice.show');
 
     Route::middleware('permission:kasir.view')->group(function () {
