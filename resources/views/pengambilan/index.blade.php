@@ -85,6 +85,7 @@
 
                     <form method="POST" :action="`/pengambilan/${penerimaType}/${penerimaId}`" style="display: flex; flex-direction: column; gap: var(--space-3);">
                         @csrf
+                        <input type="hidden" name="request_key" value="{{ (string) \Illuminate\Support\Str::uuid() }}">
                         <input type="hidden" name="qty" :value="penerimaQty">
 
                         <div>
