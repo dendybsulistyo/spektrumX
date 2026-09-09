@@ -26,11 +26,11 @@
         .field-value { min-height:5mm; border-bottom:1px dotted var(--line); font-weight:600; line-height:1.45; }
         .words { font-style:italic; text-transform:capitalize; }
         .bottom { display:grid; grid-template-columns:1fr 66mm; gap:12mm; margin-top:5mm; align-items:end; }
+        .transfer-info { margin-bottom:2mm; color:var(--muted); font-size:9px; line-height:1.35; }
+        .transfer-info strong { color:var(--ink); }
         .amount { border:1px solid var(--line); padding:4mm 6mm; font-size:19px; font-weight:800; white-space:nowrap; }
         .signature { text-align:center; line-height:1.5; }
-        .signature-space { height:15mm; }
-        .signer { border-top:1px solid var(--line); padding-top:2mm; font-weight:700; }
-        .reference { margin-top:3mm; color:var(--muted); font-size:9px; }
+        .signature-space { height:20mm; }
         @media (max-width:760px) {
             body { padding:0; background:#fff; }
             .toolbar { padding:12px; }
@@ -45,19 +45,14 @@
             body,.receipt,.meta { color:#000 !important; font-family:"Courier New",Courier,monospace !important; }
             .toolbar { display:none; }
             .receipt { width:21.6cm; min-height:10cm; height:10cm; margin:0; padding:6mm 9mm 5mm; box-shadow:none; overflow:hidden; }
-            .brand-name,h1,.meta th,.field-label { color:#000 !important; }
+            .brand-name,h1,.meta th,.field-label,.transfer-info,.transfer-info strong { color:#000 !important; }
         }
     </style>
 </head>
 <body>
     @php
         $total = (float) $document->total;
-        $companyName = $snapshot['company_name'] ?? $pengaturan->nama_perusahaan ?: 'CV Spektrum Digital Artwork';
-        $companyAddress = $snapshot['company_address'] ?? $pengaturan->alamat_perusahaan;
-        $companyNpwp = $snapshot['company_npwp'] ?? $pengaturan->npwp_perusahaan;
-        $payment = match ($snapshot['payment_method'] ?? null) {
-            'qris' => 'QRIS', 'transfer' => 'Transfer', 'campuran' => 'Campuran', 'tunai' => 'Tunai', default => 'Lunas',
-        };
+        $printedAt = now();
         $reference = $snapshot['payment_reference'] ?? null;
     @endphp
 
@@ -72,16 +67,17 @@
                 <div class="brand-name">SPEKTRUM</div>
                 <div class="brand-tagline">Digital Printing Studio</div>
                 <p class="company">
-                    {{ $companyName }}<br>
-                    @if ($companyAddress){{ $companyAddress }}<br>@endif
-                    @if ($companyNpwp)NPWP: {{ $companyNpwp }}@endif
+                    CV. Spektra Digital Artwork<br>
+                    Jl. Prof. Dr. Herman Yohannes (Sagan) Yogyakarta<br>
+                    Telp: (0274) 545480, 2921025, 2920628 · Fax: (0274) 556490<br>
+                    E-mail: spektrum.jogja@yahoo.com
                 </p>
             </section>
             <section>
                 <h1>KWITANSI</h1>
                 <table class="meta">
                     <tr><th>No.</th><td>{{ $receiptNumber }}</td></tr>
-                    <tr><th>Tanggal</th><td>{{ $document->issued_at->translatedFormat('d F Y') }}</td></tr>
+                    <tr><th>Tanggal Kwitansi</th><td>{{ $printedAt->translatedFormat('d F Y') }}</td></tr>
                     <tr><th>Invoice</th><td>{{ $document->number }}</td></tr>
                 </table>
             </section>
@@ -103,13 +99,17 @@
 
             <div class="bottom">
                 <div>
+                    <div class="transfer-info">
+                        <strong>Bank Transfer:</strong><br>
+                        Bank BCA KCP Yogyakarta<br>
+                        No. 037 567 1188 a.n CV Spektra Digital Artwork
+                        @if ($reference)<br>Referensi: {{ $reference }}@endif
+                    </div>
                     <div class="amount">Terbilang Rp {{ number_format($total, 0, ',', '.') }},-</div>
-                    <div class="reference">Pembayaran: {{ $payment }}@if ($reference) · Referensi: {{ $reference }}@endif</div>
                 </div>
                 <div class="signature">
-                    <div>Yogyakarta, {{ $document->issued_at->translatedFormat('d F Y') }}</div>
+                    <div>Yogyakarta, {{ $printedAt->translatedFormat('d F Y') }}</div>
                     <div class="signature-space"></div>
-                    <div class="signer">{{ $snapshot['issued_by_name'] ?? $document->issuedBy?->name ?? 'Kasir' }}</div>
                 </div>
             </div>
         </section>

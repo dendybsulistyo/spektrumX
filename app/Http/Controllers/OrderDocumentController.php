@@ -60,7 +60,6 @@ class OrderDocumentController extends Controller
             'document' => $document,
             'snapshot' => $snapshot,
             'receiptNumber' => $receiptNumber,
-            'pengaturan' => PengaturanKeuangan::current(),
         ]);
     }
 }
