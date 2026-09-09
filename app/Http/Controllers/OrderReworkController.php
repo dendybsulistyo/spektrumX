@@ -124,6 +124,12 @@ class OrderReworkController extends Controller
         $newStatus = $orderReworkRequest->action === 'batal' ? 'batal' : $orderReworkRequest->target_stage;
 
         DB::transaction(function () use ($order, $orderReworkRequest, $newStatus) {
+            $order = $order->newQuery()->lockForUpdate()->findOrFail($order->id);
+            $orderReworkRequest = OrderReworkRequest::lockForUpdate()->findOrFail($orderReworkRequest->id);
+            abort_if($orderReworkRequest->status !== 'pending' || $order->status === 'batal', 422, 'Pengajuan atau pembatalan sudah diproses.');
+            if ($order->customer) {
+                $order->customer->setRelation('limit', $order->customer->limit()->lockForUpdate()->first());
+            }
             if ($orderReworkRequest->action === 'batal') {
                 $order->update(['status' => $newStatus]);
                 $this->refundCancelledOrder($order, $orderReworkRequest->order_type);
@@ -201,6 +207,10 @@ class OrderReworkController extends Controller
         $piutang = (float) ($order->jumlah_piutang ?? 0);
 
         if ($order->metode_bayar === 'hutang' && $piutang > 0) {
+            $this->accounting->post(now()->format('Y-m-d'), $order->NoOrder, 'Pembatalan piutang '.$order->NoOrder, [
+                ...$this->accounting->salesDebitLines($piutang),
+                ['akun' => AccountingService::AKUN_PIUTANG_DAGANG, 'kredit' => $piutang, 'kd_bantu' => AccountingService::kodeBantuCustomer($order->customer?->KdCust)],
+            ]);
             if ($order->customer?->limit) {
                 $this->creditService->reduceHutang($order->customer, $piutang);
             }
@@ -228,7 +238,9 @@ class OrderReworkController extends Controller
                 $order->NoOrder,
                 'Refund pembatalan order '.$order->NoOrder,
                 [
-                    ...$this->accounting->salesDebitLines($dibayar),
+                    ...($order->status_bayar === 'dp'
+                        ? [['akun' => AccountingService::AKUN_UANG_MUKA_PENJUALAN, 'debet' => $dibayar, 'kd_bantu' => $kdBantu]]
+                        : $this->accounting->salesDebitLines($dibayar)),
                     ...$kasLines,
                 ]
             );

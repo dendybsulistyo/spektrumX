@@ -36,12 +36,16 @@ class StageProgressService
         return DB::transaction(function () use ($item, $fromStage, $qty, $catatan, $userId) {
             // Read the latest row under a lock so two operators can never
             // both move the same remaining Qty past the order's quantity.
+            $parent = $item->order;
+            $parent = $parent->newQuery()->lockForUpdate()->findOrFail($parent->id);
             $item = $item->newQuery()->lockForUpdate()->findOrFail($item->getKey());
+            $item->setRelation('order', $parent);
             $nextStage = $item::nextStage($fromStage);
             abort_if($nextStage === null, 500, "Tidak ada tahap berikutnya dari {$fromStage}.");
 
             $order = $item->order;
 
+            abort_if(in_array($order->status, self::EXCLUDE_ORDER_STATUSES, true), 422, 'Order belum dapat diproses atau telah dibatalkan.');
             abort_if($order->cancel_requested_at, 422, 'Order ini sedang menunggu persetujuan pembatalan.');
             abort_if(
                 OrderReworkRequest::forOrder($item->orderTypeSlug(), $order->id)->pending()->exists(),

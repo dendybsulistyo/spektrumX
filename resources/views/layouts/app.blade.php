@@ -135,13 +135,13 @@
             $pendingApprovalTotal = $pendingApprovalCount + $pendingDiskonCount + $pendingHutangCount;
             $showApproval = $canApproveCancel || $canApproveDiskon || $canApproveHutang;
             $showKeuangan = Auth::user()->hasPermission('keuangan.view') || Auth::user()->hasPermission('pengeluaran.view') || Auth::user()->hasPermission('payroll.view') || Auth::user()->hasPermission('keuangan.pengaturan');
-            $pengaturanActive = request()->routeIs('roles.*', 'users.*', 'jasa-potong.*', 'jasa-potong-artwork.*', 'server-monitor.*');
+            $pengaturanActive = request()->routeIs('pengaturan.cetak-sales-order.*', 'roles.*', 'users.*', 'jasa-potong.*', 'jasa-potong-artwork.*', 'server-monitor.*');
 
             $showMasterData = Auth::user()->hasPermission('customers.view') || Auth::user()->hasPermission('produk.view') || Auth::user()->hasPermission('harga-artwork.view') || Auth::user()->hasPermission('printers.view') || Auth::user()->hasPermission('printer-outdoor.view') || Auth::user()->hasPermission('bahan-cetak-outdoor.view') || Auth::user()->hasPermission('harga-cetak-outdoor.view') || Auth::user()->hasPermission('kategori-produk-indoor.view');
             $showTransaksi = Auth::user()->hasPermission('order-indoor.view') || Auth::user()->hasPermission('order-outdoor.view') || Auth::user()->hasPermission('order-artwork.view');
             $showOperator = Auth::user()->hasPermission('kasir.view') || Auth::user()->hasPermission('order-desain.view') || Auth::user()->hasPermission('order-cetak.view') || Auth::user()->hasPermission('order-finishing.view') || Auth::user()->hasPermission('order-qc.view') || Auth::user()->hasPermission('order-bungkus.view') || Auth::user()->hasPermission('pengambilan.view') || Auth::user()->hasPermission('file-monitor.view');
             $showAnalitik = Auth::user()->hasPermission('data-warehouse.view') || Auth::user()->hasPermission('monitoring-kinerja.view') || Auth::user()->hasPermission('monitoring-transaksi.view') || Auth::user()->hasPermission('papan-pantau.view');
-            $showPengaturan = Auth::user()->hasPermission('roles.manage') || Auth::user()->hasPermission('jasa-potong.manage') || Auth::user()->hasPermission('jasa-potong-artwork.manage');
+            $showPengaturan = Auth::user()->hasPermission('keuangan.pengaturan') || Auth::user()->hasPermission('roles.manage') || Auth::user()->hasPermission('jasa-potong.manage') || Auth::user()->hasPermission('jasa-potong-artwork.manage');
 
             $navTopLink = fn (bool $active) => 'inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-[14px] font-semibold transition '
                 .($active ? 'bg-indigo-50 text-indigo-600' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900');
@@ -418,6 +418,9 @@
                                                 <a href="{{ route('users.index') }}" class="{{ $dropdownLink(request()->routeIs('users.*')) }}">User</a>
                                                 <a href="{{ route('server-monitor.index') }}" class="{{ $dropdownLink(request()->routeIs('server-monitor.*')) }}">Monitor Server</a>
                                             @endcan
+                                            @can('keuangan.pengaturan')
+                                                <a href="{{ route('pengaturan.cetak-sales-order.edit') }}" class="{{ $dropdownLink(request()->routeIs('pengaturan.cetak-sales-order.*')) }}">Cetak Nota Pesanan / SO</a>
+                                            @endcan
                                             @can('jasa-potong.manage')
                                                 <a href="{{ route('jasa-potong.edit') }}" class="{{ $dropdownLink(request()->routeIs('jasa-potong.*')) }}">Jasa Potong Indoor</a>
                                             @endcan
@@ -628,6 +631,9 @@
                                 <a href="{{ route('roles.index') }}" class="{{ $mobileLink(request()->routeIs('roles.*')) }}">Role & Akses</a>
                                 <a href="{{ route('users.index') }}" class="{{ $mobileLink(request()->routeIs('users.*')) }}">User</a>
                                 <a href="{{ route('server-monitor.index') }}" class="{{ $mobileLink(request()->routeIs('server-monitor.*')) }}">Monitor Server</a>
+                            @endcan
+                            @can('keuangan.pengaturan')
+                                <a href="{{ route('pengaturan.cetak-sales-order.edit') }}" class="{{ $mobileLink(request()->routeIs('pengaturan.cetak-sales-order.*')) }}">Cetak Nota Pesanan / SO</a>
                             @endcan
                             @can('jasa-potong.manage')
                                 <a href="{{ route('jasa-potong.edit') }}" class="{{ $mobileLink(request()->routeIs('jasa-potong.*')) }}">Jasa Potong Indoor</a>

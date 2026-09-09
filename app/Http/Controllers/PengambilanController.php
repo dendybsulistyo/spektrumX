@@ -3,9 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\OrderComment;
-use App\Models\OrderPickupSignature;
 use App\Models\OrderReworkRequest;
 use App\Models\PrinterOutdoor;
+use App\Services\DeliveryOrderService;
 use App\Services\StageProgressService;
 use App\Support\ResolvesOrderDetailType;
 use Illuminate\Http\RedirectResponse;
@@ -71,44 +71,35 @@ class PengambilanController extends Controller
         $item = $this->resolveDetailItem($type, $id);
         $order = $item->order;
 
-        if ($order->status_bayar === 'dp' && (float) $order->jumlah_piutang > 0) {
-            return back()->with('error', 'Order ini masih ada sisa DP Rp '.number_format($order->jumlah_piutang, 0, ',', '.').' yang belum dilunasi. Lunasi dulu lewat halaman Bayar.');
-        }
-
         $data = $request->validate([
-            'qty' => ['nullable', 'integer', 'min:1'],
+            'qty' => ['required', 'integer', 'min:1'],
+            'request_key' => ['required', 'uuid'],
+            'items' => ['sometimes', 'array', 'min:1'],
+            'items.*.id' => ['required', 'integer', 'distinct'],
+            'items.*.qty' => ['required', 'integer', 'min:1'],
             'nama_penerima' => ['required', 'string', 'max:100'],
             'kontak_penerima' => ['required', 'string', 'max:50'],
             'signature_strokes' => ['required', 'string', 'max:20000'],
         ]);
 
-        $qty = $data['qty'] ?? $item->qtyAt(self::STAGE);
-        $catatan = "Diambil oleh: {$data['nama_penerima']} (Kontak: {$data['kontak_penerima']})";
         $svg = $this->signatureSvg($data['signature_strokes']);
         $path = 'pickup-signatures/'.now()->format('Y/m').'/'.$type.'-'.$order->id.'-'.$item->id.'-'.Str::uuid().'.svg';
 
-        Storage::disk('local')->put($path, $svg);
+        abort_unless(Storage::disk('local')->put($path, $svg), 500, 'Tanda tangan gagal disimpan.');
 
         try {
-            $result = $this->stageProgress->advance($item, self::STAGE, $qty, $catatan, auth()->id());
-            OrderPickupSignature::create([
-                'order_type' => $type, 'order_id' => $order->id, 'order_detail_id' => $item->id, 'qty' => $result['moved'],
-                'nama_penerima' => $data['nama_penerima'], 'kontak_penerima' => $data['kontak_penerima'],
-                'signature_path' => $path, 'signature_hash' => hash('sha256', $svg),
-                'received_by' => auth()->id(), 'received_at' => now(),
-            ]);
+            $document = app(DeliveryOrderService::class)->receive(
+                $item, $type, $data, $path, hash('sha256', $svg), auth()->id()
+            );
+            if ($document->snapshot['signature_path'] !== $path) {
+                Storage::disk('local')->delete($path);
+            }
         } catch (\Throwable $exception) {
             Storage::disk('local')->delete($path);
             throw $exception;
         }
 
-        if ($result['order']->status === 'selesai' && ! $result['order']->diambil_at) {
-            $result['order']->update(['diambil_at' => now(), 'pengambilan_by' => auth()->id()]);
-        }
-
-        $message = "{$result['moved']} unit diserahkan ke customer.".($result['stageCleared'] ? ' Baris item ini tuntas diambil.' : '');
-
-        return redirect()->route('pengambilan.index')->with('status', $message);
+        return redirect()->route('pengambilan.index')->with('status', "Barang diserahkan. DO {$document->number} tersedia di Dokumen SO / DO / Invoice.");
     }
 
     private function signatureSvg(string $payload): string
@@ -120,13 +111,16 @@ class PengambilanController extends Controller
 
         $paths = [];
         foreach ($strokes as $stroke) {
-            if (! is_array($stroke) || count($stroke) < 2) continue;
+            if (! is_array($stroke) || count($stroke) < 2) {
+                continue;
+            }
             $points = [];
             foreach ($stroke as $point) {
                 if (! is_array($point) || count($point) !== 2 || ! is_numeric($point[0]) || ! is_numeric($point[1])) {
                     throw ValidationException::withMessages(['signature_strokes' => 'Data tanda tangan tidak valid.']);
                 }
-                $x = (float) $point[0]; $y = (float) $point[1];
+                $x = (float) $point[0];
+                $y = (float) $point[1];
                 if ($x < 0 || $x > 600 || $y < 0 || $y > 220) {
                     throw ValidationException::withMessages(['signature_strokes' => 'Ukuran tanda tangan tidak valid.']);
                 }

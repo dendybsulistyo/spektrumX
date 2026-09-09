@@ -217,6 +217,8 @@ class OrderOutdoorController extends Controller
         $isReplacement = $data['resolution'] === 'nota_pengganti';
 
         DB::transaction(function () use ($orderOutdoor, $isReplacement) {
+            $orderOutdoor = $orderOutdoor->newQuery()->lockForUpdate()->findOrFail($orderOutdoor->id);
+            abort_if($orderOutdoor->status === 'batal' || ! $orderOutdoor->cancel_requested_at, 422, 'Pembatalan sudah diproses atau pengajuan sudah berubah.');
             $orderOutdoor->update([
                 'cancel_approved_at' => now(),
                 'cancel_approved_by' => auth()->id(),
@@ -296,13 +298,13 @@ class OrderOutdoorController extends Controller
 
     private function generateNoOrder(string $tglOrder): string
     {
-        $prefix = 'OUT'.date('ymd', strtotime($tglOrder));
+        $prefix = 'OUT.1.'.date('ymd', strtotime($tglOrder));
 
         $last = OrderOutdoor::where('NoOrder', 'like', $prefix.'%')
             ->orderByDesc('NoOrder')
             ->value('NoOrder');
 
-        $nextSeq = $last ? ((int) substr($last, 9, 5)) + 1 : 1;
+        $nextSeq = $last ? ((int) substr($last, strlen($prefix), 5)) + 1 : 1;
 
         return $prefix.str_pad((string) $nextSeq, 5, '0', STR_PAD_LEFT);
     }

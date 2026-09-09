@@ -163,6 +163,8 @@ Route::middleware('auth')->group(function () {
         Route::delete('/akuntansi/akun/{akun}', [AkunController::class, 'destroy'])->name('akuntansi.akun.destroy');
         Route::post('/akuntansi/aset-tetap', [AccountingFixedAssetController::class, 'store'])->name('akuntansi.fixed-assets.store');
         Route::delete('/akuntansi/aset-tetap/{fixedAsset}', [AccountingFixedAssetController::class, 'destroy'])->name('akuntansi.fixed-assets.destroy');
+        Route::get('/pengaturan/cetak-sales-order', [\App\Http\Controllers\PengaturanCetakController::class, 'edit'])->name('pengaturan.cetak-sales-order.edit');
+        Route::put('/pengaturan/cetak-sales-order', [\App\Http\Controllers\PengaturanCetakController::class, 'update'])->name('pengaturan.cetak-sales-order.update');
         Route::get('/keuangan/pengaturan', [PengaturanKeuanganController::class, 'edit'])->name('keuangan.pengaturan.edit');
         Route::put('/keuangan/pengaturan', [PengaturanKeuanganController::class, 'update'])->name('keuangan.pengaturan.update');
     });
@@ -330,6 +332,8 @@ Route::middleware('auth')->group(function () {
     // Not gated to a single permission group — Kasir and Pengambilan operators
     // both need to check the nota; InvoiceController::show() checks the
     // permission itself (kasir.view OR pengambilan.view).
+    Route::get('/order-documents', [\App\Http\Controllers\OrderDocumentController::class, 'index'])->name('order-documents.index');
+    Route::get('/order-documents/{document}', [\App\Http\Controllers\OrderDocumentController::class, 'show'])->name('order-documents.show');
     Route::get('/invoice/{type}/{id}', [InvoiceController::class, 'show'])->name('invoice.show');
 
     Route::middleware('permission:kasir.view')->group(function () {

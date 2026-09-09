@@ -206,6 +206,8 @@ class OrderArtworkController extends Controller
         $isReplacement = $data['resolution'] === 'nota_pengganti';
 
         DB::transaction(function () use ($orderArtwork, $isReplacement) {
+            $orderArtwork = $orderArtwork->newQuery()->lockForUpdate()->findOrFail($orderArtwork->id);
+            abort_if($orderArtwork->status === 'batal' || ! $orderArtwork->cancel_requested_at, 422, 'Pembatalan sudah diproses atau pengajuan sudah berubah.');
             $orderArtwork->update([
                 'cancel_approved_at' => now(),
                 'cancel_approved_by' => auth()->id(),

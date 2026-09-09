@@ -3,20 +3,22 @@
 namespace App\Http\Controllers;
 
 use App\Models\ChatMessage;
-use App\Models\OrderComment;
 use App\Models\OrderArtwork;
+use App\Models\OrderComment;
 use App\Models\OrderIndoor;
 use App\Models\OrderOutdoor;
 use App\Models\OrderPayment;
 use App\Models\OrderReworkRequest;
 use App\Models\OrderStatusNote;
+use App\Models\PengaturanKeuangan;
 use App\Models\Role;
 use App\Models\User;
 use App\Services\AccountingService;
 use App\Services\CustomerCreditService;
+use App\Services\OrderPaymentWorkflow;
 use App\Services\OrderPricingService;
-use App\Support\Rupiah;
 use App\Support\ResolvesOrderType;
+use App\Support\Rupiah;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -119,7 +121,6 @@ class KasirController extends Controller
         // Kasir works across all order types, so preload each thread once
         // for the chat buttons instead of querying from every table row.
 
-
         $orderComments = collect();
         $orderUnread = collect();
         foreach (['indoor', 'outdoor', 'artwork'] as $orderType) {
@@ -163,17 +164,25 @@ class KasirController extends Controller
 
         $pendingRework = OrderReworkRequest::forOrder($type, $id)->pending()->exists();
 
-        return view('kasir.show', ['type' => $type, 'order' => $order, 'items' => $items, 'pendingRework' => $pendingRework]);
+        return view('kasir.show', ['type' => $type, 'order' => $order, 'items' => $items, 'pendingRework' => $pendingRework, 'autoPrintSalesOrder' => PengaturanKeuangan::current()->auto_print_sales_order]);
     }
 
     public function bayar(Request $request, string $type, int $id): RedirectResponse
     {
-        $order = $this->resolveOrder($type, $id);
+        return app(OrderPaymentWorkflow::class)->run(
+            $this->resolveOrder($type, $id),
+            'belum_bayar',
+            fn (Model $order) => $this->bayarLocked($request, $type, $order),
+        );
+    }
+
+    private function bayarLocked(Request $request, string $type, Model $order): RedirectResponse
+    {
 
         // Nota pengganti only ever moves the topup/cashback difference in
         // one go, via the untouched single cara_bayar path below — splitting
         // across methods is only offered for a normal lunas/DP collection.
-        
+
         $isReplacement = (bool) $order->replacement_order_id;
 
         $rules = [
@@ -199,7 +208,7 @@ class KasirController extends Controller
 
         $data = $request->validate($rules);
 
-        $order->load('customer.limit');
+        $order->loadMissing('customer.limit');
 
         if ($order->diskonStatus() === 'pending') {
             return back()->with('error', 'Order ini sedang menunggu persetujuan diskon — tidak bisa diproses dulu.');
@@ -295,7 +304,7 @@ class KasirController extends Controller
 
             return redirect()->route('kasir.show', ['type' => $type, 'id' => $order->id])
                 ->with('status', ($cashback > 0 ? 'Nota pengganti selesai. Cashback telah dicatat.' : 'Nota pengganti selesai. Tambahan pembayaran telah dicatat.').($kembalian > 0 ? ' Kembalian: Rp '.number_format($kembalian, 0, ',', '.').'.' : ''))
-                ->with('autoPrintInvoice', true);
+                ->with('autoPrintSalesOrder', true);
         }
 
         if ($order->hutangApprovalStatus() === 'pending') {
@@ -315,7 +324,7 @@ class KasirController extends Controller
 
                 return redirect()->route('kasir.show', ['type' => $type, 'id' => $order->id])
                     ->with('status', 'Pembayaran berhasil diproses.')
-                    ->with('autoPrintInvoice', true);
+                    ->with('autoPrintSalesOrder', true);
             }
 
             // Over plafon — held for Admin/Admin Kasir sign-off instead of
@@ -440,7 +449,7 @@ class KasirController extends Controller
 
         return redirect()->route('kasir.show', ['type' => $type, 'id' => $order->id])
             ->with('status', 'Pembayaran berhasil diproses.'.($kembalian > 0 ? ' Kembalian: Rp '.number_format($kembalian, 0, ',', '.').'.' : ''))
-            ->with('autoPrintInvoice', true);
+            ->with('autoPrintSalesOrder', true);
     }
 
     /**
@@ -496,10 +505,18 @@ class KasirController extends Controller
      */
     public function approveHutang(string $type, int $id): RedirectResponse
     {
-        $order = $this->resolveOrder($type, $id);
+        return app(OrderPaymentWorkflow::class)->run(
+            $this->resolveOrder($type, $id),
+            'belum_bayar',
+            fn (Model $order) => $this->approveHutangLocked($type, $order),
+        );
+    }
+
+    private function approveHutangLocked(string $type, Model $order): RedirectResponse
+    {
         abort_if($order->hutangApprovalStatus() !== 'pending', 422, 'Tidak ada pengajuan hutang yang menunggu persetujuan untuk order ini.');
 
-        $order->load('customer.limit');
+        $order->loadMissing('customer.limit');
 
         $this->commitHutang($order, $type, $order->hutangAmount(), $order->hutang_catatan, (int) $order->hutang_requested_by, auth()->id());
 
@@ -526,11 +543,18 @@ class KasirController extends Controller
      */
     public function lunasi(Request $request, string $type, int $id): RedirectResponse
     {
+        return app(OrderPaymentWorkflow::class)->run(
+            $this->resolveOrder($type, $id),
+            'dp',
+            fn (Model $order) => $this->lunasiLocked($request, $type, $order),
+        );
+    }
+
+    private function lunasiLocked(Request $request, string $type, Model $order): RedirectResponse
+    {
         if (! in_array($type, ['indoor', 'outdoor'], true)) {
             abort(404);
         }
-
-        $order = $this->resolveOrder($type, $id);
 
         if ($order->status_bayar !== 'dp' || (float) $order->jumlah_piutang <= 0) {
             return back()->with('error', 'Order ini tidak sedang menunggu pelunasan DP.');
@@ -557,6 +581,8 @@ class KasirController extends Controller
 
             $order->update([
                 'status_bayar' => 'lunas',
+                'dibayar_at' => now(),
+                'kasir_user_id' => auth()->id(),
                 'cara_bayar' => $caraBayar,
                 'no_referensi' => $noReferensi,
                 'jumlah_dibayar' => $order->total,
@@ -587,7 +613,7 @@ class KasirController extends Controller
 
         return redirect()->route('kasir.show', ['type' => $type, 'id' => $order->id])
             ->with('status', 'Sisa DP berhasil dilunasi.'.($kembalian > 0 ? ' Kembalian: Rp '.number_format($kembalian, 0, ',', '.').'.' : ''))
-            ->with('autoPrintInvoice', true);
+            ->with('autoPrintSalesOrder', true);
     }
 
     /**
@@ -597,8 +623,16 @@ class KasirController extends Controller
      */
     public function lunasiHutang(Request $request, string $type, int $id): RedirectResponse
     {
-        $order = $this->resolveOrder($type, $id);
-        $order->load('customer.limit');
+        return app(OrderPaymentWorkflow::class)->run(
+            $this->resolveOrder($type, $id),
+            'hutang',
+            fn (Model $order) => $this->lunasiHutangLocked($request, $type, $order),
+        );
+    }
+
+    private function lunasiHutangLocked(Request $request, string $type, Model $order): RedirectResponse
+    {
+        $order->loadMissing('customer.limit');
 
         if ($order->status_bayar !== 'hutang' || (float) $order->jumlah_piutang <= 0) {
             return back()->with('error', 'Order ini tidak sedang menunggu pelunasan hutang.');
@@ -625,6 +659,8 @@ class KasirController extends Controller
 
             $order->update([
                 'status_bayar' => 'lunas',
+                'dibayar_at' => now(),
+                'kasir_user_id' => auth()->id(),
                 'cara_bayar' => $caraBayar,
                 'no_referensi' => $noReferensi,
                 'jumlah_dibayar' => $order->total,
@@ -658,7 +694,7 @@ class KasirController extends Controller
 
         return redirect()->route('kasir.show', ['type' => $type, 'id' => $order->id])
             ->with('status', 'Hutang berhasil dilunasi.'.($kembalian > 0 ? ' Kembalian: Rp '.number_format($kembalian, 0, ',', '.').'.' : ''))
-            ->with('autoPrintInvoice', true);
+            ->with('autoPrintSalesOrder', true);
     }
 
     /**

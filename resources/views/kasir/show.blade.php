@@ -3,7 +3,8 @@
         <h2 class="font-semibold text-xl text-gray-800">Bayar Order {{ $order->NoOrder }}</h2>
     </x-slot>
 
-    <div x-data="{ invoiceModalOpen: false, autoPrintPending: {{ session('autoPrintInvoice') ? 'true' : 'false' }}, diskonModalOpen: false, cancelModalOpen: false, batalOrderModalOpen: false }"
+    <div class="mb-4"><a class="text-blue-700 underline" href="{{ route('order-documents.index') }}">Dokumen SO / DO / Invoice</a></div>
+    <div x-data="{ invoiceModalOpen: false, autoPrintPending: {{ (session('autoPrintSalesOrder') && $autoPrintSalesOrder) ? 'true' : 'false' }}, diskonModalOpen: false, cancelModalOpen: false, batalOrderModalOpen: false }"
          x-init="if (autoPrintPending) { invoiceModalOpen = true }"
          @keydown.escape.window="invoiceModalOpen = false; diskonModalOpen = false; cancelModalOpen = false; batalOrderModalOpen = false">
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -458,7 +459,7 @@
                 <iframe x-ref="invoiceFrame"
                         x-show="invoiceModalOpen"
                         :src="invoiceModalOpen ? '{{ route('invoice.show', ['type' => $type, 'id' => $order->id]) }}' : ''"
-                        @load="if (autoPrintPending) { autoPrintPending = false; $refs.invoiceFrame.contentWindow.focus(); $refs.invoiceFrame.contentWindow.print(); }"
+                        @load="if (autoPrintPending && $refs.invoiceFrame.contentDocument?.readyState === 'complete' && $refs.invoiceFrame.contentWindow.location.href !== 'about:blank') { autoPrintPending = false; $refs.invoiceFrame.contentWindow.focus(); $refs.invoiceFrame.contentWindow.print(); }"
                         class="w-full h-full border-0"></iframe>
             </div>
         </div>

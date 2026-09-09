@@ -6,6 +6,8 @@ use App\Models\OrderArtwork;
 use App\Models\OrderIndoor;
 use App\Models\OrderOutdoor;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
@@ -58,7 +60,7 @@ class FileMonitorController extends Controller
 
         $combined = $indoor->unionAll($outdoor)->unionAll($artwork);
 
-        /** @var \Illuminate\Pagination\LengthAwarePaginator $headers */
+        /** @var LengthAwarePaginator $headers */
         $headers = DB::table(DB::raw("({$combined->toSql()}) as combined_orders"))
             ->mergeBindings($combined)
             ->orderByDesc('tanggal')
@@ -90,7 +92,7 @@ class FileMonitorController extends Controller
      * flatten into one row per file (an order with no details still yields
      * one row with nama_file = null).
      */
-    private function attachFiles(\Illuminate\Support\Collection $headers): \Illuminate\Support\Collection
+    private function attachFiles(Collection $headers): Collection
     {
         $byJenis = $headers->groupBy('jenis');
 
@@ -102,11 +104,8 @@ class FileMonitorController extends Controller
                 }
             })
             ->get(['BrsOrder', 'Judul'])
-            // BrsOrder is NoOrder (11 chars, itself containing a dot) plus a
-            // 2-digit line number with no extra separator — not a plain
-            // "prefix.suffix" split, so group by fixed-length prefix instead
-            // of strtok (which would cut at the dot inside NoOrder itself).
-            ->groupBy(fn ($row) => substr($row->BrsOrder, 0, 11));
+            // Remove the two-digit detail suffix, regardless of the nota format.
+            ->groupBy(fn ($row) => substr($row->BrsOrder, 0, -2));
 
         $outdoorIds = $byJenis->get('Outdoor', collect())->pluck('order_id')->all();
         $outdoorFiles = empty($outdoorIds) ? collect() : DB::table('order_outdoor_detail')

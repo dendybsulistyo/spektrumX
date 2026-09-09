@@ -60,8 +60,6 @@ class OrderIndoorController extends Controller
      * customer/items so a kasir can issue its nota pengganti — the same
      * pattern as OrderOutdoorController::createReplacement().
      */
-
-    
     public function createReplacement(OrderIndoor $orderIndoor): View
     {
         abort_unless(
@@ -220,6 +218,8 @@ class OrderIndoorController extends Controller
         $isReplacement = $data['resolution'] === 'nota_pengganti';
 
         DB::transaction(function () use ($orderIndoor, $isReplacement) {
+            $orderIndoor = $orderIndoor->newQuery()->lockForUpdate()->findOrFail($orderIndoor->id);
+            abort_if($orderIndoor->status === 'batal' || ! $orderIndoor->cancel_requested_at, 422, 'Pembatalan sudah diproses atau pengajuan sudah berubah.');
             $orderIndoor->update([
                 'cancel_approved_at' => now(),
                 'cancel_approved_by' => auth()->id(),
@@ -321,13 +321,13 @@ class OrderIndoorController extends Controller
 
     private function generateNoOrder(string $tglOrder): string
     {
-        $prefix = 'IND'.date('ymd', strtotime($tglOrder));
+        $prefix = 'IND.2.'.date('ymd', strtotime($tglOrder));
 
         $last = OrderIndoor::where('NoOrder', 'like', $prefix.'%')
             ->orderByDesc('NoOrder')
             ->value('NoOrder');
 
-        $nextSeq = $last ? ((int) substr($last, 9, 5)) + 1 : 1;
+        $nextSeq = $last ? ((int) substr($last, strlen($prefix), 5)) + 1 : 1;
 
         return $prefix.str_pad((string) $nextSeq, 5, '0', STR_PAD_LEFT);
     }

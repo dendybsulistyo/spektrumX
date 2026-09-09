@@ -13,6 +13,7 @@ class PengaturanKeuangan extends Model
         'alamat_perusahaan',
         'npwp_perusahaan',
         'is_pkp',
+        'auto_print_sales_order',
         'tarif_ppn_default',
         'nomor_seri_faktur_terakhir',
     ];
@@ -21,6 +22,7 @@ class PengaturanKeuangan extends Model
     {
         return [
             'is_pkp' => 'boolean',
+            'auto_print_sales_order' => 'boolean',
             'tarif_ppn_default' => 'float',
         ];
     }

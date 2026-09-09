@@ -11,9 +11,15 @@ use App\Models\OrderIndoor;
 use App\Models\OrderOutdoor;
 use App\Models\OrderPayment;
 use App\Models\PengaturanKeuangan;
+use App\Models\User;
+use App\Services\OrderDocumentService;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class KeuanganController extends Controller
 {
@@ -161,7 +167,7 @@ class KeuanganController extends Controller
         $dari = $request->filled('dari') ? $request->string('dari')->toString() : now()->format('Y-m-d');
         $sampai = $request->filled('sampai') ? $request->string('sampai')->toString() : now()->format('Y-m-d');
 
-        $kasirUser = \App\Models\User::findOrFail($kasir);
+        $kasirUser = User::findOrFail($kasir);
 
         $models = ['indoor' => OrderIndoor::class, 'outdoor' => OrderOutdoor::class];
 
@@ -485,7 +491,7 @@ class KeuanganController extends Controller
         ]);
     }
 
-    public function simpanDraftPpn(Request $request): \Illuminate\Http\RedirectResponse
+    public function simpanDraftPpn(Request $request): RedirectResponse
     {
         $data = $request->validate([
             'dari' => ['required', 'date'],
@@ -509,6 +515,8 @@ class KeuanganController extends Controller
         abort_if($report->status === 'final', 422, 'Laporan PPN Final sudah dikunci dan tidak dapat diubah.');
 
         DB::transaction(function () use ($report, $rate, $selectedRows) {
+            $report = LaporanPpnFinal::lockForUpdate()->findOrFail($report->id);
+            abort_if($report->status === 'final', 422, 'Laporan sudah final.');
             $report->update(['tarif_ppn' => $rate]);
             $report->items()->delete();
             $report->items()->createMany($selectedRows->map(fn ($row) => [
@@ -521,14 +529,24 @@ class KeuanganController extends Controller
         return redirect()->route('keuangan.laporan-ppn', compact('dari', 'sampai', 'rate'))->with('status', 'Draft Laporan PPN disimpan.');
     }
 
-    public function finalkanPpn(LaporanPpnFinal $laporanPpnFinal): \Illuminate\Http\RedirectResponse
+    public function finalkanPpn(LaporanPpnFinal $laporanPpnFinal): RedirectResponse
     {
-        abort_if($laporanPpnFinal->status === 'final', 422, 'Laporan ini sudah dikunci.');
-        abort_if(! $laporanPpnFinal->items()->exists(), 422, 'Pilih minimal satu transaksi sebelum mengunci laporan.');
+        DB::transaction(function () use ($laporanPpnFinal) {
+            $report = LaporanPpnFinal::lockForUpdate()->findOrFail($laporanPpnFinal->id);
+            abort_if($report->status === 'final', 422, 'Laporan ini sudah dikunci.');
+            abort_unless($report->items()->exists(), 422, 'Pilih minimal satu transaksi.');
+            foreach ($report->items as $item) {
+                $invoice = app(OrderDocumentService::class)->invoiceQuery()
+                    ->where('order_type', $item->order_type)->where('order_id', $item->order_id)->first();
+                abort_unless($invoice && $invoice->number === $item->no_order
+                    && substr($invoice->issued_at, 0, 7) === $report->periode
+                    && abs((float) $invoice->total - (float) $item->total) < 0.01,
+                    422, 'Draft tidak sesuai invoice aktif. Simpan ulang draft sebelum finalisasi.');
+            }
+            $report->update(['status' => 'final', 'finalized_at' => now(), 'finalized_by' => auth()->id()]);
+        });
 
-        $laporanPpnFinal->update(['status' => 'final', 'finalized_at' => now(), 'finalized_by' => auth()->id()]);
-
-        return redirect()->route('keuangan.laporan-ppn', ['dari' => $laporanPpnFinal->periode.'-01', 'sampai' => \Illuminate\Support\Carbon::parse($laporanPpnFinal->periode.'-01')->endOfMonth()->format('Y-m-d'), 'rate' => $laporanPpnFinal->tarif_ppn])->with('status', 'Laporan PPN Final dikunci sebagai histori.');
+        return redirect()->route('keuangan.laporan-ppn', ['dari' => $laporanPpnFinal->periode.'-01', 'sampai' => Carbon::parse($laporanPpnFinal->periode.'-01')->endOfMonth()->format('Y-m-d'), 'rate' => $laporanPpnFinal->tarif_ppn])->with('status', 'Laporan PPN Final dikunci sebagai histori.');
     }
 
     /**
@@ -538,7 +556,7 @@ class KeuanganController extends Controller
      * NOT a DJP e-Faktur bulk-import file — that format requires each
      * buyer's NPWP/address, which this app doesn't collect.
      */
-    public function exportPpn(Request $request): \Symfony\Component\HttpFoundation\StreamedResponse
+    public function exportPpn(Request $request): StreamedResponse
     {
         [$dari, $sampai, $rate, $rows] = $this->ppnData($request);
         $laporanFinal = LaporanPpnFinal::with('items')->where('periode', substr($dari, 0, 7))->where('status', 'final')->first();
@@ -583,44 +601,32 @@ class KeuanganController extends Controller
     }
 
     /**
-     * @return array{0: string, 1: string, 2: float, 3: \Illuminate\Support\Collection}
+     * @return array{0: string, 1: string, 2: float, 3: Collection}
      */
     private function ppnData(Request $request): array
     {
         $periode = $request->string('periode')->toString();
         $isMonthlyPeriod = preg_match('/^\d{4}-\d{2}$/', $periode) === 1;
         $dari = $isMonthlyPeriod ? $periode.'-01' : ($request->filled('dari') ? $request->string('dari')->toString() : now()->startOfMonth()->format('Y-m-d'));
-        $sampai = $isMonthlyPeriod ? \Illuminate\Support\Carbon::parse($dari)->endOfMonth()->format('Y-m-d') : ($request->filled('sampai') ? $request->string('sampai')->toString() : now()->format('Y-m-d'));
+        $sampai = $isMonthlyPeriod ? Carbon::parse($dari)->endOfMonth()->format('Y-m-d') : ($request->filled('sampai') ? $request->string('sampai')->toString() : now()->format('Y-m-d'));
         $rate = $request->filled('rate') ? (float) $request->input('rate') : PengaturanKeuangan::current()->tarif_ppn_default;
 
         $rows = collect();
 
-        foreach (['indoor' => OrderIndoor::class, 'outdoor' => OrderOutdoor::class, 'artwork' => OrderArtwork::class] as $type => $model) {
-            $model::query()
-                ->with('customer')
-                ->where('status_bayar', 'lunas')
-                ->whereBetween('dibayar_at', ["{$dari} 00:00:00", "{$sampai} 23:59:59"])
-                ->orderBy('dibayar_at')
-                ->get()
-                ->each(function ($order) use (&$rows, $type, $rate) {
-                    $total = (float) $order->total;
-                    $dpp = $rate > 0 ? $total / (1 + $rate / 100) : $total;
-                    $ppn = $total - $dpp;
-
-                    $rows->push([
-                        'id' => $order->id,
-                        'type_key' => $type,
-                        'key' => $type.'-'.$order->id,
-                        'tanggal' => $order->dibayar_at,
-                        'tipe' => ucfirst($type),
-                        'no_order' => $order->NoOrder,
-                        'customer' => $order->customer?->NmCust ? ucwords(mb_strtolower($order->customer->NmCust)) : '-',
-                        'total' => $total,
-                        'dpp' => $dpp,
-                        'ppn' => $ppn,
-                    ]);
-                });
-        }
+        app(OrderDocumentService::class)->invoiceQuery()
+            ->whereBetween('issued_at', ["{$dari} 00:00:00", "{$sampai} 23:59:59"])
+            ->get()->each(function ($invoice) use (&$rows, $rate) {
+                $snapshot = json_decode($invoice->snapshot, true);
+                $total = (float) $invoice->total;
+                $dpp = $rate > 0 ? $total / (1 + $rate / 100) : $total;
+                $rows->push([
+                    'id' => $invoice->order_id, 'type_key' => $invoice->order_type,
+                    'key' => $invoice->order_type.'-'.$invoice->order_id,
+                    'tanggal' => $invoice->issued_at, 'tipe' => ucfirst($invoice->order_type),
+                    'no_order' => $invoice->number, 'customer' => $snapshot['customer'] ?: '-',
+                    'total' => $total, 'dpp' => $dpp, 'ppn' => $total - $dpp,
+                ]);
+            });
 
         return [$dari, $sampai, $rate, $rows->sortBy('tanggal')->values()];
     }
