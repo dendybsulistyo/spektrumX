@@ -122,9 +122,12 @@
             // from a vertical accordion to a horizontal dropdown-per-group navbar.
             $masterDataActive = request()->routeIs('customers.*', 'kategori-produk-indoor.*', 'detail-indoor.*', 'harga-artwork.*', 'printer-outdoor.*', 'bahan-cetak-outdoor.*', 'harga-cetak-outdoor.*', 'printers.*');
             $transaksiActive = request()->routeIs('order-indoor.*', 'order-outdoor.*', 'order-artwork.*');
-            $operatorActive = request()->routeIs('file.*', 'kasir.*', 'order-desain.*', 'order-cetak.*', 'order-finishing.*', 'order-qc.*', 'order-bungkus.*', 'pengambilan.*');
+            $canViewOperationalDocuments = Auth::user()->hasPermission('kasir.view') || Auth::user()->hasPermission('pengambilan.view');
+            $operatorActive = request()->routeIs('file.*', 'kasir.*', 'order-desain.*', 'order-cetak.*', 'order-finishing.*', 'order-qc.*', 'order-bungkus.*', 'pengambilan.*')
+                || ($canViewOperationalDocuments && request()->routeIs('order-documents.*'));
             $analitikActive = request()->routeIs('data-warehouse.*', 'monitoring-kinerja.*', 'monitoring-transaksi.*', 'papan-pantau.*');
-            $keuanganActive = request()->routeIs('akuntansi.*', 'keuangan.*', 'pengeluaran.*', 'payroll.*');
+            $keuanganActive = request()->routeIs('akuntansi.*', 'keuangan.*', 'pengeluaran.*', 'payroll.*')
+                || (! $canViewOperationalDocuments && Auth::user()->hasPermission('keuangan.view') && request()->routeIs('order-documents.*'));
             $canApproveCancel = Auth::user()->hasPermission('order-indoor.approve-cancel') || Auth::user()->hasPermission('order-outdoor.approve-cancel') || Auth::user()->hasPermission('order-artwork.approve-cancel');
             $pendingApprovalCount = $canApproveCancel ? \App\Http\Controllers\PembatalanController::pendingCount() : 0;
             $canApproveDiskon = Auth::user()->hasPermission('kasir.approve-diskon');
@@ -192,6 +195,9 @@
                                             <div class="space-y-1">
                                             @can('keuangan.view')
                                                 <p class="mx-2 mt-1 rounded-md border border-slate-200 bg-slate-100 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-600">Penjualan & Pajak</p>
+                                                @if (! $canViewOperationalDocuments)
+                                                    <a href="{{ route('order-documents.index') }}" class="{{ $dropdownLink(request()->routeIs('order-documents.*')) }}">Dokumen SO / DO / Invoice</a>
+                                                @endif
                                                 <a href="{{ route('akuntansi.gunggungan') }}" class="{{ $dropdownLink(request()->routeIs('akuntansi.gunggungan')) }}">Gunggungan</a>
                                                 <a href="{{ route('akuntansi.rekap-omset') }}" class="{{ $dropdownLink(request()->routeIs('akuntansi.rekap-omset')) }}">Rekap Omset</a>
                                                 <a href="{{ route('keuangan.laporan-ppn') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.laporan-ppn')) }}">Rekap PPN</a>
@@ -373,6 +379,9 @@
                                             @can('pengambilan.view')
                                                 <a href="{{ route('pengambilan.index') }}" class="{{ $dropdownLink(request()->routeIs('pengambilan.*')) }}">Pengambilan Barang</a>
                                             @endcan
+                                            @if ($canViewOperationalDocuments)
+                                                <a href="{{ route('order-documents.index') }}" class="{{ $dropdownLink(request()->routeIs('order-documents.*')) }}">Dokumen SO / DO / Invoice</a>
+                                            @endif
                                         </div>
                                     </div>
                                 @endif
@@ -495,6 +504,9 @@
                             <p class="px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">Akuntansi</p>
                             @can('keuangan.view')
                                 <p class="mx-2 mt-2 rounded-md border border-slate-200 bg-slate-100 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-600">Penjualan & Pajak</p>
+                                @if (! $canViewOperationalDocuments)
+                                    <a href="{{ route('order-documents.index') }}" class="{{ $mobileLink(request()->routeIs('order-documents.*')) }}">Dokumen SO / DO / Invoice</a>
+                                @endif
                                 <a href="{{ route('akuntansi.gunggungan') }}" class="{{ $mobileLink(request()->routeIs('akuntansi.gunggungan')) }}">Gunggungan</a>
                                 <a href="{{ route('akuntansi.rekap-omset') }}" class="{{ $mobileLink(request()->routeIs('akuntansi.rekap-omset')) }}">Rekap Omset</a>
                                 <a href="{{ route('keuangan.laporan-ppn') }}" class="{{ $mobileLink(request()->routeIs('keuangan.laporan-ppn')) }}">Rekap PPN</a>
@@ -607,6 +619,9 @@
                             @can('pengambilan.view')
                                 <a href="{{ route('pengambilan.index') }}" class="{{ $mobileLink(request()->routeIs('pengambilan.*')) }}">Pengambilan Barang</a>
                             @endcan
+                            @if ($canViewOperationalDocuments)
+                                <a href="{{ route('order-documents.index') }}" class="{{ $mobileLink(request()->routeIs('order-documents.*')) }}">Dokumen SO / DO / Invoice</a>
+                            @endif
                         @endif
 
                         @if ($showAnalitik)
