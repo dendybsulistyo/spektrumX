@@ -63,11 +63,18 @@
                 text-shadow:none !important;
             }
             body { padding:0; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+            /* Keep the item table and total above the pre-printed signature
+               labels. The previous 4.8 cm header placed Total Tagihan over
+               "Yang Menyerahkan" when an order contained four item rows. */
+            .invoice-header { height:4.25cm; min-height:4.25cm; }
+            .content { padding:.1cm .55cm 0; }
             /* Keep the type large enough for a 9-pin dot-matrix head. */
             .customer-block { font-size:10pt; line-height:1.35; }
             .order-status, .page-info { font-size:8.5pt; }
             table { font-size:8.5pt; line-height:1.2; }
             thead th { font-size:8pt; }
+            thead th, tbody td { padding:.08cm .1cm; }
+            .total-row td { padding-top:.1cm; }
             .item-breakdown { font-size:7.5pt; }
             .total-amount { font-size:10pt; }
             .payment-summary { font-size:8.5pt; }
