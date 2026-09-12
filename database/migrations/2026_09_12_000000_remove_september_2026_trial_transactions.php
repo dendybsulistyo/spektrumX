@@ -12,18 +12,71 @@ return new class extends Migration
     public function up(): void
     {
         DB::transaction(function (): void {
-            // A September payment for an older order would require rebuilding
-            // that order's balance. Stop instead of leaving a false "lunas" state.
+            // September test payments may have settled genuine older orders.
+            // Restore those orders from the payment/journal history that remains.
             foreach (['indoor', 'outdoor', 'artwork'] as $type) {
                 $orderTable = 'order_'.$type;
-                $hasOlderPayment = DB::table('order_payments as p')
+                $olderOrderIds = DB::table('order_payments as p')
                     ->join($orderTable.' as o', 'o.id', '=', 'p.order_id')
                     ->where('p.order_type', $type)
                     ->where('p.created_at', '>=', self::START)
                     ->where('p.created_at', '<', self::END)
-                    ->where('o.TglOrder', '<', self::START)->exists();
-                if ($hasOlderPayment) {
-                    throw new RuntimeException("Ada pembayaran September untuk order {$type} sebelum September; migrasi dibatalkan.");
+                    ->where('o.TglOrder', '<', self::START)
+                    ->distinct()->pluck('o.id');
+
+                foreach ($olderOrderIds as $id) {
+                    $order = DB::table($orderTable)->where('id', $id)->lockForUpdate()->first();
+                    $priorPayments = DB::table('order_payments')
+                        ->where('order_type', $type)->where('order_id', $id)
+                        ->where('created_at', '<', self::START)
+                        ->orderBy('created_at')->orderBy('id')->get();
+                    $paid = max(0, (float) $priorPayments->sum('jumlah'));
+                    $total = (float) $order->total;
+                    $hadCreditSale = DB::table('am')->where('Bukti', $order->NoOrder)
+                        ->where('NoAkun', '11102')->where('Debet', '>', 0)
+                        ->where('TgTrans', '<', self::START)->exists();
+                    $lastPayment = $priorPayments->last();
+                    $lastMethod = $priorPayments->where('jenis', '!=', 'refund')->pluck('cara_bayar')->unique()->values();
+
+                    if ($paid >= $total && $total > 0) {
+                        $status = 'lunas';
+                        $method = 'tunai';
+                    } elseif ($hadCreditSale) {
+                        $status = 'hutang';
+                        $method = 'hutang';
+                    } elseif ($paid > 0) {
+                        $status = 'dp';
+                        $method = 'dp';
+                    } else {
+                        $status = 'belum_bayar';
+                        $method = null;
+                    }
+
+                    $oldCredit = $order->status_bayar === 'hutang' ? (float) $order->jumlah_piutang : 0;
+                    $newCredit = $status === 'hutang' ? max(0, $total - $paid) : 0;
+                    $creditDelta = $newCredit - $oldCredit;
+                    if ($creditDelta != 0 && Schema::hasTable('customer_limits')) {
+                        DB::table('customer_limits')->where('KdCust', $order->KdCust)->increment('Total', $creditDelta);
+                    }
+
+                    DB::table('order_payments')->where('order_type', $type)->where('order_id', $id)
+                        ->where('created_at', '>=', self::START)->where('created_at', '<', self::END)->delete();
+                    DB::table('order_documents')->where('order_type', $type)->where('order_id', $id)
+                        ->where('issued_at', '>=', self::START)->where('issued_at', '<', self::END)->delete();
+                    DB::table('order_status_notes')->where('order_type', $type)->where('order_id', $id)
+                        ->where('created_at', '>=', self::START)->where('created_at', '<', self::END)->delete();
+                    DB::table($orderTable)->where('id', $id)->update([
+                        'status_bayar' => $status,
+                        'metode_bayar' => $method,
+                        'jumlah_dibayar' => $paid,
+                        'jumlah_piutang' => $status === 'belum_bayar' ? 0 : max(0, $total - $paid),
+                        'cara_bayar' => $lastMethod->count() > 1 ? 'campuran' : $lastMethod->first(),
+                        'no_referensi' => $lastPayment?->no_referensi,
+                        'dibayar_at' => $lastPayment?->created_at ?? ($status === 'hutang' ? DB::table('am')
+                            ->where('Bukti', $order->NoOrder)->where('NoAkun', '11102')
+                            ->where('Debet', '>', 0)->where('TgTrans', '<', self::START)
+                            ->min('TgTrans') : null),
+                    ]);
                 }
             }
 
