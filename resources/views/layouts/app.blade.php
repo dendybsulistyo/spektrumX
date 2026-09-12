@@ -189,9 +189,9 @@
                                         <div x-show="open" x-cloak
                                              x-transition:enter="transition ease-out duration-100" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
                                              x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
-                                             style="width: 580px; max-width: calc(100vw - 2rem)"
+                                             style="width: 870px; max-width: calc(100vw - 2rem)"
                                              class="absolute left-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg p-2 z-50">
-                                            <div class="grid grid-cols-2 gap-2">
+                                            <div class="grid grid-cols-3 gap-2">
                                             <div class="space-y-1">
                                             @can('keuangan.view')
                                                 <p class="mx-2 mt-1 rounded-md border border-slate-200 bg-slate-100 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-600">Penjualan & Pajak</p>
@@ -209,7 +209,8 @@
                                                 <a href="{{ route('report.uninvoiced-orders') }}" class="{{ $dropdownLink(request()->routeIs('report.uninvoiced-orders')) }}">Rekap Order Belum Di-Invoice</a>
                                                 <a href="{{ route('report.sales-discounts') }}" class="{{ $dropdownLink(request()->routeIs('report.sales-discounts')) }}">Laporan Potongan Penjualan</a>
                                                 <a href="{{ route('keuangan.laporan-ppn') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.laporan-ppn')) }}">Rekap PPN</a>
-                                                <div class="mx-2 my-2 border-t border-slate-200"></div>
+                                            </div>
+                                            <div class="space-y-1 border-l border-gray-100 pl-2">
                                                 <p class="mx-2 rounded-md border border-slate-200 bg-slate-100 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-600">Kas, Pembelian & Piutang</p>
                                                 <a href="{{ route('keuangan.kas-harian') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.kas-harian')) }}">Kas Harian</a>
                                                 <a href="{{ route('keuangan.rekap-kasir') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.rekap-kasir*')) }}">Rekap Kasir per User</a>
@@ -234,7 +235,6 @@
                                             </div>
                                             <div class="space-y-1 border-l border-gray-100 pl-2">
                                             @can('keuangan.view')
-                                                <div class="mx-2 my-2 border-t border-slate-200"></div>
                                                 <p class="mx-2 rounded-md border border-slate-200 bg-slate-100 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-600">Jurnal & Laporan</p>
                                                 <a href="{{ route('akuntansi.jurnal-umum') }}" class="{{ $dropdownLink(request()->routeIs('akuntansi.jurnal-umum')) }}">Jurnal Umum</a>
                                                 <a href="{{ route('akuntansi.buku-besar') }}" class="{{ $dropdownLink(request()->routeIs('akuntansi.buku-besar')) }}">Buku Besar</a>
