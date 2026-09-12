@@ -73,9 +73,10 @@
             .order-status, .page-info { font-size:8.5pt; }
             table { font-size:8.5pt; line-height:1.2; }
             thead th { font-size:8pt; }
+            tbody td { font-size:10pt; }
             thead th, tbody td { padding:.08cm .1cm; }
             .total-row td { padding-top:.1cm; }
-            .item-breakdown { font-size:7.5pt; }
+            .item-breakdown { font-size:10pt; }
             .total-amount { font-size:10pt; }
             .payment-summary { font-size:8.5pt; }
             .print-meta, .dp-breakdown { font-size:10pt; line-height:1.35; }
