@@ -104,6 +104,14 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::middleware('permission:keuangan.view')->group(function () {
+        Route::get('/report/rekap-transaksi-harian', [ReportController::class, 'dailyTransactions'])->name('report.daily-transactions');
+        Route::get('/report/omzet-pod', [ReportController::class, 'podTurnover'])->name('report.pod-turnover');
+        Route::get('/report/omzet-ctp', [ReportController::class, 'ctpTurnover'])->name('report.ctp-turnover');
+        Route::get('/report/order-outdoor', [ReportController::class, 'outdoorOrders'])->name('report.outdoor-orders');
+        Route::get('/report/order-customer-lunas', [ReportController::class, 'paidOrdersByCustomer'])->name('report.paid-orders-by-customer');
+        Route::get('/report/order-customer-piutang', [ReportController::class, 'creditOrdersByCustomer'])->name('report.credit-orders-by-customer');
+        Route::get('/report/order-belum-invoice', [ReportController::class, 'uninvoicedOrders'])->name('report.uninvoiced-orders');
+        Route::get('/report/potongan-penjualan', [ReportController::class, 'salesDiscounts'])->name('report.sales-discounts');
         Route::get('/akuntansi/akun', [AkunController::class, 'index'])->name('akuntansi.akun.index');
         Route::get('/akuntansi/suppliers', [AccountingSupplierController::class, 'index'])->name('akuntansi.suppliers.index');
         Route::get('/akuntansi/pembelian', [AccountingPurchaseController::class, 'index'])->name('akuntansi.purchases.index');
@@ -127,6 +135,11 @@ Route::middleware('auth')->group(function () {
         Route::get('/keuangan/rekap-kasir/{kasir}/customer', [KeuanganController::class, 'rekapKasirCustomer'])->name('keuangan.rekap-kasir.customer');
         Route::get('/keuangan/rekap-customer', [KeuanganController::class, 'rekapCustomer'])->name('keuangan.rekap-customer');
         Route::get('/keuangan/piutang', [KeuanganController::class, 'piutang'])->name('keuangan.piutang');
+        Route::get('/keuangan/total-tagihan-piutang', [KeuanganController::class, 'totalTagihanPiutang'])->name('keuangan.total-tagihan-piutang');
+        Route::get('/keuangan/limit-piutang', [KeuanganController::class, 'creditLimits'])->name('keuangan.credit-limits');
+        Route::get('/keuangan/piutang-customer-global', [KeuanganController::class, 'globalCustomerReceivables'])->name('keuangan.global-customer-receivables');
+        Route::get('/keuangan/piutang-per-customer', [KeuanganController::class, 'customerReceivableDetails'])->name('keuangan.customer-receivable-details');
+        Route::get('/keuangan/penerimaan-piutang', [KeuanganController::class, 'dailyReceivableCollections'])->name('keuangan.daily-receivable-collections');
         Route::get('/keuangan/laba-rugi', [KeuanganController::class, 'labaRugi'])->name('keuangan.laba-rugi');
         Route::get('/keuangan/tutup-buku', [TutupBukuController::class, 'index'])->name('keuangan.tutup-buku');
         Route::get('/keuangan/tutup-buku/preview', [TutupBukuController::class, 'preview'])->name('keuangan.tutup-buku.preview');

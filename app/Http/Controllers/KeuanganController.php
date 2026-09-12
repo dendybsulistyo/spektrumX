@@ -114,9 +114,25 @@ class KeuanganController extends Controller
         $dari = $request->filled('dari') ? $request->string('dari')->toString() : now()->format('Y-m-d');
         $sampai = $request->filled('sampai') ? $request->string('sampai')->toString() : now()->format('Y-m-d');
 
+        if ($dari > $sampai) {
+            [$dari, $sampai] = [$sampai, $dari];
+        }
+
         $payments = OrderPayment::with('user')
             ->whereBetween('created_at', ["{$dari} 00:00:00", "{$sampai} 23:59:59"])
+            ->orderBy('created_at')
             ->get();
+
+        $models = ['indoor' => OrderIndoor::class, 'outdoor' => OrderOutdoor::class, 'artwork' => OrderArtwork::class];
+        $ordersByKey = collect();
+        foreach ($payments->groupBy('order_type') as $type => $typePayments) {
+            $model = $models[$type] ?? null;
+            if (! $model) {
+                continue;
+            }
+            $model::query()->with('customer')->whereIn('id', $typePayments->pluck('order_id')->unique())->get()
+                ->each(fn ($order) => $ordersByKey->put("{$type}-{$order->id}", $order));
+        }
 
         $rows = $payments->groupBy(fn (OrderPayment $p) => $p->user_id)
             ->map(function ($group) {
@@ -135,6 +151,73 @@ class KeuanganController extends Controller
             ->sortByDesc('net')
             ->values();
 
+        $groups = $payments->groupBy(fn (OrderPayment $payment) => $payment->user_id ?: 0)
+            ->map(function (Collection $userPayments) use ($ordersByKey) {
+                $detail = collect();
+                foreach ($userPayments as $payment) {
+                    $order = $ordersByKey["{$payment->order_type}-{$payment->order_id}"] ?? null;
+                    $customer = $order?->customer?->NmCust ?: '-';
+                    $amount = (float) $payment->jumlah;
+                    $kind = OrderPayment::JENIS_LABELS[$payment->jenis] ?? ucfirst($payment->jenis);
+                    $method = OrderPayment::CARA_BAYAR_LABELS[$payment->cara_bayar] ?? ucfirst($payment->cara_bayar);
+                    $section = match ($payment->jenis) {
+                        'dp' => 'Uang Muka',
+                        'pelunasan_hutang' => 'Penerimaan Piutang',
+                        default => 'Penerimaan Nota Tunai',
+                    };
+
+                    if ($amount >= 0) {
+                        $detail->push([
+                            'section' => $section,
+                            'number' => $order?->NoOrder ?? '-',
+                            'description' => "{$kind} - {$customer}",
+                            'debit' => $amount,
+                            'credit' => 0.0,
+                        ]);
+                        if ($payment->cara_bayar !== 'tunai') {
+                            $detail->push([
+                                'section' => 'Penerimaan Tidak Tunai',
+                                'number' => '',
+                                'description' => "Bayar via {$method} - {$customer}",
+                                'debit' => 0.0,
+                                'credit' => $amount,
+                            ]);
+                        }
+                    } else {
+                        $detail->push([
+                            'section' => 'Refund / Pengeluaran Kas',
+                            'number' => $order?->NoOrder ?? '-',
+                            'description' => "Refund via {$method} - {$customer}",
+                            'debit' => 0.0,
+                            'credit' => abs($amount),
+                        ]);
+                    }
+                }
+
+                $sectionOrder = ['Saldo Awal', 'Penerimaan Nota Tunai', 'Penerimaan Piutang', 'Uang Muka', 'Penerimaan Tidak Tunai', 'Refund / Pengeluaran Kas'];
+                $sections = collect($sectionOrder)->map(function (string $name) use ($detail) {
+                    $sectionRows = $name === 'Saldo Awal'
+                        ? collect([['section' => $name, 'number' => '', 'description' => 'Saldo Awal', 'debit' => 0.0, 'credit' => 0.0]])
+                        : $detail->where('section', $name)->values();
+
+                    return [
+                        'name' => $name,
+                        'rows' => $sectionRows,
+                        'debit' => (float) $sectionRows->sum('debit'),
+                        'credit' => (float) $sectionRows->sum('credit'),
+                    ];
+                })->filter(fn (array $section) => $section['name'] === 'Saldo Awal' || $section['rows']->isNotEmpty())->values();
+
+                return [
+                    'user_id' => $userPayments->first()->user_id,
+                    'kasir' => $userPayments->first()->user?->name ?? '-',
+                    'details' => $detail,
+                    'sections' => $sections,
+                    'debit' => (float) $detail->sum('debit'),
+                    'credit' => (float) $detail->sum('credit'),
+                ];
+            })->sortBy('kasir')->values();
+
         return view('keuangan.rekap-kasir', [
             'dari' => $dari,
             'sampai' => $sampai,
@@ -142,6 +225,7 @@ class KeuanganController extends Controller
             'totalMasuk' => (float) $payments->where('jumlah', '>', 0)->sum('jumlah'),
             'totalKeluar' => (float) $payments->where('jumlah', '<', 0)->sum('jumlah') * -1,
             'jumlahTransaksi' => $payments->count(),
+            'groups' => $groups,
         ]);
     }
 
@@ -365,6 +449,237 @@ class KeuanganController extends Controller
             'rows' => $rows,
             'totalHutang' => $rows->where('status_bayar', 'hutang')->sum('jumlah_piutang'),
             'totalDp' => $rows->where('status_bayar', 'dp')->sum('jumlah_piutang'),
+        ]);
+    }
+
+    public function totalTagihanPiutang(Request $request): View
+    {
+        $asOf = $request->filled('tanggal')
+            ? $request->string('tanggal')->toString()
+            : now()->format('Y-m-d');
+        $byCustomer = collect();
+
+        foreach ([OrderIndoor::class, OrderOutdoor::class, OrderArtwork::class] as $model) {
+            $model::query()->with('customer')
+                ->whereDate('TglOrder', '<=', $asOf)
+                ->where('status', '!=', 'batal')
+                ->where('jumlah_piutang', '>', 0)
+                ->get()
+                ->each(function ($order) use (&$byCustomer) {
+                    $key = $order->KdCust ?: 'tanpa-customer';
+                    $current = $byCustomer->get($key, [
+                        'name' => $order->customer?->NmCust ?: ($order->KdCust ?: 'Tanpa Customer'),
+                        'phone' => $order->customer?->Telp ?: '-',
+                        'date' => $order->TglOrder,
+                        'receivable' => 0.0,
+                    ]);
+                    if ((string) $order->TglOrder < (string) $current['date']) {
+                        $current['date'] = $order->TglOrder;
+                    }
+                    $current['receivable'] += (float) $order->jumlah_piutang;
+                    $byCustomer->put($key, $current);
+                });
+        }
+
+        $rows = $byCustomer->sortBy(fn (array $row) => mb_strtolower($row['name']))->values();
+
+        return view('keuangan.total-tagihan-piutang', [
+            'asOf' => $asOf,
+            'rows' => $rows,
+            'grandTotal' => (float) $rows->sum('receivable'),
+        ]);
+    }
+
+    public function creditLimits(): View
+    {
+        $rows = Customer::query()->whereHas('limit')->with('limit')->orderBy('NmCust')->get()
+            ->map(fn (Customer $customer) => (object) [
+                'customer' => $customer->NmCust,
+                'receivable' => max(0, (float) $customer->limit->Total),
+                'limit' => (float) $customer->limit->Batas,
+            ]);
+
+        return view('keuangan.credit-limits', [
+            'rows' => $rows,
+            'totalReceivable' => (float) $rows->sum('receivable'),
+            'totalLimit' => (float) $rows->sum('limit'),
+        ]);
+    }
+
+    public function globalCustomerReceivables(Request $request): View
+    {
+        $asOf = $request->filled('tanggal')
+            ? $request->string('tanggal')->toString()
+            : now()->format('Y-m-d');
+        $customers = collect();
+
+        foreach (['indoor' => OrderIndoor::class, 'outdoor' => OrderOutdoor::class, 'artwork' => OrderArtwork::class] as $type => $model) {
+            $settlementOrderIds = OrderPayment::query()->where('order_type', $type)
+                ->where('jenis', 'pelunasan_hutang')->pluck('order_id');
+            $orders = $model::query()->with('customer')
+                ->whereDate('TglOrder', '<=', $asOf)
+                ->where('status', '!=', 'batal')
+                ->where(function ($query) use ($settlementOrderIds) {
+                    $query->where('status_bayar', 'hutang');
+                    if ($settlementOrderIds->isNotEmpty()) {
+                        $query->orWhereIn('id', $settlementOrderIds);
+                    }
+                })->get();
+            $paymentsByOrder = OrderPayment::query()->where('order_type', $type)
+                ->where('jenis', 'pelunasan_hutang')->whereIn('order_id', $orders->pluck('id'))
+                ->where('created_at', '<=', "{$asOf} 23:59:59")
+                ->get()->groupBy('order_id');
+
+            foreach ($orders as $order) {
+                $gross = (float) $order->total;
+                $discount = $order->diskon_approved_at && $order->diskon_approved_at->format('Y-m-d') <= $asOf
+                    ? $order->diskonNominal() : 0.0;
+                $net = max(0, $gross - $discount);
+                $paid = min($net, max(0, (float) ($paymentsByOrder[$order->id] ?? collect())->sum('jumlah')));
+                $remaining = max(0, $net - $paid);
+                if ($remaining <= 0) {
+                    continue;
+                }
+
+                $key = $order->KdCust ?: 'tanpa-customer';
+                $row = $customers->get($key, [
+                    'code' => $order->KdCust,
+                    'customer' => $order->customer?->NmCust ?: ($order->KdCust ?: 'Tanpa Customer'),
+                    'receivable' => 0.0, 'discount' => 0.0, 'paid' => 0.0, 'remaining' => 0.0,
+                ]);
+                $row['receivable'] += $gross;
+                $row['discount'] += $discount;
+                $row['paid'] += $paid;
+                $row['remaining'] += $remaining;
+                $customers->put($key, $row);
+            }
+        }
+
+        $rows = $customers->sortBy(fn (array $row) => mb_strtolower($row['customer']))->values();
+        $totals = (object) collect(['receivable', 'discount', 'paid', 'remaining'])
+            ->mapWithKeys(fn ($column) => [$column => (float) $rows->sum($column)])->all();
+
+        return view('keuangan.global-customer-receivables', compact('asOf', 'rows', 'totals'));
+    }
+
+    public function customerReceivableDetails(Request $request): View
+    {
+        $from = $request->filled('dari') ? $request->string('dari')->toString() : now()->startOfMonth()->format('Y-m-d');
+        $to = $request->filled('sampai') ? $request->string('sampai')->toString() : now()->format('Y-m-d');
+        if ($from > $to) {
+            [$from, $to] = [$to, $from];
+        }
+        $customerCode = $request->string('customer')->trim()->toString();
+        $customers = Customer::query()->orderBy('NmCust')->get(['KdCust', 'NmCust']);
+        $selectedCustomer = $customerCode !== '' ? $customers->firstWhere('KdCust', $customerCode) : null;
+        $rows = collect();
+
+        if ($selectedCustomer) {
+            foreach (['indoor' => OrderIndoor::class, 'outdoor' => OrderOutdoor::class, 'artwork' => OrderArtwork::class] as $type => $model) {
+                $settledIds = OrderPayment::query()->where('order_type', $type)->where('jenis', 'pelunasan_hutang')->pluck('order_id');
+                $orders = $model::query()->where('KdCust', $customerCode)
+                    ->whereBetween('TglOrder', [$from, $to])->where('status', '!=', 'batal')
+                    ->where(function ($query) use ($settledIds) {
+                        $query->where('status_bayar', 'hutang');
+                        if ($settledIds->isNotEmpty()) {
+                            $query->orWhereIn('id', $settledIds);
+                        }
+                    })->orderBy('TglOrder')->orderBy('NoOrder')->get();
+                $payments = OrderPayment::query()->where('order_type', $type)->where('jenis', 'pelunasan_hutang')
+                    ->whereIn('order_id', $orders->pluck('id'))->where('created_at', '<=', "{$to} 23:59:59")
+                    ->get()->groupBy('order_id');
+                $invoiceNumbers = DB::table('order_documents')->where('kind', 'inv')->where('order_type', $type)
+                    ->whereIn('order_id', $orders->pluck('id'))->orderByDesc('sequence')->get(['order_id', 'number'])
+                    ->unique('order_id')->pluck('number', 'order_id');
+
+                foreach ($orders as $order) {
+                    $gross = (float) $order->total;
+                    $discount = $order->diskon_approved_at && $order->diskon_approved_at->format('Y-m-d') <= $to
+                        ? $order->diskonNominal() : 0.0;
+                    $net = max(0, $gross - $discount);
+                    $paid = min($net, max(0, (float) ($payments[$order->id] ?? collect())->sum('jumlah')));
+                    $remaining = max(0, $net - $paid);
+                    if ($remaining <= 0) {
+                        continue;
+                    }
+                    $rows->push((object) [
+                        'date' => $order->TglOrder,
+                        'invoice' => $invoiceNumbers[$order->id] ?? $order->NoOrder,
+                        'receivable' => $gross, 'discount' => $discount,
+                        'paid' => $paid, 'remaining' => $remaining,
+                    ]);
+                }
+            }
+        }
+
+        $rows = $rows->sortBy(fn ($row) => $row->date.'|'.$row->invoice)->values();
+        $totals = (object) collect(['receivable', 'discount', 'paid', 'remaining'])
+            ->mapWithKeys(fn ($column) => [$column => (float) $rows->sum($column)])->all();
+
+        return view('keuangan.customer-receivable-details', compact(
+            'from', 'to', 'customers', 'selectedCustomer', 'customerCode', 'rows', 'totals'
+        ));
+    }
+
+    public function dailyReceivableCollections(Request $request): View
+    {
+        $date = $request->filled('tanggal') ? $request->string('tanggal')->toString() : now()->format('Y-m-d');
+        $rows = collect();
+
+        foreach (['indoor' => OrderIndoor::class, 'outdoor' => OrderOutdoor::class, 'artwork' => OrderArtwork::class] as $type => $model) {
+            $settledIds = OrderPayment::query()->where('order_type', $type)->where('jenis', 'pelunasan_hutang')->pluck('order_id');
+            $orders = $model::query()->with('customer')->whereDate('TglOrder', '<=', $date)
+                ->where('status', '!=', 'batal')->where(function ($query) use ($settledIds) {
+                    $query->where('status_bayar', 'hutang');
+                    if ($settledIds->isNotEmpty()) {
+                        $query->orWhereIn('id', $settledIds);
+                    }
+                })->get();
+            $allPayments = OrderPayment::query()->where('order_type', $type)->where('jenis', 'pelunasan_hutang')
+                ->whereIn('order_id', $orders->pluck('id'))->where('created_at', '<=', "{$date} 23:59:59")
+                ->orderBy('created_at')->get()->groupBy('order_id');
+
+            foreach ($orders as $order) {
+                $payments = $allPayments[$order->id] ?? collect();
+                $todayPayments = $payments->filter(fn (OrderPayment $payment) => $payment->created_at?->format('Y-m-d') === $date);
+                $gross = (float) $order->total;
+                $discount = $order->diskon_approved_at && $order->diskon_approved_at->format('Y-m-d') <= $date
+                    ? $order->diskonNominal() : 0.0;
+                $net = max(0, $gross - $discount);
+                $paidToDate = min($net, max(0, (float) $payments->sum('jumlah')));
+                $paidToday = max(0, (float) $todayPayments->sum('jumlah'));
+                $remaining = max(0, $net - $paidToDate);
+                if ($remaining <= 0 && $paidToday <= 0) {
+                    continue;
+                }
+                $notes = $todayPayments->map(function (OrderPayment $payment) {
+                    $method = OrderPayment::CARA_BAYAR_LABELS[$payment->cara_bayar] ?? ucfirst($payment->cara_bayar);
+                    return $method.($payment->no_referensi ? ' '.$payment->no_referensi : '');
+                })->unique()->implode(', ');
+
+                $rows->push((object) [
+                    'customer_code' => $order->KdCust ?: '-',
+                    'customer' => $order->customer?->NmCust ?: ($order->KdCust ?: 'Tanpa Customer'),
+                    'date' => $order->TglOrder, 'order' => $order->NoOrder,
+                    'receivable' => $gross, 'paid' => $paidToday,
+                    'discount' => $discount, 'remaining' => $remaining,
+                    'notes' => $notes ?: '-',
+                ]);
+            }
+        }
+
+        $groups = $rows->sortBy(fn ($row) => mb_strtolower($row->customer).'|'.$row->date.'|'.$row->order)
+            ->groupBy('customer_code')->map(function ($customerRows) {
+                return (object) [
+                    'customer' => $customerRows->first()->customer,
+                    'rows' => $customerRows->values(),
+                    'totalPaid' => (float) $customerRows->sum('paid'),
+                ];
+            })->sortBy(fn ($group) => mb_strtolower($group->customer))->values();
+
+        return view('keuangan.daily-receivable-collections', [
+            'date' => $date, 'groups' => $groups,
+            'grandTotalPaid' => (float) $rows->sum('paid'),
         ]);
     }
 
