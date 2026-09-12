@@ -27,6 +27,9 @@
             'max' => $item->qtyAt($stage),
         ])->values()
         : collect();
+    $canPickup = ! $capturePenerima
+        || ($order->status_bayar === 'lunas' && (float) $order->jumlah_piutang <= 0)
+        || ($order->status_bayar === 'hutang' && $order->customer?->isVip);
 @endphp
 
 <div class="order-card">
@@ -46,7 +49,10 @@
                     Nota Pemesanan
                 </a>
             @endif
-            @if ($capturePenerima && $type === 'indoor')
+            @if ($capturePenerima && ! $canPickup)
+                <span class="tag tag-outline">Belum lunas — proses di Kasir</span>
+            @endif
+            @if ($capturePenerima && $canPickup && $type === 'indoor')
                 @can($manageAbility)
                     <button type="button" class="in-btn"
                             @click="$dispatch('open-penerima-modal', { type: 'indoor', id: {{ $pickupItems->first()['id'] }}, noOrder: '{{ $order->NoOrder }}', items: {{ Illuminate\Support\Js::from($pickupItems) }} })">
@@ -98,7 +104,7 @@
                     <span class="progress-tag">Progres di {{ $stageLabel }}: {{ $item->Qty - $item->qtyAt($stage) }}/{{ $item->Qty }}</span>
                 @endif
                 @can($manageAbility)
-                    @if ($capturePenerima && $type !== 'indoor')
+                    @if ($capturePenerima && $canPickup && $type !== 'indoor')
                         {{-- Pengambilan butuh nama & kontak penerima dulu sebelum
                              diserahkan — tangkap lewat modal di halaman induk. --}}
                         <button type="button" class="in-btn"

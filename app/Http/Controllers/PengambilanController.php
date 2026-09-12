@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
 class PengambilanController extends Controller
 {
@@ -96,6 +97,10 @@ class PengambilanController extends Controller
             }
         } catch (\Throwable $exception) {
             Storage::disk('local')->delete($path);
+            if ($exception instanceof HttpExceptionInterface && $exception->getStatusCode() === 422) {
+                return redirect()->route('pengambilan.index')
+                    ->with('error', $exception->getMessage());
+            }
             throw $exception;
         }
 
