@@ -761,8 +761,9 @@ class KeuanganController extends Controller
     }
 
     /**
-     * PPN Keluaran — every order that reached 'lunas' in the period, in
-     * full, no exclusions. Assumes displayed prices already include PPN
+     * PPN Keluaran — only active issued invoices in the invoice period.
+     * Orders without an invoice, including paid orders and VIP credit
+     * pickups with only a delivery order, never appear. Prices include PPN
      * (standard retail practice here), so DPP = total / (1 + rate) and
      * PPN = total - DPP. Rate is adjustable in case the applicable rate
      * changes or differs per case; nothing about which rows appear is
@@ -893,7 +894,7 @@ class KeuanganController extends Controller
 
             fputcsv($out, ["Laporan PPN Keluaran {$dari} s/d {$sampai} (tarif {$rate}%)"]);
             fputcsv($out, []);
-            fputcsv($out, ['No', 'Tanggal Lunas', 'Tipe', 'No Order', 'Customer', 'Total', 'DPP', 'PPN']);
+            fputcsv($out, ['No', 'Tanggal Invoice', 'Tipe', 'No Invoice', 'Customer', 'Total', 'DPP', 'PPN']);
 
             foreach ($rows as $i => $row) {
                 fputcsv($out, [

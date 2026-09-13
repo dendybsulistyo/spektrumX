@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Http\Controllers\OrderReworkController;
+use App\Http\Controllers\KeuanganController;
 use App\Models\OrderDocument;
 use App\Models\OrderIndoor;
 use App\Models\OrderIndoorDetail;
@@ -16,6 +17,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpKernel\Exception\HttpException;
@@ -155,6 +157,33 @@ class OrderDocumentsTest extends TestCase
         $this->assertNull((new OrderDocumentService)->issueInvoice($order));
         $this->assertSame(0, (new OrderDocumentService)->invoiceQuery()->count());
         $this->assertDatabaseCount('order_documents', 1);
+    }
+
+    public function test_ppn_recap_only_includes_active_invoices_in_the_invoice_period(): void
+    {
+        $withoutInvoice = $this->order(['NoOrder' => 'IND.2.26082800002', 'status_bayar' => 'lunas']);
+        $withDeliveryOrder = $this->order(['NoOrder' => 'IND.2.26082800003', 'status_bayar' => 'hutang', 'jumlah_piutang' => 1000, 'jumlah_dibayar' => 0]);
+        OrderDocument::create(['kind' => 'do', 'order_type' => 'indoor', 'order_id' => $withDeliveryOrder->id,
+            'sequence' => 1, 'number' => 'DO.2.26082800003-1', 'issued_at' => '2026-09-08 10:00:00', 'snapshot' => []]);
+        $invoiced = $this->order(['NoOrder' => 'IND.2.26082800004', 'status_bayar' => 'lunas']);
+        (new OrderDocumentService)->issueInvoice($invoiced, '2026-09-10 10:00:00');
+
+        $report = new KeuanganController;
+        $method = new \ReflectionMethod($report, 'ppnData');
+        $request = Request::create('/', 'GET', ['dari' => '2026-09-01', 'sampai' => '2026-09-30', 'rate' => 11]);
+        [, , , $rows] = $method->invoke($report, $request);
+        $this->assertSame([$invoiced->id], $rows->pluck('id')->all());
+        $this->assertSame('2026-09-10', $rows->first()['tanggal']->format('Y-m-d'));
+
+        $request = Request::create('/', 'GET', ['dari' => '2026-08-01', 'sampai' => '2026-08-31', 'rate' => 11]);
+        [, , , $rows] = $method->invoke($report, $request);
+        $this->assertCount(0, $rows);
+
+        $invoiced->update(['invoice_voided_at' => now()]);
+        $request = Request::create('/', 'GET', ['dari' => '2026-09-01', 'sampai' => '2026-09-30', 'rate' => 11]);
+        [, , , $rows] = $method->invoke($report, $request);
+        $this->assertCount(0, $rows);
+        $this->assertSame('lunas', $withoutInvoice->status_bayar);
     }
 
     public function test_regular_dp_cannot_pick_up(): void

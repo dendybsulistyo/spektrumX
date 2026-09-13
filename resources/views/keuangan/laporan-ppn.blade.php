@@ -43,7 +43,7 @@
                     <a href="{{ route('keuangan.laporan-ppn.export', ['periode' => $periode, 'dari' => $dari, 'sampai' => $sampai, 'rate' => $rate]) }}" class="btn btn-secondary" style="height: 36px; margin-left: auto;">Export CSV</a>
                 </form>
                 <p class="text-muted" style="font-size: 13px; margin: var(--space-3) 0 0;">
-                    Pilih hanya transaksi yang akan dilaporkan pada PPN masa ini. DPP dihitung dari asumsi harga jual sudah termasuk PPN ({{ $rate }}%), sehingga DPP = Total ÷ (1 + tarif) dan PPN = Total − DPP.
+                    Hanya invoice aktif yang terbit pada periode ini yang masuk Rekap PPN. Order yang belum berinvoice, termasuk yang baru memiliki DO, tidak dihitung. DPP dihitung dari asumsi harga jual sudah termasuk PPN ({{ $rate }}%), sehingga DPP = Total ÷ (1 + tarif) dan PPN = Total − DPP.
                 </p>
                 @if ($laporanFinal?->status === 'final')
                     <p class="mt-3 rounded-md bg-green-50 px-3 py-2 text-sm font-semibold text-green-800">
@@ -58,7 +58,7 @@
                 <div class="card blueprint"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
                     <div class="card-kicker">Total Omzet (termasuk PPN)</div>
                     <div style="font-family: var(--font-heading); font-weight: 600; font-size: 26px; line-height: 1;">{{ $fmt($totalOmzet) }}</div>
-                    <div class="card-meta">{{ $rows->count() }} transaksi lunas</div>
+                    <div class="card-meta">{{ $rows->count() }} invoice aktif</div>
                 </div>
                 <div class="card blueprint"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
                     <div class="card-kicker">Total DPP</div>
@@ -109,7 +109,7 @@
                     <table class="table" style="min-width: 900px;">
                         <thead>
                             <tr>
-                                <th>Tanggal Lunas</th><th>No order</th><th>Tipe</th><th>Customer</th>
+                                <th>Tanggal Invoice</th><th>No Invoice</th><th>Tipe</th><th>Customer</th>
                                 <th style="text-align: right;">Total</th><th style="text-align: right;">DPP</th><th style="text-align: right;">PPN</th>
                                 @unless ($laporanFinal?->status === 'final')
                                     <th style="width: 62px; text-align: center;">
@@ -136,7 +136,7 @@
                                     @endunless
                                 </tr>
                             @empty
-                                <tr><td colspan="{{ $laporanFinal?->status === 'final' ? 7 : 8 }}" class="text-muted" style="text-align: center; padding: var(--space-6);">Tidak ada order lunas pada rentang ini.</td></tr>
+                                <tr><td colspan="{{ $laporanFinal?->status === 'final' ? 7 : 8 }}" class="text-muted" style="text-align: center; padding: var(--space-6);">Tidak ada invoice aktif pada rentang ini.</td></tr>
                             @endforelse
                         </tbody>
                     </table>
