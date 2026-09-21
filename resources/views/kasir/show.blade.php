@@ -43,7 +43,9 @@
                 <div class="border-b border-violet-200 bg-violet-50 p-4 text-sm text-violet-900">
                     <p class="font-semibold">Informasi pembayaran dari Customer Service</p>
                     <div class="mt-1 flex flex-wrap gap-x-6 gap-y-1">
-                        <span>Transfer: <strong>Rp {{ number_format($order->cs_transfer_amount, 0, ',', '.') }}</strong></span>
+                        @if ($order->cs_payment_type !== 'hutang')
+                            <span>Transfer: <strong>Rp {{ number_format($order->cs_transfer_amount, 0, ',', '.') }}</strong></span>
+                        @endif
                         <span>Status: <strong>{{ strtoupper($order->cs_payment_type) }}</strong></span>
                         <span>Dicatat oleh: {{ $order->customerService?->name ?? '-' }}</span>
                     </div>
@@ -226,7 +228,7 @@
         <div class="bg-white rounded-lg border border-gray-200 p-4"
              x-data="{
                 isReplacement: {{ $order->replacement_order_id ? 'true' : 'false' }},
-                metode: '{{ old('metode_bayar', $order->cs_payment_type === 'dp' ? 'dp' : 'tunai') }}',
+                metode: '{{ old('metode_bayar', match ($order->cs_payment_type) { 'dp' => 'dp', 'hutang' => 'hutang', default => 'tunai' }) }}',
                 caraBayar: '{{ old('cara_bayar', 'tunai') }}',
                 noReferensi: '{{ old('no_referensi') }}',
                 jumlahBayarReplacement: '{{ old('jumlah_bayar') }}',

@@ -359,8 +359,11 @@ Route::middleware('auth')->group(function () {
     });
     Route::middleware('permission:customer-service.view')->group(function () {
         Route::get('/customer-service', [CustomerServiceController::class, 'index'])->name('customer-service.index');
+        Route::get('/customer-service/job-sheets', [CustomerServiceController::class, 'jobSheets'])->name('customer-service.job-sheets.index');
+        Route::get('/customer-service/payment-queue', [CustomerServiceController::class, 'paymentQueue'])->name('customer-service.payment-queue');
     });
     Route::middleware('permission:customer-service.manage')->group(function () {
+        Route::post('/customer-service/job-sheet', [CustomerServiceController::class, 'storeJobSheet'])->name('customer-service.job-sheet.store');
         Route::post('/customer-service/{type}/{id}/forward', [CustomerServiceController::class, 'forward'])->name('customer-service.forward');
     });
     Route::middleware('permission:kasir.manage')->group(function () {
