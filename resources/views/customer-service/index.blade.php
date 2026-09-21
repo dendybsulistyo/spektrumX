@@ -27,30 +27,35 @@
                 </thead>
                 <tbody class="divide-y divide-slate-100">
                     @forelse ($orders as $order)
-                        <tr class="align-top hover:bg-slate-50/70">
+                        <tr class="align-middle hover:bg-slate-50/70"
+                            x-data="{ raw: '', display: '', total: {{ (float) $order->total }}, minimum: {{ (float) (ceil(((float) $order->total * 0.5) / 100) * 100) }}, format(event) { this.raw = event.target.value.replace(/\D/g, ''); this.display = this.raw ? 'Rp ' + Number(this.raw).toLocaleString('id-ID') : ''; } }">
                             <td class="whitespace-nowrap px-4 py-4 text-slate-600">{{ $order->TglOrder?->format('d/m/Y') ?? $order->TglOrder }}</td>
                             <td class="px-4 py-4 font-semibold text-slate-900">{{ $order->NoOrder }}</td>
                             <td class="px-4 py-4"><span class="rounded bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600">{{ ucfirst($order->order_type) }}</span></td>
                             <td class="px-4 py-4 text-slate-700">{{ $order->customer?->NmCust ? ucwords(mb_strtolower($order->customer->NmCust)) : '-' }}</td>
                             <td class="whitespace-nowrap px-4 py-4 text-right font-medium text-slate-900">Rp {{ number_format($order->total ?? 0, 0, ',', '.') }}</td>
-                            <td colspan="3" class="px-4 py-3">
-                                <form method="POST" action="{{ route('customer-service.forward', ['type' => $order->order_type, 'id' => $order->id]) }}"
-                                      class="grid grid-cols-[minmax(180px,1fr)_150px_auto] gap-2"
-                                      x-data="{ raw: '', display: '', total: {{ (float) $order->total }}, format(event) { this.raw = event.target.value.replace(/\D/g, ''); this.display = this.raw ? 'Rp ' + Number(this.raw).toLocaleString('id-ID') : ''; } }">
+                            <td class="w-56 px-4 py-3">
+                                <input type="text" inputmode="numeric" x-model="display" @input="format($event)" placeholder="Rp 0"
+                                       form="cs-order-{{ $order->order_type }}-{{ $order->id }}"
+                                       class="w-52 rounded border-slate-300 text-sm focus:border-blue-500 focus:ring-blue-500">
+                                <input type="hidden" name="cs_transfer_amount" :value="raw" form="cs-order-{{ $order->order_type }}-{{ $order->id }}">
+                                <p class="mt-1 text-[11px] text-slate-400">Minimal 50%: Rp {{ number_format(ceil(((float) $order->total * 0.5) / 100) * 100, 0, ',', '.') }}</p>
+                            </td>
+                            <td class="w-32 px-4 py-3">
+                                <span x-show="!raw" class="text-xs text-slate-400">Otomatis</span>
+                                <span x-show="raw" x-text="Number(raw) < minimum ? 'Di bawah minimum' : (Number(raw) < total ? 'DP' : (Number(raw) === total ? 'Pelunasan' : 'Melebihi total'))"
+                                      :class="Number(raw) < minimum || Number(raw) > total ? 'bg-red-100 text-red-700' : (Number(raw) < total ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700')"
+                                      class="rounded px-2.5 py-1 text-xs font-semibold"></span>
+                            </td>
+                            <td class="whitespace-nowrap px-4 py-3 text-right">
+                                <form id="cs-order-{{ $order->order_type }}-{{ $order->id }}" method="POST"
+                                      action="{{ route('customer-service.forward', ['type' => $order->order_type, 'id' => $order->id]) }}">
                                     @csrf
-                                    <div>
-                                        <input type="text" inputmode="numeric" x-model="display" @input="format($event)" placeholder="Rp 0"
-                                               class="w-full rounded border-slate-300 text-sm focus:border-blue-500 focus:ring-blue-500">
-                                        <input type="hidden" name="cs_transfer_amount" :value="raw">
-                                    </div>
-                                    <div class="flex items-center">
-                                        <span x-show="!raw" class="text-xs text-slate-400">Otomatis</span>
-                                        <span x-show="raw" x-text="Number(raw) < total ? 'DP' : (Number(raw) === total ? 'Pelunasan' : 'Melebihi total')"
-                                              :class="Number(raw) > total ? 'bg-red-100 text-red-700' : (Number(raw) < total ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700')"
-                                              class="rounded px-2.5 py-1 text-xs font-semibold"></span>
-                                    </div>
-                                    <button type="submit" class="whitespace-nowrap rounded bg-blue-600 px-4 py-2 text-xs font-semibold text-white hover:bg-blue-700">Kirim ke Kasir</button>
                                 </form>
+                                <button type="submit" form="cs-order-{{ $order->order_type }}-{{ $order->id }}"
+                                        class="rounded bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700">
+                                    Kirim Kasir
+                                </button>
                             </td>
                         </tr>
                     @empty

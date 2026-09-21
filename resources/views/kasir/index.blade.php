@@ -108,7 +108,6 @@
                     <tr>
                         <th class="px-3 py-2 w-12">No</th>
                         <th class="px-3 py-2">No Order</th>
-                        <th class="px-3 py-2">Tipe</th>
                         <th class="px-3 py-2">Tanggal</th>
                         <th class="px-3 py-2">Customer</th>
                         <th class="px-3 py-2 text-right">Total</th>

@@ -52,6 +52,13 @@ class CustomerServiceController extends Controller
                 ]);
             }
 
+            $minimumTransfer = (float) (ceil(((float) $order->total * 0.5) / 100) * 100);
+            if ((float) $data['cs_transfer_amount'] < $minimumTransfer) {
+                throw ValidationException::withMessages([
+                    'cs_transfer_amount' => 'Nominal transfer minimal 50% dari total order, yaitu Rp '.number_format($minimumTransfer, 0, ',', '.').'.',
+                ]);
+            }
+
             $paymentType = (float) $data['cs_transfer_amount'] < (float) $order->total
                 ? 'dp'
                 : 'pelunasan';
