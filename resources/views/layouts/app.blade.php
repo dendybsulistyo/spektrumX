@@ -142,7 +142,7 @@
 
             $showMasterData = Auth::user()->hasPermission('customers.view') || Auth::user()->hasPermission('produk.view') || Auth::user()->hasPermission('harga-artwork.view') || Auth::user()->hasPermission('printers.view') || Auth::user()->hasPermission('printer-outdoor.view') || Auth::user()->hasPermission('bahan-cetak-outdoor.view') || Auth::user()->hasPermission('harga-cetak-outdoor.view') || Auth::user()->hasPermission('kategori-produk-indoor.view');
             $showTransaksi = Auth::user()->hasPermission('order-indoor.view') || Auth::user()->hasPermission('order-outdoor.view') || Auth::user()->hasPermission('order-artwork.view');
-            $showOperator = Auth::user()->hasPermission('kasir.view') || Auth::user()->hasPermission('order-desain.view') || Auth::user()->hasPermission('order-cetak.view') || Auth::user()->hasPermission('order-finishing.view') || Auth::user()->hasPermission('order-qc.view') || Auth::user()->hasPermission('order-bungkus.view') || Auth::user()->hasPermission('pengambilan.view') || Auth::user()->hasPermission('file-monitor.view');
+            $showOperator = Auth::user()->hasPermission('customer-service.view') || Auth::user()->hasPermission('kasir.view') || Auth::user()->hasPermission('order-desain.view') || Auth::user()->hasPermission('order-cetak.view') || Auth::user()->hasPermission('order-finishing.view') || Auth::user()->hasPermission('order-qc.view') || Auth::user()->hasPermission('order-bungkus.view') || Auth::user()->hasPermission('pengambilan.view') || Auth::user()->hasPermission('file-monitor.view');
             $showAnalitik = Auth::user()->hasPermission('data-warehouse.view') || Auth::user()->hasPermission('monitoring-kinerja.view') || Auth::user()->hasPermission('monitoring-transaksi.view') || Auth::user()->hasPermission('papan-pantau.view');
             $showPengaturan = Auth::user()->hasPermission('keuangan.pengaturan') || Auth::user()->hasPermission('roles.manage') || Auth::user()->hasPermission('jasa-potong.manage') || Auth::user()->hasPermission('jasa-potong-artwork.manage');
 
@@ -374,6 +374,9 @@
                                             @endcan
                                             @can('kasir.view')
                                                 <a href="{{ route('kasir.index') }}" class="{{ $dropdownLink(request()->routeIs('kasir.*')) }}">Kasir</a>
+                                            @endcan
+                                            @can('customer-service.view')
+                                                <a href="{{ route('customer-service.index') }}" class="{{ $dropdownLink(request()->routeIs('customer-service.*')) }}">Customer Service</a>
                                             @endcan
                                             @can('order-desain.view')
                                                 <a href="{{ route('order-desain.index') }}" class="{{ $dropdownLink(request()->routeIs('order-desain.*')) }}">Layout / Desain</a>
@@ -628,6 +631,9 @@
                             @endcan
                             @can('kasir.view')
                                 <a href="{{ route('kasir.index') }}" class="{{ $mobileLink(request()->routeIs('kasir.*')) }}">Kasir</a>
+                            @endcan
+                            @can('customer-service.view')
+                                <a href="{{ route('customer-service.index') }}" class="{{ $mobileLink(request()->routeIs('customer-service.*')) }}">Customer Service</a>
                             @endcan
                             @can('order-desain.view')
                                 <a href="{{ route('order-desain.index') }}" class="{{ $mobileLink(request()->routeIs('order-desain.*')) }}">Layout/Edit</a>

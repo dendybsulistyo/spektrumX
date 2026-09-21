@@ -25,6 +25,20 @@ class RoleSeeder extends Seeder
             ],
         ]);
 
+        Role::updateOrCreate(['name' => 'customer-service'], [
+            'label' => 'Customer Service (CS)',
+            'permissions' => [
+                'customers.view', 'customers.manage',
+                'produk.view', 'kategori.view', 'kategori-produk-indoor.view', 'harga-artwork.view',
+                'bahan-outdoor.view', 'harga-cetak-outdoor.view',
+                'order-indoor.view', 'order-indoor.manage',
+                'order-outdoor.view', 'order-outdoor.manage',
+                'order-artwork.view', 'order-artwork.manage',
+                'file-monitor.view', 'preview-cetak.view',
+                'customer-service.view', 'customer-service.manage',
+            ],
+        ]);
+
         Role::updateOrCreate(['name' => 'operator'], [
             'label' => 'Operator/Staff Order',
             'permissions' => [

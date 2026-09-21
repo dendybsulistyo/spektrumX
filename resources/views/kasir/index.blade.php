@@ -66,6 +66,9 @@
                             <td class="px-3 py-2 text-gray-400">{{ $loop->iteration }}</td>
                             <td class="px-3 py-2 font-semibold text-gray-900">
                                 {{ $order->NoOrder }}
+                                @if ($order->cs_processed_at)
+                                    <span class="ml-1 rounded bg-violet-100 px-2 py-0.5 text-[10px] font-semibold text-violet-700">CS: {{ strtoupper($order->cs_payment_type) }} · Rp {{ number_format($order->cs_transfer_amount, 0, ',', '.') }}</span>
+                                @endif
                                 @if ($order->diskonStatus() === 'pending')
                                     <span class="ml-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">Diskon pending</span>
                                 @elseif ($order->diskonStatus() === 'approved')
@@ -118,6 +121,9 @@
                             <td class="px-3 py-2 text-gray-400">{{ $loop->iteration }}</td>
                             <td class="px-3 py-2 font-semibold text-gray-900">
                                 {{ $order->NoOrder }}
+                                @if ($order->cs_processed_at)
+                                    <span class="ml-1 rounded bg-violet-100 px-2 py-0.5 text-[10px] font-semibold text-violet-700">CS: {{ strtoupper($order->cs_payment_type) }} · Rp {{ number_format($order->cs_transfer_amount, 0, ',', '.') }}</span>
+                                @endif
                                 @if ($order->diskonStatus() === 'pending')
                                     <span class="ml-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">Diskon pending</span>
                                 @elseif ($order->diskonStatus() === 'approved')

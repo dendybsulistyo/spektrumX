@@ -103,6 +103,8 @@ class OrderOutdoorController extends Controller
                 'status_bayar' => 'belum_bayar',
                 'replacement_order_id' => $replacement?->id,
                 'replacement_credit' => $replacement ? (float) $replacement->jumlah_dibayar : 0,
+                'payment_queue' => $replacement ? 'kasir' : ($data['payment_queue'] ?? 'kasir'),
+                'sent_to_cs_at' => ! $replacement && ($data['payment_queue'] ?? 'kasir') === 'cs' ? now() : null,
             ]);
 
             $this->saveItems($order, $data['items']);
@@ -111,7 +113,9 @@ class OrderOutdoorController extends Controller
         });
 
         return redirect()->route($replacement ? 'kasir.index' : 'order-outdoor.index')
-            ->with('status', $replacement ? 'Nota pengganti berhasil dibuat dan siap diproses kasir.' : 'Order outdoor berhasil dibuat.');
+            ->with('status', $replacement
+                ? 'Nota pengganti berhasil dibuat dan siap diproses kasir.'
+                : (($data['payment_queue'] ?? 'kasir') === 'cs' ? 'Order outdoor berhasil dikirim ke Customer Service.' : 'Order outdoor berhasil dikirim ke Kasir.'));
     }
 
     public function edit(OrderOutdoor $orderOutdoor): View

@@ -9,6 +9,7 @@ use App\Traits\HasStageProgress;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Collection;
 
 class OrderOutdoor extends Model
 {
@@ -79,6 +80,12 @@ class OrderOutdoor extends Model
         'hutang_approved_by',
         'hutang_rejected_at',
         'hutang_rejected_by',
+        'payment_queue',
+        'sent_to_cs_at',
+        'cs_transfer_amount',
+        'cs_payment_type',
+        'cs_processed_by',
+        'cs_processed_at',
     ];
 
     protected function casts(): array
@@ -112,6 +119,9 @@ class OrderOutdoor extends Model
             'hutang_requested_at' => 'datetime',
             'hutang_approved_at' => 'datetime',
             'hutang_rejected_at' => 'datetime',
+            'sent_to_cs_at' => 'datetime',
+            'cs_transfer_amount' => 'float',
+            'cs_processed_at' => 'datetime',
         ];
     }
 
@@ -129,7 +139,7 @@ class OrderOutdoor extends Model
      * Common name HasStageProgress::recalculateStatus() calls across all 3
      * order types, regardless of each type's own relation name/shape.
      */
-    public function detailItems(): \Illuminate\Support\Collection
+    public function detailItems(): Collection
     {
         return $this->items;
     }
@@ -137,6 +147,11 @@ class OrderOutdoor extends Model
     public function kasir(): BelongsTo
     {
         return $this->belongsTo(User::class, 'kasir_user_id');
+    }
+
+    public function customerService(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'cs_processed_by');
     }
 
     public function desainBy(): BelongsTo
@@ -173,5 +188,4 @@ class OrderOutdoor extends Model
     {
         return $this->belongsTo(User::class, 'created_by');
     }
-
 }

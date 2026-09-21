@@ -108,6 +108,8 @@ class OrderIndoorController extends Controller
                 'created_at' => now(),
                 'replacement_order_id' => $replacement?->id,
                 'replacement_credit' => $replacement ? (float) $replacement->jumlah_dibayar : 0,
+                'payment_queue' => $replacement ? 'kasir' : ($data['payment_queue'] ?? 'kasir'),
+                'sent_to_cs_at' => ! $replacement && ($data['payment_queue'] ?? 'kasir') === 'cs' ? now() : null,
             ]);
 
             $this->saveItems($order, $data['items']);
@@ -116,7 +118,9 @@ class OrderIndoorController extends Controller
         });
 
         return redirect()->route($replacement ? 'kasir.index' : 'order-indoor.index')
-            ->with('status', $replacement ? 'Nota pengganti berhasil dibuat dan siap diproses kasir.' : 'Order berhasil dibuat.');
+            ->with('status', $replacement
+                ? 'Nota pengganti berhasil dibuat dan siap diproses kasir.'
+                : (($data['payment_queue'] ?? 'kasir') === 'cs' ? 'Order berhasil dikirim ke Customer Service.' : 'Order berhasil dikirim ke Kasir.'));
     }
 
     public function edit(OrderIndoor $orderIndoor): View

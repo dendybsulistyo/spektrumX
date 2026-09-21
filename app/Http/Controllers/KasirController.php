@@ -42,15 +42,17 @@ class KasirController extends Controller
             : 'indoor';
 
         $indoorOrders = OrderIndoor::query()
-            ->with('customer.limit')
+            ->with(['customer.limit', 'customerService'])
             ->where('status_bayar', 'belum_bayar')
+            ->where('payment_queue', 'kasir')
             ->orderByDesc('TglOrder')
             ->orderByDesc('NoOrder')
             ->get();
 
         $outdoorOrders = OrderOutdoor::query()
-            ->with('customer.limit')
+            ->with(['customer.limit', 'customerService'])
             ->where('status_bayar', 'belum_bayar')
+            ->where('payment_queue', 'kasir')
             ->orderByDesc('TglOrder')
             ->orderByDesc('NoOrder')
             ->get();
@@ -157,7 +159,8 @@ class KasirController extends Controller
     public function show(string $type, int $id): View
     {
         $order = $this->resolveOrder($type, $id);
-        $order->load(['customer.limit', 'replaces']);
+        abort_if($order->status_bayar === 'belum_bayar' && ($order->payment_queue ?? 'kasir') !== 'kasir', 404);
+        $order->load(['customer.limit', 'replaces', 'customerService']);
 
         $rawItems = $type === 'indoor' ? $order->detailItems() : $order->items;
         $items = $this->pricingService->detailedLineItems($type, $order, $rawItems);
@@ -169,8 +172,11 @@ class KasirController extends Controller
 
     public function bayar(Request $request, string $type, int $id): RedirectResponse
     {
+        $order = $this->resolveOrder($type, $id);
+        abort_if($order->status_bayar === 'belum_bayar' && ($order->payment_queue ?? 'kasir') !== 'kasir', 404);
+
         return app(OrderPaymentWorkflow::class)->run(
-            $this->resolveOrder($type, $id),
+            $order,
             'belum_bayar',
             fn (Model $order) => $this->bayarLocked($request, $type, $order),
         );

@@ -82,11 +82,18 @@ class OrderIndoor extends Model
         'replacement_credit',
         'topup_amount',
         'cashback_amount',
+        'payment_queue',
+        'sent_to_cs_at',
+        'cs_transfer_amount',
+        'cs_payment_type',
+        'cs_processed_by',
+        'cs_processed_at',
     ];
 
     protected function casts(): array
     {
         return [
+            'TglOrder' => 'date',
             'total' => 'float',
             'jumlah_dibayar' => 'float',
             'jumlah_piutang' => 'float',
@@ -114,6 +121,9 @@ class OrderIndoor extends Model
             'replacement_credit' => 'float',
             'topup_amount' => 'float',
             'cashback_amount' => 'float',
+            'sent_to_cs_at' => 'datetime',
+            'cs_transfer_amount' => 'float',
+            'cs_processed_at' => 'datetime',
         ];
     }
 
@@ -130,6 +140,11 @@ class OrderIndoor extends Model
     public function kasir(): BelongsTo
     {
         return $this->belongsTo(User::class, 'kasir_user_id');
+    }
+
+    public function customerService(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'cs_processed_by');
     }
 
     public function desainBy(): BelongsTo

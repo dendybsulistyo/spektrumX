@@ -4,7 +4,8 @@
     </x-slot>
 
     <div class="bg-white rounded-lg shadow-sm p-6">
-        <form method="POST" action="{{ isset($replacementOrder) ? route('kasir.replacement.store') : route('order-outdoor.store') }}" enctype="multipart/form-data">
+        <form method="POST" action="{{ isset($replacementOrder) ? route('kasir.replacement.store') : route('order-outdoor.store') }}" enctype="multipart/form-data"
+              x-data="{ destinationOpen: {{ $errors->any() && old('payment_queue') ? 'true' : 'false' }} }">
             @csrf
             @if (isset($replacementOrder))
                 <input type="hidden" name="replacement_order_id" value="{{ $replacementOrder->id }}">
@@ -13,6 +14,9 @@
                 </div>
             @endif
             @include('order-outdoor._form')
+            @unless(isset($replacementOrder))
+                <x-order-payment-destination-modal />
+            @endunless
         </form>
     </div>
 </x-app-layout>

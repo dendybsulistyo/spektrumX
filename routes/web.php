@@ -8,6 +8,7 @@ use App\Http\Controllers\BahanCetakOutdoorController;
 use App\Http\Controllers\BahanOutdoorController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\CustomerServiceController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DataWarehouseController;
 use App\Http\Controllers\DetailIndoorController;
@@ -355,6 +356,12 @@ Route::middleware('auth')->group(function () {
     Route::middleware('permission:kasir.view')->group(function () {
         Route::get('/kasir', [KasirController::class, 'index'])->name('kasir.index');
         Route::get('/kasir/{type}/{id}', [KasirController::class, 'show'])->name('kasir.show');
+    });
+    Route::middleware('permission:customer-service.view')->group(function () {
+        Route::get('/customer-service', [CustomerServiceController::class, 'index'])->name('customer-service.index');
+    });
+    Route::middleware('permission:customer-service.manage')->group(function () {
+        Route::post('/customer-service/{type}/{id}/forward', [CustomerServiceController::class, 'forward'])->name('customer-service.forward');
     });
     Route::middleware('permission:kasir.manage')->group(function () {
         Route::post('/kasir/{type}/{id}/bayar', [KasirController::class, 'bayar'])->name('kasir.bayar');

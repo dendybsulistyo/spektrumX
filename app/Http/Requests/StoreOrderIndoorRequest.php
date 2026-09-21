@@ -29,6 +29,7 @@ class StoreOrderIndoorRequest extends FormRequest
             'TglOrder' => ['required', 'date'],
             'KdCust' => ['required', 'string', 'exists:customers,KdCust'],
             'replacement_order_id' => ['nullable', 'integer', 'exists:order_indoor,id'],
+            'payment_queue' => ['nullable', 'in:kasir,cs'],
 
             'items' => ['required', 'array', 'min:1'],
             // KdProd's existence depends on jenis_produk (produk_indoor vs

@@ -580,7 +580,9 @@
     </div>
 
     <div class="pt-4 flex gap-3 border-t mt-4">
-        <button type="submit" class="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-md hover:bg-gray-700">
+        <button type="{{ ! $order && ! isset($replacementOrder) ? 'button' : 'submit' }}"
+                @if (! $order && ! isset($replacementOrder)) @click="destinationOpen = true" @endif
+                class="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-md hover:bg-gray-700">
             {{ $submitLabel }}
         </button>
         <a href="{{ route('order-indoor.index') }}" class="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-md hover:bg-red-700">

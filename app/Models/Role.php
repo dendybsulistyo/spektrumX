@@ -75,6 +75,10 @@ class Role extends Model
             'kasir.approve-hutang' => 'Setujui/tolak pengajuan hutang customer VIP yang melebihi plafon',
             'kasir.replacement.manage' => 'Buat nota pengganti',
         ],
+        'Customer Service' => [
+            'customer-service.view' => 'Lihat antrean order Customer Service',
+            'customer-service.manage' => 'Isi informasi transfer dan teruskan order ke kasir',
+        ],
         'Operator Desain' => [
             'order-desain.view' => 'Lihat antrian desain',
             'order-desain.manage' => 'Update status desain',

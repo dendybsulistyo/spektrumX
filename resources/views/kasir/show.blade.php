@@ -39,6 +39,16 @@
                     </div>
                 </div>
             @endif
+            @if ($order->cs_processed_at)
+                <div class="border-b border-violet-200 bg-violet-50 p-4 text-sm text-violet-900">
+                    <p class="font-semibold">Informasi pembayaran dari Customer Service</p>
+                    <div class="mt-1 flex flex-wrap gap-x-6 gap-y-1">
+                        <span>Transfer: <strong>Rp {{ number_format($order->cs_transfer_amount, 0, ',', '.') }}</strong></span>
+                        <span>Status: <strong>{{ strtoupper($order->cs_payment_type) }}</strong></span>
+                        <span>Dicatat oleh: {{ $order->customerService?->name ?? '-' }}</span>
+                    </div>
+                </div>
+            @endif
             <div class="p-4 border-b border-gray-200">
                 <p class="text-sm text-gray-500">Customer</p>
                 <p class="font-semibold text-gray-900">{{ $order->customer?->NmCust ?? '-' }}</p>
@@ -216,7 +226,7 @@
         <div class="bg-white rounded-lg border border-gray-200 p-4"
              x-data="{
                 isReplacement: {{ $order->replacement_order_id ? 'true' : 'false' }},
-                metode: '{{ old('metode_bayar', 'tunai') }}',
+                metode: '{{ old('metode_bayar', $order->cs_payment_type === 'dp' ? 'dp' : 'tunai') }}',
                 caraBayar: '{{ old('cara_bayar', 'tunai') }}',
                 noReferensi: '{{ old('no_referensi') }}',
                 jumlahBayarReplacement: '{{ old('jumlah_bayar') }}',
@@ -242,7 +252,7 @@
                     if (this.rincianTotal > this.dpMax) return `Jumlah DP tidak boleh melebihi Rp ${this.dpMax.toLocaleString('id-ID')}.`;
                     return '';
                 },
-                rincian: [{ cara_bayar: 'tunai', jumlah: '', no_referensi: '' }],
+                rincian: @js(old('rincian', $order->cs_transfer_amount ? [['cara_bayar' => 'transfer', 'jumlah' => (string) (int) $order->cs_transfer_amount, 'no_referensi' => '']] : [['cara_bayar' => 'tunai', 'jumlah' => '', 'no_referensi' => '']])),
                 totalBayar: {{ (float) (round(($diskonStatus === 'approved' ? $order->totalSetelahDiskon() : ($order->total ?? 0)) / 100) * 100) }},
                 get rincianTotal() {
                     return this.rincian.reduce((sum, r) => sum + Number(r.jumlah || 0), 0);

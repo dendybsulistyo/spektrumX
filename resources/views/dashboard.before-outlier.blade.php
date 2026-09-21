@@ -1,22 +1,6 @@
 <x-app-layout>
     <x-slot name="header">
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-            <h2 class="font-semibold text-xl text-gray-800">Dashboard</h2>
-            <form method="GET" class="flex flex-wrap items-end gap-2">
-                <label class="grid gap-1 text-xs text-gray-500">
-                    Dari tanggal
-                    <input class="h-9 w-[160px] border border-gray-300 px-2 text-xs" style="border-radius:2px" type="date" name="from" value="{{ $from }}">
-                </label>
-                <label class="grid gap-1 text-xs text-gray-500">
-                    Sampai tanggal
-                    <input class="h-9 w-[160px] border border-gray-300 px-2 text-xs" style="border-radius:2px" type="date" name="to" value="{{ $to }}">
-                </label>
-                <button type="submit" class="h-9 bg-blue-600 px-4 text-xs font-semibold text-white hover:bg-blue-700" style="border-radius:2px">Terapkan</button>
-                @if ($from || $to)
-                    <a href="{{ route('dashboard') }}" class="inline-flex h-9 items-center border border-gray-300 bg-white px-4 text-xs font-semibold text-gray-700" style="border-radius:2px">Reset</a>
-                @endif
-            </form>
-        </div>
+        <h2 class="font-semibold text-xl text-gray-800">Dashboard</h2>
     </x-slot>
 
     @push('styles')
@@ -88,142 +72,6 @@
                khusus di sini saja, tidak menyentuh halaman lain. */
             #industry-dashboard .text-muted { color: color-mix(in srgb, var(--color-text) 80%, transparent); }
 
-            /* Eksperimen "Outlier workspace": antarmuka data yang rapat,
-               netral, dan presisi. Hanya berlaku pada dashboard ini. */
-            #industry-dashboard {
-                --color-accent: #2563eb;
-                --color-accent-100: #eff6ff;
-                --color-accent-600: #1d4ed8;
-                --color-accent-700: #1e40af;
-                --color-accent-800: #1e3a8a;
-                --color-bg: #f7f7f7;
-                --color-surface: #ffffff;
-                --color-divider: #e5e5e5;
-                position: relative;
-                min-height: calc(100vh - 64px);
-                background:
-                    linear-gradient(90deg, rgba(23,23,23,.025) 1px, transparent 1px),
-                    linear-gradient(rgba(23,23,23,.025) 1px, transparent 1px),
-                    var(--color-bg);
-                background-size: 28px 28px;
-            }
-            #industry-dashboard::before {
-                content: ""; position: absolute; inset: 0 auto 0 0; width: 3px;
-                background: linear-gradient(#60a5fa, #2563eb 45%, #8b5cf6);
-            }
-            #industry-dashboard > div { gap: 18px !important; }
-            #industry-dashboard > div > header {
-                position: relative; align-items: center !important; padding: 4px 0 14px;
-                border-bottom: 1px solid var(--color-divider);
-            }
-            #industry-dashboard .outlier-eyebrow {
-                display: inline-flex; align-items: center; gap: 7px; margin-bottom: 5px;
-                color: #525252; font-size: 10px; font-weight: 600; letter-spacing: .12em;
-                text-transform: uppercase;
-            }
-            #industry-dashboard .outlier-eyebrow::before {
-                content: ""; width: 7px; height: 7px; border-radius: 50%;
-                background: #3b82f6; box-shadow: 0 0 0 4px #dbeafe;
-            }
-            #industry-dashboard > div > header h2 { font-size: 27px !important; letter-spacing: -.035em; }
-            #industry-dashboard .panel,
-            #industry-dashboard .card {
-                border-color: #e5e5e5; border-radius: 7px; box-shadow: 0 1px 2px rgba(0,0,0,.035);
-            }
-            #industry-dashboard .card { position: relative; overflow: hidden; padding: 15px; }
-            #industry-dashboard .card::after {
-                content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 2px;
-                background: #d4d4d4;
-            }
-            #industry-dashboard > div > section:first-of-type {
-                grid-template-columns: repeat(6, minmax(145px, 1fr)) !important;
-                gap: 8px !important; overflow-x: auto; padding-bottom: 2px;
-            }
-            #industry-dashboard > div > section:first-of-type .card-kicker {
-                color: #737373; font-size: 10px; letter-spacing: .08em;
-            }
-            #industry-dashboard > div > section:first-of-type .card > div:nth-child(2) {
-                margin: 7px 0 5px; font-size: 29px !important; letter-spacing: -.04em;
-            }
-            #industry-dashboard > div > section:first-of-type .card-meta { font-size: 11px; color: #737373; }
-            #industry-dashboard > div > section:first-of-type .card:last-child {
-                background: #171717 !important; border-color: #171717 !important;
-            }
-            #industry-dashboard > div > section:first-of-type .card:last-child::after {
-                background: #ef4444;
-            }
-            #industry-dashboard > div > section:nth-of-type(2) {
-                grid-template-columns: repeat(7, minmax(120px, 1fr)) !important;
-                overflow-x: auto; border-radius: 7px;
-            }
-            #industry-dashboard > div > section:nth-of-type(2) > div { min-width: 120px; padding: 12px 14px !important; }
-            #industry-dashboard > div > section:nth-of-type(2) > div:first-child { border-left: 0 !important; }
-            #industry-dashboard > div > section:nth-of-type(2) > div > div:last-child { font-size: 25px !important; }
-            #industry-dashboard .btn { border-radius: 6px; font-size: 12px; }
-            #industry-dashboard .input { border-radius: 6px; font-size: 12px; }
-            #industry-dashboard .tag { border-radius: 999px; font-size: 10px; padding: 4px 8px; }
-            #industry-dashboard .seg { border-radius: 6px; background: #fafafa; }
-            #industry-dashboard .table { font-size: 12px; }
-            #industry-dashboard .table th {
-                background: #fafafa; color: #525252; font-size: 10px; letter-spacing: .06em;
-                border-bottom-color: #d4d4d4;
-            }
-            #industry-dashboard .table td { border-bottom-color: #eeeeee; }
-            #industry-dashboard .table tbody tr:hover { background: #eff6ff; }
-            @media (max-width: 768px) {
-                #industry-dashboard { margin: -20px !important; padding: 20px !important; }
-                #industry-dashboard > div > header { align-items: flex-start !important; }
-                #industry-dashboard > div > section:first-of-type { grid-template-columns: repeat(6, 150px) !important; }
-            }
-
-            /* Versi mendekati referensi: rail + sidebar + data workspace. */
-            #industry-dashboard { display: grid; grid-template-columns: minmax(0, 1fr); padding: 0; margin: calc(var(--space-8) * -1); background: #fff; }
-            #industry-dashboard::before { display: none; }
-            #industry-dashboard .outlier-rail { display: none; }
-            #industry-dashboard .outlier-logo { width: 22px; height: 22px; border: 4px solid #93c5fd; border-radius: 999px; margin-bottom: 16px; }
-            #industry-dashboard .outlier-rail-button { width: 28px; height: 28px; display: grid; place-items: center; border: 0; border-radius: 6px; color: #737373; background: transparent; }
-            #industry-dashboard .outlier-rail-button.active { color: #171717; background: #f0f0f0; }
-            #industry-dashboard .outlier-rail-button svg { width: 15px; height: 15px; }
-            #industry-dashboard .outlier-side { display: none; }
-            #industry-dashboard .outlier-company { display: flex; align-items: center; gap: 9px; height: 32px; padding: 0 8px; margin-bottom: 18px; font-size: 12px; font-weight: 600; }
-            #industry-dashboard .outlier-company-mark { width: 15px; height: 15px; border-radius: 5px; background: linear-gradient(135deg,#8b5cf6,#3b82f6); }
-            #industry-dashboard .outlier-side-label { margin: 17px 8px 6px; color: #a3a3a3; font-size: 9px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; }
-            #industry-dashboard .outlier-side a { display: flex; align-items: center; gap: 9px; min-height: 29px; padding: 5px 8px; border-radius: 6px; color: #737373; font-size: 12px; text-decoration: none; }
-            #industry-dashboard .outlier-side a:hover { background: #f7f7f7; color: #171717; }
-            #industry-dashboard .outlier-side a.active { background: #f5f5f5; color: #171717; font-weight: 600; }
-            #industry-dashboard .outlier-side a svg { width: 13px; height: 13px; flex: 0 0 auto; }
-            #industry-dashboard .outlier-main { width: 100%; max-width: none !important; min-width: 0; padding: 0 0 22px; gap: 0 !important; background: #fff; }
-            #industry-dashboard > .outlier-main > header { margin: 0; padding: 12px 24px !important; border-bottom: 1px solid #e5e5e5; justify-content: flex-end !important; }
-            #industry-dashboard > .outlier-main > section { margin: 12px 24px 0; }
-            #industry-dashboard > .outlier-main > section:first-of-type { margin-top: 10px; }
-            #industry-dashboard > .outlier-main > section:nth-of-type(3) { padding: 0 !important; border-radius: 0; box-shadow: none; }
-            #industry-dashboard > .outlier-main > section:nth-of-type(3) > div:first-child { padding: 14px 14px 0; }
-            #industry-dashboard > .outlier-main > section:nth-of-type(3) > .seg { margin: 12px 14px !important; width: max-content; }
-            #industry-dashboard > .outlier-main > section:nth-of-type(3) .table { border-top: 1px solid #e5e5e5; }
-            #industry-dashboard .panel,
-            #industry-dashboard .card,
-            #industry-dashboard .btn,
-            #industry-dashboard .input,
-            #industry-dashboard .tag,
-            #industry-dashboard .seg,
-            #industry-dashboard .dialog { border-radius: 2px !important; }
-            @media (max-width: 1050px) {
-                #industry-dashboard { grid-template-columns: minmax(0, 1fr); }
-                #industry-dashboard > .outlier-main > section:first-of-type { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; overflow: visible; }
-                #industry-dashboard > .outlier-main > section:nth-of-type(2) { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; overflow: visible; }
-                #industry-dashboard > .outlier-main > section:nth-of-type(2) > div:nth-child(5) { border-left: 0 !important; }
-            }
-            @media (max-width: 640px) {
-                #industry-dashboard { margin: -16px !important; grid-template-columns: minmax(0,1fr); }
-                #industry-dashboard .outlier-rail { display: none; }
-                #industry-dashboard .outlier-actions { display: none; }
-                #industry-dashboard > .outlier-main > header { align-items: flex-start !important; }
-                #industry-dashboard > .outlier-main > header { padding-inline: 14px !important; }
-                #industry-dashboard > .outlier-main > section { margin-inline: 14px; }
-                #industry-dashboard > .outlier-main > section:first-of-type { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
-                #industry-dashboard > .outlier-main > section:nth-of-type(2) { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
-                #industry-dashboard > .outlier-main > section:nth-of-type(2) > div:nth-child(odd) { border-left: 0 !important; }
-            }
         </style>
     @endpush
 
@@ -274,7 +122,28 @@
     @endphp
 
     <div id="industry-dashboard">
-        <div class="outlier-main" style="max-width: 1480px; margin: 0 auto; display: flex; flex-direction: column; gap: var(--space-8);">
+        <div style="max-width: 1480px; margin: 0 auto; display: flex; flex-direction: column; gap: var(--space-8);">
+
+            <header style="display: flex; align-items: flex-end; justify-content: space-between; gap: var(--space-6); flex-wrap: wrap;">
+                <div>
+                    <div class="card-kicker" style="margin-bottom: 4px;">Ringkasan operasional</div>
+                    <h2 style="margin: 0;">Dashboard</h2>
+                </div>
+                <form method="GET" style="display: flex; align-items: flex-end; gap: var(--space-3); flex-wrap: wrap;">
+                    <div class="field" style="width: 160px;">
+                        <label>Dari tanggal</label>
+                        <input class="input" type="date" name="from" value="{{ $from }}">
+                    </div>
+                    <div class="field" style="width: 160px;">
+                        <label>Sampai tanggal</label>
+                        <input class="input" type="date" name="to" value="{{ $to }}">
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="height: 36px;">Terapkan</button>
+                    @if ($from || $to)
+                        <a href="{{ route('dashboard') }}" class="btn btn-secondary" style="height: 36px;">Reset</a>
+                    @endif
+                </form>
+            </header>
 
             <section style="display: grid; grid-template-columns: repeat(6, 1fr); gap: var(--space-4);">
                 @foreach ($cards as $card)
