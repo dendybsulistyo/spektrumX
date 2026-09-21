@@ -2,7 +2,7 @@
     <x-slot name="header">
         <div>
             <h2 class="text-xl font-semibold text-slate-900">Customer Service</h2>
-            <p class="mt-1 text-sm text-slate-500">Info transfer untuk Kasir.</p>
+            {{-- <p class="mt-1 text-sm text-slate-500">Info transfer untuk Kasir.</p> --}}
         </div>
     </x-slot>
 

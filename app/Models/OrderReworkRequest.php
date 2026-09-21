@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Collection;
 
 class OrderReworkRequest extends Model
 {
@@ -19,11 +20,13 @@ class OrderReworkRequest extends Model
         'finishing' => 'Finishing',
         'qc' => 'Back Office',
         'bungkus' => 'Bungkus',
+        'siap_diambil' => 'Pengambilan Barang',
     ];
 
     protected $fillable = [
         'order_type',
         'order_id',
+        'order_detail_ids',
         'current_stage',
         'action',
         'target_stage',
@@ -42,6 +45,7 @@ class OrderReworkRequest extends Model
             'requested_at' => 'datetime',
             'resolved_at' => 'datetime',
             'qty' => 'integer',
+            'order_detail_ids' => 'array',
         ];
     }
 
@@ -71,9 +75,9 @@ class OrderReworkRequest extends Model
      * most), so a single unfiltered query is simpler than per-controller id
      * gathering.
      *
-     * @return \Illuminate\Support\Collection<string, self>
+     * @return Collection<string, self>
      */
-    public static function pendingMap(): \Illuminate\Support\Collection
+    public static function pendingMap(): Collection
     {
         return static::pending()->with('requestedBy')->get()
             ->keyBy(fn (self $r) => $r->order_type.'-'.$r->order_id);

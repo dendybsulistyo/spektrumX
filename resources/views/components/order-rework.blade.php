@@ -1,4 +1,4 @@
-@props(['type', 'orderId', 'noOrder', 'currentStage', 'maxQty' => null, 'pending' => null, 'canApprove' => false, 'compact' => false])
+@props(['type', 'orderId', 'noOrder', 'currentStage', 'maxQty' => null, 'items' => null, 'pending' => null, 'canApprove' => false, 'compact' => false])
 
 @php
     // "Ulang" can only send an order backward in the pipeline — a stage
@@ -9,9 +9,21 @@
     $currentIndex = array_search($currentStage, $stageKeys, true);
     $stageOptions = collect(\App\Models\OrderReworkRequest::STAGE_LABELS)
         ->only($currentIndex !== false ? array_slice($stageKeys, 0, $currentIndex) : []);
+    $reworkItems = collect($items)->map(fn ($item) => [
+        'id' => $item->id,
+        'label' => $type === 'outdoor'
+            ? ($item->gabungan ?: ($item->NmFile ?: 'File #'.$item->id))
+            : ($item->Judul ?: 'File #'.$item->id),
+        'qty' => $item->qtyAt($currentStage),
+    ])->filter(fn ($item) => $item['qty'] > 0)->values();
+    $selectFiles = in_array($currentStage, ['cetak', 'finishing', 'qc', 'bungkus', 'siap_diambil'], true)
+        && $reworkItems->isNotEmpty();
+    $pendingFileNames = $pending && filled($pending->order_detail_ids)
+        ? $reworkItems->whereIn('id', $pending->order_detail_ids)->pluck('label')
+        : collect();
 @endphp
 
-<div x-data="{ open: false }" class="inline-block mr-1">
+<div x-data="{ open: false, selectedFiles: [] }" class="inline-block mr-1">
     @if ($pending)
         <span class="relative inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md border border-amber-300 bg-amber-50 text-amber-700 text-xs font-semibold">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-3.5 h-3.5">
@@ -39,6 +51,9 @@
             <div class="mt-1 text-xs bg-amber-50 border border-amber-200 rounded-md p-2 max-w-xs">
                 <p class="text-amber-800">
                     <span class="font-semibold">{{ $pending->qty ?? 'Semua' }} unit &rarr; {{ \App\Models\OrderReworkRequest::STAGE_LABELS[$pending->target_stage] ?? $pending->target_stage }}</span>
+                    @if ($pendingFileNames->isNotEmpty())
+                        <span class="block mt-0.5">File: {{ $pendingFileNames->join(', ') }}</span>
+                    @endif
                     — {{ $pending->reason }}
                     <span class="text-amber-500">({{ $pending->requestedBy->name ?? '-' }})</span>
                 </p>
@@ -69,7 +84,7 @@
              class="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div @click="open = false" class="absolute inset-0 bg-gray-900/50"></div>
 
-            <div class="relative bg-white rounded-lg shadow-lg w-full max-w-md" @click.stop>
+            <div class="relative bg-white rounded-md shadow-lg w-full max-w-md" @click.stop>
                 <div class="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
                     <h3 class="font-semibold text-gray-900">Ulang Proses — {{ $noOrder }}</h3>
                     <button type="button" @click="open = false" class="text-gray-400 hover:text-gray-600">
@@ -93,7 +108,29 @@
                         </select>
                     </div>
 
-                    @if ($maxQty !== null)
+                    @if ($selectFiles)
+                        <div>
+                            <div class="flex items-center justify-between gap-3 mb-2">
+                                <label class="block text-xs font-semibold text-gray-700">Pilih file yang perlu diproses ulang</label>
+                                <button type="button"
+                                        @click="selectedFiles = selectedFiles.length === {{ $reworkItems->count() }} ? [] : {{ Illuminate\Support\Js::from($reworkItems->pluck('id')->map(fn ($id) => (string) $id)->values()) }}"
+                                        class="text-xs font-medium text-blue-600 hover:text-blue-700">
+                                    Pilih semua
+                                </button>
+                            </div>
+                            <div class="border border-gray-200 rounded-sm divide-y divide-gray-200 max-h-52 overflow-y-auto">
+                                @foreach ($reworkItems as $file)
+                                    <label class="flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-gray-50">
+                                        <input type="checkbox" name="detail_ids[]" value="{{ $file['id'] }}" x-model="selectedFiles"
+                                               class="rounded-sm border-gray-300 text-blue-600 focus:ring-blue-500">
+                                        <span class="min-w-0 flex-1 text-sm font-medium text-gray-800 truncate">{{ $file['label'] }}</span>
+                                        <span class="text-xs text-gray-500">{{ $file['qty'] }} unit</span>
+                                    </label>
+                                @endforeach
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1.5">Hanya file yang dicentang yang akan kembali ke tahap yang dipilih.</p>
+                        </div>
+                    @elseif ($maxQty !== null)
                         <div>
                             <label class="block text-xs font-medium text-gray-600 mb-1">Jumlah unit diulang</label>
                             <input type="number" name="qty" min="1" max="{{ $maxQty }}" value="{{ $maxQty }}" required
@@ -112,7 +149,9 @@
 
                     <div class="flex justify-end gap-2 pt-1">
                         <button type="button" @click="open = false" class="px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded-md">Batal</button>
-                        <button type="submit" class="px-4 py-1.5 bg-red-600 text-white text-sm font-medium rounded-md hover:bg-red-700">Kirim Pengajuan</button>
+                        <button type="submit"
+                                @if ($selectFiles) :disabled="selectedFiles.length === 0" @endif
+                                class="px-4 py-1.5 bg-red-600 text-white text-sm font-medium rounded-md hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed">Kirim Pengajuan</button>
                     </div>
                 </form>
             </div>

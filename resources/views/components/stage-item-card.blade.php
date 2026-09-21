@@ -67,6 +67,7 @@
             @endif
             <x-order-rework :type="$type" :order-id="$order->id" :no-order="$order->NoOrder"
                              :current-stage="$stage" :max-qty="$items->sum(fn ($i) => $i->qtyAt($stage))"
+                             :items="$items"
                              :pending="$pendingRework->get($type.'-'.$order->id)"
                              :can-approve="$canApproveRework" :compact="true" />
             @if ($order->cancel_requested_at)

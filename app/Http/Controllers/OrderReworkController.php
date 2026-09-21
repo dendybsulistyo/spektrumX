@@ -23,7 +23,7 @@ class OrderReworkController extends Controller
      * further along than from_stage; going backward (or resubmitting the
      * same stage) is the whole point of "Ulang", going forward isn't.
      */
-    private const STAGE_ORDER = ['desain' => 0, 'cetak' => 1, 'finishing' => 2, 'qc' => 3, 'bungkus' => 4];
+    private const STAGE_ORDER = ['desain' => 0, 'cetak' => 1, 'finishing' => 2, 'qc' => 3, 'bungkus' => 4, 'siap_diambil' => 5];
 
     public function __construct(
         private readonly AccountingService $accounting,
@@ -61,9 +61,9 @@ class OrderReworkController extends Controller
 
         $data = $request->validate([
             'action' => ['required', 'in:ulang,batal'],
-            'from_stage' => ['required_if:action,ulang', 'nullable', 'in:desain,cetak,finishing,qc,bungkus'],
+            'from_stage' => ['required_if:action,ulang', 'nullable', 'in:desain,cetak,finishing,qc,bungkus,siap_diambil'],
             'target_stage' => [
-                'required_if:action,ulang', 'nullable', 'in:desain,cetak,finishing,qc,bungkus',
+                'required_if:action,ulang', 'nullable', 'in:desain,cetak,finishing,qc,bungkus,siap_diambil',
                 function ($attribute, $value, $fail) use ($request) {
                     if ($request->input('action') !== 'ulang') {
                         return;
@@ -78,6 +78,8 @@ class OrderReworkController extends Controller
                 },
             ],
             'qty' => ['nullable', 'integer', 'min:1'],
+            'detail_ids' => ['required_if:from_stage,cetak,finishing,qc,bungkus,siap_diambil', 'nullable', 'array', 'min:1'],
+            'detail_ids.*' => ['integer', 'distinct'],
             'reason' => ['required', 'string', 'max:255'],
         ]);
 
@@ -90,19 +92,37 @@ class OrderReworkController extends Controller
         // genuinely still has qty sitting there — guards against a stale
         // page (qty already moved on) or a tampered request.
         $qty = null;
+        $detailIds = null;
 
         if ($data['action'] === 'ulang') {
-            $totalAtFromStage = $order->detailItems()->sum(fn ($item) => $item->qtyAt($data['from_stage']));
-            abort_if($totalAtFromStage === 0, 422, 'Order ini sudah tidak punya qty di tahap tersebut — halaman mungkin sudah berubah, muat ulang dulu.');
+            $itemsAtStage = $order->detailItems()
+                ->filter(fn ($item) => $item->qtyAt($data['from_stage']) > 0);
 
-            // Not submitted (older/plain clients) defaults to "everything
-            // sitting there", matching the previous whole-order behavior.
-            $qty = min($data['qty'] ?? $totalAtFromStage, $totalAtFromStage);
+            if (! empty($data['detail_ids'])) {
+                $detailIds = collect($data['detail_ids'])->map(fn ($id) => (int) $id)->unique()->values();
+                $selectedItems = $itemsAtStage->whereIn('id', $detailIds);
+
+                abort_if(
+                    $selectedItems->count() !== $detailIds->count(),
+                    422,
+                    'Ada file yang tidak ditemukan pada antrean tahap ini. Muat ulang halaman lalu pilih kembali.'
+                );
+
+                $totalAtFromStage = $selectedItems->sum(fn ($item) => $item->qtyAt($data['from_stage']));
+                $qty = $totalAtFromStage;
+                $detailIds = $detailIds->all();
+            } else {
+                $totalAtFromStage = $itemsAtStage->sum(fn ($item) => $item->qtyAt($data['from_stage']));
+                $qty = min($data['qty'] ?? $totalAtFromStage, $totalAtFromStage);
+            }
+
+            abort_if($totalAtFromStage === 0, 422, 'Order ini sudah tidak punya qty di tahap tersebut — halaman mungkin sudah berubah, muat ulang dulu.');
         }
 
         OrderReworkRequest::create([
             'order_type' => $type,
             'order_id' => $order->id,
+            'order_detail_ids' => $detailIds,
             'current_stage' => $data['action'] === 'ulang' ? $data['from_stage'] : $order->status,
             'action' => $data['action'],
             'target_stage' => $data['action'] === 'ulang' ? $data['target_stage'] : null,
@@ -151,9 +171,25 @@ class OrderReworkController extends Controller
                 // qty here get filled first-come-first-served until the
                 // requested amount is used up; a single-item order (by far
                 // the common case) just moves exactly what was asked.
-                $remaining = $orderReworkRequest->qty ?? PHP_INT_MAX;
+                $selectedDetailIds = collect($orderReworkRequest->order_detail_ids)
+                    ->map(fn ($id) => (int) $id);
+                $items = $order->detailItems();
 
-                foreach ($order->detailItems() as $item) {
+                if ($selectedDetailIds->isNotEmpty()) {
+                    $items = $items->whereIn('id', $selectedDetailIds);
+                    abort_if(
+                        $items->count() !== $selectedDetailIds->unique()->count(),
+                        422,
+                        'File pada pengajuan ulang tidak ditemukan.'
+                    );
+                }
+
+                $remaining = $selectedDetailIds->isNotEmpty()
+                    ? PHP_INT_MAX
+                    : ($orderReworkRequest->qty ?? PHP_INT_MAX);
+                $movedItems = collect();
+
+                foreach ($items as $item) {
                     if ($remaining <= 0) {
                         break;
                     }
@@ -165,9 +201,15 @@ class OrderReworkController extends Controller
                         $item->decrement($fromCol, $move);
                         $item->increment($toCol, $move);
                         $remaining -= $move;
+                        $movedItems->push([
+                            'id' => $item->id,
+                            'label' => $item->NmFile ?? $item->Judul ?? 'File #'.$item->id,
+                            'qty' => $move,
+                        ]);
                     }
                 }
 
+                abort_if($movedItems->isEmpty(), 422, 'File yang dipilih sudah tidak berada di tahap proses tersebut.');
                 $order->recalculateStatus();
             }
 
@@ -177,18 +219,34 @@ class OrderReworkController extends Controller
                 'resolved_at' => now(),
             ]);
 
-            OrderStatusNote::create([
-                'order_type' => $orderReworkRequest->order_type,
-                'order_id' => $order->id,
-                'qty' => $orderReworkRequest->action === 'ulang' ? $orderReworkRequest->qty : null,
-                'stage' => $orderReworkRequest->current_stage,
-                'action' => $orderReworkRequest->action === 'batal' ? 'dibatalkan' : 'diulang',
-                'catatan' => $orderReworkRequest->action === 'batal'
-                    ? "Order dibatalkan, uang dikembalikan ke customer (alasan: {$orderReworkRequest->reason})"
-                    : ($orderReworkRequest->qty ?? 'Semua').' unit diulang ke tahap '.(OrderReworkRequest::STAGE_LABELS[$orderReworkRequest->target_stage] ?? $orderReworkRequest->target_stage)." (alasan: {$orderReworkRequest->reason})",
-                'user_id' => auth()->id(),
-                'created_at' => now(),
-            ]);
+            if ($orderReworkRequest->action === 'ulang' && filled($orderReworkRequest->order_detail_ids)) {
+                foreach ($movedItems as $movedItem) {
+                    OrderStatusNote::create([
+                        'order_type' => $orderReworkRequest->order_type,
+                        'order_id' => $order->id,
+                        'order_detail_id' => $movedItem['id'],
+                        'qty' => $movedItem['qty'],
+                        'stage' => $orderReworkRequest->current_stage,
+                        'action' => 'diulang',
+                        'catatan' => $movedItem['label'].' diulang ke tahap '.(OrderReworkRequest::STAGE_LABELS[$orderReworkRequest->target_stage] ?? $orderReworkRequest->target_stage)." (alasan: {$orderReworkRequest->reason})",
+                        'user_id' => auth()->id(),
+                        'created_at' => now(),
+                    ]);
+                }
+            } else {
+                OrderStatusNote::create([
+                    'order_type' => $orderReworkRequest->order_type,
+                    'order_id' => $order->id,
+                    'qty' => $orderReworkRequest->action === 'ulang' ? $orderReworkRequest->qty : null,
+                    'stage' => $orderReworkRequest->current_stage,
+                    'action' => $orderReworkRequest->action === 'batal' ? 'dibatalkan' : 'diulang',
+                    'catatan' => $orderReworkRequest->action === 'batal'
+                        ? "Order dibatalkan, uang dikembalikan ke customer (alasan: {$orderReworkRequest->reason})"
+                        : ($orderReworkRequest->qty ?? 'Semua').' unit diulang ke tahap '.(OrderReworkRequest::STAGE_LABELS[$orderReworkRequest->target_stage] ?? $orderReworkRequest->target_stage)." (alasan: {$orderReworkRequest->reason})",
+                    'user_id' => auth()->id(),
+                    'created_at' => now(),
+                ]);
+            }
         });
 
         return back()->with('status', 'Pengajuan disetujui.');
