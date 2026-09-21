@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreOrderOutdoorRequest;
 use App\Models\BahanCetakOutdoor;
 use App\Models\Customer;
+use App\Models\CustomerServiceJobSheet;
 use App\Models\HargaCetakOutdoor;
 use App\Models\OrderComment;
 use App\Models\OrderOutdoor;
@@ -48,10 +49,27 @@ class OrderOutdoorController extends Controller
         return view('order-outdoor.index', compact('orders', 'comments', 'unread'));
     }
 
-    public function create(): View
+    public function create(Request $request): View
     {
+        $jobSheet = $request->integer('job_sheet')
+            ? CustomerServiceJobSheet::with('customer')->findOrFail($request->integer('job_sheet'))
+            : null;
+        $items = $jobSheet
+            ? collect($jobSheet->items)->map(fn (array $item) => (object) [
+                'NmFile' => mb_substr($jobSheet->folder_file ?: $item['material'], 0, 50),
+                'Panjang' => $item['width'],
+                'Lebar' => $item['height'],
+                'Qty' => $item['quantity'],
+                'KdCtk' => '',
+                'ada_finishing' => filled($item['finishing'] ?? null),
+                'jenis_finishing' => $item['finishing'] ?? null,
+            ])
+            : null;
+
         return view('order-outdoor.create', [
-            'selectedCustomer' => old('KdCust') ? Customer::where('KdCust', old('KdCust'))->first() : null,
+            'selectedCustomer' => old('KdCust') ? Customer::where('KdCust', old('KdCust'))->first() : $jobSheet?->customer,
+            'items' => $items,
+            'sourceJobSheet' => $jobSheet,
             'hargaCetakList' => HargaCetakOutdoor::orderBy('KdCtk')->get(),
             'printerOutdoorList' => PrinterOutdoor::orderBy('NoUrut')->get(),
             'bahanCetakOutdoorList' => BahanCetakOutdoor::orderBy('NoUrut')->get(),

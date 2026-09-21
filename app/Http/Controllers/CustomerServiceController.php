@@ -24,14 +24,39 @@ class CustomerServiceController extends Controller
         return view('customer-service.index', compact('selectedCustomer'));
     }
 
-    public function jobSheets(): View
+    public function jobSheets(Request $request): View
     {
-        $jobSheets = CustomerServiceJobSheet::with(['creator', 'customer'])
+        $tab = $request->query('tab') === 'claimed' ? 'claimed' : 'pending';
+        $jobSheets = CustomerServiceJobSheet::with(['creator', 'customer', 'claimant'])
+            ->when($tab === 'claimed', fn ($query) => $query->whereNotNull('claimed_at'))
+            ->when($tab === 'pending', fn ($query) => $query->whereNull('claimed_at'))
             ->latest('received_at')
             ->latest('id')
-            ->paginate(25);
+            ->paginate(25)
+            ->withQueryString();
+        $pendingCount = CustomerServiceJobSheet::whereNull('claimed_at')->count();
+        $claimedCount = CustomerServiceJobSheet::whereNotNull('claimed_at')->count();
 
-        return view('customer-service.job-sheets', compact('jobSheets'));
+        return view('customer-service.job-sheets', compact('jobSheets', 'tab', 'pendingCount', 'claimedCount'));
+    }
+
+    public function claimJobSheet(CustomerServiceJobSheet $jobSheet, string $target): RedirectResponse
+    {
+        abort_unless(in_array($target, ['indoor', 'outdoor'], true), 404);
+
+        DB::transaction(function () use ($jobSheet, $target): void {
+            $lockedSheet = CustomerServiceJobSheet::lockForUpdate()->findOrFail($jobSheet->id);
+            abort_if($lockedSheet->claimed_at, 422, 'Lembar kerja ini sudah diambil oleh Penerima File lain.');
+            $lockedSheet->update([
+                'claimed_by' => auth()->id(),
+                'claimed_at' => now(),
+                'claimed_order_type' => $target,
+            ]);
+        });
+
+        return redirect()->route($target === 'outdoor' ? 'order-outdoor.create' : 'order-indoor.create', [
+            'job_sheet' => $jobSheet->id,
+        ]);
     }
 
     public function paymentQueue(): View

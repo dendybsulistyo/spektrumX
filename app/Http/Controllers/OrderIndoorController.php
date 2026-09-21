@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreOrderIndoorRequest;
 use App\Models\Customer;
+use App\Models\CustomerServiceJobSheet;
 use App\Models\HargaArtwork;
 use App\Models\Kategori;
 use App\Models\KonfigurasiJasaPotong;
@@ -43,10 +44,29 @@ class OrderIndoorController extends Controller
         return view('order-indoor.index', compact('orders'));
     }
 
-    public function create(): View
+    public function create(Request $request): View
     {
+        $jobSheet = $request->integer('job_sheet')
+            ? CustomerServiceJobSheet::with('customer')->findOrFail($request->integer('job_sheet'))
+            : null;
+        $items = $jobSheet
+            ? collect($jobSheet->items)->map(fn (array $item) => (object) [
+                'KdProd' => '',
+                'jenis_produk' => $item['order_type'] === 'AW' ? 'artwork' : 'indoor',
+                'Judul' => mb_substr($jobSheet->folder_file ?: $item['material'], 0, 30),
+                'Panjang' => $item['width'],
+                'Lebar' => $item['height'],
+                'Qty' => $item['quantity'],
+                'PisauTurun' => null,
+                'JumlahKertas' => null,
+                'TebalKertas' => null,
+            ])
+            : null;
+
         return view('order-indoor.create', [
-            'selectedCustomer' => old('KdCust') ? Customer::where('KdCust', old('KdCust'))->first() : null,
+            'selectedCustomer' => old('KdCust') ? Customer::where('KdCust', old('KdCust'))->first() : $jobSheet?->customer,
+            'items' => $items,
+            'sourceJobSheet' => $jobSheet,
             'produkList' => Produk::orderBy('NoUrut')->get(),
             'artworkProdukList' => HargaArtwork::orderBy('NoUrut')->get(),
             'kategoriList' => $this->kategoriGabungan(),

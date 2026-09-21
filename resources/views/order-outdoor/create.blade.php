@@ -7,6 +7,11 @@
         <form method="POST" action="{{ isset($replacementOrder) ? route('kasir.replacement.store') : route('order-outdoor.store') }}" enctype="multipart/form-data"
               x-data="{ destinationOpen: {{ $errors->any() && old('payment_queue') ? 'true' : 'false' }} }">
             @csrf
+            @if (isset($sourceJobSheet) && $sourceJobSheet)
+                <div class="mb-4 rounded border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
+                    Diambil dari Lembar Kerja CS #{{ $sourceJobSheet->id }} — {{ $sourceJobSheet->customer_name }}. Pilih printer dan bahan cetak sebelum menyimpan order.
+                </div>
+            @endif
             @if (isset($replacementOrder))
                 <input type="hidden" name="replacement_order_id" value="{{ $replacementOrder->id }}">
                 <div class="mb-4 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">

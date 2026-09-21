@@ -18,7 +18,7 @@
                     <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-blue-300">Lembar Kerja CS</p>
                     <h3 class="mt-1 text-lg font-semibold">Form Permintaan Produksi</h3>
                 </div>
-                <p class="text-xs text-slate-300">OD / ID / AW / SB</p>
+                <p class="text-xs text-slate-300">OD / ID / AW </p>
             </div>
 
             <form method="POST" action="{{ route('customer-service.job-sheet.store') }}">
@@ -118,7 +118,7 @@
                             <template x-for="(item, index) in items" :key="index">
                                 <tr>
                                     <td class="px-3 py-2 text-center text-slate-400" x-text="index + 1"></td>
-                                    <td class="px-3 py-2"><select :name="`items[${index}][order_type]`" x-model="item.order_type" class="w-full rounded border-slate-300 text-sm"><option>OD</option><option>ID</option><option>AW</option><option>SB</option></select></td>
+                                    <td class="px-3 py-2"><select :name="`items[${index}][order_type]`" x-model="item.order_type" class="w-full rounded border-slate-300 text-sm"><option>OD</option><option>ID</option><option>AW</option></select></td>
                                     <td class="px-3 py-2"><input type="number" min="0.01" step="0.01" required :name="`items[${index}][width]`" x-model="item.width" class="w-full rounded border-slate-300 text-sm"></td>
                                     <td class="px-3 py-2"><input type="number" min="0.01" step="0.01" required :name="`items[${index}][height]`" x-model="item.height" class="w-full rounded border-slate-300 text-sm"></td>
                                     <td class="px-3 py-2"><input type="number" min="1" required :name="`items[${index}][quantity]`" x-model="item.quantity" class="w-full rounded border-slate-300 text-sm"></td>

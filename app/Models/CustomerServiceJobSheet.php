@@ -18,6 +18,9 @@ class CustomerServiceJobSheet extends Model
         'notes',
         'items',
         'created_by',
+        'claimed_by',
+        'claimed_at',
+        'claimed_order_type',
     ];
 
     protected function casts(): array
@@ -26,6 +29,7 @@ class CustomerServiceJobSheet extends Model
             'received_at' => 'date',
             'deadline' => 'date',
             'items' => 'array',
+            'claimed_at' => 'datetime',
         ];
     }
 
@@ -37,5 +41,10 @@ class CustomerServiceJobSheet extends Model
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class, 'customer_code', 'KdCust');
+    }
+
+    public function claimant(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'claimed_by');
     }
 }

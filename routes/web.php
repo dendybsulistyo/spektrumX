@@ -343,6 +343,7 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware('permission:file-monitor.view')->group(function () {
         Route::get('/file', [FileMonitorController::class, 'index'])->name('file.index');
+        Route::post('/customer-service/job-sheets/{jobSheet}/claim/{target}', [CustomerServiceController::class, 'claimJobSheet'])->name('customer-service.job-sheets.claim');
     });
 
     // Not gated to a single permission group — Kasir and Pengambilan operators

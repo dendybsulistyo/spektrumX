@@ -41,10 +41,12 @@
                             <td class="px-4 py-4 text-slate-700">{{ $order->customer?->NmCust ? ucwords(mb_strtolower($order->customer->NmCust)) : '-' }}</td>
                             <td class="whitespace-nowrap px-4 py-4 text-right font-medium text-slate-900">Rp {{ number_format($order->total ?? 0, 0, ',', '.') }}</td>
                             <td class="w-56 px-4 py-3">
+
                                 <select x-model="mode" class="mb-2 w-52 rounded border-slate-300 py-1.5 text-xs focus:border-blue-500 focus:ring-blue-500">
                                     <option value="payment">DP / Pelunasan</option>
                                     <option value="debt" @disabled(! $order->customer?->isVip)>Hutang{{ $order->customer?->isVip ? '' : ' — khusus VIP' }}</option>
                                 </select>
+
                                 <input x-show="mode === 'payment'" type="text" inputmode="numeric" x-model="display" @input="format($event)" placeholder="Rp 0"
                                        form="cs-payment-{{ $order->order_type }}-{{ $order->id }}"
                                        class="w-52 rounded border-slate-300 text-sm focus:border-blue-500 focus:ring-blue-500">
