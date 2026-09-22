@@ -111,15 +111,28 @@ class KeuanganController extends Controller
      */
     public function rekapKasir(Request $request): View
     {
-        $dari = $request->filled('dari') ? $request->string('dari')->toString() : now()->format('Y-m-d');
-        $sampai = $request->filled('sampai') ? $request->string('sampai')->toString() : now()->format('Y-m-d');
+        $filters = $request->validate([
+            'dari' => ['nullable', 'date'],
+            'sampai' => ['nullable', 'date'],
+            'kasir' => ['nullable', 'integer', 'exists:users,id'],
+        ]);
+        $dari = $filters['dari'] ?? now()->format('Y-m-d');
+        $sampai = $filters['sampai'] ?? now()->format('Y-m-d');
+        $kasirId = isset($filters['kasir']) ? (int) $filters['kasir'] : null;
 
         if ($dari > $sampai) {
             [$dari, $sampai] = [$sampai, $dari];
         }
 
+        $kasirUsers = User::query()
+            ->whereIn('id', OrderPayment::query()->whereNotNull('user_id')->select('user_id')->distinct())
+            ->orderBy('name')
+            ->get(['id', 'name']);
+        $selectedKasir = $kasirId ? $kasirUsers->firstWhere('id', $kasirId) : null;
+
         $payments = OrderPayment::with('user')
             ->whereBetween('created_at', ["{$dari} 00:00:00", "{$sampai} 23:59:59"])
+            ->when($kasirId, fn ($query) => $query->where('user_id', $kasirId))
             ->orderBy('created_at')
             ->get();
 
@@ -226,6 +239,9 @@ class KeuanganController extends Controller
             'totalKeluar' => (float) $payments->where('jumlah', '<', 0)->sum('jumlah') * -1,
             'jumlahTransaksi' => $payments->count(),
             'groups' => $groups,
+            'kasirUsers' => $kasirUsers,
+            'kasirId' => $kasirId,
+            'selectedKasir' => $selectedKasir,
         ]);
     }
 
@@ -654,6 +670,7 @@ class KeuanganController extends Controller
                 }
                 $notes = $todayPayments->map(function (OrderPayment $payment) {
                     $method = OrderPayment::CARA_BAYAR_LABELS[$payment->cara_bayar] ?? ucfirst($payment->cara_bayar);
+
                     return $method.($payment->no_referensi ? ' '.$payment->no_referensi : '');
                 })->unique()->implode(', ');
 

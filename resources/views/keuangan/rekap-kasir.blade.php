@@ -34,6 +34,15 @@
             <div class="blueprint no-print" style="padding: var(--space-4);">
                 <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
                 <form method="GET" style="display: flex; align-items: flex-end; gap: var(--space-3); flex-wrap: wrap;">
+                    <div class="field" style="width: 220px;">
+                        <label>Nama Kasir</label>
+                        <select name="kasir" class="input">
+                            <option value="">Semua Kasir</option>
+                            @foreach ($kasirUsers as $kasirUser)
+                                <option value="{{ $kasirUser->id }}" @selected($kasirId === $kasirUser->id)>{{ ucwords(mb_strtolower($kasirUser->name)) }}</option>
+                            @endforeach
+                        </select>
+                    </div>
                     <div class="field" style="width: 180px;">
                         <label>Dari tanggal</label>
                         <input type="date" name="dari" value="{{ $dari }}" class="input">
@@ -45,9 +54,9 @@
                     <button type="submit" class="btn btn-primary blueprint" style="height: 36px;">
                         <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>Terapkan
                     </button>
-                    <a href="{{ route('keuangan.rekap-kasir') }}" class="btn btn-secondary" style="height: 36px;">Hari Ini</a>
+                    <a href="{{ route('keuangan.rekap-kasir', array_filter(['kasir' => $kasirId])) }}" class="btn btn-secondary" style="height: 36px;">Hari Ini</a>
                     <button type="button" onclick="window.print()" class="btn btn-secondary" style="height:36px;">Cetak</button>
-                    <p class="text-muted" style="font-size: 13px; margin-left: auto;">{{ $jumlahTransaksi }} transaksi &middot; {{ \Carbon\Carbon::parse($dari)->translatedFormat('d M Y') }}{{ $dari !== $sampai ? ' – '.\Carbon\Carbon::parse($sampai)->translatedFormat('d M Y') : '' }}</p>
+                    <p class="text-muted" style="font-size: 13px; margin-left: auto;">{{ $jumlahTransaksi }} transaksi &middot; {{ $selectedKasir?->name ? ucwords(mb_strtolower($selectedKasir->name)).' · ' : '' }}{{ \Carbon\Carbon::parse($dari)->translatedFormat('d M Y') }}{{ $dari !== $sampai ? ' – '.\Carbon\Carbon::parse($sampai)->translatedFormat('d M Y') : '' }}</p>
                 </form>
             </div>
 
@@ -106,6 +115,9 @@
                 <div style="margin-bottom:16px;">
                     <h3 style="margin:0;font-size:16px;">REKAP KASIR HARIAN PER USER SPEKTRUM</h3>
                     <strong>Tanggal: {{ \Carbon\Carbon::parse($dari)->translatedFormat('d F Y') }}{{ $dari !== $sampai ? ' s/d '.\Carbon\Carbon::parse($sampai)->translatedFormat('d F Y') : '' }}</strong>
+                    @if ($selectedKasir)
+                        <div><strong>Kasir: {{ ucwords(mb_strtolower($selectedKasir->name)) }}</strong></div>
+                    @endif
                 </div>
                 @forelse($groups as $group)
                     <section class="cashier-group" style="margin-bottom:20px;">
