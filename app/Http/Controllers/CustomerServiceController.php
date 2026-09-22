@@ -108,15 +108,31 @@ class CustomerServiceController extends Controller
     {
         abort_unless(in_array($target, ['indoor', 'outdoor'], true), 404);
 
-        DB::transaction(function () use ($jobSheet, $target): void {
+        $alreadyClaimed = DB::transaction(function () use ($jobSheet, $target): ?CustomerServiceJobSheet {
             $lockedSheet = CustomerServiceJobSheet::lockForUpdate()->findOrFail($jobSheet->id);
-            abort_if($lockedSheet->claimed_at, 422, 'Lembar kerja ini sudah diambil oleh Penerima File lain.');
+
+            if ($lockedSheet->claimed_at) {
+                return $lockedSheet->load('claimant');
+            }
+
             $lockedSheet->update([
                 'claimed_by' => auth()->id(),
                 'claimed_at' => now(),
                 'claimed_order_type' => $target,
             ]);
+
+            return null;
         });
+
+        if ($alreadyClaimed) {
+            $operator = $alreadyClaimed->claimant?->name
+                ? ucwords(mb_strtolower($alreadyClaimed->claimant->name))
+                : 'operator lain';
+            $claimedAt = $alreadyClaimed->claimed_at->format('d/m/Y H:i');
+
+            return to_route('customer-service.job-sheets.index', ['tab' => 'claimed'])
+                ->with('error', "Lembar kerja ini sudah diambil oleh {$operator} pada {$claimedAt} dan tidak dapat diambil kembali.");
+        }
 
         return redirect()->route($target === 'outdoor' ? 'order-outdoor.create' : 'order-indoor.create', [
             'job_sheet' => $jobSheet->id,
