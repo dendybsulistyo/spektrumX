@@ -26,18 +26,82 @@ class CustomerServiceController extends Controller
 
     public function jobSheets(Request $request): View
     {
+        $filters = $request->validate([
+            'q' => ['nullable', 'string', 'max:100'],
+            'from' => ['nullable', 'date'],
+            'to' => ['nullable', 'date', 'after_or_equal:from'],
+            'history' => ['nullable', 'in:all'],
+        ]);
         $tab = $request->query('tab') === 'claimed' ? 'claimed' : 'pending';
+        $showAllHistory = $tab === 'claimed'
+            && ($filters['history'] ?? null) === 'all'
+            && blank($filters['from'] ?? null)
+            && blank($filters['to'] ?? null);
+        $from = $tab === 'claimed' && ! $showAllHistory
+            ? ($filters['from'] ?? now()->subMonth()->toDateString())
+            : null;
+        $to = $tab === 'claimed' && ! $showAllHistory
+            ? ($filters['to'] ?? now()->toDateString())
+            : null;
+        $keyword = trim($filters['q'] ?? '');
+
+        $claimedQuery = CustomerServiceJobSheet::query()
+            ->whereNotNull('claimed_at')
+            ->when($from, fn ($query) => $query->whereDate('claimed_at', '>=', $from))
+            ->when($to, fn ($query) => $query->whereDate('claimed_at', '<=', $to))
+            ->when($keyword !== '', function ($query) use ($keyword): void {
+                $query->where(function ($search) use ($keyword): void {
+                    $search->where('customer_name', 'like', "%{$keyword}%")
+                        ->orWhere('customer_code', 'like', "%{$keyword}%")
+                        ->orWhere('pc', 'like', "%{$keyword}%")
+                        ->orWhere('folder_file', 'like', "%{$keyword}%")
+                        ->orWhere('opf', 'like', "%{$keyword}%")
+                        ->orWhere('items', 'like', "%{$keyword}%")
+                        ->orWhereHas('claimant', fn ($user) => $user->where('name', 'like', "%{$keyword}%"));
+                });
+            });
+
         $jobSheets = CustomerServiceJobSheet::with(['creator', 'customer', 'claimant'])
             ->when($tab === 'claimed', fn ($query) => $query->whereNotNull('claimed_at'))
             ->when($tab === 'pending', fn ($query) => $query->whereNull('claimed_at'))
-            ->latest('received_at')
+            ->when($tab === 'claimed' && $from, fn ($query) => $query->whereDate('claimed_at', '>=', $from))
+            ->when($tab === 'claimed' && $to, fn ($query) => $query->whereDate('claimed_at', '<=', $to))
+            ->when($tab === 'claimed' && $keyword !== '', function ($query) use ($keyword): void {
+                $query->where(function ($search) use ($keyword): void {
+                    $search->where('customer_name', 'like', "%{$keyword}%")
+                        ->orWhere('customer_code', 'like', "%{$keyword}%")
+                        ->orWhere('pc', 'like', "%{$keyword}%")
+                        ->orWhere('folder_file', 'like', "%{$keyword}%")
+                        ->orWhere('opf', 'like', "%{$keyword}%")
+                        ->orWhere('items', 'like', "%{$keyword}%")
+                        ->orWhereHas('claimant', fn ($user) => $user->where('name', 'like', "%{$keyword}%"));
+                });
+            })
+            ->when($tab === 'claimed', fn ($query) => $query->latest('claimed_at'))
+            ->when($tab === 'pending', fn ($query) => $query->latest('received_at'))
             ->latest('id')
             ->paginate(25)
             ->withQueryString();
         $pendingCount = CustomerServiceJobSheet::whereNull('claimed_at')->count();
-        $claimedCount = CustomerServiceJobSheet::whereNotNull('claimed_at')->count();
+        $claimedCount = $tab === 'claimed'
+            ? (clone $claimedQuery)->count()
+            : CustomerServiceJobSheet::whereNotNull('claimed_at')
+                ->whereDate('claimed_at', '>=', now()->subMonth()->toDateString())
+                ->whereDate('claimed_at', '<=', now()->toDateString())
+                ->count();
+        $totalClaimedCount = CustomerServiceJobSheet::whereNotNull('claimed_at')->count();
 
-        return view('customer-service.job-sheets', compact('jobSheets', 'tab', 'pendingCount', 'claimedCount'));
+        return view('customer-service.job-sheets', compact(
+            'jobSheets',
+            'tab',
+            'pendingCount',
+            'claimedCount',
+            'totalClaimedCount',
+            'from',
+            'to',
+            'keyword',
+            'showAllHistory'
+        ));
     }
 
     public function claimJobSheet(CustomerServiceJobSheet $jobSheet, string $target): RedirectResponse

@@ -5,6 +5,39 @@
         </div>
     </x-slot>
 
+    @push('styles')
+        <style>
+            .job-history-filter {
+                display: grid;
+                grid-template-columns: minmax(280px, 1fr) 170px 170px auto;
+                align-items: end;
+                gap: 12px;
+            }
+
+            @media (max-width: 900px) {
+                .job-history-filter {
+                    grid-template-columns: 1fr 1fr;
+                }
+
+                .job-history-search,
+                .job-history-submit {
+                    grid-column: 1 / -1;
+                }
+            }
+
+            @media (max-width: 560px) {
+                .job-history-filter {
+                    grid-template-columns: 1fr;
+                }
+
+                .job-history-search,
+                .job-history-submit {
+                    grid-column: auto;
+                }
+            }
+        </style>
+    @endpush
+
     <div class="mb-4 flex justify-end">
         <a href="{{ route('customer-service.index') }}" class="rounded bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700">+ Lembar Kerja Baru</a>
     </div>
@@ -19,6 +52,49 @@
             Sudah Diambil ({{ $claimedCount }})
         </a>
     </div>
+
+    @if ($tab === 'claimed')
+        <div class="mb-4 border border-slate-200 bg-white p-4 shadow-sm">
+            <form method="GET" action="{{ route('customer-service.job-sheets.index') }}" class="job-history-filter">
+                <input type="hidden" name="tab" value="claimed">
+                @if ($showAllHistory)
+                    <input type="hidden" name="history" value="all">
+                @endif
+                <div class="job-history-search">
+                    <label for="history-q" class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Cari riwayat</label>
+                    <input id="history-q" type="search" name="q" value="{{ $keyword }}"
+                           placeholder="Customer, file, PC, OPF, atau operator"
+                           class="w-full rounded-sm border-slate-300 text-sm focus:border-blue-500 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label for="history-from" class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Dari tanggal</label>
+                    <input id="history-from" type="date" name="from" value="{{ $from }}"
+                           class="w-full rounded-sm border-slate-300 text-sm focus:border-blue-500 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label for="history-to" class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Sampai tanggal</label>
+                    <input id="history-to" type="date" name="to" value="{{ $to }}"
+                           class="w-full rounded-sm border-slate-300 text-sm focus:border-blue-500 focus:ring-blue-500">
+                </div>
+                <button type="submit" class="job-history-submit rounded-sm bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700">Cari</button>
+            </form>
+
+            <div class="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+                <p>
+                    @if ($showAllHistory)
+                        Menampilkan seluruh {{ $totalClaimedCount }} riwayat lembar kerja yang sudah diambil.
+                    @else
+                        Menampilkan {{ $claimedCount }} dari {{ $totalClaimedCount }} riwayat untuk periode {{ \Illuminate\Support\Carbon::parse($from)->format('d/m/Y') }}–{{ \Illuminate\Support\Carbon::parse($to)->format('d/m/Y') }}.
+                    @endif
+                </p>
+                @if ($showAllHistory)
+                    <a href="{{ route('customer-service.job-sheets.index', ['tab' => 'claimed']) }}" class="font-semibold text-blue-700 hover:text-blue-800">Kembali ke 1 bulan terakhir</a>
+                @else
+                    <a href="{{ route('customer-service.job-sheets.index', ['tab' => 'claimed', 'history' => 'all']) }}" class="font-semibold text-blue-700 hover:text-blue-800">Lihat seluruh riwayat</a>
+                @endif
+            </div>
+        </div>
+    @endif
 
     <div class="overflow-hidden rounded border border-slate-200 bg-white shadow-sm">
         <div class="overflow-x-auto">
@@ -76,7 +152,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="11" class="px-6 py-14 text-center text-slate-400">{{ $tab === 'claimed' ? 'Belum ada lembar kerja yang sudah diambil.' : 'Belum ada lembar kerja yang menunggu diambil.' }}</td></tr>
+                        <tr><td colspan="11" class="px-6 py-14 text-center text-slate-400">{{ $tab === 'claimed' ? 'Tidak ada riwayat lembar kerja pada pencarian ini.' : 'Belum ada lembar kerja yang menunggu diambil.' }}</td></tr>
                     @endforelse
                 </tbody>
             </table>
