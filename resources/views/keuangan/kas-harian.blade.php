@@ -29,6 +29,15 @@
             <div class="blueprint" style="padding: var(--space-4);">
                 <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
                 <form method="GET" style="display: flex; align-items: flex-end; gap: var(--space-3); flex-wrap: wrap;">
+                    <div class="field" style="width: 220px;">
+                        <label>Nama Kasir</label>
+                        <select name="kasir" class="input">
+                            <option value="">Semua Kasir</option>
+                            @foreach ($kasirUsers as $kasirUser)
+                                <option value="{{ $kasirUser->id }}" @selected($kasirId === $kasirUser->id)>{{ ucwords(mb_strtolower($kasirUser->name)) }}</option>
+                            @endforeach
+                        </select>
+                    </div>
                     <div class="field" style="width: 200px;">
                         <label>Tanggal</label>
                         <input type="date" name="tanggal" value="{{ $tanggal }}" class="input">
@@ -36,8 +45,8 @@
                     <button type="submit" class="btn btn-primary blueprint" style="height: 36px;">
                         <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>Terapkan
                     </button>
-                    <a href="{{ route('keuangan.kas-harian') }}" class="btn btn-secondary" style="height: 36px;">Hari Ini</a>
-                    <p class="text-muted" style="font-size: 13px; margin-left: auto;">{{ $jumlahTransaksi }} transaksi pada {{ \Carbon\Carbon::parse($tanggal)->translatedFormat('d F Y') }}</p>
+                    <a href="{{ route('keuangan.kas-harian', array_filter(['kasir' => $kasirId])) }}" class="btn btn-secondary" style="height: 36px;">Hari Ini</a>
+                    <p class="text-muted" style="font-size: 13px; margin-left: auto;">{{ $jumlahTransaksi }} transaksi{{ $selectedKasir?->name ? ' · '.ucwords(mb_strtolower($selectedKasir->name)) : '' }} pada {{ \Carbon\Carbon::parse($tanggal)->translatedFormat('d F Y') }}</p>
                 </form>
             </div>
 

@@ -31,10 +31,22 @@ class KeuanganController extends Controller
      */
     public function kasHarian(Request $request): View
     {
-        $tanggal = $request->filled('tanggal') ? $request->string('tanggal')->toString() : now()->format('Y-m-d');
+        $filters = $request->validate([
+            'tanggal' => ['nullable', 'date'],
+            'kasir' => ['nullable', 'integer', 'exists:users,id'],
+        ]);
+        $tanggal = $filters['tanggal'] ?? now()->format('Y-m-d');
+        $kasirId = isset($filters['kasir']) ? (int) $filters['kasir'] : null;
+
+        $kasirUsers = User::query()
+            ->whereIn('id', OrderPayment::query()->whereNotNull('user_id')->select('user_id')->distinct())
+            ->orderBy('name')
+            ->get(['id', 'name']);
+        $selectedKasir = $kasirId ? $kasirUsers->firstWhere('id', $kasirId) : null;
 
         $payments = OrderPayment::with('user')
             ->whereDate('created_at', $tanggal)
+            ->when($kasirId, fn ($query) => $query->where('user_id', $kasirId))
             ->orderBy('created_at')
             ->get();
 
@@ -99,6 +111,9 @@ class KeuanganController extends Controller
             'totalKeluar' => $totalKeluar,
             'totalNet' => $totalMasuk - $totalKeluar,
             'jumlahTransaksi' => $payments->count(),
+            'kasirUsers' => $kasirUsers,
+            'kasirId' => $kasirId,
+            'selectedKasir' => $selectedKasir,
         ]);
     }
 
