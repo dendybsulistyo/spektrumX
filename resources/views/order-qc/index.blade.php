@@ -30,10 +30,11 @@
     @endphp
 
     <div id="industry-qc">
-        <div style="max-width: 1480px; margin: 0 auto; display: flex; flex-direction: column; gap: var(--space-6);" x-data="{ tab: '{{ $initialTab }}' }">
+        <div style="max-width: 1480px; margin: 0 auto; display: flex; flex-direction: column; gap: var(--space-6);"
+             x-data="{ tab: '{{ $initialTab }}', setTab(key) { this.tab = key; const url = new URL(window.location.href); url.searchParams.set('tab', key); window.history.replaceState({}, '', url); } }">
             <div style="display: flex;">
                 @foreach ($tabs as $key => $t)
-                    <button type="button" @click="tab = '{{ $key }}'" class="seg-tab" :class="tab === '{{ $key }}' ? 'active' : ''">
+                    <button type="button" @click="setTab('{{ $key }}')" class="seg-tab" :class="tab === '{{ $key }}' ? 'active' : ''">
                         {{ $t['label'] }} ({{ $t['count'] }})
                     </button>
                 @endforeach

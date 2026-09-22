@@ -22,27 +22,33 @@
             removeLunasiRincian(i) { this.lunasiRincian.splice(i, 1); },
             cancelModalOpen: false, cancelType: '', cancelId: null, cancelNoOrder: '',
             batalOrderModalOpen: false, batalOrderType: '', batalOrderId: null, batalOrderNoOrder: '',
+            setTab(key) {
+                this.tab = key;
+                const url = new URL(window.location.href);
+                url.searchParams.set('tab', key);
+                window.history.replaceState({}, '', url);
+            },
          }">
         <div class="flex border-b border-gray-200 text-sm gap-1 p-1.5 flex-wrap">
-            <button @click="tab = 'indoor'" :class="tab === 'indoor' ? 'bg-amber-100 text-amber-800' : 'text-gray-500 hover:bg-amber-50 hover:text-amber-700'"
+            <button @click="setTab('indoor')" :class="tab === 'indoor' ? 'bg-amber-100 text-amber-800' : 'text-gray-500 hover:bg-amber-50 hover:text-amber-700'"
                     class="px-4 py-2 rounded-md font-medium transition">
                 Indoor ({{ $indoorOrders->count() }})
             </button>
-            <button @click="tab = 'outdoor'" :class="tab === 'outdoor' ? 'bg-teal-100 text-teal-800' : 'text-gray-500 hover:bg-teal-50 hover:text-teal-700'"
+            <button @click="setTab('outdoor')" :class="tab === 'outdoor' ? 'bg-teal-100 text-teal-800' : 'text-gray-500 hover:bg-teal-50 hover:text-teal-700'"
                     class="px-4 py-2 rounded-md font-medium transition">
                 Outdoor ({{ $outdoorOrders->count() }})
             </button>
             @can('kasir.replacement.manage')
-                <button @click="tab = 'replacement'" :class="tab === 'replacement' ? 'bg-rose-100 text-rose-800' : 'text-gray-500 hover:bg-rose-50 hover:text-rose-700'"
+                <button @click="setTab('replacement')" :class="tab === 'replacement' ? 'bg-rose-100 text-rose-800' : 'text-gray-500 hover:bg-rose-50 hover:text-rose-700'"
                         class="px-4 py-2 rounded-md font-medium transition">
                     Nota Pengganti ({{ $replacementOrders->count() }})
                 </button>
             @endcan
-            <button @click="tab = 'dp'" :class="tab === 'dp' ? 'bg-sky-100 text-sky-800' : 'text-gray-500 hover:bg-sky-50 hover:text-sky-700'"
+            <button @click="setTab('dp')" :class="tab === 'dp' ? 'bg-sky-100 text-sky-800' : 'text-gray-500 hover:bg-sky-50 hover:text-sky-700'"
                     class="px-4 py-2 rounded-md font-medium transition">
                 DP Belum Lunas ({{ $dpOrders->count() }})
             </button>
-            <button @click="tab = 'lunas'" :class="tab === 'lunas' ? 'bg-green-100 text-green-800' : 'text-gray-500 hover:bg-green-50 hover:text-green-700'"
+            <button @click="setTab('lunas')" :class="tab === 'lunas' ? 'bg-green-100 text-green-800' : 'text-gray-500 hover:bg-green-50 hover:text-green-700'"
                     class="px-4 py-2 rounded-md font-medium transition">
                 Sudah Bayar ({{ $lunasOrders->count() }})
             </button>

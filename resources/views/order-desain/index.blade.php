@@ -59,7 +59,13 @@
                                 }
                             });
                     },
-                    switchTab(key) { this.tab = key; this.selected = {}; },
+                    switchTab(key) {
+                        this.tab = key;
+                        this.selected = {};
+                        const url = new URL(window.location.href);
+                        url.searchParams.set('tab', key);
+                        window.history.replaceState({}, '', url);
+                    },
                     toggle(type, id, checked) {
                         const key = type + '-' + id;
                         if (checked) { this.selected[key] = { type, id }; } else { delete this.selected[key]; }

@@ -46,6 +46,12 @@
                  penerimaQty: 0,
                  penerimaItems: [],
                  penerimaNoOrder: '',
+                 setTab(key) {
+                     this.tab = key;
+                     const url = new URL(window.location.href);
+                     url.searchParams.set('tab', key);
+                     window.history.replaceState({}, '', url);
+                 },
              }"
              @open-penerima-modal="
                  penerimaOpen = true;
@@ -57,7 +63,7 @@
              ">
             <div style="display: flex;">
                 @foreach ($tabs as $key => $t)
-                    <button type="button" @click="tab = '{{ $key }}'" class="seg-tab" :class="tab === '{{ $key }}' ? 'active' : ''">
+                    <button type="button" @click="setTab('{{ $key }}')" class="seg-tab" :class="tab === '{{ $key }}' ? 'active' : ''">
                         {{ $t['label'] }} ({{ $t['count'] }})
                     </button>
                 @endforeach
