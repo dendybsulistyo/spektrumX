@@ -65,12 +65,27 @@
                                 <tr id="discount-form-{{ str_replace(':', '-', $order->key) }}" class="hidden bg-slate-50">
                                     <td colspan="7" class="px-4 py-4">
                                         <form method="POST" action="{{ route('keuangan.final-sales-discounts.store') }}"
-                                              x-data="{ amount: '', receivable: {{ $order->receivable_amount }}, current: {{ $order->final_amount }}, get refund(){ return Math.max(0, Number(this.amount || 0) - this.receivable) } }"
+                                              x-data="{
+                                                  amount: 0,
+                                                  displayAmount: '',
+                                                  receivable: {{ $order->receivable_amount }},
+                                                  current: {{ $order->final_amount }},
+                                                  formatAmount(event) {
+                                                      const digits = event.target.value.replace(/\D/g, '');
+                                                      this.amount = Number(digits || 0);
+                                                      this.displayAmount = this.amount ? `Rp ${this.amount.toLocaleString('id-ID')}` : '';
+                                                      event.target.value = this.displayAmount;
+                                                  },
+                                                  get refund(){ return Math.max(0, this.amount - this.receivable) }
+                                              }"
                                               class="grid items-end gap-3 lg:grid-cols-[150px_170px_minmax(220px,1fr)_150px_180px_auto]">
                                             @csrf
                                             <input type="hidden" name="order_key" value="{{ $order->key }}">
                                             <label class="text-xs font-semibold text-slate-600">Tanggal koreksi<input type="date" name="transaction_date" value="{{ now()->format('Y-m-d') }}" max="{{ now()->format('Y-m-d') }}" required class="mt-1 block w-full rounded-md border-slate-300 text-sm"></label>
-                                            <label class="text-xs font-semibold text-slate-600">Nominal potongan<input type="number" name="discount_amount" x-model="amount" min="100" max="{{ max(100, $order->final_amount - 100) }}" step="100" required class="mt-1 block w-full rounded-md border-slate-300 text-sm no-spinner" placeholder="Rp"></label>
+                                            <label class="text-xs font-semibold text-slate-600">Nominal potongan
+                                                <input type="text" inputmode="numeric" autocomplete="off" :value="displayAmount" @input="formatAmount($event)" required class="mt-1 block w-full rounded-md border-slate-300 text-sm" placeholder="Rp 0">
+                                                <input type="hidden" name="discount_amount" :value="amount">
+                                            </label>
                                             <label class="text-xs font-semibold text-slate-600">Alasan<input type="text" name="reason" maxlength="255" required class="mt-1 block w-full rounded-md border-slate-300 text-sm" placeholder="Alasan potongan akhir"></label>
                                             <label class="text-xs font-semibold text-slate-600">Cara refund<select name="refund_method" class="mt-1 block w-full rounded-md border-slate-300 text-sm"><option value="">Tidak ada</option><option value="tunai">Tunai</option><option value="transfer">Transfer</option><option value="qris">QRIS</option></select></label>
                                             <label class="text-xs font-semibold text-slate-600">No. referensi<input type="text" name="reference_number" maxlength="50" class="mt-1 block w-full rounded-md border-slate-300 text-sm" placeholder="Untuk QRIS/transfer"></label>
