@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ $document->number }}</title>
+    <x-app-favicon />
     <style>
         :root { --green:#197064; --green-dark:#10564d; --ink:#202c2a; --muted:#667572; --line:#8ca39f; }
         * { box-sizing:border-box; }

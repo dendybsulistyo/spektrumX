@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Surat Pesanan {{ $order->NoOrder }}</title>
+    <x-app-favicon />
     <style>
         :root { --ink:#155f60; --line:#5f7474; --muted:#536b6b; }
         * { box-sizing:border-box; }

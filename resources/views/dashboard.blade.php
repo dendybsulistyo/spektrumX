@@ -1,8 +1,12 @@
 <x-app-layout>
     <x-slot name="header">
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-            <h2 class="font-semibold text-xl text-gray-800">Dashboard</h2>
-            <form method="GET" class="flex flex-wrap items-end gap-2">
+        <div class="dashboard-page-header flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+                <div class="dashboard-page-eyebrow">Pusat Kendali Operasional</div>
+                <h2 class="font-semibold text-xl text-gray-800">Dashboard</h2>
+                <p class="dashboard-page-subtitle">Ringkasan transaksi dan posisi produksi Spektrum.</p>
+            </div>
+            <form method="GET" class="dashboard-filter flex flex-wrap items-end gap-2">
                 <label class="grid gap-1 text-xs text-gray-500">
                     Dari tanggal
                     <input class="h-9 w-[160px] border border-gray-300 px-2 text-xs" style="border-radius:2px" type="date" name="from" value="{{ $from }}">
@@ -223,6 +227,154 @@
                 #industry-dashboard > .outlier-main > section:first-of-type { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
                 #industry-dashboard > .outlier-main > section:nth-of-type(2) { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
                 #industry-dashboard > .outlier-main > section:nth-of-type(2) > div:nth-child(odd) { border-left: 0 !important; }
+            }
+
+            /* Final executive treatment: kontras navy yang tegas, permukaan
+               hangat, dan ruang yang lebih tenang tanpa mengubah struktur data. */
+            .dashboard-page-header { width:100%; }
+            .dashboard-page-eyebrow { margin-bottom:4px; color:#3156d3; font-size:10px; font-weight:800; letter-spacing:.14em; text-transform:uppercase; }
+            .dashboard-page-header h2 { color:#172033 !important; font-size:24px !important; line-height:1.15; letter-spacing:-.025em; }
+            .dashboard-page-subtitle { margin-top:4px; color:#718096; font-size:12px; }
+            .dashboard-filter label { color:#627087 !important; font-weight:600; letter-spacing:.01em; }
+            .dashboard-filter input { border-color:#d7dee8 !important; border-radius:7px !important; background:#fff; color:#172033; }
+            .dashboard-filter button { border-radius:7px !important; background:#3156d3 !important; box-shadow:0 4px 10px rgba(49,86,211,.16); }
+
+            #industry-dashboard {
+                --executive-ink:#172033;
+                --executive-navy:#1e2c46;
+                --executive-blue:#3156d3;
+                --executive-muted:#6b7890;
+                --executive-line:#d9e1eb;
+                margin:calc(var(--space-8) * -1);
+                padding:26px;
+                min-height:calc(100vh - 146px);
+                background:#f2f5f8;
+            }
+            #industry-dashboard .outlier-main { max-width:1560px !important; padding:0 0 30px; background:transparent; }
+            #industry-dashboard > .outlier-main > section { margin:0 0 18px; }
+
+            #industry-dashboard > .outlier-main > section:first-of-type {
+                grid-template-columns:repeat(6,minmax(155px,1fr)) !important;
+                gap:12px !important;
+                margin-top:0;
+                padding:0;
+            }
+            #industry-dashboard > .outlier-main > section:first-of-type .card {
+                min-height:128px;
+                padding:18px 18px 16px;
+                border:1px solid var(--executive-line) !important;
+                border-radius:10px !important;
+                background:#fff;
+                box-shadow:0 8px 24px rgba(23,32,51,.055);
+            }
+            #industry-dashboard > .outlier-main > section:first-of-type .card::after { height:3px; background:#cbd5e1; }
+            #industry-dashboard > .outlier-main > section:first-of-type .card:first-child {
+                background:linear-gradient(145deg,#172033,#223454) !important;
+                border-color:#172033 !important;
+                color:#fff;
+            }
+            #industry-dashboard > .outlier-main > section:first-of-type .card:first-child::after { background:#6f91ff; }
+            #industry-dashboard > .outlier-main > section:first-of-type .card:first-child .card-kicker,
+            #industry-dashboard > .outlier-main > section:first-of-type .card:first-child .card-meta { color:#b9c7dc; }
+            #industry-dashboard > .outlier-main > section:first-of-type .card:first-child > div:nth-child(2) { color:#fff !important; }
+            #industry-dashboard > .outlier-main > section:first-of-type .card:nth-child(2)::after { background:#d59637; }
+            #industry-dashboard > .outlier-main > section:first-of-type .card:nth-child(3)::after { background:#198769; }
+            #industry-dashboard > .outlier-main > section:first-of-type .card:nth-child(4)::after,
+            #industry-dashboard > .outlier-main > section:first-of-type .card:nth-child(5)::after { background:#667eea; }
+            #industry-dashboard > .outlier-main > section:first-of-type .card:last-child {
+                background:linear-gradient(145deg,#431f25,#6d2933) !important;
+                border-color:#431f25 !important;
+                box-shadow:0 8px 24px rgba(109,41,51,.13);
+            }
+            #industry-dashboard > .outlier-main > section:first-of-type .card:last-child::after { background:#ef6b72; }
+            #industry-dashboard > .outlier-main > section:first-of-type .card-kicker { color:#657086; font-size:10px; font-weight:800; letter-spacing:.1em; }
+            #industry-dashboard > .outlier-main > section:first-of-type .card > div:nth-child(2) { margin:11px 0 7px; color:var(--executive-ink); font-size:32px !important; font-weight:750; }
+            #industry-dashboard > .outlier-main > section:first-of-type .card-meta { color:#7b8798; font-size:11px; }
+
+            #industry-dashboard > .outlier-main > section:nth-of-type(2) {
+                position:relative;
+                grid-template-columns:repeat(7,minmax(125px,1fr)) !important;
+                overflow:hidden;
+                border:1px solid var(--executive-line);
+                border-radius:10px !important;
+                background:#fff;
+                box-shadow:0 8px 24px rgba(23,32,51,.045);
+            }
+            #industry-dashboard > .outlier-main > section:nth-of-type(2)::before {
+                content:"ALUR PRODUKSI";
+                grid-column:1 / -1;
+                padding:11px 16px 9px;
+                border-bottom:1px solid #e7ecf2;
+                background:#f8fafc;
+                color:#657086;
+                font-size:10px;
+                font-weight:800;
+                letter-spacing:.12em;
+            }
+            #industry-dashboard > .outlier-main > section:nth-of-type(2) > div {
+                position:relative;
+                min-width:125px;
+                padding:14px 16px 15px !important;
+                border-left:1px solid #e7ecf2 !important;
+                background:#fff;
+            }
+            #industry-dashboard > .outlier-main > section:nth-of-type(2) > div:first-of-type { border-left:0 !important; }
+            #industry-dashboard > .outlier-main > section:nth-of-type(2) .card-kicker { color:#4c5a70; font-size:10px; font-weight:800; letter-spacing:.07em; }
+            #industry-dashboard > .outlier-main > section:nth-of-type(2) > div > div:last-child { margin-top:7px; color:var(--executive-blue) !important; font-size:27px !important; }
+
+            #industry-dashboard > .outlier-main > section:nth-of-type(3) {
+                margin:0;
+                padding:0 !important;
+                overflow:hidden;
+                border:1px solid var(--executive-line) !important;
+                border-radius:10px !important;
+                background:#fff;
+                box-shadow:0 10px 28px rgba(23,32,51,.05);
+            }
+            #industry-dashboard > .outlier-main > section:nth-of-type(3) > div:first-child { padding:20px 20px 4px; }
+            #industry-dashboard > .outlier-main > section:nth-of-type(3) h4 { color:var(--executive-ink); font-size:18px; letter-spacing:-.015em; }
+            #industry-dashboard > .outlier-main > section:nth-of-type(3) > .seg { margin:15px 20px !important; border:1px solid #dce3ed; border-radius:7px !important; background:#f5f7fa; box-shadow:none; }
+            #industry-dashboard .seg-opt { min-height:36px; padding:8px 14px; color:#637087; font-weight:650; }
+            #industry-dashboard .seg-opt:has(input:checked) { background:var(--executive-navy); color:#fff; }
+            #industry-dashboard .table { color:#334155; font-size:12px; }
+            #industry-dashboard .table th {
+                position:sticky;
+                top:0;
+                z-index:2;
+                height:38px;
+                padding:8px 10px;
+                border-top:1px solid #dce3ed;
+                border-bottom:1px solid #cfd8e4;
+                background:#edf1f5;
+                color:#586579;
+                font-size:9.5px;
+                font-weight:800;
+                letter-spacing:.075em;
+            }
+            #industry-dashboard .table td { height:53px; padding:8px 10px; border-bottom-color:#e6ebf1; vertical-align:middle; }
+            #industry-dashboard .table tbody tr:nth-child(even) { background:#f8fafc; }
+            #industry-dashboard .table tbody tr:hover { background:#edf3ff; }
+            #industry-dashboard .text-muted { color:#6e7b8f; opacity:1; }
+            #industry-dashboard .tag { border:1px solid transparent; border-radius:5px !important; padding:4px 7px; font-size:9.5px; font-weight:750; }
+            #industry-dashboard .tag-outline { border-color:#aac0ff; background:#edf2ff; color:#2e55c7; }
+            #industry-dashboard .tag-success { border-color:#b9e4d6; background:#e8f6f1; color:#08765b; }
+            #industry-dashboard .tag-info, #industry-dashboard .tag-indigo { border-color:#c8d3ff; background:#edf0ff; color:#374bb5; }
+            #industry-dashboard .tag-red, #industry-dashboard .tag-danger { border-color:#f1c2b5; background:#fff0eb; color:#b74124; }
+            #industry-dashboard .tag-cyan, #industry-dashboard .tag-teal { border-color:#afe0de; background:#e8f7f6; color:#087671; }
+            #industry-dashboard .tag-amber { border-color:#ecd5a6; background:#fff7e7; color:#936018; }
+            #industry-dashboard .tag-purple, #industry-dashboard .tag-pink { border-color:#d9cdf3; background:#f5f0fc; color:#7049a3; }
+
+            @media (max-width:1050px) {
+                #industry-dashboard { padding:20px; }
+                #industry-dashboard > .outlier-main > section:first-of-type { grid-template-columns:repeat(3,minmax(0,1fr)) !important; }
+                #industry-dashboard > .outlier-main > section:nth-of-type(2) { grid-template-columns:repeat(4,minmax(0,1fr)) !important; }
+            }
+            @media (max-width:640px) {
+                #industry-dashboard { margin:-16px !important; padding:14px !important; }
+                #industry-dashboard > .outlier-main > section:first-of-type { grid-template-columns:repeat(2,minmax(0,1fr)) !important; }
+                #industry-dashboard > .outlier-main > section:nth-of-type(2) { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)) !important; }
+                #industry-dashboard > .outlier-main > section:nth-of-type(3) > div:first-child { padding:16px 14px 4px; }
+                #industry-dashboard > .outlier-main > section:nth-of-type(3) > .seg { margin:12px 14px !important; }
             }
         </style>
     @endpush

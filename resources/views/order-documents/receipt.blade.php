@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Kwitansi {{ $receiptNumber }}</title>
+    <x-app-favicon />
     <style>
         :root { --ink:#172321; --muted:#596966; --line:#82928f; --accent:#155f60; }
         * { box-sizing:border-box; }

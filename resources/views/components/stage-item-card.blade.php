@@ -33,14 +33,16 @@
 @endphp
 
 <div class="order-card">
+    <x-order-date-rail :date="$order->TglOrder" />
     <div class="order-card-head">
-        <div style="display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-heading); font-weight: 700; font-size: 16px;">
-            <x-order-number :number="$order->NoOrder" />
-            <x-macet-badge :show="$order->isMacet()" />
-            <span style="font-weight: 400; font-size: 16px; line-height: 1.6; color: color-mix(in srgb, var(--color-text) 82%, transparent);">
-                {{ is_string($order->TglOrder) ? $order->TglOrder : $order->TglOrder?->format('d-m-y') }}
-                &middot; {{ $order->customer?->NmCust ? ucwords(mb_strtolower($order->customer->NmCust)) : '-' }}
-            </span>
+        <div class="order-summary">
+            <div class="order-identity">
+                <x-order-number :number="$order->NoOrder" />
+                <x-macet-badge :show="$order->isMacet()" />
+            </div>
+            <div class="order-customer-line">
+                <span class="order-meta-customer">{{ $order->customer?->NmCust ? ucwords(mb_strtolower($order->customer->NmCust)) : '-' }}</span>
+            </div>
         </div>
         <div style="display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: flex-end;">
             @if ($showInvoiceLink)
@@ -86,12 +88,16 @@
             <div>
                 @if ($type === 'outdoor')
                     <x-printer-badge :code="$item->printerCode()" :name="$printerNames[$item->printerCode()] ?? null" />
+                    <span class="item-meta-divider" aria-hidden="true"></span>
                     <span style="font-size: 14px; color: color-mix(in srgb, var(--color-text) 82%, transparent);">
                         @if (filled($item->gabungan))
                             {{ $item->gabungan }}
                         @endif
                         @if (filled($item->NmFile))
-                            <span style="{{ filled($item->gabungan) ? 'margin-left:8px;' : '' }} color:var(--color-text);">{{ $item->NmFile }}</span>
+                            @if (filled($item->gabungan))
+                                <span class="item-meta-divider item-meta-divider-small" aria-hidden="true"></span>
+                            @endif
+                            <span style="color:var(--color-text);">{{ $item->NmFile }}</span>
                         @endif
                         @if (blank($item->gabungan) && blank($item->NmFile)) - @endif
                     </span>

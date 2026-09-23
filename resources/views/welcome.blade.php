@@ -4,7 +4,8 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
-        <title>{{ config('app.name', 'Laravel') }}</title>
+        <title>{{ config('app.name', 'SpektrumX') }}</title>
+        <x-app-favicon />
 
         <!-- Fonts (self-hosted — no internet on client machines) -->
         <link href="{{ asset('fonts/fonts.css') }}" rel="stylesheet">

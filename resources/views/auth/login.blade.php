@@ -6,6 +6,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
     <title>Login - {{ config('app.name', 'SpektrumX') }}</title>
+    <x-app-favicon />
 
     <link href="{{ asset('fonts/fonts.css') }}" rel="stylesheet">
 

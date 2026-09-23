@@ -6,6 +6,7 @@
         <meta name="csrf-token" content="{{ csrf_token() }}">
 
         <title>{{ config('app.name', 'SpektrumX') }}</title>
+        <x-app-favicon />
 
         {{-- Self-hosted (public/fonts) — app runs on client machines without
              internet access, so Google Fonts/bunny.net CDN links won't load. --}}
@@ -26,12 +27,12 @@
         <style>
             .industry-nav {
                 background: #ffffff !important;
-                border-bottom: 1px solid #e3e5ee !important;
+                border-bottom: 1px solid #d9e1eb !important;
                 font-family: 'Figtree', system-ui, sans-serif;
-                box-shadow: 0 1px 2px color-mix(in srgb, #16181d 6%, transparent) !important;
+                box-shadow: 0 4px 18px rgba(23,32,51,.055) !important;
             }
             .industry-nav [class*="rounded"]:not([class*="rounded-full"]) { border-radius: 4px !important; }
-            .industry-nav .brand-mark { background: #4f46e5 !important; border-radius: 4px !important; }
+            .industry-nav .brand-mark { width:32px !important; height:32px !important; background: linear-gradient(145deg,#172033,#3156d3) !important; border-radius: 8px !important; box-shadow:0 5px 12px rgba(49,86,211,.2); }
             .industry-nav a, .industry-nav button, .industry-nav span, .industry-nav div {
                 font-family: 'Figtree', system-ui, sans-serif;
             }
@@ -44,6 +45,11 @@
             .industry-nav .border-gray-200 { border-color: #e3e5ee !important; }
             .industry-nav .hover\:bg-gray-100:hover { background: #f2f3f9 !important; }
             .industry-nav .shadow-lg { box-shadow: 0 12px 32px color-mix(in srgb, #16181d 18%, transparent) !important; }
+            .industry-nav .brand-mark.bg-indigo-600 { background:linear-gradient(145deg,#172033,#3156d3) !important; }
+            .industry-nav .nav-top-link { min-height:38px; border-radius:7px !important; color:#536076; font-size:13px !important; font-weight:650; }
+            .industry-nav .nav-top-link:hover { background:#f0f3f7 !important; color:#172033 !important; }
+            .industry-nav .nav-top-link.bg-indigo-50 { background:#172033 !important; color:#fff !important; box-shadow:0 5px 14px rgba(23,32,51,.14); }
+            .industry-nav .nav-dropdown-link.bg-indigo-50 { background:#e9eefc !important; color:#294db6 !important; }
 
             /* Reskin global untuk halaman yang belum ditulis ulang manual ke
                markup Industry (Master Data, Order Indoor/Outdoor/Artwork,
@@ -146,9 +152,9 @@
             $showAnalitik = Auth::user()->hasPermission('data-warehouse.view') || Auth::user()->hasPermission('monitoring-kinerja.view') || Auth::user()->hasPermission('monitoring-transaksi.view') || Auth::user()->hasPermission('papan-pantau.view');
             $showPengaturan = Auth::user()->hasPermission('keuangan.pengaturan') || Auth::user()->hasPermission('roles.manage') || Auth::user()->hasPermission('jasa-potong.manage') || Auth::user()->hasPermission('jasa-potong-artwork.manage');
 
-            $navTopLink = fn (bool $active) => 'inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-[14px] font-semibold transition '
+            $navTopLink = fn (bool $active) => 'nav-top-link inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-[14px] font-semibold transition '
                 .($active ? 'bg-indigo-50 text-indigo-600' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900');
-            $dropdownLink = fn (bool $active) => 'block px-3 py-1.5 rounded-md text-[13px] '
+            $dropdownLink = fn (bool $active) => 'nav-dropdown-link block px-3 py-1.5 rounded-md text-[13px] '
                 .($active ? 'text-indigo-600 font-semibold bg-indigo-50' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900');
             $mobileLink = fn (bool $active) => 'block px-3 py-2 rounded-lg text-sm font-medium '
                 .($active ? 'bg-indigo-50 text-indigo-600' : 'text-gray-700 hover:bg-gray-100');

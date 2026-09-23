@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+    <defs>
+        <linearGradient id="spektrum" x1="10" y1="8" x2="56" y2="58" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#172033"/>
+            <stop offset="1" stop-color="#3156d3"/>
+        </linearGradient>
+    </defs>
+    <rect x="3" y="3" width="58" height="58" rx="14" fill="url(#spektrum)"/>
+    <rect x="3.5" y="3.5" width="57" height="57" rx="13.5" fill="none" stroke="#506fdc"/>
+    <text x="32" y="43" fill="#fff" font-family="Arial, Helvetica, sans-serif" font-size="32" font-weight="700" text-anchor="middle">S</text>
+</svg>

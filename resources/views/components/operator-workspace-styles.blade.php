@@ -1,20 +1,48 @@
 <style>
     :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) {
         --operator-navy: #172033;
-        --operator-blue: #2563eb;
-        --operator-border: #d7dee8;
-        --operator-muted: #64748b;
+        --operator-blue: #3156d3;
+        --operator-border: #d9e1eb;
+        --operator-muted: #6b7890;
         min-height: calc(100vh - 132px);
-        background: #eef2f6;
+        margin: calc(var(--space-8) * -1);
+        padding: 22px !important;
+        background: #f2f5f8 !important;
+        color: #273449;
+        font-family: 'Figtree', system-ui, sans-serif;
+        font-size: 13px;
+    }
+
+    .operator-page-title {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        color: #172033 !important;
+        font-size: 18px !important;
+        font-weight: 750 !important;
+        letter-spacing: -.018em;
+    }
+
+    .operator-page-title::before {
+        content: "";
+        width: 4px;
+        height: 19px;
+        border-radius: 2px;
+        background: #3156d3;
+    }
+
+    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) > div {
+        gap: 14px !important;
     }
 
     :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .seg-tab {
-        min-height: 38px;
-        padding: 8px 16px;
+        min-height: 34px;
+        padding: 7px 13px;
         background: #ffffff;
-        color: #475569;
+        color: #56647a;
         border-color: var(--operator-border);
-        font-size: 13px;
+        font-size: 12px;
+        font-weight: 700;
         letter-spacing: 0;
         transition: background-color .15s ease, border-color .15s ease, color .15s ease;
     }
@@ -31,53 +59,173 @@
     }
 
     :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .order-card {
+        position: relative;
         overflow: hidden;
         background: #ffffff !important;
         border: 1px solid var(--operator-border);
-        border-left: 3px solid #475569;
-        border-radius: 4px;
-        box-shadow: 0 1px 2px rgba(15, 23, 42, .05);
+        border-left: 3px solid #33445f;
+        border-radius: 9px;
+        margin-bottom: 10px !important;
+        box-shadow: 0 7px 20px rgba(23, 32, 51, .045);
+    }
+
+    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .order-date-rail {
+        position: absolute;
+        inset: 0 auto 0 0;
+        width: 58px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: #f8fafc;
+        border-right: 1px solid var(--operator-border);
+        color: #526078;
+        font-family: var(--font-heading);
+        font-variant-numeric: tabular-nums;
+        line-height: 1;
+    }
+
+    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .order-date-rail strong {
+        color: var(--operator-navy);
+        font-size: 19px;
+        font-weight: 800;
+        letter-spacing: -.04em;
+    }
+
+    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .order-date-rail span,
+    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .order-date-rail small {
+        margin-top: 3px;
+        color: #738096;
+        font-size: 9px;
+        font-weight: 750;
+        letter-spacing: .08em;
     }
 
     :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .order-card-head {
-        min-height: 54px;
-        padding: 11px 16px;
-        background: #f8fafc;
+        margin-left: 58px;
+        min-height: 46px;
+        padding: 9px 14px;
+        background: #f6f8fb;
         border-bottom-color: var(--operator-border);
         color: var(--operator-navy);
     }
 
+    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .order-summary {
+        display: flex;
+        min-width: 0;
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .order-identity {
+        display: inline-flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 7px;
+        font-family: var(--font-heading);
+        font-weight: 700;
+        font-size: 14px !important;
+        letter-spacing: -.005em !important;
+    }
+
+    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .order-customer-line {
+        display: inline-flex;
+        min-width: 0;
+        align-items: center;
+        gap: 7px;
+    }
+
+    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .order-meta-date,
+    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .order-meta-customer,
+    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .order-meta-operator {
+        font-size: 13px !important;
+        line-height: 1.45 !important;
+    }
+
+    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .order-meta-date {
+        color: #617087;
+        font-weight: 500;
+        font-variant-numeric: tabular-nums;
+    }
+
+    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .order-meta-customer {
+        color: #415168;
+        font-weight: 600;
+    }
+
+    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .order-meta-operator {
+        color: #6b7890;
+        font-weight: 500;
+    }
+
+    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .order-meta-divider,
+    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .item-meta-divider {
+        display: inline-block;
+        width: 1px;
+        height: 14px;
+        flex: 0 0 1px;
+        background: #c7d1de;
+    }
+
+    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .item-meta-divider {
+        height: 18px;
+        margin: 0 7px;
+        vertical-align: middle;
+        background: #d2dae5;
+    }
+
+    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .item-meta-divider-small {
+        height: 13px;
+        margin: 0 6px;
+    }
+
     :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .item-row {
-        min-height: 62px;
-        padding: 12px 16px;
+        margin-left: 58px;
+        min-height: 50px;
+        padding: 9px 14px;
         background: #ffffff;
-        border-bottom-color: #e7ebf0;
+        border-bottom-color: #e6ebf1;
+        font-size: 13px;
         transition: background-color .15s ease;
     }
 
     :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .item-row:hover {
-        background: #fbfcfe;
+        background: #f8fafc;
+    }
+
+    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .item-row > div:first-child span[style*="font-size: 14px"] {
+        font-size: 12px !important;
+        color: #607087 !important;
+    }
+
+    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .item-row > div:last-child {
+        gap: 8px !important;
     }
 
     :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .progress-tag {
         display: inline-flex;
         align-items: center;
-        min-height: 28px;
-        padding: 4px 9px;
-        color: #475569;
-        background: #f1f5f9;
-        border: 1px solid #e2e8f0;
-        border-radius: 3px;
-        font-size: 12px;
+        min-height: 32px;
+        padding: 0 8px;
+        color: #536178;
+        background: #edf1f5;
+        border: 1px solid #dce3eb;
+        border-radius: 5px;
+        font-size: 11px !important;
+        font-weight: 700;
     }
 
     :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .in-input {
-        min-height: 34px;
-        padding: 6px 9px;
+        height: 32px !important;
+        min-height: 32px !important;
+        padding: 0 8px !important;
         background: #ffffff;
         color: #0f172a;
         border-color: #cbd5e1;
-        border-radius: 3px;
+        border-radius: 5px;
+        font-size: 12px !important;
+        line-height: normal !important;
+        box-sizing: border-box !important;
         outline: none;
     }
 
@@ -87,20 +235,22 @@
     }
 
     :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .in-btn {
-        min-height: 34px;
-        padding: 7px 12px;
+        min-height: 32px;
+        padding: 6px 10px;
         background: var(--operator-blue);
         color: #ffffff;
         border-color: var(--operator-blue);
-        border-radius: 3px;
-        box-shadow: 0 1px 1px rgba(15, 23, 42, .08);
+        border-radius: 5px;
+        box-shadow: 0 3px 8px rgba(49, 86, 211, .14);
+        font-size: 12px !important;
+        font-weight: 700;
         transition: background-color .15s ease, border-color .15s ease, box-shadow .15s ease;
     }
 
     :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .in-btn:hover {
-        background: #1d4ed8;
-        border-color: #1d4ed8;
-        box-shadow: 0 2px 4px rgba(15, 23, 42, .12);
+        background: #2748b8;
+        border-color: #2748b8;
+        box-shadow: 0 4px 10px rgba(49, 86, 211, .2);
     }
 
     :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .in-btn-ghost {
@@ -132,17 +282,56 @@
     :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .blueprint {
         background-color: #ffffff;
         border-color: var(--operator-border);
+        border-radius: 8px;
+        box-shadow: 0 6px 18px rgba(23, 32, 51, .04);
+    }
+
+    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .tag {
+        border: 1px solid #d6dee9;
+        border-radius: 5px;
+        font-size: 10px;
+        font-weight: 700;
+    }
+
+    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .tag-outline {
+        border-color: #bdcae2;
+        background: #f5f7fb;
+        color: #415168;
+    }
+
+    #industry-desain .revision-source-tag {
+        display: inline-flex;
+        min-height: 32px;
+        align-items: center;
+        padding: 0 9px;
+        box-sizing: border-box;
+    }
+
+    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) input[type="checkbox"] {
+        width: 16px;
+        height: 16px;
+        border-color: #aeb9c8;
+        border-radius: 3px;
     }
 
     @media (max-width: 768px) {
         :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) {
             margin: -16px;
-            padding: 16px;
+            padding: 14px !important;
         }
 
         :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .order-card-head,
         :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .item-row {
-            padding: 11px 12px;
+            padding: 9px 11px;
+        }
+
+        :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .order-date-rail {
+            width: 50px;
+        }
+
+        :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .order-card-head,
+        :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .item-row {
+            margin-left: 50px;
         }
 
         :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .item-row > div:last-child {

@@ -1,6 +1,6 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800">Operator Layout / Desain</h2>
+        <h2 class="operator-page-title font-semibold text-xl text-gray-800">Operator Layout / Desain</h2>
     </x-slot>
 
     @push('styles')
@@ -165,14 +165,16 @@
                         @forelse ($indoorItems as $items)
                             @php $order = $items->first()->order; @endphp
                             <div class="order-card">
+                                <x-order-date-rail :date="$order->TglOrder" />
                                 <div class="order-card-head">
-                                    <div style="display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-heading); font-weight: 700; font-size: 16px;">
-                                        <x-order-number :number="$order->NoOrder" />
-                                        <x-macet-badge :show="$order->isMacet()" />
-                                        <span style="font-weight: 400; font-size: 16px; line-height: 1.6; color: color-mix(in srgb, var(--color-text) 82%, transparent);">
-                                            {{ is_string($order->TglOrder) ? $order->TglOrder : $order->TglOrder?->format('Y-m-d') }}
-                                            &middot; {{ $order->customer?->NmCust ? ucwords(mb_strtolower($order->customer->NmCust)) : '-' }}
-                                        </span>
+                                    <div class="order-summary">
+                                        <div class="order-identity">
+                                            <x-order-number :number="$order->NoOrder" />
+                                            <x-macet-badge :show="$order->isMacet()" />
+                                        </div>
+                                        <div class="order-customer-line">
+                                            <span class="order-meta-customer">{{ $order->customer?->NmCust ? ucwords(mb_strtolower($order->customer->NmCust)) : '-' }}</span>
+                                        </div>
                                     </div>
                                     <div style="display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: flex-end;">
                                         <x-order-rework type="indoor" :order-id="$order->id" :no-order="$order->NoOrder"
@@ -215,7 +217,7 @@
                                             @endif
                                         </div>
                                         <div style="display: inline-flex; align-items: center; gap: var(--space-3);">
-                                            <span class="progress-tag">Progres di Desain: {{ $item->Qty - $item->qtyAt('desain') }}/{{ $item->Qty }}</span>
+                                            <span class="progress-tag">Progres Desain: {{ $item->Qty - $item->qtyAt('desain') }}/{{ $item->Qty }}</span>
                                             @can('order-desain.manage')
                                                 <input type="checkbox" @change="toggle('indoor', {{ $item->id }}, $event.target.checked)" title="Pilih untuk kirim massal">
                                                 <form method="POST" action="{{ route('order-desain.progress', ['indoor', $item->id]) }}"
@@ -243,15 +245,18 @@
                         @forelse ($outdoorItems as $items)
                             @php $order = $items->first()->order; @endphp
                             <div class="order-card">
+                                <x-order-date-rail :date="$order->TglOrder" />
                                 <div class="order-card-head">
-                                    <div style="display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-heading); font-weight: 700; font-size: 16px;">
-                                        <x-order-number :number="$order->NoOrder" />
-                                        <x-macet-badge :show="$order->isMacet()" />
-                                        <span style="font-weight: 400; font-size: 16px; line-height: 1.6; color: color-mix(in srgb, var(--color-text) 82%, transparent);">
-                                            {{ \Carbon\Carbon::parse($order->TglOrder)->format('d-m-y') }}
-                                            &middot; {{ $order->customer?->NmCust ? ucwords(mb_strtolower($order->customer->NmCust)) : '-' }}
-                                            &middot; {{ $order->createdBy?->name ?? '-' }}
-                                        </span>
+                                    <div class="order-summary">
+                                        <div class="order-identity">
+                                            <x-order-number :number="$order->NoOrder" />
+                                            <x-macet-badge :show="$order->isMacet()" />
+                                        </div>
+                                        <div class="order-customer-line">
+                                            <span class="order-meta-customer">{{ $order->customer?->NmCust ? ucwords(mb_strtolower($order->customer->NmCust)) : '-' }}</span>
+                                            <span class="order-meta-divider" aria-hidden="true"></span>
+                                            <span class="order-meta-operator">Operator : {{ $order->createdBy?->name ?? '-' }}</span>
+                                        </div>
                                     </div>
                                     <div style="display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: flex-end;">
                                         <x-order-discussion type="outdoor" :order-id="$order->id" :no-order="$order->NoOrder"
@@ -290,10 +295,12 @@
                                     <div id="layout-item-outdoor-{{ $item->id }}" class="item-row">
                                         <div>
                                             <x-printer-badge :code="$item->printerCode()" :name="$printerNames[$item->printerCode()] ?? null" />
+                                            <span class="item-meta-divider" aria-hidden="true"></span>
                                             <span style="font-size: 14px; color: color-mix(in srgb, var(--color-text) 82%, transparent);">
                                                 {{ $bahanNames[$item->bahanCode()] ?? '-' }}
                                                 @if ((float) $item->Panjang > 0 && (float) $item->Lebar > 0)
-                                                    &middot; {{ rtrim(rtrim(number_format((float) $item->Panjang, 2), '0'), '.') }} x {{ rtrim(rtrim(number_format((float) $item->Lebar, 2), '0'), '.') }}
+                                                    <span class="item-meta-divider item-meta-divider-small" aria-hidden="true"></span>
+                                                    {{ rtrim(rtrim(number_format((float) $item->Panjang, 2), '0'), '.') }} x {{ rtrim(rtrim(number_format((float) $item->Lebar, 2), '0'), '.') }}
                                                 @endif
                                             </span>
                                         </div>
@@ -307,7 +314,7 @@
                                                 $gabunganLocked = (int) $item->Qty === 1 && filled($item->gabungan);
                                             @endphp
                                             @if ($isLayoutRevision)
-                                                <span class="tag tag-outline"
+                                                <span class="tag tag-outline revision-source-tag"
                                                       style="border-color:#f59e0b; color:#b45309; background:#fffbeb; white-space:nowrap;"
                                                       title="{{ $layoutRevision->reason }}">
                                                     Revisi dari {{ \App\Models\OrderReworkRequest::STAGE_LABELS[$layoutRevision->current_stage] ?? ucfirst($layoutRevision->current_stage) }}
@@ -342,7 +349,7 @@
                                             @else
                                                 <span class="text-muted" style="white-space: nowrap;">{{ $item->gabungan ?: '-' }}</span>
                                             @endcan
-                                            <span class="progress-tag">Progres di Desain: {{ $item->Qty - $item->qtyAt('desain') }}/{{ $item->Qty }}</span>
+                                            <span class="progress-tag">Progres Desain: {{ $item->Qty - $item->qtyAt('desain') }}/{{ $item->Qty }}</span>
                                             @can('order-desain.manage')
                                                 <input type="checkbox" @change="toggle('outdoor', {{ $item->id }}, $event.target.checked)" title="Pilih untuk kirim massal">
                                                 <form method="POST" action="{{ route('order-desain.progress', ['outdoor', $item->id]) }}"
@@ -369,14 +376,16 @@
                              membalas diskusinya — muncul lagi supaya desain bisa membalas. --}}
                         @foreach ($outdoorNeedsReply as $order)
                             <div class="order-card" style="background: color-mix(in srgb, var(--color-accent) 6%, transparent);">
+                                <x-order-date-rail :date="$order->TglOrder" />
                                 <div class="order-card-head">
-                                    <div style="display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-heading); font-weight: 700; font-size: 16px;">
-                                        <x-order-number :number="$order->NoOrder" />
-                                        <x-macet-badge :show="$order->isMacet()" />
-                                        <span style="font-weight: 400; font-size: 16px; line-height: 1.6; color: color-mix(in srgb, var(--color-text) 82%, transparent);">
-                                            {{ \Carbon\Carbon::parse($order->TglOrder)->format('d-m-y') }}
-                                            &middot; {{ $order->customer?->NmCust ? ucwords(mb_strtolower($order->customer->NmCust)) : '-' }}
-                                        </span>
+                                    <div class="order-summary">
+                                        <div class="order-identity">
+                                            <x-order-number :number="$order->NoOrder" />
+                                            <x-macet-badge :show="$order->isMacet()" />
+                                        </div>
+                                        <div class="order-customer-line">
+                                            <span class="order-meta-customer">{{ $order->customer?->NmCust ? ucwords(mb_strtolower($order->customer->NmCust)) : '-' }}</span>
+                                        </div>
                                     </div>
                                     <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
                                         <span class="tag tag-outline">Balasan baru &middot; status: {{ ucfirst(str_replace('_', ' ', $order->status ?? '-')) }}</span>
@@ -389,6 +398,7 @@
                                     <div class="item-row">
                                         <div>
                                             <x-printer-badge :code="$item->printerCode()" :name="$printerNames[$item->printerCode()] ?? null" />
+                                            <span class="item-meta-divider" aria-hidden="true"></span>
                                             <span style="font-size: 14px; color: color-mix(in srgb, var(--color-text) 82%, transparent);">File: {{ $item->NmFile ?: '-' }}</span>
                                         </div>
                                         <span class="text-muted">
