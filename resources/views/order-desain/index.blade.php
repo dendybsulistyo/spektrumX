@@ -309,9 +309,7 @@
                                                 $layoutRevision = $layoutRevisionItems->get($item->id);
                                                 $isLayoutRevision = $layoutRevision !== null;
                                                 $canEditNmFile = auth()->user()->hasPermission('order-desain.nmfile-manage')
-                                                    || ($isLayoutRevision && auth()->user()->hasPermission('order-desain.manage'));
-                                                $nmFileLocked = ! $isLayoutRevision && (int) $item->Qty === 1 && filled($item->NmFile);
-                                                $gabunganLocked = (int) $item->Qty === 1 && filled($item->gabungan);
+                                                    || auth()->user()->hasPermission('order-desain.manage');
                                             @endphp
                                             @if ($isLayoutRevision)
                                                 <span class="tag tag-outline revision-source-tag"
@@ -321,31 +319,23 @@
                                                 </span>
                                             @endif
                                             @if ($canEditNmFile)
-                                                @if ($nmFileLocked)
-                                                    <span class="text-muted" style="white-space: nowrap;" title="Order 1 pcs — nama file sudah terisi dan terkunci">{{ $item->NmFile }}</span>
-                                                @else
-                                                    <form method="POST" action="{{ route('order-desain.nmfile', $item) }}">
-                                                        @csrf
-                                                        <input type="text" name="NmFile" value="{{ $item->NmFile }}" maxlength="255"
-                                                               placeholder="Nama file{{ $isLayoutRevision ? ' hasil revisi' : '' }}"
-                                                               @change="rememberPosition('layout-item-outdoor-{{ $item->id }}'); $el.form.submit()" class="in-input"
-                                                               style="width: {{ $isLayoutRevision ? '190px' : '140px' }}; {{ $isLayoutRevision ? 'border-color:#f59e0b; background:#fffbeb;' : '' }}">
-                                                    </form>
-                                                @endif
+                                                <form method="POST" action="{{ route('order-desain.nmfile', $item) }}">
+                                                    @csrf
+                                                    <input type="text" name="NmFile" value="{{ $item->NmFile }}" maxlength="255"
+                                                           placeholder="Nama file{{ $isLayoutRevision ? ' hasil revisi' : '' }}"
+                                                           @change="rememberPosition('layout-item-outdoor-{{ $item->id }}'); $el.form.submit()" class="in-input"
+                                                           style="width: {{ $isLayoutRevision ? '190px' : '140px' }}; {{ $isLayoutRevision ? 'border-color:#f59e0b; background:#fffbeb;' : '' }}">
+                                                </form>
                                             @else
-                                                <span class="text-muted" style="white-space: nowrap;" title="Nama file hanya dapat diubah Operator File atau Operator Layout saat revisi">{{ $item->NmFile ?: '-' }}</span>
+                                                <span class="text-muted" style="white-space: nowrap;" title="Nama file hanya dapat diubah Operator File atau Operator Layout">{{ $item->NmFile ?: '-' }}</span>
                                             @endif
                                             @can('order-desain.manage')
-                                                @if ($gabunganLocked)
-                                                    <span class="text-muted" style="white-space: nowrap;" title="Order 1 pcs — gabungan sudah terisi dan terkunci">{{ $item->gabungan }}</span>
-                                                @else
-                                                    <form method="POST" action="{{ route('order-desain.gabungan', $item) }}">
-                                                        @csrf
-                                                        <input type="text" name="gabungan" value="{{ $item->gabungan }}" maxlength="255"
-                                                               placeholder="Gabungan"
-                                                               @change="rememberPosition('layout-item-outdoor-{{ $item->id }}'); $el.form.submit()" class="in-input" style="width: 140px;">
-                                                    </form>
-                                                @endif
+                                                <form method="POST" action="{{ route('order-desain.gabungan', $item) }}">
+                                                    @csrf
+                                                    <input type="text" name="gabungan" value="{{ $item->gabungan }}" maxlength="255"
+                                                           placeholder="Gabungan"
+                                                           @change="rememberPosition('layout-item-outdoor-{{ $item->id }}'); $el.form.submit()" class="in-input" style="width: 140px;">
+                                                </form>
                                             @else
                                                 <span class="text-muted" style="white-space: nowrap;">{{ $item->gabungan ?: '-' }}</span>
                                             @endcan

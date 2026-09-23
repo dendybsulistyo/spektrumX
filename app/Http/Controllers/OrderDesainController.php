@@ -149,16 +149,11 @@ class OrderDesainController extends Controller
      * Free-text "Gabungan" note per outdoor item — catatan manual operator
      * desain, tidak terikat validasi/format tertentu.
      *
-     * Untuk order 1 pcs, field ini terkunci begitu sudah terisi supaya
-     * tidak tertimpa operator lain — lihat updateNmFile().
+     * Nilainya tetap dapat diperbarui oleh Operator Layout selama item
+     * dikerjakan di halaman Layout.
      */
     public function updateGabungan(Request $request, OrderOutdoorDetail $item): RedirectResponse
     {
-        if ((int) $item->Qty === 1 && filled($item->gabungan)) {
-            return redirect()->route('order-desain.index', ['tab' => 'outdoor'])
-                ->with('error', 'Gabungan sudah terisi dan tidak bisa diubah untuk order 1 pcs.');
-        }
-
         $data = $request->validate([
             'gabungan' => ['nullable', 'string', 'max:255'],
         ]);
@@ -174,22 +169,18 @@ class OrderDesainController extends Controller
      * Nama file desain per outdoor item — sama pola simpan/submit dengan
      * updateGabungan() (auto-submit onchange di view).
      *
-     * Untuk order 1 pcs, field ini terkunci begitu sudah terisi supaya
-     * tidak tertimpa operator lain.
+     * Operator File dapat mengelola nama file seperti sebelumnya. Operator
+     * Layout juga dapat mengubahnya selama item masih berada di tahap Layout.
      */
     public function updateNmFile(Request $request, OrderOutdoorDetail $item): RedirectResponse
     {
         $layoutRevision = $this->activeLayoutRevisionFor($item);
         $user = auth()->user();
-        $canEditRegular = $user->hasPermission('order-desain.nmfile-manage');
-        $canEditRevision = $layoutRevision && $user->hasPermission('order-desain.manage');
+        $canEditAsFileOperator = $user->hasPermission('order-desain.nmfile-manage');
+        $canEditAsLayoutOperator = $user->hasPermission('order-desain.manage')
+            && ($item->qtyAt(self::STAGE) > 0 || $layoutRevision);
 
-        abort_unless($canEditRegular || $canEditRevision, 403);
-
-        if (! $layoutRevision && (int) $item->Qty === 1 && filled($item->NmFile)) {
-            return redirect()->route('order-desain.index', ['tab' => 'outdoor'])
-                ->with('error', 'Nama file sudah terisi dan tidak bisa diubah untuk order 1 pcs.');
-        }
+        abort_unless($canEditAsFileOperator || $canEditAsLayoutOperator, 403);
 
         $data = $request->validate([
             'NmFile' => [$layoutRevision ? 'required' : 'nullable', 'string', 'max:255'],
