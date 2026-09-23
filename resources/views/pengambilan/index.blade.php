@@ -20,6 +20,7 @@
             #industry-pengambilan .progress-tag { font-family: var(--font-heading); font-weight: 600; font-size: 13px; color: var(--color-text-muted, #666); }
             #industry-pengambilan .signature-pad { display:block; width:100%; height:160px; border:1px dashed var(--color-divider); background:#fff; touch-action:none; cursor:crosshair; }
         </style>
+        <x-operator-workspace-styles />
     @endpush
 
     @if (session('error'))

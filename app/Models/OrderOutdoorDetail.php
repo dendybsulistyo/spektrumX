@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Traits\HasItemStageProgress;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class OrderOutdoorDetail extends Model
 {
@@ -59,6 +60,14 @@ class OrderOutdoorDetail extends Model
     public function order(): BelongsTo
     {
         return $this->belongsTo(OrderOutdoor::class, 'order_outdoor_id');
+    }
+
+    public function layoutRevisionCompletions(): HasMany
+    {
+        return $this->hasMany(OrderStatusNote::class, 'order_detail_id')
+            ->where('order_type', 'outdoor')
+            ->where('action', 'revisi_selesai')
+            ->latest('created_at');
     }
 
     public function orderTypeSlug(): string

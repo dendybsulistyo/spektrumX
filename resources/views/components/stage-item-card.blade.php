@@ -77,13 +77,31 @@
     </div>
 
     @foreach ($items as $item)
+        @php
+            $layoutRevisionCompletion = $type === 'outdoor'
+                ? $item->layoutRevisionCompletions->first()
+                : null;
+        @endphp
         <div class="item-row">
             <div>
                 @if ($type === 'outdoor')
                     <x-printer-badge :code="$item->printerCode()" :name="$printerNames[$item->printerCode()] ?? null" />
                     <span style="font-size: 14px; color: color-mix(in srgb, var(--color-text) 82%, transparent);">
-                        {{ $item->gabungan ?: ($item->NmFile ?: '-') }}
+                        @if (filled($item->gabungan))
+                            {{ $item->gabungan }}
+                        @endif
+                        @if (filled($item->NmFile))
+                            <span style="{{ filled($item->gabungan) ? 'margin-left:8px;' : '' }} color:var(--color-text);">{{ $item->NmFile }}</span>
+                        @endif
+                        @if (blank($item->gabungan) && blank($item->NmFile)) - @endif
                     </span>
+                    @if ($layoutRevisionCompletion)
+                        <span class="tag"
+                              style="margin-left:8px; border:1px solid #86efac; background:#ecfdf5; color:#047857; white-space:nowrap;"
+                              title="{{ $layoutRevisionCompletion->catatan }}">
+                            Revisi Layout selesai &middot; {{ $layoutRevisionCompletion->user?->name ?? 'Operator Layout' }}
+                        </span>
+                    @endif
                 @else
                     {{ $item->Judul }}
                     @if ((float) $item->Panjang > 0 && (float) $item->Lebar > 0)

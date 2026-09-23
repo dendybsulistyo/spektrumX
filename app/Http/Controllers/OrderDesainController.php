@@ -7,6 +7,7 @@ use App\Models\OrderComment;
 use App\Models\OrderOutdoor;
 use App\Models\OrderOutdoorDetail;
 use App\Models\OrderReworkRequest;
+use App\Models\OrderStatusNote;
 use App\Models\PrinterOutdoor;
 use App\Services\StageProgressService;
 use App\Support\PageVersion;
@@ -14,6 +15,7 @@ use App\Support\ResolvesOrderDetailType;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\View\View;
 
 class OrderDesainController extends Controller
@@ -61,6 +63,7 @@ class OrderDesainController extends Controller
         $outdoorUnread = collect();
         $printerNames = collect();
         $bahanNames = collect();
+        $layoutRevisionItems = collect();
 
         if ($showOutdoor) {
             $outdoorItems = $itemsByType['outdoor'] ?? collect();
@@ -85,12 +88,13 @@ class OrderDesainController extends Controller
 
             $printerNames = PrinterOutdoor::pluck('NmPrn', 'KdPrn');
             $bahanNames = BahanCetakOutdoor::pluck('NmBhn', 'NoCetak');
+            $layoutRevisionItems = $this->activeLayoutRevisionsFor($outdoorItems->flatten(1));
         }
 
         $pendingRework = OrderReworkRequest::pendingMap();
         $canApproveRework = $user->hasPermission('order-rework.approve');
 
-        return compact('indoorItems', 'outdoorItems', 'outdoorNeedsReply', 'outdoorComments', 'outdoorUnread', 'printerNames', 'bahanNames', 'pendingRework', 'canApproveRework');
+        return compact('indoorItems', 'outdoorItems', 'outdoorNeedsReply', 'outdoorComments', 'outdoorUnread', 'printerNames', 'bahanNames', 'layoutRevisionItems', 'pendingRework', 'canApproveRework');
     }
 
     /**
@@ -101,6 +105,9 @@ class OrderDesainController extends Controller
     public function updateItem(Request $request, string $type, int $id): RedirectResponse
     {
         $item = $this->resolveDetailItem($type, $id);
+        $layoutRevision = $item instanceof OrderOutdoorDetail
+            ? $this->activeLayoutRevisionFor($item)
+            : null;
 
         $data = $request->validate([
             'qty' => ['nullable', 'integer', 'min:1'],
@@ -111,9 +118,29 @@ class OrderDesainController extends Controller
 
         $result = $this->stageProgress->advance($item, self::STAGE, $qty, $data['catatan'] ?? null, auth()->id());
 
+        if ($layoutRevision && $result['stageCleared']) {
+            $sourceStage = OrderReworkRequest::STAGE_LABELS[$layoutRevision->current_stage] ?? $layoutRevision->current_stage;
+            $fileName = $result['item']->NmFile ?: 'Tanpa nama file';
+
+            OrderStatusNote::create([
+                'order_type' => 'outdoor',
+                'order_id' => $result['order']->id,
+                'order_detail_id' => $result['item']->id,
+                'qty' => $result['moved'],
+                'stage' => self::STAGE,
+                'action' => 'revisi_selesai',
+                'catatan' => "Materi diperbaiki Operator Layout. Nama file: {$fileName}. Dikembalikan dari {$sourceStage} (alasan: {$layoutRevision->reason}).",
+                'user_id' => auth()->id(),
+                'created_at' => now(),
+            ]);
+        }
+
         PageVersion::touch(self::PAGE_VERSION_KEY);
 
         $message = "{$result['moved']} unit dipindahkan ke antrian Cetak.".($result['stageCleared'] ? ' Baris item ini tuntas di Desain.' : '');
+        if ($layoutRevision && $result['stageCleared']) {
+            $message .= ' Revisi Layout ditandai selesai.';
+        }
 
         return redirect()->route('order-desain.index', ['tab' => $type])->with('status', $message);
     }
@@ -152,19 +179,97 @@ class OrderDesainController extends Controller
      */
     public function updateNmFile(Request $request, OrderOutdoorDetail $item): RedirectResponse
     {
-        if ((int) $item->Qty === 1 && filled($item->NmFile)) {
+        $layoutRevision = $this->activeLayoutRevisionFor($item);
+        $user = auth()->user();
+        $canEditRegular = $user->hasPermission('order-desain.nmfile-manage');
+        $canEditRevision = $layoutRevision && $user->hasPermission('order-desain.manage');
+
+        abort_unless($canEditRegular || $canEditRevision, 403);
+
+        if (! $layoutRevision && (int) $item->Qty === 1 && filled($item->NmFile)) {
             return redirect()->route('order-desain.index', ['tab' => 'outdoor'])
                 ->with('error', 'Nama file sudah terisi dan tidak bisa diubah untuk order 1 pcs.');
         }
 
         $data = $request->validate([
-            'NmFile' => ['nullable', 'string', 'max:255'],
+            'NmFile' => [$layoutRevision ? 'required' : 'nullable', 'string', 'max:255'],
         ]);
 
         $item->update(['NmFile' => $data['NmFile'] ?? '']);
 
         PageVersion::touch(self::PAGE_VERSION_KEY);
 
-        return redirect()->route('order-desain.index', ['tab' => 'outdoor'])->with('status', 'Nama file disimpan.');
+        $message = $layoutRevision
+            ? 'Nama file revisi disimpan. Kirim ke Cetak setelah materi selesai diperbaiki.'
+            : 'Nama file disimpan.';
+
+        return redirect()->route('order-desain.index', ['tab' => 'outdoor'])->with('status', $message);
+    }
+
+    /**
+     * @return Collection<int, OrderReworkRequest>
+     */
+    private function activeLayoutRevisionsFor(Collection $items): Collection
+    {
+        if ($items->isEmpty()) {
+            return collect();
+        }
+
+        $requestsByOrder = OrderReworkRequest::query()
+            ->where('order_type', 'outdoor')
+            ->where('action', 'ulang')
+            ->where('target_stage', self::STAGE)
+            ->where('status', 'approved')
+            ->whereIn('order_id', $items->pluck('order_outdoor_id')->unique())
+            ->with('requestedBy')
+            ->orderByDesc('resolved_at')
+            ->get()
+            ->groupBy('order_id');
+
+        return $items->mapWithKeys(function (OrderOutdoorDetail $item) use ($requestsByOrder) {
+            $request = $requestsByOrder->get($item->order_outdoor_id, collect())
+                ->first(fn (OrderReworkRequest $request) => $this->layoutRevisionApplies($request, $item)
+                    && ! $this->layoutRevisionCompleted($request, $item));
+
+            return $request ? [$item->id => $request] : [];
+        });
+    }
+
+    private function activeLayoutRevisionFor(OrderOutdoorDetail $item): ?OrderReworkRequest
+    {
+        $item->loadMissing('layoutRevisionCompletions');
+
+        return OrderReworkRequest::query()
+            ->where('order_type', 'outdoor')
+            ->where('order_id', $item->order_outdoor_id)
+            ->where('action', 'ulang')
+            ->where('target_stage', self::STAGE)
+            ->where('status', 'approved')
+            ->with('requestedBy')
+            ->orderByDesc('resolved_at')
+            ->get()
+            ->first(fn (OrderReworkRequest $request) => $this->layoutRevisionApplies($request, $item)
+                && ! $this->layoutRevisionCompleted($request, $item));
+    }
+
+    private function layoutRevisionApplies(OrderReworkRequest $request, OrderOutdoorDetail $item): bool
+    {
+        if ($item->qtyAt(self::STAGE) < 1) {
+            return false;
+        }
+
+        $detailIds = collect($request->order_detail_ids)->map(fn ($id) => (int) $id);
+
+        return $detailIds->isEmpty() || $detailIds->contains($item->id);
+    }
+
+    private function layoutRevisionCompleted(OrderReworkRequest $request, OrderOutdoorDetail $item): bool
+    {
+        if (! $request->resolved_at) {
+            return false;
+        }
+
+        return $item->layoutRevisionCompletions
+            ->contains(fn (OrderStatusNote $note) => $note->created_at->gte($request->resolved_at));
     }
 }

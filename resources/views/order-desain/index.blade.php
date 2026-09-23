@@ -21,7 +21,13 @@
             #industry-desain .item-row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--color-divider); flex-wrap: wrap; }
             #industry-desain .item-row:last-child { border-bottom: none; }
             #industry-desain .progress-tag { font-family: var(--font-heading); font-weight: 600; font-size: 13px; color: var(--color-text-muted, #666); }
+            #industry-desain .operator-return-focus { animation: operator-return-focus 2.4s ease-out; }
+            @keyframes operator-return-focus {
+                0%, 30% { background: #dbeafe; box-shadow: inset 4px 0 0 #2563eb; }
+                100% { background: #fff; box-shadow: inset 4px 0 0 transparent; }
+            }
         </style>
+        <x-operator-workspace-styles />
     @endpush
 
     @php
@@ -43,9 +49,46 @@
                     selected: {},
                     sending: false,
                     pageVersion: '{{ $pageVersion }}',
+                    positionKey: 'spektrumX:order-desain:return-position',
                     get selectedCount() { return Object.keys(this.selected).length; },
                     init() {
+                        this.restorePosition();
                         setInterval(() => this.pollVersion(), 7000);
+                    },
+                    rememberPosition(anchorId = null) {
+                        const anchor = anchorId ? document.getElementById(anchorId) : null;
+                        sessionStorage.setItem(this.positionKey, JSON.stringify({
+                            path: window.location.pathname,
+                            tab: this.tab,
+                            anchorId,
+                            anchorTop: anchor ? anchor.getBoundingClientRect().top : null,
+                            scrollY: window.scrollY,
+                            savedAt: Date.now(),
+                        }));
+                    },
+                    restorePosition() {
+                        const raw = sessionStorage.getItem(this.positionKey);
+                        if (!raw) return;
+
+                        sessionStorage.removeItem(this.positionKey);
+
+                        let position;
+                        try { position = JSON.parse(raw); } catch (error) { return; }
+                        if (position.path !== window.location.pathname || Date.now() - position.savedAt > 30000) return;
+
+                        if (position.tab && ['indoor', 'outdoor'].includes(position.tab)) this.tab = position.tab;
+
+                        setTimeout(() => {
+                            const anchor = position.anchorId ? document.getElementById(position.anchorId) : null;
+                            if (anchor && Number.isFinite(position.anchorTop)) {
+                                window.scrollBy({ top: anchor.getBoundingClientRect().top - position.anchorTop, behavior: 'auto' });
+                                anchor.classList.add('operator-return-focus');
+                                setTimeout(() => anchor.classList.remove('operator-return-focus'), 2500);
+                                return;
+                            }
+
+                            window.scrollTo({ top: Number(position.scrollY) || 0, behavior: 'auto' });
+                        }, 60);
                     },
                     pollVersion() {
                         const active = document.activeElement;
@@ -55,6 +98,7 @@
                             .then(r => r.json())
                             .then(data => {
                                 if (data.version !== this.pageVersion) {
+                                    this.rememberPosition();
                                     window.location.reload();
                                 }
                             });
@@ -87,6 +131,7 @@
 
                         this.sending = true;
                         try {
+                            this.rememberPosition('layout-item-' + entries[0].type + '-' + entries[0].id);
                             for (const e of entries) {
                                 const el = document.getElementById('qty-' + e.type + '-' + e.id);
                                 await axios.post(`/order-desain/progress/${e.type}/${e.id}`, { qty: el.value });
@@ -160,7 +205,7 @@
                                 </div>
 
                                 @foreach ($items as $item)
-                                    <div class="item-row">
+                                    <div id="layout-item-indoor-{{ $item->id }}" class="item-row">
                                         <div>
                                             {{ $item->Judul }}
                                             @if ((float) $item->Panjang > 0 && (float) $item->Lebar > 0)
@@ -173,7 +218,9 @@
                                             <span class="progress-tag">Progres di Desain: {{ $item->Qty - $item->qtyAt('desain') }}/{{ $item->Qty }}</span>
                                             @can('order-desain.manage')
                                                 <input type="checkbox" @change="toggle('indoor', {{ $item->id }}, $event.target.checked)" title="Pilih untuk kirim massal">
-                                                <form method="POST" action="{{ route('order-desain.progress', ['indoor', $item->id]) }}" style="display: flex; align-items: center; gap: 4px;">
+                                                <form method="POST" action="{{ route('order-desain.progress', ['indoor', $item->id]) }}"
+                                                      @submit="rememberPosition('layout-item-indoor-{{ $item->id }}')"
+                                                      style="display: flex; align-items: center; gap: 4px;">
                                                     @csrf
                                                     <input type="number" id="qty-indoor-{{ $item->id }}" name="qty" min="1" max="{{ $item->qtyAt('desain') }}" value="{{ $item->qtyAt('desain') }}" required
                                                            class="in-input no-spinner" style="width: 70px;">
@@ -240,7 +287,7 @@
                                 </div>
 
                                 @foreach ($items as $item)
-                                    <div class="item-row">
+                                    <div id="layout-item-outdoor-{{ $item->id }}" class="item-row">
                                         <div>
                                             <x-printer-badge :code="$item->printerCode()" :name="$printerNames[$item->printerCode()] ?? null" />
                                             <span style="font-size: 14px; color: color-mix(in srgb, var(--color-text) 82%, transparent);">
@@ -252,22 +299,35 @@
                                         </div>
                                         <div style="display: inline-flex; align-items: center; gap: var(--space-3); flex-wrap: wrap;">
                                             @php
-                                                $nmFileLocked = (int) $item->Qty === 1 && filled($item->NmFile);
+                                                $layoutRevision = $layoutRevisionItems->get($item->id);
+                                                $isLayoutRevision = $layoutRevision !== null;
+                                                $canEditNmFile = auth()->user()->hasPermission('order-desain.nmfile-manage')
+                                                    || ($isLayoutRevision && auth()->user()->hasPermission('order-desain.manage'));
+                                                $nmFileLocked = ! $isLayoutRevision && (int) $item->Qty === 1 && filled($item->NmFile);
                                                 $gabunganLocked = (int) $item->Qty === 1 && filled($item->gabungan);
                                             @endphp
-                                            @can('order-desain.nmfile-manage')
+                                            @if ($isLayoutRevision)
+                                                <span class="tag tag-outline"
+                                                      style="border-color:#f59e0b; color:#b45309; background:#fffbeb; white-space:nowrap;"
+                                                      title="{{ $layoutRevision->reason }}">
+                                                    Revisi dari {{ \App\Models\OrderReworkRequest::STAGE_LABELS[$layoutRevision->current_stage] ?? ucfirst($layoutRevision->current_stage) }}
+                                                </span>
+                                            @endif
+                                            @if ($canEditNmFile)
                                                 @if ($nmFileLocked)
                                                     <span class="text-muted" style="white-space: nowrap;" title="Order 1 pcs — nama file sudah terisi dan terkunci">{{ $item->NmFile }}</span>
                                                 @else
                                                     <form method="POST" action="{{ route('order-desain.nmfile', $item) }}">
                                                         @csrf
                                                         <input type="text" name="NmFile" value="{{ $item->NmFile }}" maxlength="255"
-                                                               placeholder="Nama file" onchange="this.form.submit()" class="in-input" style="width: 140px;">
+                                                               placeholder="Nama file{{ $isLayoutRevision ? ' hasil revisi' : '' }}"
+                                                               @change="rememberPosition('layout-item-outdoor-{{ $item->id }}'); $el.form.submit()" class="in-input"
+                                                               style="width: {{ $isLayoutRevision ? '190px' : '140px' }}; {{ $isLayoutRevision ? 'border-color:#f59e0b; background:#fffbeb;' : '' }}">
                                                     </form>
                                                 @endif
                                             @else
-                                                <span class="text-muted" style="white-space: nowrap;" title="Hanya Operator File yang bisa ubah nama file">{{ $item->NmFile ?: '-' }}</span>
-                                            @endcan
+                                                <span class="text-muted" style="white-space: nowrap;" title="Nama file hanya dapat diubah Operator File atau Operator Layout saat revisi">{{ $item->NmFile ?: '-' }}</span>
+                                            @endif
                                             @can('order-desain.manage')
                                                 @if ($gabunganLocked)
                                                     <span class="text-muted" style="white-space: nowrap;" title="Order 1 pcs — gabungan sudah terisi dan terkunci">{{ $item->gabungan }}</span>
@@ -275,7 +335,8 @@
                                                     <form method="POST" action="{{ route('order-desain.gabungan', $item) }}">
                                                         @csrf
                                                         <input type="text" name="gabungan" value="{{ $item->gabungan }}" maxlength="255"
-                                                               placeholder="Gabungan" onchange="this.form.submit()" class="in-input" style="width: 140px;">
+                                                               placeholder="Gabungan"
+                                                               @change="rememberPosition('layout-item-outdoor-{{ $item->id }}'); $el.form.submit()" class="in-input" style="width: 140px;">
                                                     </form>
                                                 @endif
                                             @else
@@ -284,7 +345,9 @@
                                             <span class="progress-tag">Progres di Desain: {{ $item->Qty - $item->qtyAt('desain') }}/{{ $item->Qty }}</span>
                                             @can('order-desain.manage')
                                                 <input type="checkbox" @change="toggle('outdoor', {{ $item->id }}, $event.target.checked)" title="Pilih untuk kirim massal">
-                                                <form method="POST" action="{{ route('order-desain.progress', ['outdoor', $item->id]) }}" style="display: flex; align-items: center; gap: 4px;">
+                                                <form method="POST" action="{{ route('order-desain.progress', ['outdoor', $item->id]) }}"
+                                                      @submit="rememberPosition('layout-item-outdoor-{{ $item->id }}')"
+                                                      style="display: flex; align-items: center; gap: 4px;">
                                                     @csrf
                                                     <input type="number" id="qty-outdoor-{{ $item->id }}" name="qty" min="1" max="{{ $item->qtyAt('desain') }}" placeholder="qty" required
                                                            oninput="this.setCustomValidity('')"

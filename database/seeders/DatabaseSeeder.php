@@ -26,6 +26,7 @@ class DatabaseSeeder extends Seeder
             AccountingFixedAssetSeeder::class,
             JurnalJanuariSeeder::class,
             AccountingInventoryDemoSeeder::class,
+            CashDailyDemoSeeder::class,
         ]);
     }
 }

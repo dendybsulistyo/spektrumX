@@ -132,7 +132,11 @@ Route::middleware('auth')->group(function () {
         Route::get('/akuntansi/laporan-hpp', [InventoryHppController::class, 'report'])->name('akuntansi.hpp-report');
         Route::get('/akuntansi/aset-tetap', [AccountingFixedAssetController::class, 'index'])->name('akuntansi.fixed-assets.index');
         Route::get('/keuangan/kas-harian', [KeuanganController::class, 'kasHarian'])->name('keuangan.kas-harian');
+        Route::get('/keuangan/kas-harian/excel', [KeuanganController::class, 'exportKasHarianExcel'])->name('keuangan.kas-harian.excel');
         Route::get('/keuangan/rekap-kasir', [KeuanganController::class, 'rekapKasir'])->name('keuangan.rekap-kasir');
+        Route::get('/keuangan/rekap-kasir/excel', [KeuanganController::class, 'exportRekapKasirExcel'])->name('keuangan.rekap-kasir.excel');
+        Route::get('/keuangan/laporan-kasir-harian', [KeuanganController::class, 'laporanKasirHarian'])->name('keuangan.laporan-kasir-harian');
+        Route::get('/keuangan/laporan-kasir-harian/excel', [KeuanganController::class, 'exportLaporanKasirHarianExcel'])->name('keuangan.laporan-kasir-harian.excel');
         Route::get('/keuangan/rekap-kasir/{kasir}/customer', [KeuanganController::class, 'rekapKasirCustomer'])->name('keuangan.rekap-kasir.customer');
         Route::get('/keuangan/rekap-customer', [KeuanganController::class, 'rekapCustomer'])->name('keuangan.rekap-customer');
         Route::get('/keuangan/piutang', [KeuanganController::class, 'piutang'])->name('keuangan.piutang');
@@ -395,15 +399,12 @@ Route::middleware('auth')->group(function () {
     Route::middleware('permission:order-desain.view')->group(function () {
         Route::get('/order-desain', [OrderDesainController::class, 'index'])->name('order-desain.index');
         Route::get('/order-desain/version', [OrderDesainController::class, 'version'])->name('order-desain.version');
+        Route::post('/order-desain/nmfile/{item}', [OrderDesainController::class, 'updateNmFile'])->name('order-desain.nmfile');
     });
     Route::middleware('permission:order-desain.manage')->group(function () {
         Route::post('/order-desain/gabungan/{item}', [OrderDesainController::class, 'updateGabungan'])->name('order-desain.gabungan');
         Route::post('/order-desain/progress/{type}/{id}', [OrderDesainController::class, 'updateItem'])->name('order-desain.progress');
     });
-    Route::middleware('permission:order-desain.nmfile-manage')->group(function () {
-        Route::post('/order-desain/nmfile/{item}', [OrderDesainController::class, 'updateNmFile'])->name('order-desain.nmfile');
-    });
-
     Route::middleware('permission:order-cetak.view')->group(function () {
         Route::get('/order-cetak', [OrderCetakController::class, 'index'])->name('order-cetak.index');
     });

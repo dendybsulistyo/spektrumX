@@ -111,6 +111,8 @@ class StageProgressService
         }
 
         if ($showTypes['outdoor'] ?? false) {
+            $outdoorWith = array_values(array_unique([...$outdoorWith, 'layoutRevisionCompletions.user']));
+
             $result['outdoor'] = OrderOutdoorDetail::query()
                 ->where("qty_{$stage}", '>', 0)
                 ->whereHas('order', fn ($q) => $q->whereNotIn('status', self::EXCLUDE_ORDER_STATUSES))

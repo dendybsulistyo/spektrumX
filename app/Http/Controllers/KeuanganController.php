@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Akun;
+use App\Models\CashDailyEntry;
 use App\Models\Customer;
 use App\Models\JurnalEntry;
 use App\Models\LaporanPpnFinal;
@@ -13,21 +14,22 @@ use App\Models\OrderPayment;
 use App\Models\PengaturanKeuangan;
 use App\Models\User;
 use App\Services\OrderDocumentService;
+use App\Support\SimpleXlsx;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class KeuanganController extends Controller
 {
     /**
-     * Daily cash reconciliation — every cash-in event (lunas, DP, pelunasan
-     * DP, nota pengganti) for the selected date, broken down by payment
-     * channel so the cashier can match this against the physical cash
-     * drawer / QRIS & transfer mutations at closing.
+     * Rekap harian per operator kasir. Nilai nota dicatat sebagai Debet;
+     * pembayaran non-tunai mendapat pasangan Kredit sehingga selisih akhir
+     * menunjukkan uang yang semestinya berada di laci kas.
      */
     public function kasHarian(Request $request): View
     {
@@ -38,8 +40,15 @@ class KeuanganController extends Controller
         $tanggal = $filters['tanggal'] ?? now()->format('Y-m-d');
         $kasirId = isset($filters['kasir']) ? (int) $filters['kasir'] : null;
 
+        $activityUserIds = OrderPayment::query()->whereNotNull('user_id')->pluck('user_id')
+            ->merge(CashDailyEntry::query()->whereNotNull('user_id')->pluck('user_id'))
+            ->unique();
+
         $kasirUsers = User::query()
-            ->whereIn('id', OrderPayment::query()->whereNotNull('user_id')->select('user_id')->distinct())
+            ->where(function ($query) use ($activityUserIds) {
+                $query->whereHas('role', fn ($role) => $role->where('name', 'kasir'))
+                    ->orWhereIn('id', $activityUserIds);
+            })
             ->orderBy('name')
             ->get(['id', 'name']);
         $selectedKasir = $kasirId ? $kasirUsers->firstWhere('id', $kasirId) : null;
@@ -67,62 +76,212 @@ class KeuanganController extends Controller
                 });
         }
 
-        $rows = $payments->map(function (OrderPayment $p) use ($ordersByKey) {
+        $paymentRows = $payments->flatMap(function (OrderPayment $p) use ($ordersByKey) {
             $order = $ordersByKey["{$p->order_type}-{$p->order_id}"] ?? null;
             $jumlah = (float) $p->jumlah;
+            $customer = $order?->customer?->NmCust
+                ? mb_strtoupper($order->customer->NmCust)
+                : '-';
+            $jenis = OrderPayment::JENIS_LABELS[$p->jenis] ?? ucfirst($p->jenis);
+            $baseSort = $p->created_at?->format('His').'-'.str_pad((string) $p->id, 10, '0', STR_PAD_LEFT);
 
-            return [
-                'waktu' => $p->created_at,
-                'no_order' => $order?->NoOrder ?? '-',
-                'tipe' => ucfirst($p->order_type),
-                'customer' => $order?->customer?->NmCust ? ucwords(mb_strtolower($order->customer->NmCust)) : '-',
-                'jenis' => OrderPayment::JENIS_LABELS[$p->jenis] ?? $p->jenis,
-                'cara_bayar' => $p->cara_bayar,
-                'cara_bayar_label' => OrderPayment::CARA_BAYAR_LABELS[$p->cara_bayar] ?? $p->cara_bayar,
-                'no_referensi' => $p->no_referensi,
-                // Refund rows carry a negative jumlah — split into debit
-                // (kas masuk) / kredit (kas keluar) so the cashier reads
-                // money in vs. money out directly, no sign to interpret.
-                'debit' => $jumlah > 0 ? $jumlah : null,
-                'kredit' => $jumlah < 0 ? abs($jumlah) : null,
+            if ($jumlah < 0) {
+                return [[
+                    'user_id' => $p->user_id,
+                    'kasir' => $p->user?->name ?? '-',
+                    'no_nota' => $order?->NoOrder,
+                    'keterangan' => 'Refund - '.$customer,
+                    'debet' => 0,
+                    'kredit' => abs($jumlah),
+                    'sort' => '2-'.$baseSort.'-0',
+                ]];
+            }
+
+            $rows = [[
+                'user_id' => $p->user_id,
                 'kasir' => $p->user?->name ?? '-',
-            ];
+                'no_nota' => $order?->NoOrder,
+                'keterangan' => $jenis.' - '.$customer,
+                'debet' => $jumlah,
+                'kredit' => 0,
+                'sort' => '2-'.$baseSort.'-0',
+            ]];
+
+            // Pembayaran non-tunai mengurangi uang yang seharusnya berada
+            // di laci kas. Karena itu transaksi ditampilkan berpasangan:
+            // nilai nota di Debet dan pembayaran bank/QRIS di Kredit.
+            if (in_array($p->cara_bayar, ['transfer', 'qris'], true)) {
+                $method = OrderPayment::CARA_BAYAR_LABELS[$p->cara_bayar] ?? ucfirst($p->cara_bayar);
+                $rows[] = [
+                    'user_id' => $p->user_id,
+                    'kasir' => $p->user?->name ?? '-',
+                    'no_nota' => null,
+                    'keterangan' => 'Bayar via '.$method.' - '.$customer,
+                    'debet' => 0,
+                    'kredit' => $jumlah,
+                    'sort' => '2-'.$baseSort.'-1',
+                ];
+            }
+
+            return $rows;
         });
 
-        $summaryFor = fn (string $caraBayar) => [
-            'masuk' => (float) $payments->where('cara_bayar', $caraBayar)->where('jumlah', '>', 0)->sum('jumlah'),
-            'keluar' => (float) $payments->where('cara_bayar', $caraBayar)->where('jumlah', '<', 0)->sum('jumlah') * -1,
-        ];
+        $seededRows = CashDailyEntry::with('user')
+            ->whereDate('tanggal', $tanggal)
+            ->when($kasirId, fn ($query) => $query->where(fn ($scope) => $scope
+                ->whereNull('user_id')->orWhere('user_id', $kasirId)))
+            ->orderBy('urutan')
+            ->get()
+            ->map(fn (CashDailyEntry $entry) => [
+                'user_id' => $entry->user_id,
+                'kasir' => $entry->user?->name ?? '-',
+                'no_nota' => $entry->no_nota,
+                'keterangan' => $entry->keterangan,
+                'debet' => (float) $entry->debet,
+                'kredit' => (float) $entry->kredit,
+                'sort' => '1-'.str_pad((string) $entry->urutan, 10, '0', STR_PAD_LEFT),
+            ]);
 
-        $summary = [
-            'tunai' => $summaryFor('tunai'),
-            'qris' => $summaryFor('qris'),
-            'transfer' => $summaryFor('transfer'),
-        ];
+        if (! $seededRows->contains(fn (array $row) => $row['user_id'] === null)) {
+            $openingBalance = $this->openingCashBalance($tanggal);
+            $seededRows->prepend([
+                'user_id' => null,
+                'kasir' => '-',
+                'no_nota' => null,
+                'keterangan' => 'Saldo Awal',
+                'debet' => max(0, $openingBalance),
+                'kredit' => max(0, -$openingBalance),
+                'sort' => '0-opening',
+            ]);
+        }
 
-        $totalMasuk = (float) $payments->where('jumlah', '>', 0)->sum('jumlah');
-        $totalKeluar = (float) $payments->where('jumlah', '<', 0)->sum('jumlah') * -1;
+        $rows = $seededRows->concat($paymentRows)->sortBy('sort')->values();
+        $groups = collect();
+
+        $openingRows = $rows->whereNull('user_id')->values();
+        if ($openingRows->isNotEmpty()) {
+            $groups->push($this->cashGroup('-', $openingRows));
+        }
+
+        $rows->whereNotNull('user_id')->groupBy('user_id')
+            ->sortBy(fn (Collection $group) => mb_strtolower((string) $group->first()['kasir']))
+            ->each(fn (Collection $group) => $groups->push($this->cashGroup(
+                ucwords(mb_strtolower((string) $group->first()['kasir'])),
+                $group->values()
+            )));
+
+        $totalDebet = (float) $rows->sum('debet');
+        $totalKredit = (float) $rows->sum('kredit');
 
         return view('keuangan.kas-harian', [
             'tanggal' => $tanggal,
             'rows' => $rows,
-            'summary' => $summary,
-            'totalMasuk' => $totalMasuk,
-            'totalKeluar' => $totalKeluar,
-            'totalNet' => $totalMasuk - $totalKeluar,
-            'jumlahTransaksi' => $payments->count(),
+            'groups' => $groups,
+            'totalDebet' => $totalDebet,
+            'totalKredit' => $totalKredit,
+            'saldoKas' => $totalDebet - $totalKredit,
+            'jumlahTransaksi' => $rows->whereNotNull('user_id')->count(),
             'kasirUsers' => $kasirUsers,
             'kasirId' => $kasirId,
             'selectedKasir' => $selectedKasir,
         ]);
     }
 
+    public function exportKasHarianExcel(Request $request): BinaryFileResponse
+    {
+        $data = $this->kasHarian($request)->getData();
+        $rows = [
+            [['value' => 'REKAP KASIR HARIAN PER USER SPEKTRUM', 'style' => 1]],
+            ['Tanggal', Carbon::parse($data['tanggal'])->translatedFormat('d F Y')],
+            ['Kasir', $data['selectedKasir']?->name ?? 'Semua Kasir'],
+            [],
+        ];
+
+        foreach ($data['groups'] as $group) {
+            $rows[] = [['value' => 'User: '.$group['label'], 'style' => 4]];
+            $rows[] = array_map(fn ($value) => ['value' => $value, 'style' => 2], ['No. Nota', 'Keterangan', 'Debet', 'Kredit']);
+            foreach ($group['rows'] as $row) {
+                $rows[] = [
+                    $row['no_nota'] ?: '',
+                    $row['keterangan'],
+                    ['value' => (float) $row['debet'], 'style' => 3],
+                    ['value' => (float) $row['kredit'], 'style' => 3],
+                ];
+            }
+            $rows[] = [null, ['value' => 'Sub Total', 'style' => 4], ['value' => $group['subtotal_debet'], 'style' => 5], ['value' => $group['subtotal_kredit'], 'style' => 5]];
+            $rows[] = [];
+        }
+
+        $rows[] = [null, ['value' => 'TOTAL', 'style' => 4], ['value' => $data['totalDebet'], 'style' => 5], ['value' => $data['totalKredit'], 'style' => 5]];
+        $rows[] = [null, null, ['value' => 'SALDO KAS', 'style' => 4], ['value' => $data['saldoKas'], 'style' => 5]];
+
+        return SimpleXlsx::download('kas-harian-'.$data['tanggal'].'.xlsx', 'Kas Harian', $rows);
+    }
+
     /**
-     * Total cash brought in by each cashier operator over a date range —
-     * "kasir pagi hasilnya berapa, kasir sore hasilnya berapa" — grouped by
-     * whoever was logged in when the OrderPayment row was created. Refunds
-     * (negative jumlah) net out against that same operator's total, same
-     * debit/kredit split as kasHarian().
+     * @param  Collection<int, array<string, mixed>>  $rows
+     * @return array{label: string, rows: Collection, subtotal_debet: float, subtotal_kredit: float}
+     */
+    private function cashGroup(string $label, Collection $rows): array
+    {
+        return [
+            'label' => $label,
+            'rows' => $rows,
+            'subtotal_debet' => (float) $rows->sum('debet'),
+            'subtotal_kredit' => (float) $rows->sum('kredit'),
+        ];
+    }
+
+    /**
+     * Membawa saldo penutupan terakhir sebagai saldo awal tanggal berikutnya.
+     * Baris Saldo Awal manual menjadi checkpoint; setelah itu hanya mutasi
+     * tunai yang menambah/mengurangi uang di laci kas.
+     */
+    private function openingCashBalance(string $date): float
+    {
+        $checkpointDate = CashDailyEntry::query()
+            ->whereNull('user_id')
+            ->whereRaw('LOWER(keterangan) = ?', ['saldo awal'])
+            ->whereDate('tanggal', '<', $date)
+            ->max('tanggal');
+
+        if (! $checkpointDate) {
+            return 0.0;
+        }
+
+        $checkpoint = (float) CashDailyEntry::query()
+            ->whereNull('user_id')
+            ->whereRaw('LOWER(keterangan) = ?', ['saldo awal'])
+            ->whereDate('tanggal', $checkpointDate)
+            ->sum(DB::raw('debet - kredit'));
+
+        $manualMovement = (float) CashDailyEntry::query()
+            ->whereDate('tanggal', '>=', $checkpointDate)
+            ->whereDate('tanggal', '<', $date)
+            ->where(fn ($query) => $query->whereNotNull('user_id')
+                ->orWhereRaw('LOWER(keterangan) <> ?', ['saldo awal']))
+            ->sum(DB::raw('debet - kredit'));
+
+        $paymentMovement = (float) OrderPayment::query()
+            ->where('created_at', '>=', $checkpointDate.' 00:00:00')
+            ->where('created_at', '<', $date.' 00:00:00')
+            ->get(['jumlah', 'cara_bayar'])
+            ->sum(function (OrderPayment $payment) {
+                $amount = (float) $payment->jumlah;
+
+                if ($amount < 0) {
+                    return $amount;
+                }
+
+                return $payment->cara_bayar === 'tunai' ? $amount : 0.0;
+            });
+
+        return $checkpoint + $manualMovement + $paymentMovement;
+    }
+
+    /**
+     * Rekap gabungan aktivitas kasir menurut jenis penerimaan. Filter kasir
+     * tetap tersedia untuk audit satu operator tanpa mengubah susunan laporan.
      */
     public function rekapKasir(Request $request): View
     {
@@ -139,8 +298,15 @@ class KeuanganController extends Controller
             [$dari, $sampai] = [$sampai, $dari];
         }
 
+        $activityUserIds = OrderPayment::query()->whereNotNull('user_id')->pluck('user_id')
+            ->merge(CashDailyEntry::query()->whereNotNull('user_id')->pluck('user_id'))
+            ->unique();
+
         $kasirUsers = User::query()
-            ->whereIn('id', OrderPayment::query()->whereNotNull('user_id')->select('user_id')->distinct())
+            ->where(function ($query) use ($activityUserIds) {
+                $query->whereHas('role', fn ($role) => $role->where('name', 'kasir'))
+                    ->orWhereIn('id', $activityUserIds);
+            })
             ->orderBy('name')
             ->get(['id', 'name']);
         $selectedKasir = $kasirId ? $kasirUsers->firstWhere('id', $kasirId) : null;
@@ -162,102 +328,364 @@ class KeuanganController extends Controller
                 ->each(fn ($order) => $ordersByKey->put("{$type}-{$order->id}", $order));
         }
 
-        $rows = $payments->groupBy(fn (OrderPayment $p) => $p->user_id)
-            ->map(function ($group) {
-                $masuk = (float) $group->where('jumlah', '>', 0)->sum('jumlah');
-                $keluar = (float) $group->where('jumlah', '<', 0)->sum('jumlah') * -1;
+        $details = CashDailyEntry::query()
+            ->whereBetween('tanggal', [$dari, $sampai])
+            ->where(fn ($query) => $query
+                ->whereRaw('LOWER(keterangan) <> ?', ['saldo awal'])
+                ->orWhereDate('tanggal', $dari))
+            ->when($kasirId, fn ($query) => $query->where(fn ($scope) => $scope
+                ->whereNull('user_id')->orWhere('user_id', $kasirId)))
+            ->orderBy('tanggal')->orderBy('urutan')->get()
+            ->map(function (CashDailyEntry $entry) {
+                $description = $entry->keterangan;
+                $category = match (true) {
+                    $entry->user_id === null || strcasecmp($description, 'Saldo Awal') === 0 => 'opening',
+                    (float) $entry->kredit > 0 && str_starts_with(mb_strtolower($description), 'bayar via') => 'non_cash',
+                    str_starts_with(mb_strtolower($description), 'piutang ') => 'receivable',
+                    str_starts_with(mb_strtolower($description), 'dp -') || str_starts_with((string) $entry->no_nota, 'UM-') => 'advance',
+                    default => 'cash_note',
+                };
 
-                return [
-                    'user_id' => $group->first()->user_id,
-                    'kasir' => $group->first()->user?->name ?? '-',
-                    'jumlah_transaksi' => $group->count(),
-                    'masuk' => $masuk,
-                    'keluar' => $keluar,
-                    'net' => $masuk - $keluar,
-                ];
-            })
-            ->sortByDesc('net')
-            ->values();
-
-        $groups = $payments->groupBy(fn (OrderPayment $payment) => $payment->user_id ?: 0)
-            ->map(function (Collection $userPayments) use ($ordersByKey) {
-                $detail = collect();
-                foreach ($userPayments as $payment) {
-                    $order = $ordersByKey["{$payment->order_type}-{$payment->order_id}"] ?? null;
-                    $customer = $order?->customer?->NmCust ?: '-';
-                    $amount = (float) $payment->jumlah;
-                    $kind = OrderPayment::JENIS_LABELS[$payment->jenis] ?? ucfirst($payment->jenis);
-                    $method = OrderPayment::CARA_BAYAR_LABELS[$payment->cara_bayar] ?? ucfirst($payment->cara_bayar);
-                    $section = match ($payment->jenis) {
-                        'dp' => 'Uang Muka',
-                        'pelunasan_hutang' => 'Penerimaan Piutang',
-                        default => 'Penerimaan Nota Tunai',
-                    };
-
-                    if ($amount >= 0) {
-                        $detail->push([
-                            'section' => $section,
-                            'number' => $order?->NoOrder ?? '-',
-                            'description' => "{$kind} - {$customer}",
-                            'debit' => $amount,
-                            'credit' => 0.0,
-                        ]);
-                        if ($payment->cara_bayar !== 'tunai') {
-                            $detail->push([
-                                'section' => 'Penerimaan Tidak Tunai',
-                                'number' => '',
-                                'description' => "Bayar via {$method} - {$customer}",
-                                'debit' => 0.0,
-                                'credit' => $amount,
-                            ]);
-                        }
-                    } else {
-                        $detail->push([
-                            'section' => 'Refund / Pengeluaran Kas',
-                            'number' => $order?->NoOrder ?? '-',
-                            'description' => "Refund via {$method} - {$customer}",
-                            'debit' => 0.0,
-                            'credit' => abs($amount),
-                        ]);
-                    }
+                if ($category === 'advance' && $entry->no_nota) {
+                    $customer = trim((string) preg_replace('/^DP\s*-\s*/i', '', $description));
+                    $description = $entry->no_nota.' ('.$customer.')';
                 }
 
-                $sectionOrder = ['Saldo Awal', 'Penerimaan Nota Tunai', 'Penerimaan Piutang', 'Uang Muka', 'Penerimaan Tidak Tunai', 'Refund / Pengeluaran Kas'];
-                $sections = collect($sectionOrder)->map(function (string $name) use ($detail) {
-                    $sectionRows = $name === 'Saldo Awal'
-                        ? collect([['section' => $name, 'number' => '', 'description' => 'Saldo Awal', 'debit' => 0.0, 'credit' => 0.0]])
-                        : $detail->where('section', $name)->values();
-
-                    return [
-                        'name' => $name,
-                        'rows' => $sectionRows,
-                        'debit' => (float) $sectionRows->sum('debit'),
-                        'credit' => (float) $sectionRows->sum('credit'),
-                    ];
-                })->filter(fn (array $section) => $section['name'] === 'Saldo Awal' || $section['rows']->isNotEmpty())->values();
-
                 return [
-                    'user_id' => $userPayments->first()->user_id,
-                    'kasir' => $userPayments->first()->user?->name ?? '-',
-                    'details' => $detail,
-                    'sections' => $sections,
-                    'debit' => (float) $detail->sum('debit'),
-                    'credit' => (float) $detail->sum('credit'),
+                    'category' => $category,
+                    'description' => $description,
+                    'debit' => (float) $entry->debet,
+                    'credit' => (float) $entry->kredit,
+                    'user_id' => $entry->user_id,
+                    'sort' => '1-'.str_pad((string) $entry->urutan, 10, '0', STR_PAD_LEFT),
                 ];
-            })->sortBy('kasir')->values();
+            });
+
+        if (! $details->contains(fn (array $row) => $row['category'] === 'opening')) {
+            $openingBalance = $this->openingCashBalance($dari);
+            $details->prepend([
+                'category' => 'opening',
+                'description' => 'Saldo Awal',
+                'debit' => max(0, $openingBalance),
+                'credit' => max(0, -$openingBalance),
+                'user_id' => null,
+                'sort' => '0-opening',
+            ]);
+        }
+
+        foreach ($payments as $payment) {
+            $order = $ordersByKey["{$payment->order_type}-{$payment->order_id}"] ?? null;
+            $customer = $order?->customer?->NmCust ? mb_strtoupper($order->customer->NmCust) : '-';
+            $amount = (float) $payment->jumlah;
+            $method = OrderPayment::CARA_BAYAR_LABELS[$payment->cara_bayar] ?? ucfirst($payment->cara_bayar);
+            $baseSort = '2-'.$payment->created_at?->format('YmdHis').'-'.str_pad((string) $payment->id, 10, '0', STR_PAD_LEFT);
+
+            if ($amount < 0) {
+                $details->push([
+                    'category' => 'refund',
+                    'description' => "Refund via {$method} - {$customer}",
+                    'debit' => 0.0,
+                    'credit' => abs($amount),
+                    'user_id' => $payment->user_id,
+                    'sort' => $baseSort.'-0',
+                ]);
+
+                continue;
+            }
+
+            $category = match ($payment->jenis) {
+                'dp' => 'advance',
+                'pelunasan_hutang' => 'receivable',
+                default => 'cash_note',
+            };
+            $description = match ($category) {
+                'advance' => ($order?->NoOrder ?? 'DP').' ('.$customer.')',
+                'receivable' => 'Piutang '.$customer,
+                default => 'Nota '.($order?->NoOrder ?? '-').' ('.$customer.')',
+            };
+
+            $details->push([
+                'category' => $category,
+                'description' => $description,
+                'debit' => $amount,
+                'credit' => 0.0,
+                'user_id' => $payment->user_id,
+                'sort' => $baseSort.'-0',
+            ]);
+
+            if (in_array($payment->cara_bayar, ['transfer', 'qris'], true)) {
+                $details->push([
+                    'category' => 'non_cash',
+                    'description' => "Bayar via {$method} - {$customer}",
+                    'debit' => 0.0,
+                    'credit' => $amount,
+                    'user_id' => $payment->user_id,
+                    'sort' => $baseSort.'-1',
+                ]);
+            }
+        }
+
+        $details = $details->sortBy('sort')->values();
+        $sectionDefinitions = [
+            'opening' => 'Saldo Awal',
+            'cash_note' => 'Penerimaan Nota Tunai (Cash)',
+            'receivable' => 'Penerimaan Piutang',
+            'advance' => 'Uang Muka (DP)',
+            'non_cash' => 'Penerimaan Non Tunai (Transfer atau QRIS)',
+            'refund' => 'Refund / Pengeluaran Kas',
+        ];
+
+        $sections = collect($sectionDefinitions)->map(function (string $label, string $key) use ($details) {
+            $sectionRows = $details->where('category', $key);
+
+            // Laporan lama merangkum piutang per customer. Baris transaksi
+            // lain tetap dipertahankan agar nomor nota dan kanal bayar jelas.
+            if ($key === 'receivable') {
+                $sectionRows = $sectionRows->groupBy('description')->map(fn (Collection $rows) => [
+                    'description' => $rows->first()['description'],
+                    'debit' => (float) $rows->sum('debit'),
+                    'credit' => (float) $rows->sum('credit'),
+                ])->sortBy('description')->values();
+            } else {
+                $sectionRows = $sectionRows->map(fn (array $row) => [
+                    'description' => $row['description'],
+                    'debit' => $row['debit'],
+                    'credit' => $row['credit'],
+                ])->values();
+            }
+
+            return [
+                'key' => $key,
+                'label' => $label,
+                'rows' => $sectionRows,
+                'debit' => (float) $sectionRows->sum('debit'),
+                'credit' => (float) $sectionRows->sum('credit'),
+            ];
+        })->filter(fn (array $section) => $section['rows']->isNotEmpty())->values();
+
+        $totalDebet = (float) $details->sum('debit');
+        $totalKredit = (float) $details->sum('credit');
+        $cashierCount = $details->whereNotNull('user_id')->pluck('user_id')->unique()->count();
 
         return view('keuangan.rekap-kasir', [
             'dari' => $dari,
             'sampai' => $sampai,
-            'rows' => $rows,
-            'totalMasuk' => (float) $payments->where('jumlah', '>', 0)->sum('jumlah'),
-            'totalKeluar' => (float) $payments->where('jumlah', '<', 0)->sum('jumlah') * -1,
-            'jumlahTransaksi' => $payments->count(),
-            'groups' => $groups,
+            'sections' => $sections,
+            'totalDebet' => $totalDebet,
+            'totalKredit' => $totalKredit,
+            'saldoKas' => $totalDebet - $totalKredit,
+            'jumlahTransaksi' => $details->whereNotNull('user_id')->count(),
+            'cashierCount' => $cashierCount,
             'kasirUsers' => $kasirUsers,
             'kasirId' => $kasirId,
             'selectedKasir' => $selectedKasir,
         ]);
+    }
+
+    public function exportRekapKasirExcel(Request $request): BinaryFileResponse
+    {
+        $data = $this->rekapKasir($request)->getData();
+        $period = Carbon::parse($data['dari'])->translatedFormat('d F Y');
+        if ($data['dari'] !== $data['sampai']) {
+            $period .= ' s/d '.Carbon::parse($data['sampai'])->translatedFormat('d F Y');
+        }
+
+        $rows = [
+            [['value' => 'REKAP KASIR HARIAN SPEKTRUM', 'style' => 1]],
+            ['Periode', $period],
+            ['Kasir', $data['selectedKasir']?->name ?? 'Gabungan Semua Kasir'],
+            [],
+        ];
+
+        foreach ($data['sections'] as $section) {
+            $rows[] = [['value' => $section['label'], 'style' => 4]];
+            $rows[] = array_map(fn ($value) => ['value' => $value, 'style' => 2], ['Keterangan', 'Debet', 'Kredit']);
+            foreach ($section['rows'] as $row) {
+                $rows[] = [
+                    $row['description'],
+                    ['value' => (float) $row['debit'], 'style' => 3],
+                    ['value' => (float) $row['credit'], 'style' => 3],
+                ];
+            }
+            if ($section['key'] !== 'opening') {
+                $rows[] = [['value' => 'Sub Total', 'style' => 4], ['value' => $section['debit'], 'style' => 5], ['value' => $section['credit'], 'style' => 5]];
+            }
+            $rows[] = [];
+        }
+
+        $rows[] = [['value' => 'TOTAL', 'style' => 4], ['value' => $data['totalDebet'], 'style' => 5], ['value' => $data['totalKredit'], 'style' => 5]];
+        $rows[] = [null, ['value' => 'SALDO KAS', 'style' => 4], ['value' => $data['saldoKas'], 'style' => 5]];
+
+        return SimpleXlsx::download('rekap-kasir-'.$data['dari'].'-'.$data['sampai'].'.xlsx', 'Rekap Kasir', $rows);
+    }
+
+    /**
+     * Jurnal kronologis seluruh aktivitas kasir pada satu hari. Baris nota
+     * selalu mendahului pasangan pembayaran Transfer/QRIS pada waktu yang sama.
+     */
+    public function laporanKasirHarian(Request $request): View
+    {
+        $filters = $request->validate([
+            'tanggal' => ['nullable', 'date'],
+            'kasir' => ['nullable', 'integer', 'exists:users,id'],
+        ]);
+        $tanggal = $filters['tanggal'] ?? now()->format('Y-m-d');
+        $kasirId = isset($filters['kasir']) ? (int) $filters['kasir'] : null;
+
+        $activityUserIds = OrderPayment::query()->whereNotNull('user_id')->pluck('user_id')
+            ->merge(CashDailyEntry::query()->whereNotNull('user_id')->pluck('user_id'))
+            ->unique();
+        $kasirUsers = User::query()
+            ->where(function ($query) use ($activityUserIds) {
+                $query->whereHas('role', fn ($role) => $role->where('name', 'kasir'))
+                    ->orWhereIn('id', $activityUserIds);
+            })
+            ->orderBy('name')->get(['id', 'name']);
+        $selectedKasir = $kasirId ? $kasirUsers->firstWhere('id', $kasirId) : null;
+
+        $manualRows = CashDailyEntry::with('user')
+            ->whereDate('tanggal', $tanggal)
+            ->when($kasirId, fn ($query) => $query->where(fn ($scope) => $scope
+                ->whereNull('user_id')->orWhere('user_id', $kasirId)))
+            ->orderBy('occurred_at')->orderBy('urutan')->get()
+            ->map(function (CashDailyEntry $entry) {
+                $occurredAt = $entry->occurred_at
+                    ?? Carbon::parse($entry->tanggal)->startOfDay()->addSeconds($entry->urutan);
+
+                return [
+                    'occurred_at' => $occurredAt,
+                    'no_nota' => $entry->no_nota,
+                    'keterangan' => $entry->keterangan,
+                    'debet' => (float) $entry->debet,
+                    'kredit' => (float) $entry->kredit,
+                    'kasir' => $entry->user?->name,
+                    'user_id' => $entry->user_id,
+                    'sort' => $occurredAt->format('YmdHis').'-0-'.str_pad((string) $entry->urutan, 10, '0', STR_PAD_LEFT),
+                ];
+            });
+
+        if (! $manualRows->contains(fn (array $row) => $row['user_id'] === null && strcasecmp($row['keterangan'], 'Saldo Awal') === 0)) {
+            $opening = $this->openingCashBalance($tanggal);
+            $occurredAt = Carbon::parse($tanggal)->startOfDay();
+            $manualRows->prepend([
+                'occurred_at' => $occurredAt,
+                'no_nota' => null,
+                'keterangan' => 'Saldo Awal',
+                'debet' => max(0, $opening),
+                'kredit' => max(0, -$opening),
+                'kasir' => null,
+                'user_id' => null,
+                'sort' => $occurredAt->format('YmdHis').'-0-0000000000',
+            ]);
+        }
+
+        $payments = OrderPayment::with('user')
+            ->whereDate('created_at', $tanggal)
+            ->when($kasirId, fn ($query) => $query->where('user_id', $kasirId))
+            ->orderBy('created_at')->orderBy('id')->get();
+        $models = ['indoor' => OrderIndoor::class, 'outdoor' => OrderOutdoor::class, 'artwork' => OrderArtwork::class];
+        $ordersByKey = collect();
+
+        foreach ($payments->groupBy('order_type') as $type => $typePayments) {
+            $model = $models[$type] ?? null;
+            if (! $model) {
+                continue;
+            }
+
+            $model::query()->with('customer')->whereIn('id', $typePayments->pluck('order_id')->unique())->get()
+                ->each(fn ($order) => $ordersByKey->put("{$type}-{$order->id}", $order));
+        }
+
+        $paymentRows = $payments->flatMap(function (OrderPayment $payment) use ($ordersByKey) {
+            $order = $ordersByKey["{$payment->order_type}-{$payment->order_id}"] ?? null;
+            $customer = $order?->customer?->NmCust ? mb_strtoupper($order->customer->NmCust) : '-';
+            $amount = (float) $payment->jumlah;
+            $method = OrderPayment::CARA_BAYAR_LABELS[$payment->cara_bayar] ?? ucfirst($payment->cara_bayar);
+            $kind = OrderPayment::JENIS_LABELS[$payment->jenis] ?? ucfirst($payment->jenis);
+            $baseSort = $payment->created_at->format('YmdHis').'-1-'.str_pad((string) $payment->id, 10, '0', STR_PAD_LEFT);
+
+            if ($amount < 0) {
+                return [[
+                    'occurred_at' => $payment->created_at,
+                    'no_nota' => $order?->NoOrder,
+                    'keterangan' => "Refund via {$method} - {$customer}",
+                    'debet' => 0.0,
+                    'kredit' => abs($amount),
+                    'kasir' => $payment->user?->name,
+                    'user_id' => $payment->user_id,
+                    'sort' => $baseSort.'-0',
+                ]];
+            }
+
+            $rows = [[
+                'occurred_at' => $payment->created_at,
+                'no_nota' => $order?->NoOrder,
+                'keterangan' => "{$kind} - {$customer}",
+                'debet' => $amount,
+                'kredit' => 0.0,
+                'kasir' => $payment->user?->name,
+                'user_id' => $payment->user_id,
+                'sort' => $baseSort.'-0',
+            ]];
+
+            if (in_array($payment->cara_bayar, ['transfer', 'qris'], true)) {
+                $rows[] = [
+                    'occurred_at' => $payment->created_at,
+                    'no_nota' => null,
+                    'keterangan' => "Bayar via {$method} - {$customer}",
+                    'debet' => 0.0,
+                    'kredit' => $amount,
+                    'kasir' => $payment->user?->name,
+                    'user_id' => $payment->user_id,
+                    'sort' => $baseSort.'-1',
+                ];
+            }
+
+            return $rows;
+        });
+
+        $rows = $manualRows->concat($paymentRows)->sortBy('sort')->values();
+        $totalDebet = (float) $rows->sum('debet');
+        $totalKredit = (float) $rows->sum('kredit');
+
+        return view('keuangan.laporan-kasir-harian', [
+            'tanggal' => $tanggal,
+            'rows' => $rows,
+            'totalDebet' => $totalDebet,
+            'totalKredit' => $totalKredit,
+            'saldoKas' => $totalDebet - $totalKredit,
+            'jumlahTransaksi' => $rows->whereNotNull('user_id')->count(),
+            'kasirUsers' => $kasirUsers,
+            'kasirId' => $kasirId,
+            'selectedKasir' => $selectedKasir,
+        ]);
+    }
+
+    public function exportLaporanKasirHarianExcel(Request $request): BinaryFileResponse
+    {
+        $data = $this->laporanKasirHarian($request)->getData();
+        $rows = [
+            [['value' => 'LAPORAN KASIR HARIAN SPEKTRUM', 'style' => 1]],
+            ['Tanggal', Carbon::parse($data['tanggal'])->translatedFormat('d F Y')],
+            ['Kasir', $data['selectedKasir']?->name ?? 'Semua Kasir'],
+            [],
+            array_map(fn ($value) => ['value' => $value, 'style' => 2], ['Tanggal & Jam', 'No. Nota', 'Keterangan', 'Debet', 'Kredit']),
+        ];
+
+        foreach ($data['rows'] as $row) {
+            $rows[] = [
+                $row['occurred_at']->format('d/m/Y H:i'),
+                $row['no_nota'] ?: '',
+                $row['keterangan'],
+                ['value' => (float) $row['debet'], 'style' => 3],
+                ['value' => (float) $row['kredit'], 'style' => 3],
+            ];
+        }
+
+        $rows[] = [null, null, ['value' => 'TOTAL', 'style' => 4], ['value' => $data['totalDebet'], 'style' => 5], ['value' => $data['totalKredit'], 'style' => 5]];
+        $rows[] = [null, null, null, ['value' => 'SALDO KAS', 'style' => 4], ['value' => $data['saldoKas'], 'style' => 5]];
+
+        return SimpleXlsx::download('laporan-kasir-harian-'.$data['tanggal'].'.xlsx', 'Laporan Kasir', $rows);
     }
 
     /**

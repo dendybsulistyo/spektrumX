@@ -214,6 +214,7 @@
                                                 <p class="mx-2 rounded-md border border-slate-200 bg-slate-100 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-600">Kas, Pembelian & Piutang</p>
                                                 <a href="{{ route('keuangan.kas-harian') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.kas-harian')) }}">Kas Harian</a>
                                                 <a href="{{ route('keuangan.rekap-kasir') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.rekap-kasir*')) }}">Rekap Kasir per User</a>
+                                                <a href="{{ route('keuangan.laporan-kasir-harian') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.laporan-kasir-harian')) }}">Laporan Kasir Harian</a>
                                                 <a href="{{ route('akuntansi.kas-bank') }}" class="{{ $dropdownLink(request()->routeIs('akuntansi.kas-bank')) }}">Buku Kas & Bank</a>
                                                 <a href="{{ route('akuntansi.purchases.index') }}" class="{{ $dropdownLink(request()->routeIs('akuntansi.purchases.*')) }}">Pembelian & Hutang Supplier</a>
                                                 <a href="{{ route('akuntansi.purchases.report') }}" class="{{ $dropdownLink(request()->routeIs('akuntansi.purchases.report')) }}">Laporan Pembelian</a>
@@ -542,6 +543,7 @@
                                 <div class="mx-2 my-2 border-t border-slate-200"></div><p class="mx-2 rounded-md border border-slate-200 bg-slate-100 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-600">Kas, Pembelian & Piutang</p>
                                 <a href="{{ route('keuangan.kas-harian') }}" class="{{ $mobileLink(request()->routeIs('keuangan.kas-harian')) }}">Kas Harian</a>
                                 <a href="{{ route('keuangan.rekap-kasir') }}" class="{{ $mobileLink(request()->routeIs('keuangan.rekap-kasir*')) }}">Rekap Kasir per User</a>
+                                <a href="{{ route('keuangan.laporan-kasir-harian') }}" class="{{ $mobileLink(request()->routeIs('keuangan.laporan-kasir-harian')) }}">Laporan Kasir Harian</a>
                                 <a href="{{ route('akuntansi.kas-bank') }}" class="{{ $mobileLink(request()->routeIs('akuntansi.kas-bank')) }}">Buku Kas & Bank</a>
                                 <a href="{{ route('akuntansi.purchases.index') }}" class="{{ $mobileLink(request()->routeIs('akuntansi.purchases.*')) }}">Pembelian & Hutang Supplier</a>
                                 <a href="{{ route('akuntansi.purchases.report') }}" class="{{ $mobileLink(request()->routeIs('akuntansi.purchases.report')) }}">Laporan Pembelian</a>

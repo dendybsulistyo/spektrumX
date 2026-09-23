@@ -19,6 +19,7 @@
             #industry-cetak .item-row:last-child { border-bottom: none; }
             #industry-cetak .progress-tag { font-family: var(--font-heading); font-weight: 600; font-size: 13px; color: var(--color-text-muted, #666); }
         </style>
+        <x-operator-workspace-styles />
     @endpush
 
     @php
