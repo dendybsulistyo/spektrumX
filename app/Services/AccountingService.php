@@ -38,6 +38,8 @@ class AccountingService
 
     public const AKUN_PENJUALAN = '41000';
 
+    public const AKUN_POTONGAN_PENJUALAN = '41003';
+
     public const AKUN_PPN_KELUARAN = '22105';
 
     public const AKUN_GAJI = '61001';
@@ -103,6 +105,28 @@ class AccountingService
             'akun' => $line['akun'],
             'debet' => $line['kredit'],
         ], $this->salesCreditLines($total));
+    }
+
+    /**
+     * Break a tax-inclusive late sales discount into contra revenue and the
+     * related output-tax correction. This preserves the original sales
+     * journal and records the reduction as a separate auditable posting.
+     *
+     * @return array<int, array{akun: string, debet: float}>
+     */
+    public function finalSalesDiscountDebitLines(float $total): array
+    {
+        $rate = $this->salesTaxRate ??= (float) PengaturanKeuangan::current()->tarif_ppn_default;
+        $dpp = $rate > 0 ? round($total / (1 + $rate / 100)) : $total;
+        $ppn = round($total - $dpp);
+
+        $lines = [['akun' => self::AKUN_POTONGAN_PENJUALAN, 'debet' => $dpp]];
+
+        if ($ppn > 0) {
+            $lines[] = ['akun' => self::AKUN_PPN_KELUARAN, 'debet' => $ppn];
+        }
+
+        return $lines;
     }
 
     /**

@@ -53,7 +53,9 @@
                         <div class="blueprint text-muted" style="padding: var(--space-6); text-align: center;">Tidak ada order di antrian cetak.</div>
                     @endforelse
                 </div>
-            @endforeach
+            @endforeach 
         </div>
     </div>
 </x-app-layout>
+
+<!-- wire:ignore -->

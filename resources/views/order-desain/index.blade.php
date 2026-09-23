@@ -308,8 +308,7 @@
                                             @php
                                                 $layoutRevision = $layoutRevisionItems->get($item->id);
                                                 $isLayoutRevision = $layoutRevision !== null;
-                                                $canEditNmFile = auth()->user()->hasPermission('order-desain.nmfile-manage')
-                                                    || auth()->user()->hasPermission('order-desain.manage');
+                                                $canEditNmFile = auth()->user()->hasPermission('order-desain.nmfile-manage');
                                             @endphp
                                             @if ($isLayoutRevision)
                                                 <span class="tag tag-outline revision-source-tag"
@@ -327,7 +326,8 @@
                                                            style="width: {{ $isLayoutRevision ? '190px' : '140px' }}; {{ $isLayoutRevision ? 'border-color:#f59e0b; background:#fffbeb;' : '' }}">
                                                 </form>
                                             @else
-                                                <span class="text-muted" style="white-space: nowrap;" title="Nama file hanya dapat diubah Operator File atau Operator Layout">{{ $item->NmFile ?: '-' }}</span>
+                                                <input type="text" value="{{ $item->NmFile }}" class="in-input" style="width: 140px;" disabled
+                                                       title="Nama File hanya dapat dilihat oleh Operator Layout">
                                             @endif
                                             @can('order-desain.manage')
                                                 <form method="POST" action="{{ route('order-desain.gabungan', $item) }}">

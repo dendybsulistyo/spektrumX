@@ -574,6 +574,8 @@ class KasirController extends Controller
         ]);
 
         $sisaPiutang = (float) $order->jumlah_piutang;
+        $totalFinal = Rupiah::bulatkan($order->diskonStatus() === 'approved' ? $order->totalSetelahDiskon() : (float) $order->total);
+        $dpDiterima = (float) $order->jumlah_dibayar;
 
         if ($rincianError = $this->checkRincian($data['rincian'], $sisaPiutang)) {
             return back()->with('error', $rincianError)->withInput();
@@ -581,7 +583,7 @@ class KasirController extends Controller
 
         [$rincian, $kembalian] = $this->capRincianToTarget($data['rincian'], $sisaPiutang);
 
-        DB::transaction(function () use ($order, $type, $sisaPiutang, $rincian) {
+        DB::transaction(function () use ($order, $type, $sisaPiutang, $totalFinal, $dpDiterima, $rincian) {
             $caraBayar = $this->dominantCaraBayar($rincian);
             $noReferensi = $this->dominantNoReferensi($rincian);
 
@@ -591,7 +593,7 @@ class KasirController extends Controller
                 'kasir_user_id' => auth()->id(),
                 'cara_bayar' => $caraBayar,
                 'no_referensi' => $noReferensi,
-                'jumlah_dibayar' => $order->total,
+                'jumlah_dibayar' => $totalFinal,
                 'jumlah_piutang' => 0,
             ]);
 
@@ -611,8 +613,8 @@ class KasirController extends Controller
                 now()->format('Y-m-d'), $order->NoOrder, 'Pelunasan DP '.$order->NoOrder,
                 [
                     ...$this->kasLines($rincian, AccountingService::kodeBantuCustomer($order->customer?->KdCust)),
-                    ['akun' => AccountingService::AKUN_UANG_MUKA_PENJUALAN, 'debet' => (float) $order->total - $sisaPiutang, 'kd_bantu' => AccountingService::kodeBantuCustomer($order->customer?->KdCust)],
-                    ...$this->accounting->salesCreditLines((float) $order->total),
+                    ['akun' => AccountingService::AKUN_UANG_MUKA_PENJUALAN, 'debet' => $dpDiterima, 'kd_bantu' => AccountingService::kodeBantuCustomer($order->customer?->KdCust)],
+                    ...$this->accounting->salesCreditLines($totalFinal),
                 ]
             );
         });

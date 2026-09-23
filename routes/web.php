@@ -14,6 +14,7 @@ use App\Http\Controllers\DataWarehouseController;
 use App\Http\Controllers\DetailIndoorController;
 use App\Http\Controllers\DiskonApprovalController;
 use App\Http\Controllers\FileMonitorController;
+use App\Http\Controllers\FinalSalesDiscountController;
 use App\Http\Controllers\GunggunganController;
 use App\Http\Controllers\GunggunganHistoricalJournalController;
 use App\Http\Controllers\HargaArtworkController;
@@ -137,6 +138,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/keuangan/rekap-kasir/excel', [KeuanganController::class, 'exportRekapKasirExcel'])->name('keuangan.rekap-kasir.excel');
         Route::get('/keuangan/laporan-kasir-harian', [KeuanganController::class, 'laporanKasirHarian'])->name('keuangan.laporan-kasir-harian');
         Route::get('/keuangan/laporan-kasir-harian/excel', [KeuanganController::class, 'exportLaporanKasirHarianExcel'])->name('keuangan.laporan-kasir-harian.excel');
+        Route::get('/keuangan/potongan-penjualan-akhir', [FinalSalesDiscountController::class, 'index'])->name('keuangan.final-sales-discounts.index');
         Route::get('/keuangan/rekap-kasir/{kasir}/customer', [KeuanganController::class, 'rekapKasirCustomer'])->name('keuangan.rekap-kasir.customer');
         Route::get('/keuangan/rekap-customer', [KeuanganController::class, 'rekapCustomer'])->name('keuangan.rekap-customer');
         Route::get('/keuangan/piutang', [KeuanganController::class, 'piutang'])->name('keuangan.piutang');
@@ -164,6 +166,7 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::middleware('permission:keuangan.pengaturan')->group(function () {
+        Route::post('/keuangan/potongan-penjualan-akhir', [FinalSalesDiscountController::class, 'store'])->name('keuangan.final-sales-discounts.store');
         Route::post('/keuangan/laporan-ppn/draft', [KeuanganController::class, 'simpanDraftPpn'])->name('keuangan.laporan-ppn.draft');
         Route::post('/keuangan/laporan-ppn/{laporanPpnFinal}/finalkan', [KeuanganController::class, 'finalkanPpn'])->name('keuangan.laporan-ppn.finalkan');
     });

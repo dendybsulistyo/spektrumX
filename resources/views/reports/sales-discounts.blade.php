@@ -1,5 +1,5 @@
 <x-app-layout>
-    <x-slot name="header"><h2 class="font-semibold text-xl text-gray-800">Laporan Potongan Penjualan</h2></x-slot>
+    <x-slot name="header"><h2 class="font-semibold text-xl text-gray-800">Rekap Potongan Penjualan</h2></x-slot>
     <style>
         .sales-discount-report { color:#111827; }
         .sales-discount-report table { width:100%; border-collapse:collapse; font-size:12px; }
@@ -25,11 +25,11 @@
             <button type="button" onclick="window.print()" class="rounded-md bg-slate-800 px-4 py-2 text-sm font-semibold text-white">Cetak</button>
         </div>
         <section class="bg-white p-5 shadow-sm">
-            <div class="mb-4"><h1 class="text-base font-bold">LAPORAN POTONGAN PENJUALAN - SPEKTRUM</h1><p class="text-sm font-semibold">Periode: {{ \Carbon\Carbon::parse($from)->translatedFormat('d F Y') }} s/d {{ \Carbon\Carbon::parse($to)->translatedFormat('d F Y') }}</p></div>
+            <div class="mb-4"><h1 class="text-base font-bold">REKAP POTONGAN PENJUALAN - SPEKTRUM</h1><p class="text-sm font-semibold">Periode: {{ \Carbon\Carbon::parse($from)->translatedFormat('d F Y') }} s/d {{ \Carbon\Carbon::parse($to)->translatedFormat('d F Y') }}</p></div>
             <table>
-                <thead><tr><th style="width:20%;">Tanggal</th><th style="width:24%;">No. Order</th><th>Customer</th><th style="width:23%;">Discount</th></tr></thead>
-                <tbody>@forelse($rows as $row)<tr><td style="text-align:center;">{{ \Carbon\Carbon::parse($row->date)->format('d-m-Y') }}</td><td>{{ $row->order }}</td><td>{{ $row->customer }}</td><td class="number">{{ number_format($row->discount,0,',','.') }}</td></tr>@empty<tr><td colspan="4" style="padding:28px;text-align:center;">Tidak ada potongan penjualan yang disetujui pada periode ini.</td></tr>@endforelse</tbody>
-                <tfoot><tr><td colspan="3" class="number"><strong>Total Discount</strong></td><td class="number"><strong>{{ number_format($totalDiscount,0,',','.') }}</strong></td></tr></tfoot>
+                <thead><tr><th>Tanggal</th><th>No. Order</th><th>Customer</th><th>Jenis</th><th>Nilai Awal</th><th>Potongan</th><th>Nilai Akhir</th></tr></thead>
+                <tbody>@forelse($rows as $row)<tr><td style="text-align:center;">{{ \Carbon\Carbon::parse($row->date)->format('d-m-Y') }}</td><td>{{ $row->order }}</td><td>{{ $row->customer }}</td><td>{{ $row->category }}</td><td class="number">{{ number_format($row->initial,0,',','.') }}</td><td class="number">{{ number_format($row->discount,0,',','.') }}</td><td class="number">{{ number_format($row->final,0,',','.') }}</td></tr>@empty<tr><td colspan="7" style="padding:28px;text-align:center;">Tidak ada potongan penjualan pada periode ini.</td></tr>@endforelse</tbody>
+                <tfoot><tr><td colspan="5" class="number"><strong>Total Potongan</strong></td><td class="number"><strong>{{ number_format($totalDiscount,0,',','.') }}</strong></td><td></td></tr></tfoot>
             </table>
         </section>
     </div></div>

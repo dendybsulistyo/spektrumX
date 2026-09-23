@@ -6,6 +6,7 @@ use App\Models\BahanCetakOutdoor;
 use App\Models\Customer;
 use App\Models\HargaCetakOutdoor;
 use App\Models\OrderArtwork;
+use App\Models\FinalSalesDiscount;
 use App\Models\OrderIndoor;
 use App\Models\OrderOutdoor;
 use App\Models\OrderPayment;
@@ -430,7 +431,7 @@ class ReportController extends Controller
                 ->whereNotNull('diskon_approved_at')
                 ->orderBy('TglOrder')->orderBy('NoOrder')->get()
                 ->each(function ($order) use (&$rows) {
-                    $discount = $order->diskonNominal();
+                    $discount = $order->diskonAwalNominal();
                     if ($discount <= 0) {
                         return;
                     }
@@ -438,10 +439,31 @@ class ReportController extends Controller
                         'date' => $order->TglOrder,
                         'order' => $order->NoOrder,
                         'customer' => $order->customer?->NmCust ?? '-',
+                        'category' => 'Diskon sebelum pembayaran',
+                        'initial' => (float) $order->total,
                         'discount' => $discount,
+                        'final' => (float) $order->total - $discount,
                     ]);
                 });
         }
+
+        FinalSalesDiscount::query()
+            ->with('customer')
+            ->whereBetween('transaction_date', [$from, $to])
+            ->orderBy('transaction_date')
+            ->orderBy('id')
+            ->get()
+            ->each(function (FinalSalesDiscount $adjustment) use (&$rows) {
+                $rows->push((object) [
+                    'date' => $adjustment->transaction_date,
+                    'order' => $adjustment->order_number,
+                    'customer' => $adjustment->customer?->NmCust ?? '-',
+                    'category' => 'Potongan akhir',
+                    'initial' => $adjustment->initial_amount - $adjustment->discount_before,
+                    'discount' => $adjustment->discount_amount,
+                    'final' => $adjustment->final_amount,
+                ]);
+            });
 
         $rows = $rows->sortBy(fn ($row) => $row->date.'|'.$row->order)->values();
 

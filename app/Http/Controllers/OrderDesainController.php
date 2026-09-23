@@ -169,18 +169,16 @@ class OrderDesainController extends Controller
      * Nama file desain per outdoor item — sama pola simpan/submit dengan
      * updateGabungan() (auto-submit onchange di view).
      *
-     * Operator File dapat mengelola nama file seperti sebelumnya. Operator
-     * Layout juga dapat mengubahnya selama item masih berada di tahap Layout.
+     * Nama File dikelola oleh Operator File. Di halaman Operator Layout nilai
+     * ini hanya ditampilkan sebagai referensi dan tidak dapat diperbarui.
      */
     public function updateNmFile(Request $request, OrderOutdoorDetail $item): RedirectResponse
     {
         $layoutRevision = $this->activeLayoutRevisionFor($item);
         $user = auth()->user();
         $canEditAsFileOperator = $user->hasPermission('order-desain.nmfile-manage');
-        $canEditAsLayoutOperator = $user->hasPermission('order-desain.manage')
-            && ($item->qtyAt(self::STAGE) > 0 || $layoutRevision);
 
-        abort_unless($canEditAsFileOperator || $canEditAsLayoutOperator, 403);
+        abort_unless($canEditAsFileOperator, 403);
 
         $data = $request->validate([
             'NmFile' => [$layoutRevision ? 'required' : 'nullable', 'string', 'max:255'],

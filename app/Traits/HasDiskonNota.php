@@ -35,7 +35,7 @@ trait HasDiskonNota
 
     public function diskonStatus(): string
     {
-        if ($this->diskon_approved_at) {
+        if ($this->diskon_approved_at || (float) ($this->diskon_akhir_nominal ?? 0) > 0) {
             return 'approved';
         }
 
@@ -51,6 +51,11 @@ trait HasDiskonNota
     }
 
     public function diskonNominal(): float
+    {
+        return Rupiah::bulatkan($this->diskonAwalNominal() + (float) ($this->diskon_akhir_nominal ?? 0));
+    }
+
+    public function diskonAwalNominal(): float
     {
         if ($this->diskon_tipe === 'nominal') {
             return Rupiah::bulatkan((float) $this->diskon_nominal_tetap);
@@ -80,6 +85,10 @@ trait HasDiskonNota
      */
     public function diskonApprovedLabel(): string
     {
+        if ((float) ($this->diskon_akhir_nominal ?? 0) > 0) {
+            return 'Rp '.number_format($this->diskonNominal(), 0, ',', '.');
+        }
+
         if ($this->diskon_tipe === 'nominal') {
             return 'Rp '.number_format((float) $this->diskon_nominal_tetap, 0, ',', '.');
         }

@@ -234,6 +234,14 @@
         box-shadow: 0 0 0 2px rgba(37, 99, 235, .12);
     }
 
+    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .in-input:disabled {
+        background: #edf1f5;
+        color: #69768a;
+        border-color: #d6dee8;
+        cursor: not-allowed;
+        opacity: 1;
+    }
+
     :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .in-btn {
         min-height: 32px;
         padding: 6px 10px;
