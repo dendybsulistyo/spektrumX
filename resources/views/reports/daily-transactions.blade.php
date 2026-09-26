@@ -51,7 +51,7 @@
                             <tr>
                                 <td class="center">{{ \Carbon\Carbon::parse($row->date)->format('d-m-Y') }}</td>
                                 <td class="document-number">
-                                    @forelse ($row->invoices as $number)<div>{{ $number }}</div>@empty - @endforelse
+                                    @foreach ($row->invoices as $number)<div>{{ $number }}</div>@endforeach
                                 </td><td>{{ $row->customer }}</td><td>{{ $row->product }}</td><td>{{ $row->description }}</td>
                                 <td class="number">{{ number_format((float) $row->length, 2, ',', '.') }}</td>
                                 <td class="number">{{ number_format((float) $row->width, 2, ',', '.') }}</td>
@@ -64,7 +64,7 @@
                                 <td class="number">{{ $row->credit > 0 ? number_format($row->credit, 0, ',', '.') : '-' }}</td>
                             </tr>
                         @empty
-                            <tr><td colspan="14" class="center" style="padding:28px">Belum ada transaksi pada tanggal ini.</td></tr>
+                            <tr><td colspan="14" class="center" style="padding:28px">Belum ada transaksi berinvoice pada tanggal ini.</td></tr>
                         @endforelse
                         </tbody>
                         <tfoot class="font-bold"><tr>

@@ -58,6 +58,10 @@ class ReportController extends Controller
 
             $orders->each(function ($order) use ($type, $documents, &$rows) {
                     $orderDocuments = $documents->get($order->id, collect());
+                    if ($orderDocuments->isEmpty()) {
+                        return;
+                    }
+
                     $rawItems = match ($type) {
                         'indoor' => $order->detailItems(),
                         'outdoor' => $order->items()->with('hargaCetak')->get(),
