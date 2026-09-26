@@ -19,6 +19,31 @@ class LaporanAkuntansiController extends Controller
     {
         [$dari, $sampai] = $this->dates($request);
         $entries = JurnalEntry::query()->whereBetween('TgTrans', [$dari, $sampai])->orderBy('TgTrans')->orderBy('NoTrans')->get();
+
+        // Koreksi pembelian tetap tersimpan lengkap di ledger untuk audit.
+        // Pada Jurnal Umum, tampilkan hanya posting terakhir setiap pembelian
+        // agar jurnal asal dan jurnal pembalik tidak membingungkan pengguna.
+        $currentPurchaseJournals = AccountingPurchase::query()
+            ->whereNotNull('no_trans_jurnal')
+            ->get(['nomor_bukti', 'no_trans_jurnal'])
+            ->mapWithKeys(fn (AccountingPurchase $purchase) => [
+                mb_substr($purchase->nomor_bukti, 0, 20) => $purchase->no_trans_jurnal,
+            ]);
+        $correctedPurchaseProofs = JurnalEntry::query()
+            ->where('KetMT', 'like', 'Koreksi pembelian %')
+            ->pluck('Bukti')
+            ->flip();
+
+        $entries = $entries->reject(function (JurnalEntry $entry) use ($correctedPurchaseProofs, $currentPurchaseJournals): bool {
+            $currentJournal = $currentPurchaseJournals->get($entry->Bukti);
+
+            if ($currentJournal) {
+                return $entry->NoTrans !== $currentJournal;
+            }
+
+            return $correctedPurchaseProofs->has($entry->Bukti);
+        })->values();
+
         $names = Akun::whereIn('NoAkun', $entries->pluck('NoAkun')->unique())->pluck('NmAkun', 'NoAkun');
 
         return view('akuntansi.jurnal-umum', compact('dari', 'sampai', 'entries', 'names'));
