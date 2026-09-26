@@ -124,7 +124,7 @@
                             </td>
                             <td class="px-4 py-3 text-right">
                                 <div class="flex justify-end gap-2">
-                                    <button type="button" onclick="document.getElementById('sheet-detail-{{ $sheet->id }}').showModal()" class="rounded border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100">Lihat</button>
+                                    {{-- <button type="button" onclick="document.getElementById('sheet-detail-{{ $sheet->id }}').showModal()" class="rounded border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100">Lihat</button> --}}
                                     @if (! $sheet->claimed_at)
                                         @can('file-monitor.view')
                                             <button type="button" onclick="document.getElementById('sheet-claim-{{ $sheet->id }}').showModal()" class="rounded bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700">Ambil</button>
