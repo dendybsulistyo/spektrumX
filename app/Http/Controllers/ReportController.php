@@ -11,6 +11,7 @@ use App\Models\OrderIndoor;
 use App\Models\OrderOutdoor;
 use App\Models\OrderPayment;
 use App\Models\PrinterOutdoor;
+use App\Services\OrderDocumentService;
 use App\Services\OrderPricingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -18,7 +19,10 @@ use Illuminate\View\View;
 
 class ReportController extends Controller
 {
-    public function __construct(private readonly OrderPricingService $pricing) {}
+    public function __construct(
+        private readonly OrderPricingService $pricing,
+        private readonly OrderDocumentService $documents,
+    ) {}
 
     public function priceListOutdoor(): View
     {
@@ -404,6 +408,7 @@ class ReportController extends Controller
 
                     $rows->push((object) [
                         'date' => $order->TglOrder, 'order' => $order->NoOrder,
+                        'sales_order' => $this->documents->number($order, 'so'),
                         'delivery_orders' => $orderDocuments->where('kind', 'do')->pluck('number')->values(),
                         'invoices' => $orderDocuments->where('kind', 'inv')->pluck('number')->values(),
                         'customer' => $order->customer?->NmCust ?? '-',
