@@ -88,7 +88,12 @@ class AccountingPurchaseController extends Controller
 
         return view('akuntansi.purchases.edit', [
             'purchase' => $purchase,
-            'suppliers' => AccountingSupplier::where('is_active', true)->orWhereKey($purchase->supplier_id)->orderBy('nama')->get(),
+            'suppliers' => AccountingSupplier::query()
+                ->where(fn ($query) => $query
+                    ->where('is_active', true)
+                    ->orWhere('id', $purchase->supplier_id))
+                ->orderBy('nama')
+                ->get(),
             'accounts' => Akun::where('TipeDK', 'D')->orderBy('NoAkun')->get(),
             'inventoryItems' => AccountingInventoryItem::where('is_active', true)->orderBy('nama')->get(),
             'taxRate' => (float) PengaturanKeuangan::current()->tarif_ppn_default,
