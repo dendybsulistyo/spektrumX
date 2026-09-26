@@ -16,12 +16,38 @@
                 @endif
             </form>
 
+            <div id="file-live-queues"
+                 data-endpoint="{{ route('file.live-queue-stats') }}"
+                 class="ml-auto flex flex-wrap items-stretch justify-end gap-2"
+                 aria-live="polite">
+                @can('customer-service.view')
+                    <a href="{{ route('customer-service.job-sheets.index', ['tab' => 'pending']) }}"
+                       class="group inline-flex min-w-[172px] items-center gap-3 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-blue-800 transition hover:border-blue-300 hover:bg-blue-100">
+                        <span class="relative flex h-2.5 w-2.5 shrink-0">
+                            <span id="file-live-pulse" class="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-400 opacity-50"></span>
+                            <span class="relative inline-flex h-2.5 w-2.5 rounded-full bg-blue-600"></span>
+                        </span>
+                        <span class="min-w-0">
+                            <span class="block text-[10px] font-bold uppercase tracking-wider text-blue-600">Antrean CS · Live</span>
+                            <span class="mt-0.5 block text-xs font-semibold"><strong id="file-cs-pending-count" class="text-base">{{ $liveQueueStats['cs_pending_count'] }}</strong> bisa diambil</span>
+                            <span class="block text-[10px] text-blue-600"><span id="file-cs-pending-items">{{ $liveQueueStats['cs_pending_items'] }}</span> item menunggu</span>
+                        </span>
+                    </a>
+                @else
+                    <div class="inline-flex min-w-[172px] items-center gap-3 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-blue-800">
+                        <span class="relative flex h-2.5 w-2.5 shrink-0"><span id="file-live-pulse" class="relative inline-flex h-2.5 w-2.5 rounded-full bg-blue-600"></span></span>
+                        <span><span class="block text-[10px] font-bold uppercase tracking-wider text-blue-600">Antrean CS · Live</span><span class="mt-0.5 block text-xs font-semibold"><strong id="file-cs-pending-count" class="text-base">{{ $liveQueueStats['cs_pending_count'] }}</strong> bisa diambil</span><span class="block text-[10px] text-blue-600"><span id="file-cs-pending-items">{{ $liveQueueStats['cs_pending_items'] }}</span> item menunggu</span></span>
+                    </div>
+                @endcan
+
             @can('kasir.replacement.manage')
                 <a href="{{ route('kasir.index', ['tab' => 'replacement']) }}"
-                   class="ml-auto inline-flex items-center px-3 py-1.5 bg-rose-50 text-rose-700 border border-rose-200 text-xs font-semibold rounded-md hover:bg-rose-100">
-                    Nota Pengganti ({{ $replacementCount }})
+                   class="inline-flex items-center px-3 py-2 bg-rose-50 text-rose-700 border border-rose-200 text-xs font-semibold rounded-md hover:bg-rose-100">
+                    Nota Pengganti (<span id="file-replacement-count">{{ $replacementCount }}</span>)
                 </a>
             @endcan
+                <span id="file-live-status" class="sr-only">Terakhir diperbarui {{ $liveQueueStats['checked_at'] }}</span>
+            </div>
         </div>
 
         <div class="overflow-x-auto">
@@ -66,4 +92,57 @@
             {{ $files->links() }}
         </div>
     </div>
+
+    <script>
+        (() => {
+            const widget = document.getElementById('file-live-queues');
+            if (!widget) return;
+
+            const pendingCount = document.getElementById('file-cs-pending-count');
+            const pendingItems = document.getElementById('file-cs-pending-items');
+            const replacementCount = document.getElementById('file-replacement-count');
+            const pulse = document.getElementById('file-live-pulse');
+            const liveStatus = document.getElementById('file-live-status');
+            let fetching = false;
+
+            const updateText = (element, value) => {
+                if (!element || element.textContent === String(value)) return;
+                element.textContent = value;
+                element.classList.add('scale-125');
+                window.setTimeout(() => element.classList.remove('scale-125'), 250);
+            };
+
+            const refresh = async () => {
+                if (fetching || document.hidden) return;
+                fetching = true;
+
+                try {
+                    const response = await fetch(widget.dataset.endpoint, {
+                        headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                        cache: 'no-store',
+                    });
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    const stats = await response.json();
+
+                    updateText(pendingCount, stats.cs_pending_count);
+                    updateText(pendingItems, stats.cs_pending_items);
+                    updateText(replacementCount, stats.replacement_count);
+                    pulse?.classList.remove('bg-amber-500');
+                    pulse?.classList.add('bg-blue-600');
+                    widget.title = `Data diperbarui pukul ${stats.checked_at}`;
+                    if (liveStatus) liveStatus.textContent = `Terakhir diperbarui ${stats.checked_at}`;
+                } catch (error) {
+                    pulse?.classList.remove('bg-blue-600');
+                    pulse?.classList.add('bg-amber-500');
+                    widget.title = 'Pembaruan antrean tertunda. Angka terakhir tetap ditampilkan.';
+                } finally {
+                    fetching = false;
+                }
+            };
+
+            const timer = window.setInterval(refresh, 5000);
+            document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
+            window.addEventListener('pagehide', () => window.clearInterval(timer), { once: true });
+        })();
+    </script>
 </x-app-layout>

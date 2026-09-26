@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\CustomerServiceJobSheet;
 use App\Models\OrderArtwork;
 use App\Models\OrderIndoor;
 use App\Models\OrderOutdoor;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
@@ -72,9 +74,34 @@ class FileMonitorController extends Controller
 
         $headers->setCollection($files);
 
-        // Surfaced here (Operator File's main working page) as a shortcut
-        // into Kasir's Nota Pengganti tab, since Operator File is who
-        // actually creates nota pengganti — see kasir.replacement.manage.
+        $liveQueueStats = $this->queueStats();
+
+        return view('file.index', [
+            'files' => $headers,
+            'replacementCount' => $liveQueueStats['replacement_count'],
+            'liveQueueStats' => $liveQueueStats,
+        ]);
+    }
+
+    public function liveQueueStats(): JsonResponse
+    {
+        return response()
+            ->json($this->queueStats())
+            ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+    }
+
+    /**
+     * Lightweight counters polled by the Operator File page. The job-sheet
+     * query only reads unclaimed rows; no order/file list is rebuilt.
+     *
+     * @return array{cs_pending_count:int, cs_pending_items:int, cs_oldest_received_at:?string, replacement_count:int, checked_at:string}
+     */
+    private function queueStats(): array
+    {
+        $pendingSheets = CustomerServiceJobSheet::query()
+            ->whereNull('claimed_at')
+            ->get(['items', 'received_at']);
+
         $replacementCount = 0;
         foreach ([OrderIndoor::class, OrderOutdoor::class, OrderArtwork::class] as $model) {
             $replacementCount += $model::query()
@@ -84,7 +111,13 @@ class FileMonitorController extends Controller
                 ->count();
         }
 
-        return view('file.index', ['files' => $headers, 'replacementCount' => $replacementCount]);
+        return [
+            'cs_pending_count' => $pendingSheets->count(),
+            'cs_pending_items' => $pendingSheets->sum(fn (CustomerServiceJobSheet $sheet) => count($sheet->items ?? [])),
+            'cs_oldest_received_at' => $pendingSheets->min('received_at')?->format('d/m/Y'),
+            'replacement_count' => $replacementCount,
+            'checked_at' => now()->format('H:i:s'),
+        ];
     }
 
     /**
