@@ -2,11 +2,11 @@
     <x-slot name="header"><h2 class="font-semibold text-xl text-gray-800">Rekap Order Belum Di-Invoice</h2></x-slot>
     <style>
         .uninvoiced-report { color:#111827; font-size:10px; }
-        .uninvoiced-report table { width:100%; border-collapse:collapse; font-size:7px; }
-        .uninvoiced-report th,.uninvoiced-report td { border:1px solid #64748b; padding:2px 3px; vertical-align:top; line-height:1.25; }
-        .uninvoiced-report th { background:#e2e8f0; text-align:center; white-space:nowrap; }
+        .uninvoiced-report table { width:100%; border-collapse:collapse; table-layout:auto; }
+        .uninvoiced-report th,.uninvoiced-report td { border:1px solid #64748b; padding:1px 2px !important; vertical-align:top; font-size:6px !important; line-height:1.1 !important; }
+        .uninvoiced-report th { background:#e2e8f0; text-align:center; white-space:nowrap; font-size:6px !important; font-weight:700; }
         .uninvoiced-report .number { text-align:right; white-space:nowrap; }
-        .uninvoiced-report .document-number { min-width:112px; line-height:1.25; white-space:nowrap; }
+        .uninvoiced-report .document-number { min-width:98px; line-height:1.1 !important; white-space:nowrap; }
         .uninvoiced-report .filter-panel { margin-bottom:8px; padding:8px; gap:8px; border-radius:4px; }
         .uninvoiced-report .filter-panel form { gap:8px; }
         .uninvoiced-report .filter-panel label { font-size:13px; font-weight:600; }
@@ -20,8 +20,8 @@
             @page { size:A4 landscape; margin:7mm; }
             body { background:#fff !important; } header,nav,.no-print { display:none !important; } main { padding:0 !important; }
             .uninvoiced-report section { box-shadow:none !important; padding:0 !important; }
-            .uninvoiced-report table { font-family:Arial,sans-serif; font-size:6.75pt; }
-            .uninvoiced-report th,.uninvoiced-report td { padding:2px 3px; }
+            .uninvoiced-report table { font-family:Arial,sans-serif; }
+            .uninvoiced-report th,.uninvoiced-report td { padding:1px 2px !important; font-size:5.5pt !important; line-height:1.05 !important; }
             .uninvoiced-report thead { display:table-header-group; } .uninvoiced-report tr { break-inside:avoid; }
         }
     </style>
