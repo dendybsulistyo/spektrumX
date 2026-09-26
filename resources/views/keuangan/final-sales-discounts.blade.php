@@ -17,8 +17,8 @@
 
             <section class="rounded-lg border border-slate-200 bg-white shadow-sm">
                 <div class="border-b border-slate-200 px-5 py-4">
-                    <h3 class="text-base font-semibold text-slate-900">Cari SO yang sudah masuk keuangan</h3>
-                    <p class="mt-1 text-sm text-slate-500">Nilai SO awal tetap utuh. Potongan dicatat sebagai koreksi terpisah beserta jurnal dan penyelesaian piutang/refund.</p>
+                    <h3 class="text-base font-semibold text-slate-900">Sales Order tercatat</h3>
+                    <p class="mt-1 text-sm text-slate-500">Input Potongan dicatat sebagai koreksi terpisah</p>
                 </div>
                 <form method="GET" class="grid items-end gap-3 px-5 py-4 md:grid-cols-[minmax(260px,1fr)_170px_170px_auto]">
                     <label class="text-xs font-semibold uppercase tracking-wide text-slate-600">Order atau customer

@@ -95,6 +95,7 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware('permission:monitoring-kinerja.view')->group(function () {
         Route::get('/monitoring-kinerja', [MonitoringKinerjaController::class, 'index'])->name('monitoring-kinerja.index');
+        Route::get('/monitoring-kinerja/staf/{staff}', [MonitoringKinerjaController::class, 'show'])->name('monitoring-kinerja.show');
     });
 
     Route::middleware('permission:monitoring-transaksi.view')->group(function () {

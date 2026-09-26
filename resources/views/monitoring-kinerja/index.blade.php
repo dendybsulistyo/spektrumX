@@ -49,9 +49,16 @@
                         </tr>
                     </thead>
                     <tbody class="divide-y">
-                        @forelse ($staffRows as $row)
+                        @forelse ($staffRows as $staffId => $row)
                             <tr>
-                                <td class="px-3 py-2 font-semibold text-gray-900">{{ $row['name'] }}</td>
+                                <td class="px-3 py-2 font-semibold">
+                                    <a href="{{ route('monitoring-kinerja.show', ['staff' => $staffId, 'from' => $from, 'to' => $to]) }}"
+                                       class="inline-flex items-center gap-1.5 text-blue-700 hover:text-blue-900 hover:underline"
+                                       title="Lihat detail kinerja {{ $row['name'] }}">
+                                        {{ $row['name'] }}
+                                        <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 18l6-6-6-6"/></svg>
+                                    </a>
+                                </td>
                                 @foreach ($stages as $stage)
                                     <td class="px-3 py-2 text-right text-gray-600">{{ $row['counts'][$stage] ?? '-' }}</td>
                                 @endforeach
