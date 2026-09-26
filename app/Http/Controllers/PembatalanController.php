@@ -53,15 +53,27 @@ class PembatalanController extends Controller
                 });
         }
 
-        OrderReworkRequest::query()
+        $reworkRequests = OrderReworkRequest::query()
             ->where('action', 'batal')
             ->pending()
             ->with('requestedBy')
             ->orderBy('requested_at')
-            ->get()
-            ->each(function (OrderReworkRequest $req) use (&$rows, $models) {
-                $model = $models[$req->order_type] ?? null;
-                $order = $model ? $model::with('customer')->find($req->order_id) : null;
+            ->get();
+
+        $reworkOrders = collect();
+        foreach ($reworkRequests->groupBy('order_type') as $orderType => $requests) {
+            $model = $models[$orderType] ?? null;
+            if (! $model) {
+                continue;
+            }
+
+            $model::query()->with('customer')->whereIn('id', $requests->pluck('order_id')->unique())->get()
+                ->each(fn ($order) => $reworkOrders->put($orderType.':'.$order->id, $order));
+        }
+
+        $reworkRequests
+            ->each(function (OrderReworkRequest $req) use (&$rows, $reworkOrders) {
+                $order = $reworkOrders->get($req->order_type.':'.$req->order_id);
 
                 if (! $order) {
                     return;

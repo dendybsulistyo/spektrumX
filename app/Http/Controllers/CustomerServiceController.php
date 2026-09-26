@@ -7,6 +7,7 @@ use App\Models\CustomerServiceJobSheet;
 use App\Models\OrderIndoor;
 use App\Models\OrderOutdoor;
 use App\Models\OrderStatusNote;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -45,23 +46,7 @@ class CustomerServiceController extends Controller
             : null;
         $keyword = trim($filters['q'] ?? '');
 
-        $claimedQuery = CustomerServiceJobSheet::query()
-            ->whereNotNull('claimed_at')
-            ->when($from, fn ($query) => $query->whereDate('claimed_at', '>=', $from))
-            ->when($to, fn ($query) => $query->whereDate('claimed_at', '<=', $to))
-            ->when($keyword !== '', function ($query) use ($keyword): void {
-                $query->where(function ($search) use ($keyword): void {
-                    $search->where('customer_name', 'like', "%{$keyword}%")
-                        ->orWhere('customer_code', 'like', "%{$keyword}%")
-                        ->orWhere('pc', 'like', "%{$keyword}%")
-                        ->orWhere('folder_file', 'like', "%{$keyword}%")
-                        ->orWhere('opf', 'like', "%{$keyword}%")
-                        ->orWhere('items', 'like', "%{$keyword}%")
-                        ->orWhereHas('claimant', fn ($user) => $user->where('name', 'like', "%{$keyword}%"));
-                });
-            });
-
-        $jobSheets = CustomerServiceJobSheet::with(['creator', 'customer', 'claimant'])
+        $jobSheets = CustomerServiceJobSheet::query()
             ->when($tab === 'claimed', fn ($query) => $query->whereNotNull('claimed_at'))
             ->when($tab === 'pending', fn ($query) => $query->whereNull('claimed_at'))
             ->when($tab === 'claimed' && $from, fn ($query) => $query->whereDate('claimed_at', '>=', $from))
@@ -82,9 +67,28 @@ class CustomerServiceController extends Controller
             ->latest('id')
             ->paginate(25)
             ->withQueryString();
-        $pendingCount = CustomerServiceJobSheet::whereNull('claimed_at')->count();
+
+        $userIds = $jobSheets->getCollection()
+            ->flatMap(fn (CustomerServiceJobSheet $sheet) => [$sheet->created_by, $sheet->claimed_by])
+            ->filter()
+            ->unique();
+        $usersById = $userIds->isEmpty()
+            ? collect()
+            : User::query()
+                ->select(['id', 'name'])
+                ->whereKey($userIds)
+                ->get()
+                ->keyBy('id');
+        $jobSheets->getCollection()->each(function (CustomerServiceJobSheet $sheet) use ($usersById): void {
+            $sheet->setRelation('creator', $usersById->get($sheet->created_by));
+            $sheet->setRelation('claimant', $usersById->get($sheet->claimed_by));
+        });
+
+        $pendingCount = $tab === 'pending'
+            ? $jobSheets->total()
+            : CustomerServiceJobSheet::whereNull('claimed_at')->count();
         $claimedCount = $tab === 'claimed'
-            ? (clone $claimedQuery)->count()
+            ? $jobSheets->total()
             : CustomerServiceJobSheet::whereNotNull('claimed_at')
                 ->whereDate('claimed_at', '>=', now()->subMonth()->toDateString())
                 ->whereDate('claimed_at', '<=', now()->toDateString())

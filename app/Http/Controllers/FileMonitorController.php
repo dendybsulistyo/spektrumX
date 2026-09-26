@@ -9,6 +9,7 @@ use App\Models\OrderOutdoor;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
@@ -100,7 +101,8 @@ class FileMonitorController extends Controller
     {
         $pendingSheets = CustomerServiceJobSheet::query()
             ->whereNull('claimed_at')
-            ->get(['received_at']);
+            ->selectRaw('COUNT(*) as total, MIN(received_at) as oldest_received_at')
+            ->first();
 
         $replacementCount = 0;
         foreach ([OrderIndoor::class, OrderOutdoor::class, OrderArtwork::class] as $model) {
@@ -112,8 +114,10 @@ class FileMonitorController extends Controller
         }
 
         return [
-            'cs_pending_count' => $pendingSheets->count(),
-            'cs_oldest_received_at' => $pendingSheets->min('received_at')?->format('d/m/Y'),
+            'cs_pending_count' => (int) $pendingSheets->total,
+            'cs_oldest_received_at' => $pendingSheets->oldest_received_at
+                ? Carbon::parse($pendingSheets->oldest_received_at)->format('d/m/Y')
+                : null,
             'replacement_count' => $replacementCount,
             'checked_at' => now()->format('H:i:s'),
         ];

@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\AccountingSupplier;
 use App\Models\AccountingOpeningBalance;
+use App\Models\AccountingSupplier;
 use App\Models\JurnalEntry;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -16,6 +16,15 @@ class AccountingSupplierController extends Controller
     {
         $search = trim($request->string('search')->toString());
         $suppliers = AccountingSupplier::query()
+            ->select([
+                'id',
+                'kode_bantu',
+                'nama',
+                'npwp',
+                'alamat',
+                'saldo_awal',
+                'is_active',
+            ])
             ->when($search, fn ($query) => $query->where(fn ($query) => $query->where('kode_bantu', 'like', "%{$search}%")->orWhere('nama', 'like', "%{$search}%")))
             ->orderBy('kode_bantu')->get();
 

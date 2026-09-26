@@ -831,8 +831,19 @@ class KeuanganController extends Controller
                 ->get();
 
             $models = ['Indoor' => OrderIndoor::class, 'Outdoor' => OrderOutdoor::class, 'Artwork' => OrderArtwork::class];
+            $customerCodes = $customers->pluck('KdCust');
+            $totalsByType = collect();
 
-            $rows = $customers->map(function (Customer $customer) use ($models) {
+            foreach ($models as $label => $model) {
+                $totalsByType->put($label, $model::query()
+                    ->whereIn('KdCust', $customerCodes)
+                    ->selectRaw('KdCust, COUNT(*) as jumlah_order, COALESCE(SUM(total), 0) as total_nilai, COALESCE(SUM(jumlah_dibayar), 0) as total_dibayar, COALESCE(SUM(jumlah_piutang), 0) as total_piutang')
+                    ->groupBy('KdCust')
+                    ->get()
+                    ->keyBy('KdCust'));
+            }
+
+            $rows = $customers->map(function (Customer $customer) use ($models, $totalsByType) {
                 $jumlahOrder = 0;
                 $totalNilai = 0.0;
                 $totalDibayar = 0.0;
@@ -840,17 +851,17 @@ class KeuanganController extends Controller
                 $perTipe = [];
 
                 foreach ($models as $label => $model) {
-                    $orders = $model::where('KdCust', $customer->KdCust)->get(['total', 'jumlah_dibayar', 'jumlah_piutang']);
+                    $totals = $totalsByType->get($label)->get($customer->KdCust);
 
-                    if ($orders->isEmpty()) {
+                    if (! $totals) {
                         continue;
                     }
 
-                    $jumlahOrder += $orders->count();
-                    $totalNilai += (float) $orders->sum('total');
-                    $totalDibayar += (float) $orders->sum('jumlah_dibayar');
-                    $totalPiutang += (float) $orders->sum('jumlah_piutang');
-                    $perTipe[] = "{$label} {$orders->count()}";
+                    $jumlahOrder += (int) $totals->jumlah_order;
+                    $totalNilai += (float) $totals->total_nilai;
+                    $totalDibayar += (float) $totals->total_dibayar;
+                    $totalPiutang += (float) $totals->total_piutang;
+                    $perTipe[] = "{$label} {$totals->jumlah_order}";
                 }
 
                 return [
@@ -1313,9 +1324,16 @@ class KeuanganController extends Controller
             $report = LaporanPpnFinal::lockForUpdate()->findOrFail($laporanPpnFinal->id);
             abort_if($report->status === 'final', 422, 'Laporan ini sudah dikunci.');
             abort_unless($report->items()->exists(), 422, 'Pilih minimal satu transaksi.');
+
+            $report->load('items');
+            $invoices = app(OrderDocumentService::class)->invoiceQuery()
+                ->whereIn('order_type', $report->items->pluck('order_type')->unique())
+                ->whereIn('order_id', $report->items->pluck('order_id')->unique())
+                ->get()
+                ->keyBy(fn ($invoice) => $invoice->order_type.'-'.$invoice->order_id);
+
             foreach ($report->items as $item) {
-                $invoice = app(OrderDocumentService::class)->invoiceQuery()
-                    ->where('order_type', $item->order_type)->where('order_id', $item->order_id)->first();
+                $invoice = $invoices->get($item->order_type.'-'.$item->order_id);
                 abort_unless($invoice && $invoice->number === $item->no_order
                     && substr($invoice->issued_at, 0, 7) === $report->periode
                     && abs((float) $invoice->total - (float) $item->total) < 0.01,

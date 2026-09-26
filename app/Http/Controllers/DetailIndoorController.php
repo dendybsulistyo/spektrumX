@@ -12,8 +12,12 @@ class DetailIndoorController extends Controller
 {
     public function index(Request $request): View
     {
+        $kategoriList = Kategori::query()
+            ->select(['KdDivs', 'NmDivs', 'NoUrut'])
+            ->orderBy('NoUrut')
+            ->get();
+
         $produk = Produk::query()
-            ->with('kategori')
             ->join('kategori_produk_indoor', 'kategori_produk_indoor.KdDivs', '=', 'produk_indoor.KdDivs')
             ->when($request->filled('search'), function ($q) use ($request) {
                 $search = $request->string('search');
@@ -26,7 +30,13 @@ class DetailIndoorController extends Controller
             ->paginate(30)
             ->withQueryString();
 
+        $kategoriByCode = $kategoriList->keyBy('KdDivs');
+        $produk->getCollection()->each(
+            fn (Produk $item) => $item->setRelation('kategori', $kategoriByCode->get($item->KdDivs))
+        );
+
         $bertingkat = HargaBertingkat::query()
+            ->select(['KdProd', 'BatasA', 'BatasZ', 'Harga'])
             ->whereIn('KdProd', $produk->pluck('KdProd'))
             ->orderBy('KdProd')
             ->orderBy('BatasA')
@@ -35,7 +45,7 @@ class DetailIndoorController extends Controller
 
         return view('detail-indoor.index', [
             'produk' => $produk,
-            'kategoriList' => Kategori::orderBy('NoUrut')->get(),
+            'kategoriList' => $kategoriList,
             'bertingkat' => $bertingkat,
         ]);
     }

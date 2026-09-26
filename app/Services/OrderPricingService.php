@@ -18,6 +18,20 @@ use Illuminate\Support\Collection;
 
 class OrderPricingService
 {
+    private ?Collection $printerNames = null;
+
+    private ?Collection $bahanNames = null;
+
+    private array $produkCache = [];
+
+    private array $artworkCache = [];
+
+    private array $outdoorSpecialPriceCache = [];
+
+    private ?float $cuttingValue = null;
+
+    private ?float $artworkCuttingValue = null;
+
     /**
      * Indoor Panjang/Lebar are entered in whatever unit the product's Satuan
      * implies (e.g. "sqcm" → centimeters, "sqm" → meters) — HargaStd is
@@ -72,8 +86,14 @@ class OrderPricingService
         $hargaStd = $harga->HargaStd;
 
         if ($kdCust) {
-            $khusus = HargaCetakOutdoorKhusus::where('KdCust', $kdCust)->where('KdCtk', $harga->KdCtk)->first();
-            $hargaStd = $khusus->HargaStd ?? $hargaStd;
+            $cacheKey = $kdCust.'|'.$harga->KdCtk;
+            if (! array_key_exists($cacheKey, $this->outdoorSpecialPriceCache)) {
+                $this->outdoorSpecialPriceCache[$cacheKey] = HargaCetakOutdoorKhusus::query()
+                    ->where('KdCust', $kdCust)
+                    ->where('KdCtk', $harga->KdCtk)
+                    ->value('HargaStd');
+            }
+            $hargaStd = $this->outdoorSpecialPriceCache[$cacheKey] ?? $hargaStd;
         }
 
         // Area-based pricing (harga per m²) almost never lands on a round
@@ -180,8 +200,12 @@ class OrderPricingService
      */
     public function detailedLineItems(string $type, OrderIndoor|OrderOutdoor|OrderArtwork $order, Collection $rawItems): Collection
     {
-        $printerNames = PrinterOutdoor::pluck('NmPrn', 'KdPrn');
-        $bahanNames = BahanCetakOutdoor::pluck('NmBhn', 'NoCetak');
+        $printerNames = $type === 'outdoor'
+            ? ($this->printerNames ??= PrinterOutdoor::pluck('NmPrn', 'KdPrn'))
+            : collect();
+        $bahanNames = $type === 'outdoor'
+            ? ($this->bahanNames ??= BahanCetakOutdoor::pluck('NmBhn', 'NoCetak'))
+            : collect();
 
         return $rawItems->map(function ($item) use ($type, $order, $printerNames, $bahanNames) {
             [$name, $subtotal, $hargaSatuan, $bahan, $printer, $breakdown] = match ($type) {
@@ -190,8 +214,8 @@ class OrderPricingService
                 // catalog/formula that specific line was priced from.
                 'indoor' => (function () use ($item) {
                     if ($item->isArtwork()) {
-                        $harga = HargaArtwork::where('KdProd', $item->KdProd)->with('kategori')->first();
-                        $nilaiX = $harga?->isJasaPotong() ? KonfigurasiJasaPotongArtwork::current()->nilai_x : null;
+                        $harga = $this->artwork($item->KdProd, true);
+                        $nilaiX = $harga?->isJasaPotong() ? $this->artworkCuttingValue() : null;
 
                         return [
                             $item->Judul,
@@ -208,8 +232,8 @@ class OrderPricingService
                         ];
                     }
 
-                    $produk = Produk::where('KdProd', $item->KdProd)->with('kategori')->first();
-                    $nilaiX = $produk?->isPjLb === Produk::PJLB_QTY_ALT ? KonfigurasiJasaPotong::current()->nilai_x : null;
+                    $produk = $this->produk($item->KdProd);
+                    $nilaiX = $produk?->isPjLb === Produk::PJLB_QTY_ALT ? $this->cuttingValue() : null;
 
                     return [
                         $item->Judul,
@@ -254,8 +278,8 @@ class OrderPricingService
                     return [$item->NmFile, $subtotal, $hargaSatuan, $bahan, $printer, null];
                 })(),
                 'artwork' => (function () use ($item) {
-                    $harga = HargaArtwork::where('KdProd', $item->KdProd)->first();
-                    $nilaiX = $harga?->isJasaPotong() ? KonfigurasiJasaPotongArtwork::current()->nilai_x : null;
+                    $harga = $this->artwork($item->KdProd);
+                    $nilaiX = $harga?->isJasaPotong() ? $this->artworkCuttingValue() : null;
 
                     return [
                         $item->Judul,
@@ -309,5 +333,38 @@ class OrderPricingService
         }
 
         return 'Jasa Potong: (PisauTurun '.$item->PisauTurun.' × JumlahKertas '.$item->JumlahKertas.' × TebalKertas '.$item->TebalKertas.') ÷ 10 + Rp '.number_format($nilaiX, 0, ',', '.');
+    }
+
+    private function produk(?string $code): ?Produk
+    {
+        $key = (string) $code;
+        if (! array_key_exists($key, $this->produkCache)) {
+            $this->produkCache[$key] = Produk::query()->where('KdProd', $key)->with('kategori')->first();
+        }
+
+        return $this->produkCache[$key];
+    }
+
+    private function artwork(?string $code, bool $withCategory = false): ?HargaArtwork
+    {
+        $key = (string) $code;
+        if (! array_key_exists($key, $this->artworkCache)) {
+            $query = HargaArtwork::query()->where('KdProd', $key);
+            $this->artworkCache[$key] = $withCategory ? $query->with('kategori')->first() : $query->first();
+        } elseif ($withCategory && $this->artworkCache[$key] && ! $this->artworkCache[$key]->relationLoaded('kategori')) {
+            $this->artworkCache[$key]->load('kategori');
+        }
+
+        return $this->artworkCache[$key];
+    }
+
+    private function cuttingValue(): float
+    {
+        return $this->cuttingValue ??= (float) KonfigurasiJasaPotong::current()->nilai_x;
+    }
+
+    private function artworkCuttingValue(): float
+    {
+        return $this->artworkCuttingValue ??= (float) KonfigurasiJasaPotongArtwork::current()->nilai_x;
     }
 }

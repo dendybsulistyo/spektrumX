@@ -13,8 +13,12 @@ class HargaArtworkController extends Controller
 {
     public function index(Request $request): View
     {
+        $kategoriList = Kategori::query()
+            ->select(['KdDivs', 'NmDivs', 'NoUrut'])
+            ->orderBy('NoUrut')
+            ->get();
+
         $hargaArtwork = HargaArtwork::query()
-            ->with('kategori')
             ->when($request->filled('search'), function ($q) use ($request) {
                 $search = $request->string('search');
                 $q->where('NmProd', 'like', "%{$search}%")
@@ -25,9 +29,14 @@ class HargaArtworkController extends Controller
             ->paginate(15)
             ->withQueryString();
 
+        $kategoriByCode = $kategoriList->keyBy('KdDivs');
+        $hargaArtwork->getCollection()->each(
+            fn (HargaArtwork $item) => $item->setRelation('kategori', $kategoriByCode->get($item->KdDivs))
+        );
+
         return view('harga-artwork.index', [
             'hargaArtwork' => $hargaArtwork,
-            'kategoriList' => Kategori::orderBy('NoUrut')->get(),
+            'kategoriList' => $kategoriList,
         ]);
     }
 

@@ -19,7 +19,8 @@ class CashAdjustmentController extends Controller
         $cashier = $this->cashier();
         $adjustments = CashDailyEntry::query()
             ->cashAdjustments()
-            ->with('user')
+            ->select(['id', 'tanggal', 'occurred_at', 'user_id', 'no_nota', 'keterangan', 'debet', 'kredit'])
+            ->with('user:id,name')
             ->latest('occurred_at')
             ->latest('id')
             ->paginate(25);
@@ -76,6 +77,9 @@ class CashAdjustmentController extends Controller
 
     private function cashier(): ?User
     {
-        return User::query()->whereRaw('LOWER(email) = ?', [self::CASHIER_EMAIL])->first();
+        return User::query()
+            ->select(['id', 'name'])
+            ->whereRaw('LOWER(email) = ?', [self::CASHIER_EMAIL])
+            ->first();
     }
 }

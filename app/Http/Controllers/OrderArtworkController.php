@@ -266,17 +266,19 @@ class OrderArtworkController extends Controller
      */
     private function saveItems(OrderArtwork $order, array $items): void
     {
+        $productNames = HargaArtwork::query()
+            ->whereIn('KdProd', collect($items)->pluck('KdProd')->unique())
+            ->pluck('NmProd', 'KdProd');
+
         foreach ($items as $index => $item) {
             $seq = str_pad((string) ($index + 1), 2, '0', STR_PAD_LEFT);
             $brsOrder = $order->NoOrder.$seq;
-
-            $produk = HargaArtwork::where('KdProd', $item['KdProd'])->first();
 
             OrderArtworkDetail::create([
                 'order_artwork_id' => $order->id,
                 'BrsOrder' => $brsOrder,
                 'KdProd' => $item['KdProd'],
-                'NmProd' => $produk->NmProd ?? '',
+                'NmProd' => $productNames->get($item['KdProd'], ''),
                 'Judul' => $item['Judul'],
                 'Panjang' => $item['Panjang'],
                 'Lebar' => $item['Lebar'],

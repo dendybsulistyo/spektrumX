@@ -260,6 +260,8 @@ class CustomerController extends Controller
         $isVip = (bool) ($data['is_vip'] ?? false);
 
         if ($isVip) {
+            $customer->loadMissing('limit');
+
             CustomerLimit::updateOrCreate(
                 ['KdCust' => $customer->KdCust],
                 ['Batas' => $data['Batas'], 'Total' => $customer->limit?->Total ?? 0]

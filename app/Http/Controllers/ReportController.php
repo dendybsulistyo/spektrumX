@@ -4,9 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\BahanCetakOutdoor;
 use App\Models\Customer;
+use App\Models\FinalSalesDiscount;
 use App\Models\HargaCetakOutdoor;
 use App\Models\OrderArtwork;
-use App\Models\FinalSalesDiscount;
 use App\Models\OrderIndoor;
 use App\Models\OrderOutdoor;
 use App\Models\OrderPayment;
@@ -46,8 +46,24 @@ class ReportController extends Controller
         $rows = collect();
 
         foreach (['indoor' => OrderIndoor::class, 'outdoor' => OrderOutdoor::class, 'artwork' => OrderArtwork::class] as $type => $model) {
-            $orders = $model::query()->with('customer')->whereDate('TglOrder', $date)
-                ->where('status', '!=', 'batal')->orderBy('NoOrder')->get();
+            $table = (new $model)->getTable();
+            $relations = $type === 'outdoor' ? ['customer', 'items.hargaCetak'] : ['customer', 'items'];
+            $orders = $model::query()
+                ->with($relations)
+                ->where('TglOrder', $date)
+                ->where('status', '!=', 'batal')
+                ->whereExists(fn ($query) => $query->selectRaw('1')
+                    ->from('order_documents')
+                    ->where('kind', 'inv')
+                    ->where('order_type', $type)
+                    ->whereColumn('order_id', $table.'.id'))
+                ->orderBy('NoOrder')
+                ->get();
+
+            if ($orders->isEmpty()) {
+                continue;
+            }
+
             $documents = DB::table('order_documents')
                 ->where('order_type', $type)
                 ->whereIn('order_id', $orders->pluck('id'))
@@ -55,58 +71,53 @@ class ReportController extends Controller
                 ->orderBy('sequence')
                 ->get(['order_id', 'kind', 'number'])
                 ->groupBy('order_id');
+            $payments = OrderPayment::query()
+                ->where('order_type', $type)
+                ->whereIn('order_id', $orders->pluck('id'))
+                ->get(['order_id', 'jumlah'])
+                ->groupBy('order_id');
 
-            $orders->each(function ($order) use ($type, $documents, &$rows) {
-                    $orderDocuments = $documents->get($order->id, collect());
-                    if ($orderDocuments->isEmpty()) {
-                        return;
-                    }
+            $orders->each(function ($order) use ($type, $documents, $payments, &$rows) {
+                $orderDocuments = $documents->get($order->id, collect());
+                $items = $this->pricing->detailedLineItems($type, $order, $order->items);
+                $gross = (float) $items->sum('subtotal');
+                $net = $order->diskonStatus() === 'approved' ? $order->totalSetelahDiskon() : (float) $order->total;
+                $discount = max(0, $gross - $net);
+                $paid = max(0, min($net, (float) $payments->get($order->id, collect())->sum('jumlah')));
+                $credit = max(0, $net - $paid);
 
-                    $rawItems = match ($type) {
-                        'indoor' => $order->detailItems(),
-                        'outdoor' => $order->items()->with('hargaCetak')->get(),
-                        'artwork' => $order->items,
-                    };
-                    $items = $this->pricing->detailedLineItems($type, $order, $rawItems);
-                    $gross = (float) $items->sum('subtotal');
-                    $net = $order->diskonStatus() === 'approved' ? $order->totalSetelahDiskon() : (float) $order->total;
-                    $discount = max(0, $gross - $net);
-                    $payments = OrderPayment::forOrder($type, $order->id)->get();
-                    $paid = max(0, min($net, (float) $payments->sum('jumlah')));
-                    $credit = max(0, $net - $paid);
+                if ($items->isEmpty()) {
+                    $items = collect([(object) ['name' => '-', 'bahan' => '-', 'printer' => null,
+                        'panjang' => 0, 'lebar' => 0, 'qty' => 0, 'harga_satuan' => null,
+                        'subtotal' => $gross, 'breakdown' => null]]);
+                }
 
-                    if ($items->isEmpty()) {
-                        $items = collect([(object) ['name' => '-', 'bahan' => '-', 'printer' => null,
-                            'panjang' => 0, 'lebar' => 0, 'qty' => 0, 'harga_satuan' => null,
-                            'subtotal' => $gross, 'breakdown' => null]]);
-                    }
+                $allocatedDiscount = 0.0;
+                $allocatedPaid = 0.0;
+                $allocatedCredit = 0.0;
+                foreach ($items->values() as $index => $item) {
+                    $last = $index === $items->count() - 1;
+                    $ratio = $gross > 0 ? (float) $item->subtotal / $gross : ($last ? 1 : 0);
+                    $lineDiscount = $last ? $discount - $allocatedDiscount : round($discount * $ratio);
+                    $linePaid = $last ? $paid - $allocatedPaid : round($paid * $ratio);
+                    $lineCredit = $last ? $credit - $allocatedCredit : round($credit * $ratio);
+                    $allocatedDiscount += $lineDiscount;
+                    $allocatedPaid += $linePaid;
+                    $allocatedCredit += $lineCredit;
 
-                    $allocatedDiscount = 0.0;
-                    $allocatedPaid = 0.0;
-                    $allocatedCredit = 0.0;
-                    foreach ($items->values() as $index => $item) {
-                        $last = $index === $items->count() - 1;
-                        $ratio = $gross > 0 ? (float) $item->subtotal / $gross : ($last ? 1 : 0);
-                        $lineDiscount = $last ? $discount - $allocatedDiscount : round($discount * $ratio);
-                        $linePaid = $last ? $paid - $allocatedPaid : round($paid * $ratio);
-                        $lineCredit = $last ? $credit - $allocatedCredit : round($credit * $ratio);
-                        $allocatedDiscount += $lineDiscount;
-                        $allocatedPaid += $linePaid;
-                        $allocatedCredit += $lineCredit;
-
-                        $rows->push((object) [
-                            'date' => $order->TglOrder, 'number' => $order->NoOrder,
-                            'invoices' => $orderDocuments->where('kind', 'inv')->pluck('number')->values(),
-                            'customer' => $order->customer?->NmCust ?? '-',
-                            'product' => collect([$item->printer, $item->bahan])->filter()->implode(' / ') ?: '-',
-                            'description' => collect([$item->name, $item->breakdown])->filter()->implode(' — '),
-                            'length' => $item->panjang, 'width' => $item->lebar, 'qty' => $item->qty,
-                            'price' => $item->harga_satuan, 'subtotal' => (float) $item->subtotal,
-                            'discount' => $lineDiscount, 'total' => (float) $item->subtotal - $lineDiscount,
-                            'cash' => $linePaid, 'credit' => $lineCredit,
-                        ]);
-                    }
-                });
+                    $rows->push((object) [
+                        'date' => $order->TglOrder, 'number' => $order->NoOrder,
+                        'invoices' => $orderDocuments->pluck('number')->values(),
+                        'customer' => $order->customer?->NmCust ?? '-',
+                        'product' => collect([$item->printer, $item->bahan])->filter()->implode(' / ') ?: '-',
+                        'description' => collect([$item->name, $item->breakdown])->filter()->implode(' — '),
+                        'length' => $item->panjang, 'width' => $item->lebar, 'qty' => $item->qty,
+                        'price' => $item->harga_satuan, 'subtotal' => (float) $item->subtotal,
+                        'discount' => $lineDiscount, 'total' => (float) $item->subtotal - $lineDiscount,
+                        'cash' => $linePaid, 'credit' => $lineCredit,
+                    ]);
+                }
+            });
         }
 
         $rows = $rows->sortBy(fn ($row) => $row->number.'|'.$row->description)->values();
@@ -246,24 +257,23 @@ class ReportController extends Controller
 
         if ($selectedCustomer) {
             foreach (['indoor' => OrderIndoor::class, 'outdoor' => OrderOutdoor::class, 'artwork' => OrderArtwork::class] as $type => $model) {
-                $orders = $model::query()->where('KdCust', $customerCode)->where('status_bayar', 'lunas')
+                $relations = $type === 'outdoor' ? ['items.hargaCetak'] : ['items'];
+                $orders = $model::query()->with($relations)->where('KdCust', $customerCode)->where('status_bayar', 'lunas')
                     ->where('status', '!=', 'batal')->whereBetween('TglOrder', [$from, $to])
                     ->orderBy('TglOrder')->orderBy('NoOrder')->get();
                 $invoiceNumbers = DB::table('order_documents')->where('kind', 'inv')->where('order_type', $type)
                     ->whereIn('order_id', $orders->pluck('id'))->orderByDesc('sequence')
                     ->get(['order_id', 'number'])->unique('order_id')->pluck('number', 'order_id');
+                $paymentsByOrder = OrderPayment::query()->where('order_type', $type)
+                    ->whereIn('order_id', $orders->pluck('id'))->get()->groupBy('order_id');
 
                 foreach ($orders as $order) {
-                    $rawItems = match ($type) {
-                        'indoor' => $order->detailItems(),
-                        'outdoor' => $order->items()->with('hargaCetak')->get(),
-                        'artwork' => $order->items,
-                    };
+                    $rawItems = $order->items;
                     $items = $this->pricing->detailedLineItems($type, $order, $rawItems);
                     $gross = (float) $items->sum('subtotal');
                     $net = $order->diskonStatus() === 'approved' ? $order->totalSetelahDiskon() : (float) $order->total;
                     $discount = max(0, $gross - $net);
-                    $payments = OrderPayment::forOrder($type, $order->id)->get();
+                    $payments = $paymentsByOrder->get($order->id, collect());
                     $advance = max(0, (float) $payments->whereIn('jenis', ['lunas', 'dp', 'nota_pengganti'])->sum('jumlah'));
                     $settlement = max(0, (float) $payments->whereIn('jenis', ['pelunasan_dp', 'pelunasan_hutang'])->sum('jumlah'));
                     if ($advance + $settlement <= 0) {
@@ -315,7 +325,8 @@ class ReportController extends Controller
 
         if ($selectedCustomer) {
             foreach (['indoor' => OrderIndoor::class, 'outdoor' => OrderOutdoor::class, 'artwork' => OrderArtwork::class] as $type => $model) {
-                $orders = $model::query()->where('KdCust', $customerCode)->where('status_bayar', 'hutang')
+                $relations = $type === 'outdoor' ? ['items.hargaCetak'] : ['items'];
+                $orders = $model::query()->with($relations)->where('KdCust', $customerCode)->where('status_bayar', 'hutang')
                     ->where('jumlah_piutang', '>', 0)->where('status', '!=', 'batal')
                     ->whereBetween('TglOrder', [$from, $to])->orderBy('TglOrder')->orderBy('NoOrder')->get();
                 $invoiceNumbers = DB::table('order_documents')->where('kind', 'inv')->where('order_type', $type)
@@ -323,11 +334,7 @@ class ReportController extends Controller
                     ->get(['order_id', 'number'])->unique('order_id')->pluck('number', 'order_id');
 
                 foreach ($orders as $order) {
-                    $rawItems = match ($type) {
-                        'indoor' => $order->detailItems(),
-                        'outdoor' => $order->items()->with('hargaCetak')->get(),
-                        'artwork' => $order->items,
-                    };
+                    $rawItems = $order->items;
                     $items = $this->pricing->detailedLineItems($type, $order, $rawItems);
                     $gross = (float) $items->sum('subtotal');
                     $net = $order->diskonStatus() === 'approved' ? $order->totalSetelahDiskon() : (float) $order->total;
@@ -377,7 +384,10 @@ class ReportController extends Controller
         $rows = collect();
         foreach (['indoor' => OrderIndoor::class, 'outdoor' => OrderOutdoor::class, 'artwork' => OrderArtwork::class] as $type => $model) {
             $table = (new $model)->getTable();
-            $orders = $model::query()->with(['customer', 'createdBy'])
+            $relations = $type === 'outdoor'
+                ? ['customer', 'createdBy', 'items.hargaCetak']
+                : ['customer', 'createdBy', 'items'];
+            $orders = $model::query()->with($relations)
                 ->whereBetween('TglOrder', [$from, $to])
                 ->where('status', '!=', 'batal')
                 ->whereNull('invoice_voided_at')
@@ -395,11 +405,7 @@ class ReportController extends Controller
 
             foreach ($orders as $order) {
                 $orderDocuments = $documents->get($order->id, collect());
-                $rawItems = match ($type) {
-                    'indoor' => $order->detailItems(),
-                    'outdoor' => $order->items()->with('hargaCetak')->get(),
-                    'artwork' => $order->items,
-                };
+                $rawItems = $order->items;
                 $items = $this->pricing->detailedLineItems($type, $order, $rawItems);
                 if ($items->isEmpty()) {
                     $items = collect([(object) ['name' => '-', 'bahan' => '-', 'printer' => null,

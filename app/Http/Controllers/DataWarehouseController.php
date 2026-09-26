@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
@@ -69,19 +70,17 @@ class DataWarehouseController extends Controller
             'jumlah_transaksi' => $c->jumlah_transaksi,
         ]);
 
-        $topProdukQty = DB::table('notad_transaksi_INDOOR_CEK')
+        $productSummary = DB::table('notad_transaksi_INDOOR_CEK')
             ->select('Produk', DB::raw('SUM(Qty) as total_qty'), DB::raw('SUM(Jumlah) as total_omzet'))
             ->groupBy('Produk')
-            ->orderByDesc('total_qty')
-            ->limit(10)
-            ->get();
+            ->get()
+            ->each(function ($row): void {
+                $row->total_omzet = (float) $row->total_omzet;
+            });
 
-        $topProdukOmzet = DB::table('notad_transaksi_INDOOR_CEK')
-            ->select('Produk', DB::raw('SUM(Qty) as total_qty'), DB::raw('SUM(Jumlah) as total_omzet'))
-            ->groupBy('Produk')
-            ->orderByDesc('total_omzet')
-            ->limit(10)
-            ->get();
+        $topProdukQty = $productSummary->sortByDesc('total_qty')->take(10)->values();
+
+        $topProdukOmzet = $productSummary->sortByDesc('total_omzet')->take(10)->values();
 
         $bottomProduk = DB::table('notad_transaksi_INDOOR_CEK')
             ->select('Produk', DB::raw('SUM(Qty) as total_qty'), DB::raw('SUM(Jumlah) as total_omzet'))
@@ -121,6 +120,10 @@ class DataWarehouseController extends Controller
             ->paginate(20, ['*'], 'cust_page')
             ->withQueryString();
 
+        $dataRange = DB::table('notam')
+            ->selectRaw('MIN(TglNota) as min, MAX(TglNota) as max')
+            ->first();
+
         return view('data-warehouse.index', [
             'from' => $from,
             'to' => $to,
@@ -138,8 +141,8 @@ class DataWarehouseController extends Controller
             'custSearch' => $custSearch,
             'custStatus' => $custStatus,
             'dataRange' => [
-                'min' => DB::table('notam')->min('TglNota'),
-                'max' => DB::table('notam')->max('TglNota'),
+                'min' => $dataRange->min,
+                'max' => $dataRange->max,
             ],
         ]);
     }
@@ -150,7 +153,7 @@ class DataWarehouseController extends Controller
      * present (refreshed from the source system's live export), so this
      * anchors on the real current date again.
      *
-     * @return array{0: object, 1: \Illuminate\Support\Collection, 2: array{start: string, end: string}}
+     * @return array{0: object, 1: Collection, 2: array{start: string, end: string}}
      */
     private function customerActivity(): array
     {
@@ -180,7 +183,7 @@ class DataWarehouseController extends Controller
             $summary->{"{$row->segment}_{$row->status}"} = (int) $row->jumlah;
         }
 
-        $vipCustomers = collect(DB::select("
+        $vipCustomers = collect(DB::select('
             SELECT
                 c.KdCust, c.NmCust,
                 CASE WHEN active.KdCust IS NOT NULL THEN 1 ELSE 0 END AS aktif
@@ -190,7 +193,7 @@ class DataWarehouseController extends Controller
                 SELECT DISTINCT KdCust FROM notam WHERE Batal = 0 AND TglNota BETWEEN ? AND ?
             ) active ON active.KdCust = c.KdCust
             ORDER BY aktif DESC, c.NmCust
-        ", [$windowStart, $refDate]));
+        ', [$windowStart, $refDate]));
 
         return [$summary, $vipCustomers, ['start' => $windowStart, 'end' => $refDate]];
     }

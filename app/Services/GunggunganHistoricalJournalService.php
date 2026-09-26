@@ -43,14 +43,19 @@ class GunggunganHistoricalJournalService
     {
         $orders = $this->candidates($year, $month);
         $posted = JurnalEntry::whereIn('Bukti', $orders->pluck('NoOrder'))->pluck('Bukti')->flip();
-        $imported = 0; $total = 0.0;
+        $imported = 0;
+        $total = 0.0;
 
         DB::transaction(function () use ($orders, $posted, &$imported, &$total) {
             foreach ($orders as $order) {
-                if ($posted->has($order->NoOrder)) continue;
+                if ($posted->has($order->NoOrder)) {
+                    continue;
+                }
 
                 $amount = (float) ($order->status_bayar === 'dp' ? $order->jumlah_dibayar : $order->total);
-                if ($amount <= 0) continue;
+                if ($amount <= 0) {
+                    continue;
+                }
                 $helper = AccountingService::kodeBantuCustomer($order->KdCust);
 
                 $lines = match ($order->status_bayar) {
@@ -69,7 +74,8 @@ class GunggunganHistoricalJournalService
                 };
 
                 $this->accounting->post($order->TglOrder, $order->NoOrder, 'Penjualan historis '.$order->NoOrder, $lines);
-                $imported++; $total += $amount;
+                $imported++;
+                $total += $amount;
             }
         });
 

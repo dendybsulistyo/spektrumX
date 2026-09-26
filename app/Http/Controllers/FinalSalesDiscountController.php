@@ -51,8 +51,7 @@ class FinalSalesDiscountController extends Controller
                 ->with('customer')
                 ->whereIn('status_bayar', ['lunas', 'dp', 'hutang'])
                 ->whereNotNull('dibayar_at')
-                ->whereDate('dibayar_at', '>=', $from)
-                ->whereDate('dibayar_at', '<=', $to)
+                ->whereBetween('dibayar_at', [$from.' 00:00:00', $to.' 23:59:59'])
                 ->where('status', '!=', 'batal')
                 ->whereNull('invoice_voided_at')
                 ->when($search !== '', function ($query) use ($search) {

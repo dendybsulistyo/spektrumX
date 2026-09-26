@@ -9,6 +9,7 @@ use App\Models\HargaCetakOutdoorKhusus;
 use App\Models\PrinterOutdoor;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class HargaCetakOutdoorKhususController extends Controller
@@ -56,23 +57,33 @@ class HargaCetakOutdoorKhususController extends Controller
             'harga.*' => ['nullable', 'numeric', 'min:0'],
         ], [], ['KdCust' => 'customer', 'KdPrn' => 'printer']);
 
-        $customer = Customer::where('KdCust', $data['KdCust'])->first();
+        $customer = Customer::with('limit')->where('KdCust', $data['KdCust'])->first();
         abort_unless($customer?->is_vip, 422, 'Harga khusus hanya bisa diatur untuk customer VIP.');
 
+        $deleteKeys = [];
+        $upserts = [];
         foreach ($data['harga'] as $noCetak => $std) {
             $kdCtk = $data['KdPrn'].$noCetak;
 
             if ($std === null || $std === '') {
-                HargaCetakOutdoorKhusus::where('KdCust', $data['KdCust'])->where('KdCtk', $kdCtk)->delete();
+                $deleteKeys[] = $kdCtk;
 
                 continue;
             }
 
-            HargaCetakOutdoorKhusus::updateOrCreate(
-                ['KdCust' => $data['KdCust'], 'KdCtk' => $kdCtk],
-                ['HargaStd' => $std]
-            );
+            $upserts[] = ['KdCust' => $data['KdCust'], 'KdCtk' => $kdCtk, 'HargaStd' => $std];
         }
+
+        DB::transaction(function () use ($data, $deleteKeys, $upserts): void {
+            if ($deleteKeys !== []) {
+                HargaCetakOutdoorKhusus::where('KdCust', $data['KdCust'])
+                    ->whereIn('KdCtk', $deleteKeys)
+                    ->delete();
+            }
+            if ($upserts !== []) {
+                HargaCetakOutdoorKhusus::upsert($upserts, ['KdCust', 'KdCtk'], ['HargaStd']);
+            }
+        });
 
         return redirect()->route('harga-cetak-outdoor-khusus.index', ['KdCust' => $data['KdCust'], 'KdPrn' => $data['KdPrn']])
             ->with('status', 'Harga khusus berhasil disimpan.');

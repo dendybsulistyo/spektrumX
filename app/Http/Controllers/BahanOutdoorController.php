@@ -13,8 +13,13 @@ class BahanOutdoorController extends Controller
 {
     public function index(Request $request): View
     {
+        $kategoriList = KategoriBahanOutdoor::query()
+            ->select(['KdGrup', 'NmGrup', 'NoUrut'])
+            ->orderBy('NoUrut')
+            ->get();
+
         $bahanOutdoor = BahanOutdoor::query()
-            ->with('kategori')
+            ->select(['id', 'KdBrgs', 'KdGrup', 'NmBrgs', 'Keters', 'Satuan', 'NoUrut'])
             ->when($request->filled('search'), function ($q) use ($request) {
                 $search = $request->string('search');
                 $q->where('NmBrgs', 'like', "%{$search}%")
@@ -25,15 +30,25 @@ class BahanOutdoorController extends Controller
             ->paginate(20)
             ->withQueryString();
 
+        $kategoriByCode = $kategoriList->keyBy('KdGrup');
+        $bahanOutdoor->getCollection()->each(
+            fn (BahanOutdoor $item) => $item->setRelation('kategori', $kategoriByCode->get($item->KdGrup))
+        );
+
         return view('bahan-outdoor.index', [
             'bahanOutdoor' => $bahanOutdoor,
-            'kategoriList' => KategoriBahanOutdoor::orderBy('NoUrut')->get(),
+            'kategoriList' => $kategoriList,
         ]);
     }
 
     public function create(): View
     {
-        return view('bahan-outdoor.create', ['kategoriList' => KategoriBahanOutdoor::orderBy('NoUrut')->get()]);
+        return view('bahan-outdoor.create', [
+            'kategoriList' => KategoriBahanOutdoor::query()
+                ->select(['KdGrup', 'NmGrup', 'NoUrut'])
+                ->orderBy('NoUrut')
+                ->get(),
+        ]);
     }
 
     public function store(StoreBahanOutdoorRequest $request): RedirectResponse
@@ -47,7 +62,10 @@ class BahanOutdoorController extends Controller
     {
         return view('bahan-outdoor.edit', [
             'bahanOutdoor' => $bahanOutdoor,
-            'kategoriList' => KategoriBahanOutdoor::orderBy('NoUrut')->get(),
+            'kategoriList' => KategoriBahanOutdoor::query()
+                ->select(['KdGrup', 'NmGrup', 'NoUrut'])
+                ->orderBy('NoUrut')
+                ->get(),
         ]);
     }
 

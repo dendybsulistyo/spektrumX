@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\ChatMessage;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 
 class ChatController extends Controller
 {
@@ -13,22 +15,49 @@ class ChatController extends Controller
     {
         $me = auth()->id();
 
-        $users = User::with('role')->where('id', '!=', $me)->get()->map(function (User $user) use ($me) {
-            $last = ChatMessage::between($me, $user->id)->latest()->first();
+        $latestMessageColumn = fn (string $column): Builder => ChatMessage::query()
+            ->select($column)
+            ->where(function (Builder $query) use ($me): void {
+                $query->where(function (Builder $conversation) use ($me): void {
+                    $conversation->whereColumn('sender_id', 'users.id')
+                        ->where('recipient_id', $me);
+                })->orWhere(function (Builder $conversation) use ($me): void {
+                    $conversation->where('sender_id', $me)
+                        ->whereColumn('recipient_id', 'users.id');
+                });
+            })
+            ->latest()
+            ->limit(1);
 
-            return [
-                'id' => $user->id,
-                'name' => $user->name,
-                'role' => $user->role?->label,
-                'initials' => $this->initials($user->name),
-                'last_message' => $last?->body,
-                'last_message_at' => $last?->created_at,
-                'unread_count' => ChatMessage::where('sender_id', $user->id)
+        $users = User::query()
+            ->select(['id', 'name', 'role_id'])
+            ->with('role:id,label')
+            ->addSelect([
+                'last_message' => $latestMessageColumn('body'),
+                'last_message_at' => $latestMessageColumn('created_at'),
+                'unread_count' => ChatMessage::query()
+                    ->selectRaw('count(*)')
+                    ->whereColumn('sender_id', 'users.id')
                     ->where('recipient_id', $me)
-                    ->whereNull('read_at')
-                    ->count(),
-            ];
-        });
+                    ->whereNull('read_at'),
+            ])
+            ->where('id', '!=', $me)
+            ->get()
+            ->map(function (User $user) {
+                $lastMessageAt = $user->last_message_at
+                    ? Carbon::parse($user->last_message_at)
+                    : null;
+
+                return [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'role' => $user->role?->label,
+                    'initials' => $this->initials($user->name),
+                    'last_message' => $user->last_message,
+                    'last_message_at' => $lastMessageAt,
+                    'unread_count' => (int) $user->unread_count,
+                ];
+            });
 
         $sorted = $users->sortByDesc(fn ($u) => $u['last_message_at']?->timestamp ?? -1)->values();
 

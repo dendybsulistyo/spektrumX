@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Akun;
+use App\Models\JurnalEntry;
 use App\Models\JurnalManual;
 use App\Models\PeriodeTutupBuku;
 use App\Services\AccountingService;
@@ -21,21 +22,32 @@ class JurnalManualController extends Controller
         $from = $request->filled('from') ? $request->string('from')->toString() : now()->startOfMonth()->format('Y-m-d');
         $to = $request->filled('to') ? $request->string('to')->toString() : now()->format('Y-m-d');
 
-        $entries = JurnalManual::with(['user', 'dibatalkanOleh'])
+        $jurnalManuals = JurnalManual::with(['user', 'dibatalkanOleh'])
             ->whereBetween('tanggal', [$from, $to])
             ->orderByDesc('tanggal')
             ->orderByDesc('id')
-            ->get()
-            ->map(function (JurnalManual $jm) {
-                $lines = $jm->jurnalLines();
-                $akunNames = Akun::whereIn('NoAkun', $lines->pluck('NoAkun'))->pluck('NmAkun', 'NoAkun');
+            ->get();
+
+        $linesByTransaction = JurnalEntry::query()
+            ->whereIn('NoTrans', $jurnalManuals->pluck('no_trans_jurnal')->filter()->unique())
+            ->orderBy('NoAkun')
+            ->get(['NoTrans', 'NoAkun', 'Debet', 'Kredit'])
+            ->groupBy('NoTrans');
+
+        $accountNames = Akun::query()
+            ->whereIn('NoAkun', $linesByTransaction->flatten(1)->pluck('NoAkun')->unique())
+            ->pluck('NmAkun', 'NoAkun');
+
+        $entries = $jurnalManuals
+            ->map(function (JurnalManual $jm) use ($linesByTransaction, $accountNames) {
+                $lines = $linesByTransaction->get($jm->no_trans_jurnal, collect());
 
                 return [
                     'model' => $jm,
                     'total' => $lines->sum('Debet'),
                     'lines' => $lines->map(fn ($l) => [
                         'akun' => $l->NoAkun,
-                        'nama' => $akunNames->get($l->NoAkun, $l->NoAkun),
+                        'nama' => $accountNames->get($l->NoAkun, $l->NoAkun),
                         'debet' => (float) $l->Debet,
                         'kredit' => (float) $l->Kredit,
                     ]),

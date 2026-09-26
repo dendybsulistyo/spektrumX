@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\OrderArtwork;
 use App\Models\OrderIndoor;
 use App\Models\OrderOutdoor;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
 class DashboardStatsService
@@ -14,24 +15,46 @@ class DashboardStatsService
      */
     public function stats(?string $from = null, ?string $to = null): array
     {
-        $all = $this->loadOrders($from, $to);
+        $totals = collect($this->scopedQueries($from, $to))
+            ->map(fn ($query) => $query->selectRaw(''
+                .'COUNT(*) as total, '
+                .'SUM(CASE WHEN status_bayar = "belum_bayar" THEN 1 ELSE 0 END) as belum_bayar, '
+                .'SUM(CASE WHEN status_bayar = "lunas" THEN 1 ELSE 0 END) as lunas, '
+                .'SUM(CASE WHEN status_bayar = "hutang" THEN 1 ELSE 0 END) as hutang, '
+                .'COALESCE(SUM(CASE WHEN status_bayar = "hutang" THEN jumlah_piutang ELSE 0 END), 0) as hutang_nominal, '
+                .'SUM(CASE WHEN status_bayar = "dp" THEN 1 ELSE 0 END) as dp, '
+                .'COALESCE(SUM(CASE WHEN status_bayar = "dp" THEN jumlah_piutang ELSE 0 END), 0) as dp_nominal, '
+                .'SUM(CASE WHEN status = "desain" THEN 1 ELSE 0 END) as desain, '
+                .'SUM(CASE WHEN status = "cetak" THEN 1 ELSE 0 END) as cetak, '
+                .'SUM(CASE WHEN status = "finishing" THEN 1 ELSE 0 END) as finishing, '
+                .'SUM(CASE WHEN status = "qc" THEN 1 ELSE 0 END) as qc, '
+                .'SUM(CASE WHEN status = "bungkus" THEN 1 ELSE 0 END) as bungkus, '
+                .'SUM(CASE WHEN status = "siap_diambil" THEN 1 ELSE 0 END) as siap_diambil, '
+                .'SUM(CASE WHEN status = "selesai" THEN 1 ELSE 0 END) as selesai, '
+                .'SUM(CASE WHEN status NOT IN ("siap_diambil", "selesai", "batal") '
+                .'AND created_at IS NOT NULL AND created_at < ? THEN 1 ELSE 0 END) as telat',
+                [now()->subHours(72)]
+            )->first());
+
+        $sum = fn (string $key): int => (int) $totals->sum(fn ($row) => $row->{$key} ?? 0);
+        $sumAmount = fn (string $key): float => (float) $totals->sum(fn ($row) => $row->{$key} ?? 0);
 
         return [
-            'total' => $all->count(),
-            'belum_bayar' => $all->where('status_bayar', 'belum_bayar')->count(),
-            'lunas' => $all->where('status_bayar', 'lunas')->count(),
-            'hutang' => $all->where('status_bayar', 'hutang')->count(),
-            'hutang_nominal' => $all->where('status_bayar', 'hutang')->sum('jumlah_piutang'),
-            'dp' => $all->where('status_bayar', 'dp')->count(),
-            'dp_nominal' => $all->where('status_bayar', 'dp')->sum('jumlah_piutang'),
-            'desain' => $all->where('status', 'desain')->count(),
-            'cetak' => $all->where('status', 'cetak')->count(),
-            'finishing' => $all->where('status', 'finishing')->count(),
-            'qc' => $all->where('status', 'qc')->count(),
-            'bungkus' => $all->where('status', 'bungkus')->count(),
-            'siap_diambil' => $all->where('status', 'siap_diambil')->count(),
-            'selesai' => $all->where('status', 'selesai')->count(),
-            'telat' => $all->filter(fn ($o) => $this->isOverdue($o))->count(),
+            'total' => $sum('total'),
+            'belum_bayar' => $sum('belum_bayar'),
+            'lunas' => $sum('lunas'),
+            'hutang' => $sum('hutang'),
+            'hutang_nominal' => $sumAmount('hutang_nominal'),
+            'dp' => $sum('dp'),
+            'dp_nominal' => $sumAmount('dp_nominal'),
+            'desain' => $sum('desain'),
+            'cetak' => $sum('cetak'),
+            'finishing' => $sum('finishing'),
+            'qc' => $sum('qc'),
+            'bungkus' => $sum('bungkus'),
+            'siap_diambil' => $sum('siap_diambil'),
+            'selesai' => $sum('selesai'),
+            'telat' => $sum('telat'),
         ];
     }
 
@@ -42,9 +65,9 @@ class DashboardStatsService
     {
         [$indoorQuery, $outdoorQuery, $artworkQuery] = $this->scopedQueries($from, $to);
 
-        $indoor = $indoorQuery->get();
-        $outdoor = $outdoorQuery->get();
-        $artwork = $artworkQuery->get();
+        $indoor = $indoorQuery->latest('created_at')->limit($limit)->get();
+        $outdoor = $outdoorQuery->latest('created_at')->limit($limit)->get();
+        $artwork = $artworkQuery->latest('created_at')->limit($limit)->get();
 
         $indoor->load('customer', 'createdBy', 'kasir', 'desainBy', 'cetakBy', 'finishingBy', 'qcBy', 'bungkusBy', 'pengambilanBy', 'items');
         $outdoor->load('customer', 'createdBy', 'kasir', 'desainBy', 'cetakBy', 'finishingBy', 'qcBy', 'bungkusBy', 'pengambilanBy', 'items');
@@ -57,18 +80,11 @@ class DashboardStatsService
         return $mapped->sortByDesc('created_at')->take($limit)->values();
     }
 
-    private function loadOrders(?string $from = null, ?string $to = null): Collection
-    {
-        [$indoorQuery, $outdoorQuery, $artworkQuery] = $this->scopedQueries($from, $to);
-
-        return $indoorQuery->get()->concat($outdoorQuery->get())->concat($artworkQuery->get());
-    }
-
     /**
      * Query builders scoped to an optional created_at date range, shared by
      * stats() and recentOrders() so both respect the same date filter.
      *
-     * @return array{0: \Illuminate\Database\Eloquent\Builder, 1: \Illuminate\Database\Eloquent\Builder, 2: \Illuminate\Database\Eloquent\Builder}
+     * @return array{0: Builder, 1: Builder, 2: Builder}
      */
     private function scopedQueries(?string $from, ?string $to): array
     {

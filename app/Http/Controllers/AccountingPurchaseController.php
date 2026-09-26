@@ -14,6 +14,7 @@ use App\Models\PeriodeTutupBuku;
 use App\Services\AccountingService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -30,13 +31,19 @@ class AccountingPurchaseController extends Controller
         $status = $request->string('status')->toString();
 
         $purchases = AccountingPurchase::query()
-            ->with(['supplier', 'payments', 'returns', 'lines.inventoryItem'])
+            ->with('supplier')
+            ->withExists(['payments', 'returns'])
             ->whereBetween('tanggal', [$from, $to])
             ->when(in_array($status, ['tunai', 'hutang', 'lunas'], true), fn ($query) => $query->where('status', $status))
             ->latest('tanggal')->latest('id')->paginate(30)->withQueryString();
 
-        $purchases->getCollection()->each(function (AccountingPurchase $purchase): void {
-            $purchase->setAttribute('can_edit', $this->editBlockedReason($purchase) === null);
+        $periods = $purchases->getCollection()->pluck('tanggal')->map->format('Y-m')->unique();
+        $closedPeriods = $periods->isEmpty()
+            ? collect()
+            : PeriodeTutupBuku::query()->whereIn('periode', $periods)->pluck('periode')->flip();
+
+        $purchases->getCollection()->each(function (AccountingPurchase $purchase) use ($closedPeriods): void {
+            $purchase->setAttribute('can_edit', $this->editBlockedReason($purchase, $closedPeriods) === null);
         });
 
         $summary = (clone AccountingPurchase::query())->whereBetween('tanggal', [$from, $to])
@@ -58,7 +65,7 @@ class AccountingPurchaseController extends Controller
         $from = $request->filled('from') ? $request->string('from')->toString() : now()->startOfMonth()->toDateString();
         $to = $request->filled('to') ? $request->string('to')->toString() : now()->toDateString();
         $classification = $request->string('klasifikasi')->toString();
-        $lines = AccountingPurchaseLine::with(['purchase.supplier', 'inventoryItem'])
+        $lines = AccountingPurchaseLine::with('purchase.supplier')
             ->whereHas('purchase', fn ($query) => $query->whereBetween('tanggal', [$from, $to]))
             ->when(in_array($classification, ['bahan_baku', 'bahan_penolong', 'aset', 'biaya'], true), fn ($query) => $query->where('klasifikasi', $classification))
             ->orderBy('purchase_id')->get()->sortBy(fn ($line) => $line->purchase->tanggal)->values();
@@ -80,7 +87,7 @@ class AccountingPurchaseController extends Controller
 
     public function edit(AccountingPurchase $purchase): View|RedirectResponse
     {
-        $purchase->load(['payments', 'returns', 'lines.inventoryItem']);
+        $purchase->load('lines')->loadExists(['payments', 'returns']);
 
         if ($reason = $this->editBlockedReason($purchase)) {
             return redirect()->route('akuntansi.purchases.index')->with('error', $reason);
@@ -166,9 +173,7 @@ class AccountingPurchaseController extends Controller
                 'user_id' => auth()->id(),
             ]);
 
-            foreach ($lines as $line) {
-                AccountingPurchaseLine::create(['purchase_id' => $purchase->id, 'inventory_item_id' => $line['inventory_item_id'] ?? null, 'deskripsi' => $line['deskripsi'], 'klasifikasi' => $line['klasifikasi'], 'akun' => $line['akun'], 'qty' => $line['qty'], 'satuan' => $line['satuan'], 'harga_satuan' => $line['harga_satuan'], 'subtotal' => $line['subtotal']]);
-            }
+            $this->insertLines($purchase->id, $lines);
             $journalLines = $lines->isNotEmpty() ? $lines->groupBy('akun')->map(fn ($rows, $account) => ['akun' => $account, 'debet' => (float) $rows->sum('subtotal')])->values()->all() : [['akun' => $purchase->akun_pembelian, 'debet' => $dpp]];
             if ($ppn > 0) {
                 $journalLines[] = ['akun' => AccountingService::AKUN_PPN_MASUKAN, 'debet' => $ppn];
@@ -208,7 +213,7 @@ class AccountingPurchaseController extends Controller
             'lines.*.harga_satuan' => ['nullable', 'numeric', 'min:0'],
         ]);
 
-        $purchase->load(['payments', 'returns']);
+        $purchase->loadExists(['payments', 'returns']);
         if ($reason = $this->editBlockedReason($purchase)) {
             return back()->withInput()->with('error', $reason);
         }
@@ -239,7 +244,11 @@ class AccountingPurchaseController extends Controller
         $total = $lines->isNotEmpty() ? $dpp + $ppn : round((float) $data['total']);
 
         DB::transaction(function () use ($data, $dpp, $lines, $ppn, $purchase, $total): void {
-            $locked = AccountingPurchase::with(['supplier', 'payments', 'returns'])->lockForUpdate()->findOrFail($purchase->id);
+            $locked = AccountingPurchase::query()
+                ->with('supplier')
+                ->withExists(['payments', 'returns'])
+                ->lockForUpdate()
+                ->findOrFail($purchase->id);
             if ($reason = $this->editBlockedReason($locked)) {
                 throw ValidationException::withMessages(['purchase' => $reason]);
             }
@@ -268,9 +277,7 @@ class AccountingPurchaseController extends Controller
             ]);
 
             $locked->lines()->delete();
-            foreach ($lines as $line) {
-                $locked->lines()->create(['inventory_item_id' => $line['inventory_item_id'] ?? null, 'deskripsi' => $line['deskripsi'], 'klasifikasi' => $line['klasifikasi'], 'akun' => $line['akun'], 'qty' => $line['qty'], 'satuan' => $line['satuan'], 'harga_satuan' => $line['harga_satuan'], 'subtotal' => $line['subtotal']]);
-            }
+            $this->insertLines($locked->id, $lines);
 
             $journalLines = $lines->isNotEmpty() ? $lines->groupBy('akun')->map(fn ($rows, $account) => ['akun' => $account, 'debet' => (float) $rows->sum('subtotal')])->values()->all() : [['akun' => $locked->akun_pembelian, 'debet' => $dpp]];
             if ($ppn > 0) {
@@ -399,13 +406,47 @@ class AccountingPurchaseController extends Controller
         return $prefix.'-'.str_pad((string) $count, 3, '0', STR_PAD_LEFT);
     }
 
-    private function editBlockedReason(AccountingPurchase $purchase): ?string
+    private function insertLines(int $purchaseId, Collection $lines): void
     {
-        if ($purchase->payments->isNotEmpty() || $purchase->returns->isNotEmpty()) {
+        if ($lines->isEmpty()) {
+            return;
+        }
+
+        $timestamp = now();
+        AccountingPurchaseLine::query()->insert($lines->map(fn (array $line) => [
+            'purchase_id' => $purchaseId,
+            'inventory_item_id' => $line['inventory_item_id'] ?? null,
+            'deskripsi' => $line['deskripsi'],
+            'klasifikasi' => $line['klasifikasi'],
+            'akun' => $line['akun'],
+            'qty' => $line['qty'],
+            'satuan' => $line['satuan'],
+            'harga_satuan' => $line['harga_satuan'],
+            'subtotal' => $line['subtotal'],
+            'created_at' => $timestamp,
+            'updated_at' => $timestamp,
+        ])->all());
+    }
+
+    private function editBlockedReason(AccountingPurchase $purchase, ?Collection $closedPeriods = null): ?string
+    {
+        $hasPayments = array_key_exists('payments_exists', $purchase->getAttributes())
+            ? (bool) $purchase->payments_exists
+            : $purchase->payments->isNotEmpty();
+        $hasReturns = array_key_exists('returns_exists', $purchase->getAttributes())
+            ? (bool) $purchase->returns_exists
+            : $purchase->returns->isNotEmpty();
+
+        if ($hasPayments || $hasReturns) {
             return 'Pembelian yang sudah memiliki pelunasan atau retur tidak dapat diedit. Gunakan transaksi koreksi agar riwayat tetap aman.';
         }
 
-        if (PeriodeTutupBuku::isClosed($purchase->tanggal->format('Y-m-d'))) {
+        $period = $purchase->tanggal->format('Y-m');
+        $isClosed = $closedPeriods !== null
+            ? $closedPeriods->has($period)
+            : PeriodeTutupBuku::isClosed($period);
+
+        if ($isClosed) {
             return 'Periode pembelian ini sudah ditutup. Data tidak dapat diedit.';
         }
 

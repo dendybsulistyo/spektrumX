@@ -15,8 +15,17 @@ class AccountingFixedAssetController extends Controller
     public function index(Request $request): View
     {
         $tahun = $request->integer('tahun') ?: now()->year;
-        
-        $assets = AccountingFixedAsset::orderBy('tanggal_perolehan')
+
+        $assets = AccountingFixedAsset::query()
+            ->select([
+                'id',
+                'nama',
+                'kelompok',
+                'tanggal_perolehan',
+                'harga_perolehan',
+                'keterangan',
+            ])
+            ->orderBy('tanggal_perolehan')
             ->orderBy('id')
             ->get()
             ->map(function (AccountingFixedAsset $asset) use ($tahun) {
@@ -30,6 +39,7 @@ class AccountingFixedAssetController extends Controller
                 $asset->current_depreciation = $depreciation['current_depreciation'];
                 $asset->accumulated_depreciation = $depreciation['accumulated_depreciation'];
                 $asset->book_value = $depreciation['book_value'];
+
                 return $asset;
             });
 

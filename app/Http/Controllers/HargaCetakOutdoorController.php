@@ -9,6 +9,7 @@ use App\Models\PrinterOutdoor;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class HargaCetakOutdoorController extends Controller
@@ -35,6 +36,8 @@ class HargaCetakOutdoorController extends Controller
             'harga.*.*.min' => ['nullable', 'numeric', 'min:0'],
         ]);
 
+        $deleteKeys = [];
+        $upserts = [];
         foreach ($data['harga'] as $noCetak => $perPrinter) {
             foreach ($perPrinter as $kdPrn => $pair) {
                 $kdCtk = $kdPrn.$noCetak;
@@ -42,17 +45,23 @@ class HargaCetakOutdoorController extends Controller
                 $min = $pair['min'] ?? null;
 
                 if (($std === null || $std === '') && ($min === null || $min === '')) {
-                    HargaCetakOutdoor::where('KdCtk', $kdCtk)->delete();
+                    $deleteKeys[] = $kdCtk;
 
                     continue;
                 }
 
-                HargaCetakOutdoor::updateOrCreate(
-                    ['KdCtk' => $kdCtk],
-                    ['HargaStd' => $std ?? $min, 'HargaMin' => $min ?? $std]
-                );
+                $upserts[] = ['KdCtk' => $kdCtk, 'HargaStd' => $std ?? $min, 'HargaMin' => $min ?? $std];
             }
         }
+
+        DB::transaction(function () use ($deleteKeys, $upserts): void {
+            if ($deleteKeys !== []) {
+                HargaCetakOutdoor::whereIn('KdCtk', $deleteKeys)->delete();
+            }
+            if ($upserts !== []) {
+                HargaCetakOutdoor::upsert($upserts, ['KdCtk'], ['HargaStd', 'HargaMin']);
+            }
+        });
 
         $message = 'Harga cetak outdoor berhasil disimpan.';
 

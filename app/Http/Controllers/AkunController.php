@@ -16,6 +16,7 @@ class AkunController extends Controller
         $search = trim($request->string('search')->toString());
 
         $accounts = Akun::query()
+            ->select(['NoAkun', 'NmAkun', 'TipeDK', 'TipeNL'])
             ->when($search, fn ($query) => $query->where(function ($query) use ($search) {
                 $query->where('NoAkun', 'like', "%{$search}%")
                     ->orWhere('NmAkun', 'like', "%{$search}%");

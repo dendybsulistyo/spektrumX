@@ -302,14 +302,22 @@ class OrderIndoorController extends Controller
      */
     private function saveItems(OrderIndoor $order, array $items): void
     {
+        $itemsByType = collect($items)->groupBy(fn (array $item) => $item['jenis_produk'] ?? 'indoor');
+        $indoorNames = Produk::query()
+            ->whereIn('KdProd', $itemsByType->get('indoor', collect())->pluck('KdProd')->unique())
+            ->pluck('NmProd', 'KdProd');
+        $artworkNames = HargaArtwork::query()
+            ->whereIn('KdProd', $itemsByType->get('artwork', collect())->pluck('KdProd')->unique())
+            ->pluck('NmProd', 'KdProd');
+
         foreach ($items as $index => $item) {
             $seq = str_pad((string) ($index + 1), 2, '0', STR_PAD_LEFT);
             $brsOrder = $order->NoOrder.$seq;
 
             $jenisProduk = $item['jenis_produk'] ?? 'indoor';
             $nmProd = $jenisProduk === 'artwork'
-                ? HargaArtwork::where('KdProd', $item['KdProd'])->value('NmProd')
-                : Produk::where('KdProd', $item['KdProd'])->value('NmProd');
+                ? $artworkNames->get($item['KdProd'])
+                : $indoorNames->get($item['KdProd']);
 
             OrderIndoorDetail::create([
                 'order_indoor_id' => $order->id,
