@@ -25,19 +25,13 @@
                     <x-input-error :messages="$errors->get('occurred_at')" class="mt-1" />
                 </div>
                 <div>
-                    <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-600">Posisi</label>
-                    <select name="position" required class="w-full rounded border-slate-300 text-sm">
-                        <option value="debet" @selected(old('position') === 'debet')>Debet / menambah saldo</option>
-                        <option value="kredit" @selected(old('position') === 'kredit')>Kredit / mengurangi saldo</option>
+                    <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-600">Jenis Penyesuaian</label>
+                    <select name="adjustment_type" required class="w-full rounded border-slate-300 text-sm">
+                        <option value="setor_tunai" @selected(old('adjustment_type') === 'setor_tunai')>Setor Tunai</option>
+                        <option value="setor_bank" @selected(old('adjustment_type') === 'setor_bank')>Setor ke Bank</option>
+                        <option value="pengeluaran" @selected(old('adjustment_type') === 'pengeluaran')>Pengeluaran</option>
                     </select>
-                </div>
-                <div>
-                    <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-600">Metode</label>
-                    <select name="payment_method" required class="w-full rounded border-slate-300 text-sm">
-                        <option value="tunai">Tunai</option>
-                        <option value="transfer" @selected(old('payment_method') === 'transfer')>Transfer</option>
-                        <option value="qris" @selected(old('payment_method') === 'qris')>QRIS</option>
-                    </select>
+                    <x-input-error :messages="$errors->get('adjustment_type')" class="mt-1" />
                 </div>
                 <div>
                     <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-600">Nominal</label>

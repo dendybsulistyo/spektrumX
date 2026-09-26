@@ -37,8 +37,7 @@ class CashAdjustmentController extends Controller
 
         $validated = $request->validate([
             'occurred_at' => ['required', 'date'],
-            'position' => ['required', 'in:debet,kredit'],
-            'payment_method' => ['required', 'in:tunai,transfer,qris'],
+            'adjustment_type' => ['required', 'in:setor_tunai,setor_bank,pengeluaran'],
             'amount' => ['required', 'integer', 'min:1', 'max:9999999999999'],
             'reference' => ['nullable', 'string', 'max:80'],
             'reason' => ['required', 'string', 'max:255'],
@@ -48,12 +47,12 @@ class CashAdjustmentController extends Controller
         abort_unless($cashier, 422, 'Akun Yovita belum tersedia.');
 
         $occurredAt = Carbon::parse($validated['occurred_at']);
-        $method = match ($validated['payment_method']) {
-            'tunai' => 'Tunai',
-            'transfer' => 'Transfer',
-            'qris' => 'QRIS',
+        $type = $validated['adjustment_type'];
+        $typeLabel = match ($type) {
+            'setor_tunai' => 'Setor Tunai',
+            'setor_bank' => 'Setor ke Bank',
+            'pengeluaran' => 'Pengeluaran',
         };
-        $position = $validated['position'];
         $amount = (float) $validated['amount'];
         $sequence = (int) CashDailyEntry::query()
             ->whereDate('tanggal', $occurredAt->toDateString())
@@ -65,9 +64,9 @@ class CashAdjustmentController extends Controller
             'user_id' => $cashier->id,
             'source_key' => 'cash-adjustment:'.Str::uuid(),
             'no_nota' => $validated['reference'] ?: null,
-            'keterangan' => 'Penyesuaian '.$method.' - '.$validated['reason'],
-            'debet' => $position === 'debet' ? $amount : 0,
-            'kredit' => $position === 'kredit' ? $amount : 0,
+            'keterangan' => $typeLabel.' - '.$validated['reason'],
+            'debet' => $type === 'setor_tunai' ? $amount : 0,
+            'kredit' => $type !== 'setor_tunai' ? $amount : 0,
             'urutan' => $sequence,
         ]);
 
