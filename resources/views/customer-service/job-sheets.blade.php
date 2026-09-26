@@ -98,10 +98,11 @@
 
     <div class="overflow-hidden rounded border border-slate-200 bg-white shadow-sm">
         <div class="overflow-x-auto">
-            <table class="w-full min-w-[560px] text-sm">
+            <table class="w-full min-w-[650px] text-sm">
                 <thead class="border-b border-slate-200 bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
                     <tr>
                         <th class="px-4 py-3">Tanggal</th>
+                        <th class="px-4 py-3">Tujuan</th>
                         {{-- <th class="px-4 py-3">Deadline</th> --}}
                         <th class="px-4 py-3">Pembuat</th>
                         <th class="px-4 py-3">Diambil Oleh</th>
@@ -112,6 +113,14 @@
                     @forelse ($jobSheets as $sheet)
                         <tr class="align-middle hover:bg-slate-50/70">
                             <td class="whitespace-nowrap px-4 py-3 text-slate-600">{{ $sheet->received_at->format('d/m/Y') }}</td>
+                            <td class="px-4 py-3">
+                                <span @class([
+                                    'inline-flex rounded border px-2 py-1 text-xs font-semibold',
+                                    'border-blue-200 bg-blue-50 text-blue-700' => $sheet->order_type === 'indoor',
+                                    'border-amber-200 bg-amber-50 text-amber-700' => $sheet->order_type === 'outdoor',
+                                    'border-slate-200 bg-slate-50 text-slate-500' => ! in_array($sheet->order_type, ['indoor', 'outdoor'], true),
+                                ])>{{ $sheet->order_type ? 'Order '.ucfirst($sheet->order_type) : 'Belum ditentukan' }}</span>
+                            </td>
                             {{-- <td class="whitespace-nowrap px-4 py-3 text-slate-600">{{ $sheet->deadline?->format('d/m/Y') ?? '-' }}</td> --}}
                             <td class="px-4 py-3 text-slate-600">{{ $sheet->creator?->name ? ucwords(mb_strtolower($sheet->creator->name)) : '-' }}</td>
                             <td class="px-4 py-3 text-slate-600">
@@ -127,14 +136,19 @@
                                     {{-- <button type="button" onclick="document.getElementById('sheet-detail-{{ $sheet->id }}').showModal()" class="rounded border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100">Lihat</button> --}}
                                     @if (! $sheet->claimed_at)
                                         @can('file-monitor.view')
-                                            <button type="button" onclick="document.getElementById('sheet-claim-{{ $sheet->id }}').showModal()" class="rounded bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700">Ambil</button>
+                                            @if (in_array($sheet->order_type, ['indoor', 'outdoor'], true))
+                                                <form method="POST" target="_blank" action="{{ route('customer-service.job-sheets.claim', $sheet) }}" onsubmit="setTimeout(() => window.location.reload(), 800)">
+                                                    @csrf
+                                                    <button type="submit" class="rounded bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700">Ambil</button>
+                                                </form>
+                                            @endif
                                         @endcan
                                     @endif
                                 </div>
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="4" class="px-6 py-14 text-center text-slate-400">{{ $tab === 'claimed' ? 'Tidak ada riwayat lembar kerja pada pencarian ini.' : 'Belum ada lembar kerja yang menunggu diambil.' }}</td></tr>
+                        <tr><td colspan="5" class="px-6 py-14 text-center text-slate-400">{{ $tab === 'claimed' ? 'Tidak ada riwayat lembar kerja pada pencarian ini.' : 'Belum ada lembar kerja yang menunggu diambil.' }}</td></tr>
                     @endforelse
                 </tbody>
             </table>
@@ -144,32 +158,6 @@
     <div class="mt-4">{{ $jobSheets->links() }}</div>
 
     @foreach ($jobSheets as $sheet)
-        @if (! $sheet->claimed_at)
-            @can('file-monitor.view')
-                <dialog id="sheet-claim-{{ $sheet->id }}" class="w-[min(480px,calc(100%-2rem))] rounded border-0 p-0 shadow-2xl backdrop:bg-slate-950/60">
-                    <div class="border-b border-slate-700 px-5 py-4 text-white" style="background:#17233c">
-                        <div class="flex items-start justify-between gap-4">
-                            <div><p class="text-xs uppercase tracking-widest text-blue-300">Ambil Lembar Kerja</p><h3 class="mt-1 text-lg font-semibold">{{ $sheet->customer_name }}</h3></div>
-                            <button type="button" onclick="this.closest('dialog').close()" class="text-xl text-slate-300 hover:text-white">&times;</button>
-                        </div>
-                    </div>
-                    <div class="p-5">
-                        <p class="text-sm leading-6 text-slate-600">Pilih form transaksi yang akan dibuka. Form dibuka di tab baru dengan data customer dari lembar kerja ini.</p>
-                        <div class="mt-4 grid grid-cols-2 gap-3">
-                            <form method="POST" target="_blank" action="{{ route('customer-service.job-sheets.claim', ['jobSheet' => $sheet, 'target' => 'indoor']) }}" onsubmit="setTimeout(() => window.location.reload(), 800)">
-                                @csrf
-                                <button type="submit" class="w-full rounded border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-800 hover:bg-blue-100">Order Indoor</button>
-                            </form>
-                            <form method="POST" target="_blank" action="{{ route('customer-service.job-sheets.claim', ['jobSheet' => $sheet, 'target' => 'outdoor']) }}" onsubmit="setTimeout(() => window.location.reload(), 800)">
-                                @csrf
-                                <button type="submit" class="w-full rounded border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800 hover:bg-amber-100">Order Outdoor</button>
-                            </form>
-                        </div>
-                    </div>
-                </dialog>
-            @endcan
-        @endif
-
         <dialog id="sheet-detail-{{ $sheet->id }}" class="w-[min(1100px,calc(100%-2rem))] rounded border-0 p-0 shadow-2xl backdrop:bg-slate-950/60">
             <div class="border-b border-slate-700 px-5 py-4 text-white" style="background:#17233c">
                 <div class="flex items-start justify-between gap-4">
@@ -179,6 +167,7 @@
             </div>
             <div class="grid gap-3 border-b border-slate-200 bg-slate-50 p-5 text-sm sm:grid-cols-2 lg:grid-cols-4">
                 <div><p class="text-xs text-slate-400">Tanggal Masuk</p><p class="mt-1 font-medium">{{ $sheet->received_at->format('d/m/Y') }}</p></div>
+                <div><p class="text-xs text-slate-400">Tujuan Order</p><p class="mt-1 font-medium">{{ $sheet->order_type ? 'Order '.ucfirst($sheet->order_type) : '-' }}</p></div>
                 <div><p class="text-xs text-slate-400">Deadline</p><p class="mt-1 font-medium">{{ $sheet->deadline?->format('d/m/Y') ?? '-' }}</p></div>
                 <div><p class="text-xs text-slate-400">PC</p><p class="mt-1 font-medium">{{ $sheet->pc ?: '-' }}</p></div>
                 <div><p class="text-xs text-slate-400">OPF</p><p class="mt-1 font-medium">{{ $sheet->opf ?: '-' }}</p></div>

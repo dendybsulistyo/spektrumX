@@ -104,9 +104,11 @@ class CustomerServiceController extends Controller
         ));
     }
 
-    public function claimJobSheet(CustomerServiceJobSheet $jobSheet, string $target): RedirectResponse
+    public function claimJobSheet(CustomerServiceJobSheet $jobSheet): RedirectResponse
     {
-        abort_unless(in_array($target, ['indoor', 'outdoor'], true), 404);
+        abort_unless(in_array($jobSheet->order_type, ['indoor', 'outdoor'], true), 422, 'Tujuan order pada lembar kerja belum ditentukan.');
+
+        $target = $jobSheet->order_type;
 
         $alreadyClaimed = DB::transaction(function () use ($jobSheet, $target): ?CustomerServiceJobSheet {
             $lockedSheet = CustomerServiceJobSheet::lockForUpdate()->findOrFail($jobSheet->id);
@@ -169,6 +171,7 @@ class CustomerServiceController extends Controller
             'deadline' => ['nullable', 'date', 'after_or_equal:received_at'],
             'opf' => ['nullable', 'string', 'max:100'],
             'notes' => ['nullable', 'string', 'max:1000'],
+            'order_type' => ['required', 'in:indoor,outdoor'],
         ]);
 
         $customer = Customer::where('KdCust', $data['customer_code'])->firstOrFail();

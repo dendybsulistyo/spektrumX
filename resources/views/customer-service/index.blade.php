@@ -61,6 +61,20 @@
                         <p x-show="query && !selectedCode" class="mt-1 text-[11px] font-normal normal-case tracking-normal text-amber-600">Pilih customer dari hasil pencarian.</p>
                         <x-input-error :messages="$errors->get('customer_code')" class="mt-1 normal-case tracking-normal" />
                     </div>
+                    <fieldset class="xl:col-span-2">
+                        <legend class="text-xs font-semibold uppercase tracking-wide text-slate-500">Tujuan Order</legend>
+                        <div class="mt-1.5 grid grid-cols-2 gap-2">
+                            <label class="flex cursor-pointer items-center gap-2 rounded border border-slate-300 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 has-[:checked]:border-blue-600 has-[:checked]:bg-blue-50 has-[:checked]:text-blue-800">
+                                <input type="radio" name="order_type" value="indoor" @checked(old('order_type', 'indoor') === 'indoor') class="border-slate-300 text-blue-600 focus:ring-blue-500">
+                                Order Indoor
+                            </label>
+                            <label class="flex cursor-pointer items-center gap-2 rounded border border-slate-300 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 has-[:checked]:border-amber-500 has-[:checked]:bg-amber-50 has-[:checked]:text-amber-800">
+                                <input type="radio" name="order_type" value="outdoor" @checked(old('order_type') === 'outdoor') class="border-slate-300 text-amber-600 focus:ring-amber-500">
+                                Order Outdoor
+                            </label>
+                        </div>
+                        <x-input-error :messages="$errors->get('order_type')" class="mt-1" />
+                    </fieldset>
                     <label class="text-xs font-semibold uppercase tracking-wide text-slate-500">
                         PC <span class="font-normal normal-case tracking-normal text-slate-400">(opsional)</span>
                         <input name="pc" value="{{ old('pc') }}" maxlength="100"

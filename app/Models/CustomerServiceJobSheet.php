@@ -16,6 +16,7 @@ class CustomerServiceJobSheet extends Model
         'deadline',
         'opf',
         'notes',
+        'order_type',
         'items',
         'created_by',
         'claimed_by',
