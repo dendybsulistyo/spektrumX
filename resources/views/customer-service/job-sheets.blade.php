@@ -102,7 +102,7 @@
                 <thead class="border-b border-slate-200 bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
                     <tr>
                         <th class="px-4 py-3">Tanggal</th>
-                        <th class="px-4 py-3">Tujuan</th>
+                        {{-- <th class="px-4 py-3">Tujuan</th> --}}
                         {{-- <th class="px-4 py-3">Deadline</th> --}}
                         <th class="px-4 py-3">Pembuat</th>
                         <th class="px-4 py-3">Diambil Oleh</th>
@@ -112,7 +112,7 @@
                 <tbody class="divide-y divide-slate-100">
                     @forelse ($jobSheets as $sheet)
                         <tr class="align-middle hover:bg-slate-50/70">
-                            <td class="whitespace-nowrap px-4 py-3 text-slate-600">{{ $sheet->received_at->format('d/m/Y') }}</td>
+                            {{-- <td class="whitespace-nowrap px-4 py-3 text-slate-600">{{ $sheet->received_at->format('d/m/Y') }}</td>
                             <td class="px-4 py-3">
                                 <span @class([
                                     'inline-flex rounded border px-2 py-1 text-xs font-semibold',
@@ -120,7 +120,7 @@
                                     'border-amber-200 bg-amber-50 text-amber-700' => $sheet->order_type === 'outdoor',
                                     'border-slate-200 bg-slate-50 text-slate-500' => ! in_array($sheet->order_type, ['indoor', 'outdoor'], true),
                                 ])>{{ $sheet->order_type ? 'Order '.ucfirst($sheet->order_type) : 'Belum ditentukan' }}</span>
-                            </td>
+                            </td> --}}
                             {{-- <td class="whitespace-nowrap px-4 py-3 text-slate-600">{{ $sheet->deadline?->format('d/m/Y') ?? '-' }}</td> --}}
                             <td class="px-4 py-3 text-slate-600">{{ $sheet->creator?->name ? ucwords(mb_strtolower($sheet->creator->name)) : '-' }}</td>
                             <td class="px-4 py-3 text-slate-600">
