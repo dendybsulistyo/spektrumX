@@ -51,7 +51,7 @@ class ReportController extends Controller
             $documents = DB::table('order_documents')
                 ->where('order_type', $type)
                 ->whereIn('order_id', $orders->pluck('id'))
-                ->whereIn('kind', ['do', 'inv'])
+                ->where('kind', 'inv')
                 ->orderBy('sequence')
                 ->get(['order_id', 'kind', 'number'])
                 ->groupBy('order_id');
@@ -92,8 +92,6 @@ class ReportController extends Controller
 
                         $rows->push((object) [
                             'date' => $order->TglOrder, 'number' => $order->NoOrder,
-                            'sales_order' => $this->documents->number($order, 'so'),
-                            'delivery_orders' => $orderDocuments->where('kind', 'do')->pluck('number')->values(),
                             'invoices' => $orderDocuments->where('kind', 'inv')->pluck('number')->values(),
                             'customer' => $order->customer?->NmCust ?? '-',
                             'product' => collect([$item->printer, $item->bahan])->filter()->implode(' / ') ?: '-',
