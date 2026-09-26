@@ -94,13 +94,13 @@ class FileMonitorController extends Controller
      * Lightweight counters polled by the Operator File page. The job-sheet
      * query only reads unclaimed rows; no order/file list is rebuilt.
      *
-     * @return array{cs_pending_count:int, cs_pending_items:int, cs_oldest_received_at:?string, replacement_count:int, checked_at:string}
+     * @return array{cs_pending_count:int, cs_oldest_received_at:?string, replacement_count:int, checked_at:string}
      */
     private function queueStats(): array
     {
         $pendingSheets = CustomerServiceJobSheet::query()
             ->whereNull('claimed_at')
-            ->get(['items', 'received_at']);
+            ->get(['received_at']);
 
         $replacementCount = 0;
         foreach ([OrderIndoor::class, OrderOutdoor::class, OrderArtwork::class] as $model) {
@@ -113,7 +113,6 @@ class FileMonitorController extends Controller
 
         return [
             'cs_pending_count' => $pendingSheets->count(),
-            'cs_pending_items' => $pendingSheets->sum(fn (CustomerServiceJobSheet $sheet) => count($sheet->items ?? [])),
             'cs_oldest_received_at' => $pendingSheets->min('received_at')?->format('d/m/Y'),
             'replacement_count' => $replacementCount,
             'checked_at' => now()->format('H:i:s'),

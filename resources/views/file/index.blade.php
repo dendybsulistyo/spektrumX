@@ -30,13 +30,13 @@
                         <span class="min-w-0">
                             <span class="block text-[10px] font-bold uppercase tracking-wider text-blue-600">Antrean CS · Live</span>
                             <span class="mt-0.5 block text-xs font-semibold"><strong id="file-cs-pending-count" class="text-base">{{ $liveQueueStats['cs_pending_count'] }}</strong> bisa diambil</span>
-                            <span class="block text-[10px] text-blue-600"><span id="file-cs-pending-items">{{ $liveQueueStats['cs_pending_items'] }}</span> item menunggu</span>
+                            <span id="file-cs-oldest" class="block text-[10px] text-blue-600">{{ $liveQueueStats['cs_oldest_received_at'] ? 'Terlama '.$liveQueueStats['cs_oldest_received_at'] : 'Tidak ada antrean' }}</span>
                         </span>
                     </a>
                 @else
                     <div class="inline-flex min-w-[172px] items-center gap-3 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-blue-800">
                         <span class="relative flex h-2.5 w-2.5 shrink-0"><span id="file-live-pulse" class="relative inline-flex h-2.5 w-2.5 rounded-full bg-blue-600"></span></span>
-                        <span><span class="block text-[10px] font-bold uppercase tracking-wider text-blue-600">Antrean CS · Live</span><span class="mt-0.5 block text-xs font-semibold"><strong id="file-cs-pending-count" class="text-base">{{ $liveQueueStats['cs_pending_count'] }}</strong> bisa diambil</span><span class="block text-[10px] text-blue-600"><span id="file-cs-pending-items">{{ $liveQueueStats['cs_pending_items'] }}</span> item menunggu</span></span>
+                        <span><span class="block text-[10px] font-bold uppercase tracking-wider text-blue-600">Antrean CS · Live</span><span class="mt-0.5 block text-xs font-semibold"><strong id="file-cs-pending-count" class="text-base">{{ $liveQueueStats['cs_pending_count'] }}</strong> bisa diambil</span><span id="file-cs-oldest" class="block text-[10px] text-blue-600">{{ $liveQueueStats['cs_oldest_received_at'] ? 'Terlama '.$liveQueueStats['cs_oldest_received_at'] : 'Tidak ada antrean' }}</span></span>
                     </div>
                 @endcan
 
@@ -99,7 +99,7 @@
             if (!widget) return;
 
             const pendingCount = document.getElementById('file-cs-pending-count');
-            const pendingItems = document.getElementById('file-cs-pending-items');
+            const oldestQueue = document.getElementById('file-cs-oldest');
             const replacementCount = document.getElementById('file-replacement-count');
             const pulse = document.getElementById('file-live-pulse');
             const liveStatus = document.getElementById('file-live-status');
@@ -125,7 +125,7 @@
                     const stats = await response.json();
 
                     updateText(pendingCount, stats.cs_pending_count);
-                    updateText(pendingItems, stats.cs_pending_items);
+                    updateText(oldestQueue, stats.cs_oldest_received_at ? `Terlama ${stats.cs_oldest_received_at}` : 'Tidak ada antrean');
                     updateText(replacementCount, stats.replacement_count);
                     pulse?.classList.remove('bg-amber-500');
                     pulse?.classList.add('bg-blue-600');

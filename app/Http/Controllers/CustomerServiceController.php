@@ -169,20 +169,13 @@ class CustomerServiceController extends Controller
             'deadline' => ['nullable', 'date', 'after_or_equal:received_at'],
             'opf' => ['nullable', 'string', 'max:100'],
             'notes' => ['nullable', 'string', 'max:1000'],
-            'items' => ['required', 'array', 'min:1'],
-            'items.*.order_type' => ['required', 'in:OD,ID,AW,SB'],
-            'items.*.width' => ['required', 'numeric', 'min:0.01'],
-            'items.*.height' => ['required', 'numeric', 'min:0.01'],
-            'items.*.quantity' => ['required', 'integer', 'min:1'],
-            'items.*.material' => ['required', 'string', 'max:150'],
-            'items.*.printer' => ['nullable', 'string', 'max:150'],
-            'items.*.finishing' => ['nullable', 'string', 'max:150'],
         ]);
 
         $customer = Customer::where('KdCust', $data['customer_code'])->firstOrFail();
 
         CustomerServiceJobSheet::create([
             ...$data,
+            'items' => [],
             'customer_name' => $customer->NmCust,
             'created_by' => auth()->id(),
         ]);
