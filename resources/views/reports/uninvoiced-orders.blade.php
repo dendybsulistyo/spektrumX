@@ -2,16 +2,19 @@
     <x-slot name="header"><h2 class="font-semibold text-xl text-gray-800">Rekap Order Belum Di-Invoice</h2></x-slot>
     <style>
         .uninvoiced-report { color:#111827; }
-        .uninvoiced-report table { width:100%; border-collapse:collapse; font-size:10px; }
-        .uninvoiced-report th,.uninvoiced-report td { border:1px solid #64748b; padding:4px 5px; vertical-align:top; }
+        .uninvoiced-report table { width:100%; border-collapse:collapse; font-size:9px; }
+        .uninvoiced-report th,.uninvoiced-report td { border:1px solid #64748b; padding:3px 4px; vertical-align:top; }
         .uninvoiced-report th { background:#e2e8f0; text-align:center; white-space:nowrap; }
         .uninvoiced-report .number { text-align:right; white-space:nowrap; }
+        .uninvoiced-report .document-number { min-width:128px; line-height:1.35; white-space:nowrap; }
+        .uninvoiced-report .document-number span { color:#64748b; font-size:8px; font-weight:700; }
         @media print {
             @page { size:A4 landscape; margin:7mm; }
             body { background:#fff !important; } header,nav,.no-print { display:none !important; } main { padding:0 !important; }
             .uninvoiced-report section { box-shadow:none !important; padding:0 !important; }
-            .uninvoiced-report table { font-family:Arial,sans-serif; font-size:7.5pt; }
+            .uninvoiced-report table { font-family:Arial,sans-serif; font-size:6.75pt; }
             .uninvoiced-report th,.uninvoiced-report td { padding:2px 3px; }
+            .uninvoiced-report .document-number span { font-size:6pt; }
             .uninvoiced-report thead { display:table-header-group; } .uninvoiced-report tr { break-inside:avoid; }
         }
     </style>
@@ -30,9 +33,13 @@
                 <p class="text-sm">Bulan: {{ \Carbon\Carbon::parse($from)->translatedFormat('d F Y') }} s/d {{ \Carbon\Carbon::parse($to)->translatedFormat('d F Y') }}</p>
             </div>
             <div class="overflow-x-auto"><table>
-                <thead><tr><th>Tanggal</th><th>No. Order</th><th>Customer</th><th>Nama Produk</th><th>Keterangan</th><th>Penerima</th><th>Pj.</th><th>Leb.</th><th>Qty</th><th>Harga</th><th>Sub Total</th><th>Diskon</th><th>Total</th><th>Uang Muka</th></tr></thead>
+                <thead><tr><th>Tanggal</th><th>No. SO / DO / Invoice</th><th>Customer</th><th>Nama Produk</th><th>Keterangan</th><th>Penerima</th><th>Pj.</th><th>Leb.</th><th>Qty</th><th>Harga</th><th>Sub Total</th><th>Diskon</th><th>Total</th><th>Uang Muka</th></tr></thead>
                 <tbody>@forelse($rows as $row)<tr>
-                    <td>{{ \Carbon\Carbon::parse($row->date)->format('d-m-Y') }}</td><td>{{ $row->order }}</td><td>{{ $row->customer }}</td><td>{{ $row->product }}</td><td>{{ $row->description }}</td><td>{{ $row->recipient }}</td>
+                    <td>{{ \Carbon\Carbon::parse($row->date)->format('d-m-Y') }}</td><td class="document-number">
+                        <div><span>SO</span> {{ $row->order }}</div>
+                        @foreach ($row->delivery_orders as $number)<div><span>DO</span> {{ $number }}</div>@endforeach
+                        @forelse ($row->invoices as $number)<div><span>INV</span> {{ $number }}</div>@empty<div><span>INV</span> -</div>@endforelse
+                    </td><td>{{ $row->customer }}</td><td>{{ $row->product }}</td><td>{{ $row->description }}</td><td>{{ $row->recipient }}</td>
                     <td class="number">{{ number_format((float)$row->length,2,',','.') }}</td><td class="number">{{ number_format((float)$row->width,2,',','.') }}</td><td class="number">{{ number_format((float)$row->qty,0,',','.') }}</td>
                     <td class="number">{{ $row->price !== null ? number_format($row->price,0,',','.') : '-' }}</td><td class="number">{{ number_format($row->subtotal,0,',','.') }}</td><td class="number">{{ number_format($row->discount,0,',','.') }}</td><td class="number">{{ number_format($row->total,0,',','.') }}</td><td class="number">{{ number_format($row->advance,0,',','.') }}</td>
                 </tr>@empty<tr><td colspan="14" style="padding:28px;text-align:center">Tidak ada order yang belum di-invoice pada periode ini.</td></tr>@endforelse</tbody>

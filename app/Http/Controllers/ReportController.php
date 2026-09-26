@@ -367,8 +367,16 @@ class ReportController extends Controller
                     ->where('kind', 'inv')->where('order_type', $type)
                     ->whereColumn('order_id', $table.'.id'))
                 ->orderBy('TglOrder')->orderBy('NoOrder')->get();
+            $documents = DB::table('order_documents')
+                ->where('order_type', $type)
+                ->whereIn('order_id', $orders->pluck('id'))
+                ->whereIn('kind', ['do', 'inv'])
+                ->orderBy('sequence')
+                ->get(['order_id', 'kind', 'number'])
+                ->groupBy('order_id');
 
             foreach ($orders as $order) {
+                $orderDocuments = $documents->get($order->id, collect());
                 $rawItems = match ($type) {
                     'indoor' => $order->detailItems(),
                     'outdoor' => $order->items()->with('hargaCetak')->get(),
@@ -396,6 +404,8 @@ class ReportController extends Controller
 
                     $rows->push((object) [
                         'date' => $order->TglOrder, 'order' => $order->NoOrder,
+                        'delivery_orders' => $orderDocuments->where('kind', 'do')->pluck('number')->values(),
+                        'invoices' => $orderDocuments->where('kind', 'inv')->pluck('number')->values(),
                         'customer' => $order->customer?->NmCust ?? '-',
                         'product' => collect([$item->printer, $item->bahan])->filter()->implode(' / ') ?: $item->name,
                         'description' => $item->name, 'recipient' => $order->createdBy?->name ?? '-',
