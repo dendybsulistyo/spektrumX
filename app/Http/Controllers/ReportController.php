@@ -46,9 +46,18 @@ class ReportController extends Controller
         $rows = collect();
 
         foreach (['indoor' => OrderIndoor::class, 'outdoor' => OrderOutdoor::class, 'artwork' => OrderArtwork::class] as $type => $model) {
-            $model::query()->with('customer')->whereDate('TglOrder', $date)
-                ->where('status', '!=', 'batal')->orderBy('NoOrder')->get()
-                ->each(function ($order) use ($type, &$rows) {
+            $orders = $model::query()->with('customer')->whereDate('TglOrder', $date)
+                ->where('status', '!=', 'batal')->orderBy('NoOrder')->get();
+            $documents = DB::table('order_documents')
+                ->where('order_type', $type)
+                ->whereIn('order_id', $orders->pluck('id'))
+                ->whereIn('kind', ['do', 'inv'])
+                ->orderBy('sequence')
+                ->get(['order_id', 'kind', 'number'])
+                ->groupBy('order_id');
+
+            $orders->each(function ($order) use ($type, $documents, &$rows) {
+                    $orderDocuments = $documents->get($order->id, collect());
                     $rawItems = match ($type) {
                         'indoor' => $order->detailItems(),
                         'outdoor' => $order->items()->with('hargaCetak')->get(),
@@ -83,6 +92,9 @@ class ReportController extends Controller
 
                         $rows->push((object) [
                             'date' => $order->TglOrder, 'number' => $order->NoOrder,
+                            'sales_order' => $this->documents->number($order, 'so'),
+                            'delivery_orders' => $orderDocuments->where('kind', 'do')->pluck('number')->values(),
+                            'invoices' => $orderDocuments->where('kind', 'inv')->pluck('number')->values(),
                             'customer' => $order->customer?->NmCust ?? '-',
                             'product' => collect([$item->printer, $item->bahan])->filter()->implode(' / ') ?: '-',
                             'description' => collect([$item->name, $item->breakdown])->filter()->implode(' — '),

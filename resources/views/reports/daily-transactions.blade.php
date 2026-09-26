@@ -3,19 +3,20 @@
 
     <style>
         .daily-report { color:#111827; }
-        .daily-report table { width:100%; border-collapse:collapse; font-size:11px; }
-        .daily-report th,.daily-report td { border:1px solid #64748b; padding:5px 6px; vertical-align:top; }
-        .daily-report th { background:#e2e8f0; text-align:center; white-space:nowrap; }
+        .daily-report table { width:100%; border-collapse:collapse; }
+        .daily-report th,.daily-report td { border:1px solid #64748b; padding:2px 3px !important; vertical-align:top; font-size:11px !important; line-height:1.18 !important; }
+        .daily-report th { background:#e2e8f0; text-align:center; white-space:nowrap; font-size:11px !important; font-weight:700; }
         .daily-report .number { text-align:right; white-space:nowrap; }
         .daily-report .center { text-align:center; }
+        .daily-report .document-number { min-width:108px; white-space:nowrap; }
         @media print {
             @page { size:A4 landscape; margin:8mm; }
             body { background:#fff !important; }
             header,nav,.no-print { display:none !important; }
             main { padding:0 !important; }
             .daily-report { width:100%; margin:0; }
-            .daily-report table { font-family:Arial,sans-serif; font-size:8pt; }
-            .daily-report th,.daily-report td { padding:2.5px 3px; }
+            .daily-report table { font-family:Arial,sans-serif; }
+            .daily-report th,.daily-report td { padding:2px 3px !important; font-size:7.5pt !important; line-height:1.12 !important; }
             .daily-report thead { display:table-header-group; }
             .daily-report tr { break-inside:avoid; }
         }
@@ -41,7 +42,7 @@
                 <div class="overflow-x-auto">
                     <table>
                         <thead><tr>
-                            <th>Tanggal</th><th>No. Nota</th><th>Customer</th><th>Produk</th><th>Keterangan</th>
+                            <th>Tanggal</th><th>No. SO / DO / Invoice</th><th>Customer</th><th>Produk</th><th>Keterangan</th>
                             <th>Pj.</th><th>Leb.</th><th>Qty</th><th>Harga</th><th>Sub Total</th>
                             <th>Diskon</th><th>Total</th><th>Tunai</th><th>Kredit</th>
                         </tr></thead>
@@ -49,7 +50,11 @@
                         @forelse ($rows as $row)
                             <tr>
                                 <td class="center">{{ \Carbon\Carbon::parse($row->date)->format('d-m-Y') }}</td>
-                                <td>{{ $row->number }}</td><td>{{ $row->customer }}</td><td>{{ $row->product }}</td><td>{{ $row->description }}</td>
+                                <td class="document-number">
+                                    <div>{{ $row->sales_order }}</div>
+                                    @foreach ($row->delivery_orders as $number)<div>{{ $number }}</div>@endforeach
+                                    @foreach ($row->invoices as $number)<div>{{ $number }}</div>@endforeach
+                                </td><td>{{ $row->customer }}</td><td>{{ $row->product }}</td><td>{{ $row->description }}</td>
                                 <td class="number">{{ number_format((float) $row->length, 2, ',', '.') }}</td>
                                 <td class="number">{{ number_format((float) $row->width, 2, ',', '.') }}</td>
                                 <td class="number">{{ number_format((float) $row->qty, 0, ',', '.') }}</td>
