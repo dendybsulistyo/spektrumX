@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\JurnalEntry;
 use App\Models\PengaturanKeuangan;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
@@ -21,8 +22,8 @@ class AccountingService
 {
     private ?float $salesTaxRate = null;
 
-    /** @var \Illuminate\Support\Collection<int, string>|null */
-    private ?\Illuminate\Support\Collection $postableAccounts = null;
+    /** @var Collection<int, string>|null */
+    private ?Collection $postableAccounts = null;
 
     public const AKUN_KAS_TUNAI = '11100';
 
@@ -136,7 +137,7 @@ class AccountingService
      * No-ops quietly if the NoTrans is empty/unknown (e.g. a pengeluaran row
      * created before this integration existed, with no journal to reverse).
      */
-    public function reverse(?string $noTrans, string $keterangan): void
+    public function reverse(?string $noTrans, string $keterangan, ?string $tanggal = null): void
     {
         if (! $noTrans) {
             return;
@@ -155,7 +156,7 @@ class AccountingService
             'kd_bantu' => $e->KdBantu,
         ])->all();
 
-        $this->post(now()->format('Y-m-d'), $original->first()->Bukti, $keterangan, $lines);
+        $this->post($tanggal ?? now()->format('Y-m-d'), $original->first()->Bukti, $keterangan, $lines);
     }
 
     /**

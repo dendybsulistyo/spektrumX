@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AccountingInventoryItem;
 use App\Models\AccountingPurchase;
+use App\Models\AccountingPurchaseLine;
 use App\Models\AccountingPurchasePayment;
 use App\Models\AccountingPurchaseReturn;
-use App\Models\AccountingPurchaseLine;
-use App\Models\AccountingInventoryItem;
 use App\Models\AccountingSupplier;
 use App\Models\Akun;
 use App\Models\PengaturanKeuangan;
@@ -16,6 +16,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class AccountingPurchaseController extends Controller
@@ -29,10 +30,14 @@ class AccountingPurchaseController extends Controller
         $status = $request->string('status')->toString();
 
         $purchases = AccountingPurchase::query()
-            ->with(['supplier', 'payments', 'lines.inventoryItem'])
+            ->with(['supplier', 'payments', 'returns', 'lines.inventoryItem'])
             ->whereBetween('tanggal', [$from, $to])
             ->when(in_array($status, ['tunai', 'hutang', 'lunas'], true), fn ($query) => $query->where('status', $status))
             ->latest('tanggal')->latest('id')->paginate(30)->withQueryString();
+
+        $purchases->getCollection()->each(function (AccountingPurchase $purchase): void {
+            $purchase->setAttribute('can_edit', $this->editBlockedReason($purchase) === null);
+        });
 
         $summary = (clone AccountingPurchase::query())->whereBetween('tanggal', [$from, $to])
             ->selectRaw("COALESCE(SUM(total), 0) as total, COALESCE(SUM(CASE WHEN status = 'tunai' THEN total ELSE 0 END), 0) as tunai, COALESCE(SUM(jumlah_hutang), 0) as hutang")
@@ -69,7 +74,25 @@ class AccountingPurchaseController extends Controller
             'ppn' => $lines->sum('ppn_laporan'),
             'total' => $lines->sum('total_laporan'),
         ];
+
         return view('akuntansi.purchase-report-v2', compact('from', 'to', 'classification', 'lines', 'totals', 'summary'));
+    }
+
+    public function edit(AccountingPurchase $purchase): View|RedirectResponse
+    {
+        $purchase->load(['payments', 'returns', 'lines.inventoryItem']);
+
+        if ($reason = $this->editBlockedReason($purchase)) {
+            return redirect()->route('akuntansi.purchases.index')->with('error', $reason);
+        }
+
+        return view('akuntansi.purchases.edit', [
+            'purchase' => $purchase,
+            'suppliers' => AccountingSupplier::where('is_active', true)->orWhereKey($purchase->supplier_id)->orderBy('nama')->get(),
+            'accounts' => Akun::where('TipeDK', 'D')->orderBy('NoAkun')->get(),
+            'inventoryItems' => AccountingInventoryItem::where('is_active', true)->orderBy('nama')->get(),
+            'taxRate' => (float) PengaturanKeuangan::current()->tarif_ppn_default,
+        ]);
     }
 
     public function store(Request $request): RedirectResponse
@@ -101,12 +124,19 @@ class AccountingPurchaseController extends Controller
         }
 
         $lines = collect($data['lines'] ?? [])->filter(fn ($line) => filled($line['deskripsi'] ?? null))->values();
-        if ($lines->isNotEmpty() && $lines->contains(fn ($line) => empty($line['klasifikasi']) || empty($line['qty']) || ! isset($line['harga_satuan']))) return back()->withInput()->with('error', 'Setiap rincian pembelian harus memiliki klasifikasi, jumlah, dan harga satuan.');
-        if ($lines->isEmpty() && empty($data['akun_pembelian'])) return back()->withInput()->with('error', 'Pilih akun pembelian atau isi rincian item pembelian.');
-        if ($lines->isEmpty() && empty($data['total'])) return back()->withInput()->with('error', 'Total nota wajib diisi.');
+        if ($lines->isNotEmpty() && $lines->contains(fn ($line) => empty($line['klasifikasi']) || empty($line['qty']) || ! isset($line['harga_satuan']))) {
+            return back()->withInput()->with('error', 'Setiap rincian pembelian harus memiliki klasifikasi, jumlah, dan harga satuan.');
+        }
+        if ($lines->isEmpty() && empty($data['akun_pembelian'])) {
+            return back()->withInput()->with('error', 'Pilih akun pembelian atau isi rincian item pembelian.');
+        }
+        if ($lines->isEmpty() && empty($data['total'])) {
+            return back()->withInput()->with('error', 'Total nota wajib diisi.');
+        }
         $accountsByClass = ['bahan_baku' => '53000', 'bahan_penolong' => '53003', 'aset' => '12200', 'biaya' => '63014'];
         $lines = $lines->map(function (array $line) use ($accountsByClass) {
             $subtotal = round((float) $line['qty'] * (float) $line['harga_satuan']);
+
             return $line + ['akun' => $accountsByClass[$line['klasifikasi']], 'subtotal' => $subtotal, 'satuan' => $line['satuan'] ?: 'pcs'];
         });
         $rate = (float) PengaturanKeuangan::current()->tarif_ppn_default;
@@ -131,9 +161,13 @@ class AccountingPurchaseController extends Controller
                 'user_id' => auth()->id(),
             ]);
 
-            foreach ($lines as $line) AccountingPurchaseLine::create(['purchase_id' => $purchase->id, 'inventory_item_id' => $line['inventory_item_id'] ?? null, 'deskripsi' => $line['deskripsi'], 'klasifikasi' => $line['klasifikasi'], 'akun' => $line['akun'], 'qty' => $line['qty'], 'satuan' => $line['satuan'], 'harga_satuan' => $line['harga_satuan'], 'subtotal' => $line['subtotal']]);
+            foreach ($lines as $line) {
+                AccountingPurchaseLine::create(['purchase_id' => $purchase->id, 'inventory_item_id' => $line['inventory_item_id'] ?? null, 'deskripsi' => $line['deskripsi'], 'klasifikasi' => $line['klasifikasi'], 'akun' => $line['akun'], 'qty' => $line['qty'], 'satuan' => $line['satuan'], 'harga_satuan' => $line['harga_satuan'], 'subtotal' => $line['subtotal']]);
+            }
             $journalLines = $lines->isNotEmpty() ? $lines->groupBy('akun')->map(fn ($rows, $account) => ['akun' => $account, 'debet' => (float) $rows->sum('subtotal')])->values()->all() : [['akun' => $purchase->akun_pembelian, 'debet' => $dpp]];
-            if ($ppn > 0) $journalLines[] = ['akun' => AccountingService::AKUN_PPN_MASUKAN, 'debet' => $ppn];
+            if ($ppn > 0) {
+                $journalLines[] = ['akun' => AccountingService::AKUN_PPN_MASUKAN, 'debet' => $ppn];
+            }
             $journalLines[] = $data['metode'] === 'tunai'
                 ? ['akun' => AccountingService::akunKasFor($data['cara_bayar']), 'kredit' => $total]
                 : ['akun' => AccountingService::AKUN_HUTANG_DAGANG, 'kredit' => $total, 'kd_bantu' => $supplier->kode_bantu];
@@ -143,6 +177,109 @@ class AccountingPurchaseController extends Controller
         return redirect()->route('akuntansi.purchases.index')->with('status', 'Pembelian berhasil dicatat dan jurnal dibuat otomatis.');
     }
 
+    public function update(Request $request, AccountingPurchase $purchase): RedirectResponse
+    {
+        $data = $request->validate([
+            'supplier_id' => ['required', Rule::exists('accounting_suppliers', 'id')->where(
+                fn ($query) => $query->where('is_active', true)->orWhere('id', $purchase->supplier_id)
+            )],
+            'tanggal' => ['required', 'date'],
+            'nomor_bukti' => ['required', 'string', 'max:50', Rule::unique('accounting_purchases', 'nomor_bukti')->ignore($purchase)],
+            'keterangan' => ['required', 'string', 'max:255'],
+            'akun_pembelian' => ['nullable', Rule::exists('am__', 'NoAkun')->where('TipeDK', 'D')],
+            'total' => ['nullable', 'numeric', 'min:1'],
+            'kena_ppn' => ['nullable', 'boolean'],
+            'metode' => ['required', 'in:tunai,hutang'],
+            'cara_bayar' => ['required_if:metode,tunai', 'nullable', 'in:tunai,qris,transfer'],
+            'no_referensi' => ['nullable', 'string', 'max:50'],
+            'termin_hari' => ['nullable', 'integer', 'min:0', 'max:3650'],
+            'tanggal_terima_invoice' => ['nullable', 'date'],
+            'lines' => ['nullable', 'array'],
+            'lines.*.deskripsi' => ['nullable', 'string', 'max:255'],
+            'lines.*.inventory_item_id' => ['nullable', 'exists:accounting_inventory_items,id'],
+            'lines.*.klasifikasi' => ['nullable', 'in:bahan_baku,bahan_penolong,aset,biaya'],
+            'lines.*.qty' => ['nullable', 'numeric', 'gt:0'],
+            'lines.*.satuan' => ['nullable', 'string', 'max:20'],
+            'lines.*.harga_satuan' => ['nullable', 'numeric', 'min:0'],
+        ]);
+
+        $purchase->load(['payments', 'returns']);
+        if ($reason = $this->editBlockedReason($purchase)) {
+            return back()->withInput()->with('error', $reason);
+        }
+        if (PeriodeTutupBuku::isClosed($data['tanggal'])) {
+            return back()->withInput()->with('error', 'Periode tanggal baru sudah ditutup. Pembelian tidak dapat dipindahkan ke periode tersebut.');
+        }
+
+        $lines = collect($data['lines'] ?? [])->filter(fn ($line) => filled($line['deskripsi'] ?? null))->values();
+        if ($lines->isNotEmpty() && $lines->contains(fn ($line) => empty($line['klasifikasi']) || empty($line['qty']) || ! isset($line['harga_satuan']))) {
+            return back()->withInput()->with('error', 'Setiap rincian pembelian harus memiliki klasifikasi, jumlah, dan harga satuan.');
+        }
+        if ($lines->isEmpty() && empty($data['akun_pembelian'])) {
+            return back()->withInput()->with('error', 'Pilih akun pembelian atau isi rincian item pembelian.');
+        }
+        if ($lines->isEmpty() && empty($data['total'])) {
+            return back()->withInput()->with('error', 'Total nota wajib diisi.');
+        }
+
+        $accountsByClass = ['bahan_baku' => '53000', 'bahan_penolong' => '53003', 'aset' => '12200', 'biaya' => '63014'];
+        $lines = $lines->map(function (array $line) use ($accountsByClass) {
+            $subtotal = round((float) $line['qty'] * (float) $line['harga_satuan']);
+
+            return $line + ['akun' => $accountsByClass[$line['klasifikasi']], 'subtotal' => $subtotal, 'satuan' => $line['satuan'] ?: 'pcs'];
+        });
+        $rate = (float) PengaturanKeuangan::current()->tarif_ppn_default;
+        $dpp = $lines->isNotEmpty() ? (float) $lines->sum('subtotal') : ($request->boolean('kena_ppn') && $rate > 0 ? round((float) $data['total'] / (1 + $rate / 100)) : round((float) $data['total']));
+        $ppn = $request->boolean('kena_ppn') && $rate > 0 ? round($dpp * $rate / 100) : 0;
+        $total = $lines->isNotEmpty() ? $dpp + $ppn : round((float) $data['total']);
+
+        DB::transaction(function () use ($data, $dpp, $lines, $ppn, $purchase, $total): void {
+            $locked = AccountingPurchase::with(['supplier', 'payments', 'returns'])->lockForUpdate()->findOrFail($purchase->id);
+            if ($reason = $this->editBlockedReason($locked)) {
+                throw ValidationException::withMessages(['purchase' => $reason]);
+            }
+
+            $oldDate = $locked->tanggal->format('Y-m-d');
+            $this->accounting->reverse($locked->no_trans_jurnal, 'Koreksi pembelian '.$locked->nomor_bukti, $oldDate);
+
+            $supplier = AccountingSupplier::findOrFail($data['supplier_id']);
+            $locked->update([
+                'supplier_id' => $supplier->id,
+                'tanggal' => $data['tanggal'],
+                'nomor_bukti' => $data['nomor_bukti'],
+                'keterangan' => $data['keterangan'],
+                'akun_pembelian' => $lines->first()['akun'] ?? $data['akun_pembelian'],
+                'dpp' => $dpp,
+                'ppn' => $ppn,
+                'total' => $total,
+                'status' => $data['metode'] === 'tunai' ? 'tunai' : 'hutang',
+                'cara_bayar' => $data['metode'] === 'tunai' ? $data['cara_bayar'] : null,
+                'no_referensi' => $data['no_referensi'] ?? null,
+                'termin_hari' => $data['termin_hari'] ?? null,
+                'tanggal_terima_invoice' => $data['tanggal_terima_invoice'] ?? null,
+                'jumlah_dibayar' => $data['metode'] === 'tunai' ? $total : 0,
+                'jumlah_hutang' => $data['metode'] === 'hutang' ? $total : 0,
+                'user_id' => auth()->id(),
+            ]);
+
+            $locked->lines()->delete();
+            foreach ($lines as $line) {
+                $locked->lines()->create(['inventory_item_id' => $line['inventory_item_id'] ?? null, 'deskripsi' => $line['deskripsi'], 'klasifikasi' => $line['klasifikasi'], 'akun' => $line['akun'], 'qty' => $line['qty'], 'satuan' => $line['satuan'], 'harga_satuan' => $line['harga_satuan'], 'subtotal' => $line['subtotal']]);
+            }
+
+            $journalLines = $lines->isNotEmpty() ? $lines->groupBy('akun')->map(fn ($rows, $account) => ['akun' => $account, 'debet' => (float) $rows->sum('subtotal')])->values()->all() : [['akun' => $locked->akun_pembelian, 'debet' => $dpp]];
+            if ($ppn > 0) {
+                $journalLines[] = ['akun' => AccountingService::AKUN_PPN_MASUKAN, 'debet' => $ppn];
+            }
+            $journalLines[] = $data['metode'] === 'tunai'
+                ? ['akun' => AccountingService::akunKasFor($data['cara_bayar']), 'kredit' => $total]
+                : ['akun' => AccountingService::AKUN_HUTANG_DAGANG, 'kredit' => $total, 'kd_bantu' => $supplier->kode_bantu];
+            $locked->update(['no_trans_jurnal' => $this->accounting->post($data['tanggal'], $data['nomor_bukti'], $data['keterangan'], $journalLines)]);
+        });
+
+        return redirect()->route('akuntansi.purchases.index')->with('status', 'Pembelian berhasil diperbarui dan jurnal koreksi dibuat otomatis.');
+    }
+
     public function pay(Request $request, AccountingPurchase $purchase): RedirectResponse
     {
         $data = $request->validate([
@@ -150,14 +287,22 @@ class AccountingPurchaseController extends Controller
             'cara_bayar' => ['required', 'in:tunai,qris,transfer'],
             'no_referensi' => ['nullable', 'string', 'max:50'],
         ]);
-        if ($purchase->jumlah_hutang <= 0) return back()->with('error', 'Nota pembelian ini sudah lunas.');
-        if ((float) $data['jumlah'] > (float) $purchase->jumlah_hutang) return back()->withInput()->with('error', 'Nominal pelunasan melebihi sisa hutang supplier.');
-        if (PeriodeTutupBuku::isClosed($data['tanggal'])) return back()->withInput()->with('error', 'Periode pelunasan ini sudah ditutup.');
+        if ($purchase->jumlah_hutang <= 0) {
+            return back()->with('error', 'Nota pembelian ini sudah lunas.');
+        }
+        if ((float) $data['jumlah'] > (float) $purchase->jumlah_hutang) {
+            return back()->withInput()->with('error', 'Nominal pelunasan melebihi sisa hutang supplier.');
+        }
+        if (PeriodeTutupBuku::isClosed($data['tanggal'])) {
+            return back()->withInput()->with('error', 'Periode pelunasan ini sudah ditutup.');
+        }
 
         DB::transaction(function () use ($data, $purchase) {
             $purchase->refresh()->load('supplier');
             $amount = round((float) $data['jumlah']);
-            if ($amount > $purchase->jumlah_hutang) abort(422, 'Sisa hutang sudah berubah. Silakan ulangi.');
+            if ($amount > $purchase->jumlah_hutang) {
+                abort(422, 'Sisa hutang sudah berubah. Silakan ulangi.');
+            }
             $payment = AccountingPurchasePayment::create([
                 'purchase_id' => $purchase->id, 'tanggal' => $data['tanggal'], 'jumlah' => $amount,
                 'cara_bayar' => $data['cara_bayar'], 'no_referensi' => $data['no_referensi'] ?? null, 'user_id' => auth()->id(),
@@ -185,15 +330,23 @@ class AccountingPurchaseController extends Controller
             'cara_refund' => ['nullable', 'in:tunai,qris,transfer'],
             'no_referensi' => ['nullable', 'string', 'max:50'],
         ]);
-        if ($data['jenis'] === 'retur' && empty($data['total'])) return back()->withInput()->with('error', 'Nominal retur wajib diisi.');
-        if (PeriodeTutupBuku::isClosed($data['tanggal'])) return back()->withInput()->with('error', 'Periode retur ini sudah ditutup.');
+        if ($data['jenis'] === 'retur' && empty($data['total'])) {
+            return back()->withInput()->with('error', 'Nominal retur wajib diisi.');
+        }
+        if (PeriodeTutupBuku::isClosed($data['tanggal'])) {
+            return back()->withInput()->with('error', 'Periode retur ini sudah ditutup.');
+        }
 
         DB::transaction(function () use ($data, $purchase) {
             $purchase->refresh()->load('supplier');
             $available = round($purchase->total - $purchase->jumlah_retur);
             $total = $data['jenis'] === 'batal' ? $available : round((float) $data['total']);
-            if ($available <= 0) abort(422, 'Nota ini sudah diretur atau dibatalkan sepenuhnya.');
-            if ($total > $available) abort(422, 'Nominal retur melebihi sisa nilai nota yang dapat diretur.');
+            if ($available <= 0) {
+                abort(422, 'Nota ini sudah diretur atau dibatalkan sepenuhnya.');
+            }
+            if ($total > $available) {
+                abort(422, 'Nominal retur melebihi sisa nilai nota yang dapat diretur.');
+            }
             $dpp = round($total * $purchase->dpp / $purchase->total);
             $ppn = $total - $dpp;
             $offsetHutang = min($total, $purchase->jumlah_hutang);
@@ -209,10 +362,16 @@ class AccountingPurchaseController extends Controller
                 'no_referensi' => $data['no_referensi'] ?? null, 'user_id' => auth()->id(),
             ]);
             $lines = [];
-            if ($offsetHutang > 0) $lines[] = ['akun' => AccountingService::AKUN_HUTANG_DAGANG, 'debet' => $offsetHutang, 'kd_bantu' => $purchase->supplier->kode_bantu];
-            if ($refund > 0) $lines[] = ['akun' => AccountingService::akunKasFor($caraRefund), 'debet' => $refund];
+            if ($offsetHutang > 0) {
+                $lines[] = ['akun' => AccountingService::AKUN_HUTANG_DAGANG, 'debet' => $offsetHutang, 'kd_bantu' => $purchase->supplier->kode_bantu];
+            }
+            if ($refund > 0) {
+                $lines[] = ['akun' => AccountingService::akunKasFor($caraRefund), 'debet' => $refund];
+            }
             $lines[] = ['akun' => $purchase->akun_pembelian, 'kredit' => $dpp];
-            if ($ppn > 0) $lines[] = ['akun' => AccountingService::AKUN_PPN_MASUKAN, 'kredit' => $ppn];
+            if ($ppn > 0) {
+                $lines[] = ['akun' => AccountingService::AKUN_PPN_MASUKAN, 'kredit' => $ppn];
+            }
             $return->update(['no_trans_jurnal' => $this->accounting->post($data['tanggal'], $bukti, $keterangan, $lines)]);
 
             $newHutang = round($purchase->jumlah_hutang - $offsetHutang);
@@ -231,6 +390,20 @@ class AccountingPurchaseController extends Controller
     {
         $prefix = 'RT-'.str_replace('-', '', substr($date, 2));
         $count = AccountingPurchaseReturn::where('nomor_bukti', 'like', $prefix.'-%')->count() + 1;
+
         return $prefix.'-'.str_pad((string) $count, 3, '0', STR_PAD_LEFT);
+    }
+
+    private function editBlockedReason(AccountingPurchase $purchase): ?string
+    {
+        if ($purchase->payments->isNotEmpty() || $purchase->returns->isNotEmpty()) {
+            return 'Pembelian yang sudah memiliki pelunasan atau retur tidak dapat diedit. Gunakan transaksi koreksi agar riwayat tetap aman.';
+        }
+
+        if (PeriodeTutupBuku::isClosed($purchase->tanggal->format('Y-m-d'))) {
+            return 'Periode pembelian ini sudah ditutup. Data tidak dapat diedit.';
+        }
+
+        return null;
     }
 }

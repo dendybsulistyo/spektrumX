@@ -173,7 +173,9 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::middleware('permission:keuangan.pengaturan')->group(function () {
+        Route::get('/akuntansi/pembelian/{purchase}/edit', [AccountingPurchaseController::class, 'edit'])->name('akuntansi.purchases.edit');
         Route::post('/akuntansi/pembelian', [AccountingPurchaseController::class, 'store'])->name('akuntansi.purchases.store');
+        Route::put('/akuntansi/pembelian/{purchase}', [AccountingPurchaseController::class, 'update'])->name('akuntansi.purchases.update');
         Route::post('/akuntansi/pembelian/{purchase}/pelunasan', [AccountingPurchaseController::class, 'pay'])->name('akuntansi.purchases.pay');
         Route::post('/akuntansi/pembelian/{purchase}/retur', [AccountingPurchaseController::class, 'return'])->name('akuntansi.purchases.return');
         Route::post('/akuntansi/persediaan', [InventoryHppController::class, 'storeItem'])->name('akuntansi.inventory.store-item');
