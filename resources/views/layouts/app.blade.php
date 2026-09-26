@@ -226,6 +226,7 @@
                                                 <a href="{{ route('keuangan.kas-harian') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.kas-harian')) }}">Kas Harian</a>
                                                 <a href="{{ route('keuangan.rekap-kasir') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.rekap-kasir*')) }}">Rekap Kasir per User</a>
                                                 <a href="{{ route('keuangan.laporan-kasir-harian') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.laporan-kasir-harian')) }}">Laporan Kasir Harian</a>
+                                                <a href="{{ route('keuangan.cash-adjustments.index') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.cash-adjustments.*')) }}">Penyesuaian Kas</a>
                                                 <a href="{{ route('keuangan.final-sales-discounts.index') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.final-sales-discounts.*')) }}">Potongan Penjualan Akhir</a>
                                                 <a href="{{ route('akuntansi.kas-bank') }}" class="{{ $dropdownLink(request()->routeIs('akuntansi.kas-bank')) }}">Buku Kas & Bank</a>
                                                 <a href="{{ route('akuntansi.purchases.index') }}" class="{{ $dropdownLink(request()->routeIs('akuntansi.purchases.*')) }}">Pembelian & Hutang Supplier</a>
@@ -557,6 +558,7 @@
                                 <a href="{{ route('keuangan.kas-harian') }}" class="{{ $mobileLink(request()->routeIs('keuangan.kas-harian')) }}">Kas Harian</a>
                                 <a href="{{ route('keuangan.rekap-kasir') }}" class="{{ $mobileLink(request()->routeIs('keuangan.rekap-kasir*')) }}">Rekap Kasir per User</a>
                                 <a href="{{ route('keuangan.laporan-kasir-harian') }}" class="{{ $mobileLink(request()->routeIs('keuangan.laporan-kasir-harian')) }}">Laporan Kasir Harian</a>
+                                <a href="{{ route('keuangan.cash-adjustments.index') }}" class="{{ $mobileLink(request()->routeIs('keuangan.cash-adjustments.*')) }}">Penyesuaian Kas</a>
                                 <a href="{{ route('keuangan.final-sales-discounts.index') }}" class="{{ $mobileLink(request()->routeIs('keuangan.final-sales-discounts.*')) }}">Potongan Penjualan Akhir</a>
                                 <a href="{{ route('akuntansi.kas-bank') }}" class="{{ $mobileLink(request()->routeIs('akuntansi.kas-bank')) }}">Buku Kas & Bank</a>
                                 <a href="{{ route('akuntansi.purchases.index') }}" class="{{ $mobileLink(request()->routeIs('akuntansi.purchases.*')) }}">Pembelian & Hutang Supplier</a>

@@ -6,6 +6,7 @@ use App\Http\Controllers\AccountingSupplierController;
 use App\Http\Controllers\AkunController;
 use App\Http\Controllers\BahanCetakOutdoorController;
 use App\Http\Controllers\BahanOutdoorController;
+use App\Http\Controllers\CashAdjustmentController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\CustomerServiceController;
@@ -139,6 +140,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/keuangan/rekap-kasir/excel', [KeuanganController::class, 'exportRekapKasirExcel'])->name('keuangan.rekap-kasir.excel');
         Route::get('/keuangan/laporan-kasir-harian', [KeuanganController::class, 'laporanKasirHarian'])->name('keuangan.laporan-kasir-harian');
         Route::get('/keuangan/laporan-kasir-harian/excel', [KeuanganController::class, 'exportLaporanKasirHarianExcel'])->name('keuangan.laporan-kasir-harian.excel');
+        Route::get('/keuangan/penyesuaian-kas', [CashAdjustmentController::class, 'index'])->name('keuangan.cash-adjustments.index');
         Route::get('/keuangan/potongan-penjualan-akhir', [FinalSalesDiscountController::class, 'index'])->name('keuangan.final-sales-discounts.index');
         Route::get('/keuangan/rekap-kasir/{kasir}/customer', [KeuanganController::class, 'rekapKasirCustomer'])->name('keuangan.rekap-kasir.customer');
         Route::get('/keuangan/rekap-customer', [KeuanganController::class, 'rekapCustomer'])->name('keuangan.rekap-customer');
@@ -167,6 +169,7 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::middleware('permission:keuangan.pengaturan')->group(function () {
+        Route::post('/keuangan/penyesuaian-kas', [CashAdjustmentController::class, 'store'])->name('keuangan.cash-adjustments.store');
         Route::post('/keuangan/potongan-penjualan-akhir', [FinalSalesDiscountController::class, 'store'])->name('keuangan.final-sales-discounts.store');
         Route::post('/keuangan/laporan-ppn/draft', [KeuanganController::class, 'simpanDraftPpn'])->name('keuangan.laporan-ppn.draft');
         Route::post('/keuangan/laporan-ppn/{laporanPpnFinal}/finalkan', [KeuanganController::class, 'finalkanPpn'])->name('keuangan.laporan-ppn.finalkan');

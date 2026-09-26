@@ -33,4 +33,9 @@ class CashDailyEntry extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    public function scopeCashAdjustments($query)
+    {
+        return $query->where('source_key', 'like', 'cash-adjustment:%');
+    }
 }

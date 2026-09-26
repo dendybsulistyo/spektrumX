@@ -340,6 +340,7 @@ class KeuanganController extends Controller
                 $description = $entry->keterangan;
                 $category = match (true) {
                     $entry->user_id === null || strcasecmp($description, 'Saldo Awal') === 0 => 'opening',
+                    str_starts_with($entry->source_key, 'cash-adjustment:') => 'adjustment',
                     (float) $entry->kredit > 0 && str_starts_with(mb_strtolower($description), 'bayar via') => 'non_cash',
                     str_starts_with(mb_strtolower($description), 'piutang ') => 'receivable',
                     str_starts_with(mb_strtolower($description), 'dp -') || str_starts_with((string) $entry->no_nota, 'UM-') => 'advance',
@@ -433,6 +434,7 @@ class KeuanganController extends Controller
             'advance' => 'Uang Muka (DP)',
             'non_cash' => 'Penerimaan Non Tunai (Transfer atau QRIS)',
             'refund' => 'Refund / Pengeluaran Kas',
+            'adjustment' => 'Penyesuaian Kas',
         ];
 
         $sections = collect($sectionDefinitions)->map(function (string $label, string $key) use ($details) {
