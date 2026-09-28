@@ -33,12 +33,17 @@
     <div id="industry-bungkus">
         <div style="max-width: 1480px; margin: 0 auto; display: flex; flex-direction: column; gap: var(--space-6);"
              x-data="{ tab: '{{ $initialTab }}', setTab(key) { this.tab = key; const url = new URL(window.location.href); url.searchParams.set('tab', key); window.history.replaceState({}, '', url); } }">
-            <div style="display: flex;">
-                @foreach ($tabs as $key => $t)
-                    <button type="button" @click="setTab('{{ $key }}')" class="seg-tab" :class="tab === '{{ $key }}' ? 'active' : ''">
-                        {{ $t['label'] }} ({{ $t['count'] }})
-                    </button>
-                @endforeach
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap;">
+                <div style="display: flex;">
+                    @foreach ($tabs as $key => $t)
+                        <button type="button" @click="setTab('{{ $key }}')" class="seg-tab" :class="tab === '{{ $key }}' ? 'active' : ''">
+                            {{ $t['label'] }} ({{ $t['count'] }})
+                        </button>
+                    @endforeach
+                </div>
+                <a x-show="tab === 'outdoor'" x-cloak
+                   href="{{ route('order-bungkus.print-outdoor') }}" target="_blank" rel="noopener"
+                   class="in-btn">Cetak Rekap Outdoor</a>
             </div>
 
             @foreach (['indoor' => $indoorItems, 'outdoor' => $outdoorItems] as $tabKey => $itemGroups)

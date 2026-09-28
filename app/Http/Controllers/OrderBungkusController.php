@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\BahanCetakOutdoor;
 use App\Models\OrderComment;
 use App\Models\OrderReworkRequest;
 use App\Models\PrinterOutdoor;
@@ -22,6 +23,25 @@ class OrderBungkusController extends Controller
     public function index(): View
     {
         return view('order-bungkus.index', $this->loadData());
+    }
+
+    public function printOutdoor(): View
+    {
+        $groups = $this->stageProgress->itemsAtStage(self::STAGE, [
+            'indoor' => false, 'outdoor' => true,
+        ], outdoorWith: ['order.customer']);
+
+        $items = ($groups['outdoor'] ?? collect())
+            ->flatMap(fn ($orderItems) => $orderItems)
+            ->sortBy(fn ($item) => ($item->order?->TglOrder?->format('Y-m-d') ?? '').'|'.($item->order?->NoOrder ?? '').'|'.str_pad((string) $item->id, 10, '0', STR_PAD_LEFT))
+            ->values();
+
+        return view('order-bungkus.print-outdoor', [
+            'items' => $items,
+            'printerNames' => PrinterOutdoor::pluck('NmPrn', 'KdPrn'),
+            'materialNames' => BahanCetakOutdoor::pluck('NmBhn', 'NoCetak'),
+            'printedAt' => now(),
+        ]);
     }
 
     /**

@@ -457,6 +457,7 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware('permission:order-bungkus.view')->group(function () {
         Route::get('/order-bungkus', [OrderBungkusController::class, 'index'])->name('order-bungkus.index');
+        Route::get('/order-bungkus/cetak/outdoor', [OrderBungkusController::class, 'printOutdoor'])->name('order-bungkus.print-outdoor');
     });
     Route::middleware('permission:order-bungkus.manage')->group(function () {
         Route::post('/order-bungkus/{type}/{id}', [OrderBungkusController::class, 'updateItem'])->name('order-bungkus.update');
