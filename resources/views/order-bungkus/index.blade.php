@@ -41,9 +41,12 @@
                         </button>
                     @endforeach
                 </div>
-                <a x-show="tab === 'outdoor'" x-cloak
-                   href="{{ route('order-bungkus.print-outdoor') }}" target="_blank" rel="noopener"
-                   class="in-btn">Cetak Rekap Outdoor</a>
+                <div x-show="tab === 'outdoor'" x-cloak style="display: flex; gap: 8px; flex-wrap: wrap;">
+                    <a href="{{ route('order-bungkus.print-outdoor', ['keterangan' => 1]) }}" target="_blank" rel="noopener"
+                       class="in-btn">Cetak + Keterangan</a>
+                    <a href="{{ route('order-bungkus.print-outdoor', ['keterangan' => 0]) }}" target="_blank" rel="noopener"
+                       class="in-btn" style="background: var(--color-surface); color: var(--color-text); border-color: var(--color-divider);">Cetak Tanpa Keterangan</a>
+                </div>
             </div>
 
             @foreach (['indoor' => $indoorItems, 'outdoor' => $outdoorItems] as $tabKey => $itemGroups)

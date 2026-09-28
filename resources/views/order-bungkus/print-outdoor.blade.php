@@ -33,6 +33,7 @@
     </style>
 </head>
 <body>
+    @php $showNotes = ! request()->has('keterangan') || request()->boolean('keterangan'); @endphp
     <main class="sheet">
         <div class="heading">
             <div>
@@ -44,13 +45,20 @@
 
         <table>
             <colgroup>
-                <col style="width: 13%"><col style="width: 15%"><col style="width: 20%"><col style="width: 9%">
-                <col style="width: 5%"><col style="width: 12%"><col style="width: 14%"><col style="width: 12%">
+                @if ($showNotes)
+                    <col style="width: 12%"><col style="width: 14%"><col style="width: 18%"><col style="width: 9%">
+                    <col style="width: 5%"><col style="width: 12%"><col style="width: 14%"><col style="width: 11%"><col style="width: 5%">
+                @else
+                    <col style="width: 13%"><col style="width: 15%"><col style="width: 22%"><col style="width: 10%">
+                    <col style="width: 5%"><col style="width: 13%"><col style="width: 17%"><col style="width: 5%">
+                @endif
             </colgroup>
             <thead>
                 <tr>
                     <th>No. Order</th><th>Customer</th><th>Nama File</th><th>Ukuran</th>
-                    <th>Qty</th><th>Printer</th><th>Bahan</th><th>Keterangan</th>
+                    <th>Qty</th><th>Printer</th><th>Bahan</th>
+                    @if ($showNotes)<th>Keterangan</th>@endif
+                    <th>Paraf / TTD</th>
                 </tr>
             </thead>
             <tbody>
@@ -68,10 +76,11 @@
                         <td class="qty">{{ $item->qtyAt('bungkus') }}</td>
                         <td>{{ $printerNames[$printerCode] ?? $printerCode ?? '-' }}</td>
                         <td>{{ $materialNames[$materialCode] ?? $materialCode ?? '-' }}</td>
-                        <td class="notes">{{ $notes ?: '' }}</td>
+                        @if ($showNotes)<td class="notes">{{ $notes ?: '' }}</td>@endif
+                        <td class="notes"></td>
                     </tr>
                 @empty
-                    <tr><td colspan="8" class="empty">Tidak ada order Outdoor dalam antrean Bungkus.</td></tr>
+                    <tr><td colspan="{{ $showNotes ? 9 : 8 }}" class="empty">Tidak ada order Outdoor dalam antrean Bungkus.</td></tr>
                 @endforelse
             </tbody>
         </table>
