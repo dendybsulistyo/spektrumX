@@ -15,6 +15,6 @@ class HargaBertingkat extends Model
     protected $casts = [
         'BatasA' => 'integer',
         'BatasZ' => 'integer',
-        'Harga' => 'float',
+        'Harga' => 'integer',
     ];
 }

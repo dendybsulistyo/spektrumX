@@ -32,8 +32,8 @@ class HargaCetakOutdoorController extends Controller
     {
         $data = $request->validate([
             'harga' => ['required', 'array'],
-            'harga.*.*.std' => ['nullable', 'numeric', 'min:0'],
-            'harga.*.*.min' => ['nullable', 'numeric', 'min:0'],
+            'harga.*.*.std' => ['nullable', 'integer', 'min:1'],
+            'harga.*.*.min' => ['nullable', 'integer', 'min:1'],
         ]);
 
         $deleteKeys = [];

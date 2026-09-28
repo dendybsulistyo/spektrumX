@@ -12,7 +12,11 @@
                 this.saving = true;
                 const form = event.target;
                 try {
-                    const { data } = await axios.post(form.action, new FormData(form));
+                    const payload = new FormData(form);
+                    form.querySelectorAll('input[data-rupiah][name]').forEach((input) => {
+                        payload.set(input.name, input.value.replace(/\D/g, ''));
+                    });
+                    const { data } = await axios.post(form.action, payload);
                     this.toastMessage = data.message ?? 'Harga berhasil disimpan.';
                     this.toastError = false;
                 } catch (e) {
@@ -60,16 +64,16 @@
                                         $harga = $prices->get($kdCtk);
                                     @endphp
                                     <td class="px-1 py-1.5">
-                                        <input type="number" step="0.001" min="0"
+                                        <input type="text" inputmode="numeric" data-rupiah
                                                name="harga[{{ $bahan->NoCetak }}][{{ $printer->KdPrn }}][std]"
-                                               value="{{ old('harga.'.$bahan->NoCetak.'.'.$printer->KdPrn.'.std', $harga?->HargaStd) }}"
+                                               value="{{ old('harga.'.$bahan->NoCetak.'.'.$printer->KdPrn.'.std', $harga ? number_format($harga->HargaStd, 0, ',', '.') : '') }}"
                                                placeholder="-"
                                                class="w-24 text-right rounded-md border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500">
                                     </td>
                                     <td class="px-1 py-1.5">
-                                        <input type="number" step="0.001" min="0"
+                                        <input type="text" inputmode="numeric" data-rupiah
                                                name="harga[{{ $bahan->NoCetak }}][{{ $printer->KdPrn }}][min]"
-                                               value="{{ old('harga.'.$bahan->NoCetak.'.'.$printer->KdPrn.'.min', $harga?->HargaMin) }}"
+                                               value="{{ old('harga.'.$bahan->NoCetak.'.'.$printer->KdPrn.'.min', $harga ? number_format($harga->HargaMin, 0, ',', '.') : '') }}"
                                                placeholder="-"
                                                class="w-24 text-right rounded-md border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500">
                                     </td>

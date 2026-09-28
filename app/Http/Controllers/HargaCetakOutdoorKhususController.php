@@ -54,7 +54,7 @@ class HargaCetakOutdoorKhususController extends Controller
             'KdCust' => ['required', 'string', 'exists:customers,KdCust'],
             'KdPrn' => ['required', 'string', 'size:2'],
             'harga' => ['required', 'array'],
-            'harga.*' => ['nullable', 'numeric', 'min:0'],
+            'harga.*' => ['nullable', 'integer', 'min:1'],
         ], [], ['KdCust' => 'customer', 'KdPrn' => 'printer']);
 
         $customer = Customer::with('limit')->where('KdCust', $data['KdCust'])->first();

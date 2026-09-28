@@ -18,15 +18,4 @@ final class Rupiah
         return ceil($nominal / self::UNIT_PEMBULATAN) * self::UNIT_PEMBULATAN;
     }
 
-    /**
-     * Legacy Outdoor prices were stored in thousands (23.5 = Rp23.500),
-     * while newer rows store the full Rupiah amount. Accept both formats.
-     */
-    public static function hargaOutdoor(float|int|string|null $nominal): float
-    {
-        $value = (float) ($nominal ?? 0);
-
-        return $value > 0 && $value < 1000 ? $value * 1000 : $value;
-    }
-
 }

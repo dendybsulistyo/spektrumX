@@ -19,8 +19,8 @@ class HargaCetakOutdoorKhusus extends Model
     protected function casts(): array
     {
         return [
-            'HargaStd' => 'float',
-            'HargaMin' => 'float',
+            'HargaStd' => 'integer',
+            'HargaMin' => 'integer',
         ];
     }
 

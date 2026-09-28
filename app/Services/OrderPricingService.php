@@ -83,7 +83,7 @@ class OrderPricingService
     {
         $areaM2 = ($panjangCm / 100) * ($lebarCm / 100);
 
-        $hargaStd = Rupiah::hargaOutdoor($harga->HargaStd);
+        $hargaStd = (float) $harga->HargaStd;
 
         if ($kdCust) {
             $cacheKey = $kdCust.'|'.$harga->KdCtk;
@@ -95,7 +95,7 @@ class OrderPricingService
             }
             $hargaStd = array_key_exists($cacheKey, $this->outdoorSpecialPriceCache)
                 && $this->outdoorSpecialPriceCache[$cacheKey] !== null
-                    ? Rupiah::hargaOutdoor($this->outdoorSpecialPriceCache[$cacheKey])
+                    ? (float) $this->outdoorSpecialPriceCache[$cacheKey]
                     : $hargaStd;
         }
 
