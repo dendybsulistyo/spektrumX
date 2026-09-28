@@ -6,7 +6,6 @@ use App\Http\Requests\StoreHargaCetakOutdoorRequest;
 use App\Models\BahanCetakOutdoor;
 use App\Models\HargaCetakOutdoor;
 use App\Models\PrinterOutdoor;
-use App\Support\Rupiah;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -31,14 +30,6 @@ class HargaCetakOutdoorController extends Controller
 
     public function updateMatrix(Request $request): RedirectResponse|JsonResponse
     {
-        $request->merge([
-            'harga' => collect($request->input('harga', []))->map(
-                fn ($perPrinter) => collect($perPrinter)->map(
-                    fn ($pair) => collect($pair)->map(fn ($value) => Rupiah::dariInput($value))->all()
-                )->all()
-            )->all(),
-        ]);
-
         $data = $request->validate([
             'harga' => ['required', 'array'],
             'harga.*.*.std' => ['nullable', 'numeric', 'min:0'],

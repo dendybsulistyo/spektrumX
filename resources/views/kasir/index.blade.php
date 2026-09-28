@@ -73,7 +73,7 @@
                             <td class="px-3 py-2 font-semibold text-gray-900">
                                 {{ $order->NoOrder }}
                                 @if ($order->cs_processed_at)
-                                    <span class="ml-1 rounded bg-violet-100 px-2 py-0.5 text-[10px] font-semibold text-violet-700">CS: {{ strtoupper($order->cs_payment_type) }}@if($order->cs_payment_type !== 'hutang') · Rp {{ number_format($order->cs_transfer_amount, 0, ',', '.') }}@endif · {{ $order->customerService?->name ? ucwords(mb_strtolower($order->customerService->name)) : '-' }}</span>
+                                    <span class="ml-1 rounded bg-violet-100 px-2 py-0.5 text-[10px] font-semibold text-violet-700">CS: {{ strtoupper($order->cs_payment_type) }} · Total Rp {{ number_format($order->cs_order_total ?? $order->total, 0, ',', '.') }}@if($order->cs_payment_type !== 'hutang') · Transfer Rp {{ number_format($order->cs_transfer_amount, 0, ',', '.') }}@endif · {{ $order->customerService?->name ? ucwords(mb_strtolower($order->customerService->name)) : '-' }}</span>
                                 @endif
                                 @if ($order->diskonStatus() === 'pending')
                                     <span class="ml-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">Diskon pending</span>
@@ -127,7 +127,7 @@
                             <td class="px-3 py-2 font-semibold text-gray-900">
                                 {{ $order->NoOrder }}
                                 @if ($order->cs_processed_at)
-                                    <span class="ml-1 rounded bg-violet-100 px-2 py-0.5 text-[10px] font-semibold text-violet-700">CS: {{ strtoupper($order->cs_payment_type) }}@if($order->cs_payment_type !== 'hutang') · Rp {{ number_format($order->cs_transfer_amount, 0, ',', '.') }}@endif · {{ $order->customerService?->name ? ucwords(mb_strtolower($order->customerService->name)) : '-' }}</span>
+                                    <span class="ml-1 rounded bg-violet-100 px-2 py-0.5 text-[10px] font-semibold text-violet-700">CS: {{ strtoupper($order->cs_payment_type) }} · Total Rp {{ number_format($order->cs_order_total ?? $order->total, 0, ',', '.') }}@if($order->cs_payment_type !== 'hutang') · Transfer Rp {{ number_format($order->cs_transfer_amount, 0, ',', '.') }}@endif · {{ $order->customerService?->name ? ucwords(mb_strtolower($order->customerService->name)) : '-' }}</span>
                                 @endif
                                 @if ($order->diskonStatus() === 'pending')
                                     <span class="ml-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">Diskon pending</span>

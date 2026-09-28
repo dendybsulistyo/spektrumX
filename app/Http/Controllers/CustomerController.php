@@ -230,7 +230,10 @@ class CustomerController extends Controller
     public function hargaCetakOutdoorKhusus(Customer $customer): JsonResponse
     {
         $khusus = $customer->hargaCetakOutdoorKhusus()->get()
-            ->mapWithKeys(fn ($h) => [$h->KdCtk => ['std' => (float) $h->HargaStd, 'min' => (float) $h->HargaMin]]);
+            ->mapWithKeys(fn ($h) => [$h->KdCtk => [
+                'std' => \App\Support\Rupiah::hargaOutdoor($h->HargaStd),
+                'min' => \App\Support\Rupiah::hargaOutdoor($h->HargaMin),
+            ]]);
 
         return response()->json($khusus);
     }

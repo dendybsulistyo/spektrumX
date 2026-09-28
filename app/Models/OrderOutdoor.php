@@ -84,6 +84,7 @@ class OrderOutdoor extends Model
         'payment_queue',
         'sent_to_cs_at',
         'cs_transfer_amount',
+        'cs_order_total',
         'cs_payment_type',
         'cs_processed_by',
         'cs_processed_at',
@@ -123,6 +124,7 @@ class OrderOutdoor extends Model
             'hutang_rejected_at' => 'datetime',
             'sent_to_cs_at' => 'datetime',
             'cs_transfer_amount' => 'float',
+            'cs_order_total' => 'float',
             'cs_processed_at' => 'datetime',
         ];
     }

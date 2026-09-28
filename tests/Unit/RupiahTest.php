@@ -26,20 +26,13 @@ class RupiahTest extends TestCase
         ];
     }
 
-    public function test_outdoor_models_expose_normalized_rupiah_values(): void
+    public function test_outdoor_models_keep_master_values_unchanged(): void
     {
         $standard = (new HargaCetakOutdoor)->setRawAttributes(['HargaStd' => 23.5, 'HargaMin' => 40]);
         $special = (new HargaCetakOutdoorKhusus)->setRawAttributes(['HargaStd' => 48.5]);
 
-        $this->assertSame(23500.0, $standard->HargaStd);
-        $this->assertSame(40000.0, $standard->HargaMin);
-        $this->assertSame(48500.0, $special->HargaStd);
-    }
-
-    public function test_it_converts_formatted_rupiah_input_to_raw_digits(): void
-    {
-        $this->assertSame('135000', Rupiah::dariInput('135.000'));
-        $this->assertSame('23500', Rupiah::dariInput('23.500'));
-        $this->assertNull(Rupiah::dariInput(''));
+        $this->assertSame(23.5, $standard->HargaStd);
+        $this->assertSame(40.0, $standard->HargaMin);
+        $this->assertSame(48.5, $special->HargaStd);
     }
 }

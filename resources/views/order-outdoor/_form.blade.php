@@ -20,7 +20,7 @@
     $initialKhususOverrides = collect();
     if ($selectedCustomer) {
         foreach ($selectedCustomer->hargaCetakOutdoorKhusus as $khusus) {
-            $initialKhususOverrides[$khusus->KdCtk] = ['std' => (float) $khusus->HargaStd, 'min' => (float) $khusus->HargaMin];
+            $initialKhususOverrides[$khusus->KdCtk] = ['std' => \App\Support\Rupiah::hargaOutdoor($khusus->HargaStd), 'min' => \App\Support\Rupiah::hargaOutdoor($khusus->HargaMin)];
         }
     }
 
@@ -46,7 +46,7 @@
 
 <div x-data="{
         items: {{ old('items') ? json_encode(old('items')) : $initialItems->toJson() }},
-        hargaMapStandard: {{ $hargaCetakList->keyBy('KdCtk')->map(fn ($h) => ['std' => (float) $h->HargaStd, 'min' => (float) $h->HargaMin])->toJson() }},
+        hargaMapStandard: {{ $hargaCetakList->keyBy('KdCtk')->map(fn ($h) => ['std' => \App\Support\Rupiah::hargaOutdoor($h->HargaStd), 'min' => \App\Support\Rupiah::hargaOutdoor($h->HargaMin)])->toJson() }},
         hargaMap: {},
         async fetchKhusus(kdCust) {
             if (!kdCust) {

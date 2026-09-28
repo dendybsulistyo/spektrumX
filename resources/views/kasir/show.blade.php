@@ -43,6 +43,7 @@
                 <div class="border-b border-violet-200 bg-violet-50 p-4 text-sm text-violet-900">
                     <p class="font-semibold">Informasi pembayaran dari Customer Service</p>
                     <div class="mt-1 flex flex-wrap gap-x-6 gap-y-1">
+                        <span>Total versi CS: <strong>Rp {{ number_format($order->cs_order_total ?? $order->total, 0, ',', '.') }}</strong></span>
                         @if ($order->cs_payment_type !== 'hutang')
                             <span>Transfer: <strong>Rp {{ number_format($order->cs_transfer_amount, 0, ',', '.') }}</strong></span>
                         @endif

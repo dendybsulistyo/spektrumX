@@ -86,6 +86,7 @@ class OrderIndoor extends Model
         'payment_queue',
         'sent_to_cs_at',
         'cs_transfer_amount',
+        'cs_order_total',
         'cs_payment_type',
         'cs_processed_by',
         'cs_processed_at',
@@ -125,6 +126,7 @@ class OrderIndoor extends Model
             'cashback_amount' => 'float',
             'sent_to_cs_at' => 'datetime',
             'cs_transfer_amount' => 'float',
+            'cs_order_total' => 'float',
             'cs_processed_at' => 'datetime',
         ];
     }

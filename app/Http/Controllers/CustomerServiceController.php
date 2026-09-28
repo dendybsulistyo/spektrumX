@@ -242,6 +242,7 @@ class CustomerServiceController extends Controller
 
             $order->update([
                 'cs_transfer_amount' => $transferAmount,
+                'cs_order_total' => (float) $order->total,
                 'cs_payment_type' => $paymentType,
                 'cs_processed_by' => auth()->id(),
                 'cs_processed_at' => now(),

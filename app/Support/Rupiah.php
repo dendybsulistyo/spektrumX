@@ -29,15 +29,4 @@ final class Rupiah
         return $value > 0 && $value < 1000 ? $value * 1000 : $value;
     }
 
-    /** Convert an Indonesian whole-Rupiah input (135.000) into raw digits. */
-    public static function dariInput(float|int|string|null $nominal): float|int|string|null
-    {
-        if (! is_string($nominal)) {
-            return $nominal;
-        }
-
-        $digits = preg_replace('/\D/', '', $nominal);
-
-        return $digits === '' ? null : $digits;
-    }
 }

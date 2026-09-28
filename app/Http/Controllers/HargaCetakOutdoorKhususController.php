@@ -7,7 +7,6 @@ use App\Models\Customer;
 use App\Models\HargaCetakOutdoor;
 use App\Models\HargaCetakOutdoorKhusus;
 use App\Models\PrinterOutdoor;
-use App\Support\Rupiah;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -51,12 +50,6 @@ class HargaCetakOutdoorKhususController extends Controller
 
     public function updateMatrix(Request $request): RedirectResponse
     {
-        $request->merge([
-            'harga' => collect($request->input('harga', []))
-                ->map(fn ($value) => Rupiah::dariInput($value))
-                ->all(),
-        ]);
-
         $data = $request->validate([
             'KdCust' => ['required', 'string', 'exists:customers,KdCust'],
             'KdPrn' => ['required', 'string', 'size:2'],

@@ -83,7 +83,7 @@ class OrderPricingService
     {
         $areaM2 = ($panjangCm / 100) * ($lebarCm / 100);
 
-        $hargaStd = $harga->HargaStd;
+        $hargaStd = Rupiah::hargaOutdoor($harga->HargaStd);
 
         if ($kdCust) {
             $cacheKey = $kdCust.'|'.$harga->KdCtk;

@@ -2,8 +2,6 @@
 
 namespace App\Models;
 
-use App\Support\Rupiah;
-use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 
 class HargaCetakOutdoor extends Model
@@ -29,13 +27,11 @@ class HargaCetakOutdoor extends Model
         'HargaMin',
     ];
 
-    protected function hargaStd(): Attribute
+    protected function casts(): array
     {
-        return Attribute::get(fn ($value) => Rupiah::hargaOutdoor($value));
-    }
-
-    protected function hargaMin(): Attribute
-    {
-        return Attribute::get(fn ($value) => Rupiah::hargaOutdoor($value));
+        return [
+            'HargaStd' => 'float',
+            'HargaMin' => 'float',
+        ];
     }
 }
