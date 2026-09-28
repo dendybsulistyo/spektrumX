@@ -64,14 +64,18 @@
                 </tr>
             </thead>
             <tbody>
+                @php $previousOrderNumber = null; @endphp
                 @forelse ($items as $item)
                     @php
+                        $orderNumber = $item->order?->NoOrder;
+                        $showOrderNumber = $orderNumber !== $previousOrderNumber;
+                        $previousOrderNumber = $orderNumber;
                         $printerCode = $item->printerCode();
                         $materialCode = $item->bahanCode();
                         $notes = collect([$item->jenis_finishing, $item->gabungan])->filter()->join(' · ');
                     @endphp
                     <tr>
-                        <td class="number">{{ $item->order?->NoOrder ?? '-' }}</td>
+                        <td class="number">{{ $showOrderNumber ? ($orderNumber ?? '-') : '' }}</td>
                         <td>{{ $item->order?->customer?->NmCust ? ucwords(mb_strtolower($item->order->customer->NmCust)) : '-' }}</td>
                         <td>{{ $item->NmFile ?: '-' }}</td>
                         <td class="number">{{ rtrim(rtrim(number_format((float) $item->Panjang, 2, ',', '.'), '0'), ',') }} × {{ rtrim(rtrim(number_format((float) $item->Lebar, 2, ',', '.'), '0'), ',') }}</td>
