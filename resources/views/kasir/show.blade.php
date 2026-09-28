@@ -45,7 +45,7 @@
                     <div class="mt-1 flex flex-wrap gap-x-6 gap-y-1">
                         <span>Total versi CS: <strong>Rp {{ number_format($order->cs_order_total ?? $order->total, 0, ',', '.') }}</strong></span>
                         @if ($order->cs_payment_type !== 'hutang')
-                            <span>Transfer: <strong>Rp {{ number_format($order->cs_transfer_amount, 0, ',', '.') }}</strong></span>
+                            <span>Rencana pembayaran CS: <strong>Rp {{ number_format($order->cs_transfer_amount, 0, ',', '.') }}</strong></span>
                         @endif
                         <span>Status: <strong>{{ strtoupper($order->cs_payment_type) }}</strong></span>
                         <span>Dicatat oleh: {{ $order->customerService?->name ?? '-' }}</span>
