@@ -63,7 +63,6 @@
                         <th class="px-3 py-2">Tanggal</th>
                         <th class="px-3 py-2">Customer</th>
                         <th class="px-3 py-2 text-right">Total</th>
-                        <th class="px-3 py-2 text-right">Rencana CS</th>
                         <th class="px-3 py-2 text-right">Aksi</th>
                     </tr>
                 </thead>
@@ -92,14 +91,6 @@
                             <td class="px-3 py-2 text-gray-600">{{ $order->TglOrder }}</td>
                             <td class="px-3 py-2 text-gray-600">{{ $order->customer?->NmCust ? ucwords(mb_strtolower($order->customer->NmCust)) : '-' }}</td>
                             <td class="px-3 py-2 text-right text-gray-900">Rp {{ number_format($order->total ?? 0, 0, ',', '.') }}</td>
-                            <td class="whitespace-nowrap px-3 py-2 text-right">
-                                @if ($order->cs_processed_at)
-                                    <p class="font-semibold text-violet-700">{{ $order->cs_payment_type === 'hutang' ? 'Hutang' : 'Rp '.number_format($order->cs_transfer_amount, 0, ',', '.') }}</p>
-                                    <p class="text-[10px] uppercase text-violet-500">{{ $order->cs_payment_type === 'hutang' ? 'Nilai penuh' : $order->cs_payment_type }}</p>
-                                @else
-                                    <span class="text-gray-400">-</span>
-                                @endif
-                            </td>
                             <td class="px-3 py-2 text-right">
                                 <x-order-discussion type="indoor" :order-id="$order->id" :no-order="$order->NoOrder"
                                                      :comments="$orderComments->get('indoor-'.$order->id, collect())"
@@ -111,7 +102,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="7" class="px-4 py-6 text-center text-gray-400">Tidak ada order indoor yang menunggu pembayaran.</td></tr>
+                        <tr><td colspan="6" class="px-4 py-6 text-center text-gray-400">Tidak ada order indoor yang menunggu pembayaran.</td></tr>
                     @endforelse
                 </tbody>
             </table>
@@ -126,7 +117,6 @@
                         <th class="px-3 py-2">Tanggal</th>
                         <th class="px-3 py-2">Customer</th>
                         <th class="px-3 py-2 text-right">Total</th>
-                        <th class="px-3 py-2 text-right">Rencana CS</th>
                         <th class="px-3 py-2 text-right">Aksi</th>
                     </tr>
                 </thead>
@@ -155,14 +145,6 @@
                             <td class="px-3 py-2 text-gray-600">{{ $order->TglOrder?->format('Y-m-d') }}</td>
                             <td class="px-3 py-2 text-gray-600">{{ $order->customer?->NmCust ? ucwords(mb_strtolower($order->customer->NmCust)) : '-' }}</td>
                             <td class="px-3 py-2 text-right text-gray-900">Rp {{ number_format($order->total ?? 0, 0, ',', '.') }}</td>
-                            <td class="whitespace-nowrap px-3 py-2 text-right">
-                                @if ($order->cs_processed_at)
-                                    <p class="font-semibold text-violet-700">{{ $order->cs_payment_type === 'hutang' ? 'Hutang' : 'Rp '.number_format($order->cs_transfer_amount, 0, ',', '.') }}</p>
-                                    <p class="text-[10px] uppercase text-violet-500">{{ $order->cs_payment_type === 'hutang' ? 'Nilai penuh' : $order->cs_payment_type }}</p>
-                                @else
-                                    <span class="text-gray-400">-</span>
-                                @endif
-                            </td>
                             <td class="px-3 py-2 text-right">
                                 <x-order-discussion type="outdoor" :order-id="$order->id" :no-order="$order->NoOrder"
                                                      :comments="$orderComments->get('outdoor-'.$order->id, collect())"
@@ -174,7 +156,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="7" class="px-4 py-6 text-center text-gray-400">Tidak ada order outdoor yang menunggu pembayaran.</td></tr>
+                        <tr><td colspan="6" class="px-4 py-6 text-center text-gray-400">Tidak ada order outdoor yang menunggu pembayaran.</td></tr>
                     @endforelse
                 </tbody>
             </table>
