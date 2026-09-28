@@ -93,7 +93,10 @@ class OrderPricingService
                     ->where('KdCtk', $harga->KdCtk)
                     ->value('HargaStd');
             }
-            $hargaStd = $this->outdoorSpecialPriceCache[$cacheKey] ?? $hargaStd;
+            $hargaStd = array_key_exists($cacheKey, $this->outdoorSpecialPriceCache)
+                && $this->outdoorSpecialPriceCache[$cacheKey] !== null
+                    ? Rupiah::hargaOutdoor($this->outdoorSpecialPriceCache[$cacheKey])
+                    : $hargaStd;
         }
 
         // Area-based pricing (harga per m²) almost never lands on a round

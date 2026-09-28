@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Support\Rupiah;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -16,12 +18,14 @@ class HargaCetakOutdoorKhusus extends Model
         'HargaMin',
     ];
 
-    protected function casts(): array
+    protected function hargaStd(): Attribute
     {
-        return [
-            'HargaStd' => 'float',
-            'HargaMin' => 'float',
-        ];
+        return Attribute::get(fn ($value) => Rupiah::hargaOutdoor($value));
+    }
+
+    protected function hargaMin(): Attribute
+    {
+        return Attribute::get(fn ($value) => Rupiah::hargaOutdoor($value));
     }
 
     public function customer(): BelongsTo

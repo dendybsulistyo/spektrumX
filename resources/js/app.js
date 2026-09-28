@@ -28,6 +28,18 @@ const initializeRupiahInputs = () => {
         input.form?.addEventListener('submit', () => {
             input.value = input.value.replace(/\D/g, '');
         });
+
+        // Alpine/Axios forms construct FormData before a regular submit
+        // listener can normalize the visible value. Normalize that payload
+        // too, while keeping the formatted value on screen.
+        if (input.form && !input.form.dataset.rupiahFormDataReady) {
+            input.form.dataset.rupiahFormDataReady = 'true';
+            input.form.addEventListener('formdata', (event) => {
+                input.form.querySelectorAll('input[data-rupiah][name]').forEach((rupiahInput) => {
+                    event.formData.set(rupiahInput.name, rupiahInput.value.replace(/\D/g, ''));
+                });
+            });
+        }
     });
 };
 
