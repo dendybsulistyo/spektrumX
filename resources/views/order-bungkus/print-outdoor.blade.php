@@ -18,6 +18,8 @@
         .number { text-align: center; white-space: nowrap; }
         .qty { text-align: center; }
         .notes { height: 28px; }
+        .compact th, .compact td { padding-top: 2px; padding-bottom: 2px; line-height: 1.15; }
+        .compact .signature { height: 18px; }
         .empty { padding: 28px; text-align: center; color: #666; }
         .actions { max-width: 297mm; margin: 12px auto 0; text-align: right; }
         button { border: 0; border-radius: 5px; padding: 9px 16px; color: #fff; background: #172033; font-weight: 700; cursor: pointer; }
@@ -32,8 +34,8 @@
         }
     </style>
 </head>
-<body>
-    @php $showNotes = ! request()->has('keterangan') || request()->boolean('keterangan'); @endphp
+@php $showNotes = ! request()->has('keterangan') || request()->boolean('keterangan'); @endphp
+<body class="{{ $showNotes ? '' : 'compact' }}">
     <main class="sheet">
         <div class="heading">
             <div>
@@ -77,7 +79,7 @@
                         <td>{{ $printerNames[$printerCode] ?? $printerCode ?? '-' }}</td>
                         <td>{{ $materialNames[$materialCode] ?? $materialCode ?? '-' }}</td>
                         @if ($showNotes)<td class="notes">{{ $notes ?: '' }}</td>@endif
-                        <td class="notes"></td>
+                        <td class="notes signature"></td>
                     </tr>
                 @empty
                     <tr><td colspan="{{ $showNotes ? 9 : 8 }}" class="empty">Tidak ada order Outdoor dalam antrean Bungkus.</td></tr>
