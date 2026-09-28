@@ -16,7 +16,9 @@ class InvoiceController extends Controller
     public function show(string $type, int $id): View
     {
         abort_unless(
-            auth()->user()->hasPermission('kasir.view') || auth()->user()->hasPermission('pengambilan.view'),
+            auth()->user()->hasPermission('kasir.view')
+                || auth()->user()->hasPermission('pengambilan.view')
+                || auth()->user()->hasPermission('customer-service.view'),
             403
         );
 

@@ -63,6 +63,11 @@
                                 <span x-show="mode === 'debt'" x-cloak class="rounded bg-orange-100 px-2.5 py-1 text-xs font-semibold text-orange-700">Hutang</span>
                             </td>
                             <td class="whitespace-nowrap px-4 py-3 text-right">
+                                <a href="{{ route('invoice.show', ['type' => $order->order_type, 'id' => $order->id, 'source' => 'cs', 'draft' => 1]) }}"
+                                   target="_blank" rel="noopener"
+                                   class="mr-2 inline-flex rounded border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50">
+                                    Draft SO
+                                </a>
                                 <form id="cs-payment-{{ $order->order_type }}-{{ $order->id }}" method="POST"
                                       action="{{ route('customer-service.forward', ['type' => $order->order_type, 'id' => $order->id]) }}">
                                     @csrf

@@ -360,9 +360,8 @@ Route::middleware('auth')->group(function () {
         Route::post('/customer-service/job-sheets/{jobSheet}/claim', [CustomerServiceController::class, 'claimJobSheet'])->name('customer-service.job-sheets.claim');
     });
 
-    // Not gated to a single permission group — Kasir and Pengambilan operators
-    // both need to check the nota; InvoiceController::show() checks the
-    // permission itself (kasir.view OR pengambilan.view).
+    // Not gated to a single permission group — Kasir, Pengambilan, and CS
+    // need to preview the SO; each endpoint checks its own permission.
     Route::get('/order-documents', [OrderDocumentController::class, 'index'])->name('order-documents.index');
     Route::get('/order-documents/{document}/kwitansi', [OrderDocumentController::class, 'receipt'])->name('order-documents.receipt');
     Route::get('/order-documents/{document}', [OrderDocumentController::class, 'show'])->name('order-documents.show');

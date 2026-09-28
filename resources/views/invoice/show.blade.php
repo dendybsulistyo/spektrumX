@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Surat Pesanan {{ $order->NoOrder }}</title>
+    <title>{{ request()->boolean('draft') ? 'Draft SO' : 'Surat Pesanan' }} {{ $order->NoOrder }}</title>
     <x-app-favicon />
     <style>
         :root { --ink:#155f60; --line:#5f7474; --muted:#536b6b; }
@@ -138,7 +138,7 @@
                 <div class="customer-row"><span class="key"></span><span class="value">{{ $order->NoOrder }}</span></div>
                 <div class="customer-row"><span class="key"></span><span class="value">{{ $order->customer?->NPWP ?: '-' }}</span></div>
                 <p class="order-status">{{ $statusNote }}</p>
-                <p class="page-info">Cetakan ke {{ $pageIndex + 1 }} dari {{ $totalPages }} halaman</p>
+                <p class="page-info">{{ request()->boolean('draft') ? 'DRAFT SO · ' : '' }}Cetakan ke {{ $pageIndex + 1 }} dari {{ $totalPages }} halaman</p>
             </section>
         </header>
 
@@ -197,7 +197,7 @@
     <div class="actions no-print" id="standaloneActions">
         <a href="#" id="backLink" class="link-back">← Kembali</a>
         @if (request('source') !== 'pengambilan' || ($order->status_bayar === 'lunas' && ! $order->invoice_voided_at))
-            <button class="btn" onclick="window.print()">Cetak Surat Pesanan</button>
+            <button class="btn" onclick="window.print()">{{ request()->boolean('draft') ? 'Cetak Draft SO' : 'Cetak Surat Pesanan' }}</button>
         @endif
     </div>
     <script>
