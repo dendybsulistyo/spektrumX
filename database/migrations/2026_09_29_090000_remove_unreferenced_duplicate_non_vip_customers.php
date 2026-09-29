@@ -25,9 +25,15 @@ return new class extends Migration
         $customers = DB::table('customers')->get()->map(fn ($row): array => (array) $row);
         $vipCodes = DB::table('customer_limits')->pluck('KdCust')->map(fn ($code): string => (string) $code)->flip();
 
-        if ($customers->count() !== self::EXPECTED_CUSTOMERS || $vipCodes->count() !== self::EXPECTED_VIP) {
+        // Customer baru dapat ditambahkan setelah audit awal dibuat. Jangan
+        // menggagalkan deployment hanya karena total customer bertambah;
+        // pengaman utama tetap jumlah calon hapus, status VIP, dan referensi.
+        // Jumlah yang lebih kecil dari snapshot audit tetap mencurigakan dan
+        // harus diperiksa agar migration tidak berjalan pada data yang sudah
+        // pernah dibersihkan sebagian.
+        if ($customers->count() < self::EXPECTED_CUSTOMERS || $vipCodes->count() !== self::EXPECTED_VIP) {
             throw new RuntimeException(sprintf(
-                'Audit customer berubah. Ditemukan %d customer dan %d VIP; migrasi mengharapkan %d customer dan %d VIP.',
+                'Audit customer tidak aman. Ditemukan %d customer dan %d VIP; migrasi memerlukan minimal %d customer dan tepat %d VIP.',
                 $customers->count(),
                 $vipCodes->count(),
                 self::EXPECTED_CUSTOMERS,
@@ -61,7 +67,9 @@ return new class extends Migration
             $table->longText('customer_json');
         });
 
-        DB::transaction(function () use ($deletions): void {
+        $customerCountBefore = $customers->count();
+
+        DB::transaction(function () use ($deletions, $customerCountBefore): void {
             foreach ($deletions->chunk(500) as $chunk) {
                 DB::table(self::BACKUP_TABLE)->insert($chunk->map(fn (array $item): array => [
                     'customer_id' => $item['customer']['id'],
@@ -73,7 +81,7 @@ return new class extends Migration
                 DB::table('customers')->whereIn('id', $chunk->pluck('customer.id'))->delete();
             }
 
-            if (DB::table('customers')->count() !== self::EXPECTED_CUSTOMERS - self::EXPECTED_DELETIONS) {
+            if (DB::table('customers')->count() !== $customerCountBefore - $deletions->count()) {
                 throw new RuntimeException('Jumlah customer setelah deduplikasi tidak sesuai perhitungan audit.');
             }
         });
