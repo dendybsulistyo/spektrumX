@@ -338,6 +338,7 @@ Route::middleware('auth')->group(function () {
     });
     Route::middleware('permission:harga-cetak-outdoor-khusus.manage')->group(function () {
         Route::post('/harga-cetak-outdoor-khusus-matrix', [HargaCetakOutdoorKhususController::class, 'updateMatrix'])->name('harga-cetak-outdoor-khusus.update-matrix');
+        Route::post('/harga-cetak-outdoor-khusus/copy', [HargaCetakOutdoorKhususController::class, 'copy'])->name('harga-cetak-outdoor-khusus.copy');
     });
 
     Route::middleware('permission:order-outdoor.view')->group(function () {

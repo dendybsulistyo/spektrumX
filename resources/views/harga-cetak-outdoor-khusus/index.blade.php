@@ -37,6 +37,42 @@
 
         @if ($selectedCustomer && $selectedKdPrn)
             @php $printer = $printers->firstWhere('KdPrn', $selectedKdPrn); @endphp
+            @can('harga-cetak-outdoor-khusus.manage')
+                <div class="rounded-lg border border-indigo-200 bg-indigo-50 p-4">
+                    <div class="mb-3">
+                        <h3 class="text-sm font-semibold text-indigo-900">Salin Harga Customer VIP</h3>
+                        <p class="mt-1 text-xs text-indigo-700">Harga tujuan pada cakupan yang dipilih akan dibuat sama persis dengan customer sumber.</p>
+                    </div>
+                    <form method="POST" action="{{ route('harga-cetak-outdoor-khusus.copy') }}"
+                          class="flex flex-wrap items-end gap-3"
+                          onsubmit="return confirm('Salin harga khusus dan mengganti harga customer tujuan pada cakupan yang dipilih?')">
+                        @csrf
+                        <input type="hidden" name="target_kd_cust" value="{{ $selectedKdCust }}">
+                        <input type="hidden" name="KdPrn" value="{{ $selectedKdPrn }}">
+                        <div class="min-w-64 flex-1">
+                            <x-input-label for="source_kd_cust" value="Salin dari customer" />
+                            <select id="source_kd_cust" name="source_kd_cust" required
+                                    class="mt-1 block w-full rounded-md border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                <option value="">-- Pilih customer sumber --</option>
+                                @foreach ($vipCustomers->where('KdCust', '!=', $selectedKdCust) as $c)
+                                    <option value="{{ $c->KdCust }}" @selected(old('source_kd_cust') === $c->KdCust)>{{ $c->NmCust }} ({{ $c->KdCust }})</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="w-48">
+                            <x-input-label for="copy_scope" value="Harga yang disalin" />
+                            <select id="copy_scope" name="scope" class="mt-1 block w-full rounded-md border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                <option value="printer" @selected(old('scope') !== 'all')>Printer ini saja</option>
+                                <option value="all" @selected(old('scope') === 'all')>Semua printer</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">
+                            Salin Harga
+                        </button>
+                    </form>
+                </div>
+            @endcan
+
             <form method="POST" action="{{ route('harga-cetak-outdoor-khusus.update-matrix') }}" novalidate>
                 @csrf
                 <input type="hidden" name="KdCust" value="{{ $selectedKdCust }}">

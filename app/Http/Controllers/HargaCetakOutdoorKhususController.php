@@ -10,6 +10,7 @@ use App\Models\PrinterOutdoor;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class HargaCetakOutdoorKhususController extends Controller
@@ -87,5 +88,55 @@ class HargaCetakOutdoorKhususController extends Controller
 
         return redirect()->route('harga-cetak-outdoor-khusus.index', ['KdCust' => $data['KdCust'], 'KdPrn' => $data['KdPrn']])
             ->with('status', 'Harga khusus berhasil disimpan.');
+    }
+
+    public function copy(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'source_kd_cust' => ['required', 'string', 'different:target_kd_cust', 'exists:customer_limits,KdCust'],
+            'target_kd_cust' => ['required', 'string', 'exists:customer_limits,KdCust'],
+            'KdPrn' => ['required', 'string', 'size:2', 'exists:printers_outdoors,KdPrn'],
+            'scope' => ['required', Rule::in(['printer', 'all'])],
+        ], [], [
+            'source_kd_cust' => 'customer sumber',
+            'target_kd_cust' => 'customer tujuan',
+            'KdPrn' => 'printer',
+            'scope' => 'cakupan penyalinan',
+        ]);
+
+        $sourceQuery = HargaCetakOutdoorKhusus::query()->where('KdCust', $data['source_kd_cust']);
+        if ($data['scope'] === 'printer') {
+            $sourceQuery->where('KdCtk', 'like', $data['KdPrn'].'%');
+        }
+
+        $sourcePrices = $sourceQuery->get(['KdCtk', 'HargaStd', 'HargaMin']);
+        if ($sourcePrices->isEmpty()) {
+            return back()->withInput()->with('error', 'Customer sumber belum mempunyai harga khusus pada cakupan yang dipilih.');
+        }
+
+        DB::transaction(function () use ($data, $sourcePrices): void {
+            $targetQuery = HargaCetakOutdoorKhusus::query()->where('KdCust', $data['target_kd_cust']);
+            if ($data['scope'] === 'printer') {
+                $targetQuery->where('KdCtk', 'like', $data['KdPrn'].'%');
+            }
+            $targetQuery->delete();
+
+            $now = now();
+            HargaCetakOutdoorKhusus::insert($sourcePrices->map(fn (HargaCetakOutdoorKhusus $price): array => [
+                'KdCust' => $data['target_kd_cust'],
+                'KdCtk' => $price->KdCtk,
+                'HargaStd' => $price->HargaStd,
+                'HargaMin' => $price->HargaMin,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ])->all());
+        });
+
+        $scopeLabel = $data['scope'] === 'all' ? 'semua printer' : 'printer yang dipilih';
+
+        return redirect()->route('harga-cetak-outdoor-khusus.index', [
+            'KdCust' => $data['target_kd_cust'],
+            'KdPrn' => $data['KdPrn'],
+        ])->with('status', sprintf('%d harga khusus untuk %s berhasil disalin.', $sourcePrices->count(), $scopeLabel));
     }
 }
