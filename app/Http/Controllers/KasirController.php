@@ -203,6 +203,10 @@ class KasirController extends Controller
     private function bayarLocked(Request $request, string $type, Model $order): RedirectResponse
     {
 
+        if ($this->missingCashierArtworkPrice($type, $order)) {
+            return back()->with('error', 'Harga satuan Rupiah untuk produk 1706 Art Work wajib diisi sebelum pembayaran.');
+        }
+
         // Nota pengganti only ever moves the topup/cashback difference in
         // one go, via the untouched single cara_bayar path below — splitting
         // across methods is only offered for a normal lunas/DP collection.
@@ -474,6 +478,52 @@ class KasirController extends Controller
         return redirect()->route('kasir.show', ['type' => $type, 'id' => $order->id])
             ->with('status', 'Pembayaran berhasil diproses.'.($kembalian > 0 ? ' Kembalian: Rp '.number_format($kembalian, 0, ',', '.').'.' : ''))
             ->with('autoPrintSalesOrder', true);
+    }
+
+    public function updateArtworkPrice(Request $request, string $type, int $id, int $detail): RedirectResponse
+    {
+        abort_unless(in_array($type, ['indoor', 'artwork'], true), 404);
+        $data = $request->validate([
+            'harga_satuan' => ['required', 'integer', 'min:100', 'max:999999999999'],
+        ]);
+
+        $order = $this->resolveOrder($type, $id);
+        abort_unless($order->status_bayar === 'belum_bayar' && ($order->payment_queue ?? 'kasir') === 'kasir', 422, 'Harga hanya dapat diubah sebelum pembayaran.');
+
+        DB::transaction(function () use ($type, $order, $detail, $data): void {
+            $order = $order->newQuery()->lockForUpdate()->findOrFail($order->id);
+            abort_unless($order->status_bayar === 'belum_bayar' && ($order->payment_queue ?? 'kasir') === 'kasir', 422, 'Status pembayaran order sudah berubah.');
+
+            $item = $order->items()->whereKey($detail)->lockForUpdate()->firstOrFail();
+
+            $isArtwork1706 = (string) $item->KdProd === '1706'
+                && ($type === 'artwork' || ($type === 'indoor' && $item->isArtwork()));
+            abort_unless($isArtwork1706, 422, 'Harga manual hanya berlaku untuk produk 1706 Art Work.');
+
+            $item->update(['harga_satuan_kasir' => (int) $data['harga_satuan']]);
+            $total = $type === 'indoor'
+                ? $this->pricingService->totalIndoor($order->fresh())
+                : $this->pricingService->totalArtwork($order->fresh('items'));
+            $order->update(['total' => $total]);
+        }, attempts: 3);
+
+        return back()->with('status', 'Harga Art Work berhasil disimpan dan total order diperbarui.');
+    }
+
+    private function missingCashierArtworkPrice(string $type, Model $order): bool
+    {
+        if (! in_array($type, ['indoor', 'artwork'], true)) {
+            return false;
+        }
+
+        $query = $order->items();
+        if ($type === 'indoor') {
+            $query->where('jenis_produk', 'artwork');
+        }
+
+        return $query->where('KdProd', '1706')
+            ->where(fn ($query) => $query->whereNull('harga_satuan_kasir')->orWhere('harga_satuan_kasir', '<=', 0))
+            ->exists();
     }
 
     /**

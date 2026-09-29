@@ -26,6 +26,7 @@ class OrderArtworkDetail extends Model
         'Panjang',
         'Lebar',
         'Qty',
+        'harga_satuan_kasir',
         'qty_desain',
         'qty_cetak',
         'qty_finishing',
@@ -44,6 +45,7 @@ class OrderArtworkDetail extends Model
         return [
             'Panjang' => 'float',
             'Lebar' => 'float',
+            'harga_satuan_kasir' => 'float',
             'PisauTurun' => 'integer',
             'JumlahKertas' => 'integer',
             'TebalKertas' => 'integer',

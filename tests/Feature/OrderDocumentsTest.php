@@ -12,6 +12,7 @@ use App\Services\CustomerCreditService;
 use App\Services\DeliveryOrderService;
 use App\Services\OrderDocumentService;
 use App\Services\OrderPaymentWorkflow;
+use App\Services\OrderPricingService;
 use Illuminate\Database\QueryException;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Carbon;
@@ -50,11 +51,21 @@ class OrderDocumentsTest extends TestCase
         Schema::create('order_indoor_detail', function (Blueprint $t) {
             $t->id();
             $t->integer('order_indoor_id');
+            $t->string('KdProd')->nullable();
+            $t->string('jenis_produk')->default('indoor');
+            $t->string('NmProd')->nullable();
             $t->string('Judul')->default('Banner');
+            $t->decimal('Panjang')->default(0);
+            $t->decimal('Lebar')->default(0);
             $t->integer('Qty')->default(10);
+            $t->decimal('harga_satuan_kasir', 18, 2)->nullable();
             foreach (['desain', 'cetak', 'finishing', 'qc', 'bungkus', 'siap_diambil', 'selesai'] as $stage) {
                 $t->integer('qty_'.$stage)->default(0);
             }
+        });
+        Schema::create('harga_artwork', function (Blueprint $t) {
+            $t->id();
+            $t->string('KdProd')->unique();
         });
         Schema::create('customers', function (Blueprint $t) {
             $t->id();
@@ -108,6 +119,22 @@ class OrderDocumentsTest extends TestCase
         OrderIndoorDetail::create(['order_indoor_id' => $order->id, 'Qty' => 10, 'qty_siap_diambil' => 10]);
 
         return $order->fresh();
+    }
+
+    public function test_artwork_1706_uses_cashier_unit_price_without_changing_master_price(): void
+    {
+        DB::table('harga_artwork')->insert(['KdProd' => '1706']);
+        $order = $this->order(['total' => 0]);
+        $item = $order->items->first();
+        $item->update([
+            'KdProd' => '1706',
+            'jenis_produk' => 'artwork',
+            'Qty' => 3,
+            'harga_satuan_kasir' => 25000,
+        ]);
+
+        $this->assertSame(75000.0, app(OrderPricingService::class)->totalIndoor($order->fresh()));
+        $this->assertDatabaseHas('harga_artwork', ['KdProd' => '1706']);
     }
 
     public function test_two_pickups_create_two_dos_and_retry_does_not_move_stock_twice(): void

@@ -98,7 +98,28 @@
                                 <td class="px-3 py-2 text-right text-gray-600">{{ $item->panjang }}</td>
                                 <td class="px-3 py-2 text-right text-gray-600">{{ $item->lebar }}</td>
                                 <td class="px-3 py-2 text-right text-gray-600">{{ $item->qty }}</td>
-                                <td class="px-3 py-2 text-right text-gray-600">{{ $item->harga_satuan !== null ? 'Rp '.number_format($item->harga_satuan, 0, ',', '.') : '-' }}</td>
+                                <td class="px-3 py-2 text-right text-gray-600">
+                                    @if ($item->harga_kasir_dapat_diisi && $order->status_bayar === 'belum_bayar')
+                                        @can('kasir.manage')
+                                            <form method="POST" action="{{ route('kasir.artwork-price.update', ['type' => $type, 'id' => $order->id, 'detail' => $item->detail_id]) }}"
+                                                  x-data="{ raw: '{{ (int) ($item->harga_satuan_kasir ?? 0) }}' }" class="flex items-center justify-end gap-1">
+                                                @csrf
+                                                <span>Rp</span>
+                                                <input type="text" inputmode="numeric"
+                                                       :value="raw > 0 ? Number(raw).toLocaleString('id-ID') : ''"
+                                                       @input="raw = $event.target.value.replace(/\D/g, ''); $event.target.value = raw ? Number(raw).toLocaleString('id-ID') : ''"
+                                                       placeholder="0" class="w-28 rounded-md border-gray-300 px-2 py-1 text-right text-xs">
+                                                <input type="hidden" name="harga_satuan" :value="raw">
+                                                <button type="submit" class="rounded bg-indigo-600 px-2 py-1 text-[11px] font-semibold text-white hover:bg-indigo-700">Simpan</button>
+                                            </form>
+                                            <p class="mt-1 text-[10px] text-orange-600">Harga khusus diisi Kasir</p>
+                                        @else
+                                            {{ $item->harga_satuan !== null ? 'Rp '.number_format($item->harga_satuan, 0, ',', '.') : 'Belum diisi' }}
+                                        @endcan
+                                    @else
+                                        {{ $item->harga_satuan !== null ? 'Rp '.number_format($item->harga_satuan, 0, ',', '.') : '-' }}
+                                    @endif
+                                </td>
                                 <td class="px-3 py-2 text-right text-gray-900">Rp {{ number_format($item->subtotal, 0, ',', '.') }}</td>
                             </tr>
                         @endforeach
