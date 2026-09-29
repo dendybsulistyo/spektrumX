@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\OrderDocument;
+use App\Models\OrderPickupSignature;
 use App\Models\PengaturanKeuangan;
 use App\Services\OrderDocumentService;
 use Illuminate\Http\Request;
@@ -12,7 +13,13 @@ class OrderDocumentController extends Controller
 {
     private function authorizeAccess(): void
     {
-        abort_unless(auth()->user()->hasPermission('kasir.view') || auth()->user()->hasPermission('pengambilan.view') || auth()->user()->hasPermission('keuangan.view'), 403);
+        abort_unless(
+            auth()->user()->hasPermission('kasir.view')
+                || auth()->user()->hasPermission('pengambilan.view')
+                || auth()->user()->hasPermission('customer-service.view')
+                || auth()->user()->hasPermission('keuangan.view'),
+            403
+        );
     }
 
     public function index(Request $request)
@@ -34,8 +41,19 @@ class OrderDocumentController extends Controller
         $void = ! $order || $order->status === 'batal' || $order->invoice_voided_at;
         $signature = null;
         if ($path = $document->snapshot['signature_path'] ?? null) {
-            if (Storage::disk('local')->exists($path)) {
-                $signature = 'data:image/svg+xml;base64,'.base64_encode(Storage::disk('local')->get($path));
+            $storedSignature = str_starts_with($path, 'pickup-signatures/')
+                ? OrderPickupSignature::query()
+                    ->where('order_type', $document->order_type)
+                    ->where('order_id', $document->order_id)
+                    ->where('signature_path', $path)
+                    ->first(['signature_hash'])
+                : null;
+
+            if ($storedSignature && Storage::disk('local')->exists($path)) {
+                $contents = Storage::disk('local')->get($path);
+                if (is_string($contents) && hash_equals($storedSignature->signature_hash, hash('sha256', $contents))) {
+                    $signature = 'data:image/svg+xml;base64,'.base64_encode($contents);
+                }
             }
         }
 

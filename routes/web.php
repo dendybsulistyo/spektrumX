@@ -78,9 +78,15 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
-    Route::get('/customers-search', [CustomerController::class, 'search'])->name('customers.search');
-    Route::post('/customers-quick-create', [CustomerController::class, 'quickCreate'])->name('customers.quick-create');
-    Route::get('/customers/{customer:KdCust}/harga-cetak-outdoor-khusus', [CustomerController::class, 'hargaCetakOutdoorKhusus'])->name('customers.harga-cetak-outdoor-khusus');
+    Route::middleware('permission.any:customers.view,customer-service.view,order-indoor.manage,order-outdoor.manage,order-artwork.manage')->group(function () {
+        Route::get('/customers-search', [CustomerController::class, 'search'])->name('customers.search');
+    });
+    Route::middleware('permission.any:customers.manage,customer-service.manage,order-indoor.manage,order-outdoor.manage,order-artwork.manage')->group(function () {
+        Route::post('/customers-quick-create', [CustomerController::class, 'quickCreate'])->name('customers.quick-create');
+    });
+    Route::middleware('permission.any:harga-cetak-outdoor-khusus.view,order-outdoor.manage')->group(function () {
+        Route::get('/customers/{customer:KdCust}/harga-cetak-outdoor-khusus', [CustomerController::class, 'hargaCetakOutdoorKhusus'])->name('customers.harga-cetak-outdoor-khusus');
+    });
 
     Route::middleware('permission:preview-cetak.view')->group(function () {
         Route::get('/preview-cetak', [PreviewCetakController::class, 'index'])->name('preview-cetak.index');

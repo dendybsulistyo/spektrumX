@@ -316,6 +316,24 @@ class OrderDocumentsTest extends TestCase
             $t->decimal('Debet', 18, 2);
             $t->decimal('Kredit', 18, 2);
         });
+        Schema::create('accounting_period_locks', function (Blueprint $t) {
+            $t->id();
+            $t->string('periode', 7)->unique();
+            $t->timestamps();
+        });
+        Schema::create('accounting_number_sequences', function (Blueprint $t) {
+            $t->id();
+            $t->string('scope', 30);
+            $t->date('sequence_date');
+            $t->unsignedBigInteger('last_number')->default(0);
+            $t->timestamps();
+            $t->unique(['scope', 'sequence_date']);
+        });
+        Schema::create('periode_tutup_buku', function (Blueprint $t) {
+            $t->id();
+            $t->string('periode', 7)->unique();
+            $t->timestamps();
+        });
         DB::table('am__')->insert([
             ['NoAkun' => '11100', 'TipeDK' => 'D'], ['NoAkun' => '11102', 'TipeDK' => 'D'], ['NoAkun' => '41000', 'TipeDK' => 'K'],
         ]);
