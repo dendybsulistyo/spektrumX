@@ -44,9 +44,13 @@ return new class extends Migration
         $referenceCounts = $this->referenceCounts();
         $deletions = $this->deletions($customers, $vipCodes, $referenceCounts);
 
-        if ($deletions->count() !== self::EXPECTED_DELETIONS) {
+        // Calon hapus dapat berkurang bila customer yang semula tidak dipakai
+        // mulai memperoleh referensi transaksi setelah audit. Customer itu
+        // wajib dipertahankan. Sebaliknya, jumlah yang melebihi snapshot audit
+        // dihentikan agar customer baru tidak ikut terhapus tanpa pemeriksaan.
+        if ($deletions->isEmpty() || $deletions->count() > self::EXPECTED_DELETIONS) {
             throw new RuntimeException(sprintf(
-                'Hasil audit duplikasi berubah. Ditemukan %d calon hapus; migrasi mengharapkan %d.',
+                'Hasil audit duplikasi tidak aman. Ditemukan %d calon hapus; batas hasil audit adalah %d.',
                 $deletions->count(),
                 self::EXPECTED_DELETIONS,
             ));
