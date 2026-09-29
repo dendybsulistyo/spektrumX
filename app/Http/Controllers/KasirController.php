@@ -204,7 +204,7 @@ class KasirController extends Controller
     {
 
         if ($this->missingCashierArtworkPrice($type, $order)) {
-            return back()->with('error', 'Harga satuan Rupiah untuk produk 1706 Art Work wajib diisi sebelum pembayaran.');
+            return back()->with('error', 'Harga satuan Rupiah untuk Art Work atau Ongkos Kirim wajib diisi sebelum pembayaran.');
         }
 
         // Nota pengganti only ever moves the topup/cashback difference in
@@ -496,9 +496,12 @@ class KasirController extends Controller
 
             $item = $order->items()->whereKey($detail)->lockForUpdate()->firstOrFail();
 
-            $isArtwork1706 = (string) $item->KdProd === '1706'
-                && ($type === 'artwork' || ($type === 'indoor' && $item->isArtwork()));
-            abort_unless($isArtwork1706, 422, 'Harga manual hanya berlaku untuk produk 1706 Art Work.');
+            $isCustomPriceItem = ($type === 'artwork' && (string) $item->KdProd === '1706')
+                || ($type === 'indoor' && (
+                    ((string) $item->KdProd === '1706' && $item->isArtwork())
+                    || ((string) $item->KdProd === '2001' && ! $item->isArtwork())
+                ));
+            abort_unless($isCustomPriceItem, 422, 'Harga manual hanya berlaku untuk Art Work 1706 dan Ongkos Kirim 2001.');
 
             $item->update(['harga_satuan_kasir' => (int) $data['harga_satuan']]);
             $total = $type === 'indoor'
@@ -517,11 +520,21 @@ class KasirController extends Controller
         }
 
         $query = $order->items();
-        if ($type === 'indoor') {
-            $query->where('jenis_produk', 'artwork');
-        }
+        $query->where(function ($query) use ($type) {
+            if ($type === 'artwork') {
+                $query->where('KdProd', '1706');
 
-        return $query->where('KdProd', '1706')
+                return;
+            }
+
+            $query->where(function ($query) {
+                $query->where('jenis_produk', 'artwork')->where('KdProd', '1706');
+            })->orWhere(function ($query) {
+                $query->where('jenis_produk', 'indoor')->where('KdProd', '2001');
+            });
+        });
+
+        return $query
             ->where(fn ($query) => $query->whereNull('harga_satuan_kasir')->orWhere('harga_satuan_kasir', '<=', 0))
             ->exists();
     }

@@ -137,6 +137,20 @@ class OrderDocumentsTest extends TestCase
         $this->assertDatabaseHas('harga_artwork', ['KdProd' => '1706']);
     }
 
+    public function test_delivery_fee_2001_uses_cashier_unit_price(): void
+    {
+        $order = $this->order(['total' => 0]);
+        $item = $order->items->first();
+        $item->update([
+            'KdProd' => '2001',
+            'jenis_produk' => 'indoor',
+            'Qty' => 1,
+            'harga_satuan_kasir' => 45000,
+        ]);
+
+        $this->assertSame(45000.0, app(OrderPricingService::class)->totalIndoor($order->fresh()));
+    }
+
     public function test_two_pickups_create_two_dos_and_retry_does_not_move_stock_twice(): void
     {
         $order = $this->order();

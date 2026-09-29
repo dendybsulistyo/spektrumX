@@ -113,12 +113,12 @@ class OrderPricingService
     public function totalIndoor(OrderIndoor $order): float
     {
         return Rupiah::bulatkan($order->detailItems()->sum(function ($item) {
+            if ($this->usesCashierUnitPrice($item)) {
+                return Rupiah::bulatkan((float) $item->harga_satuan_kasir * (int) $item->Qty);
+            }
+
             if ($item->isArtwork()) {
                 $harga = HargaArtwork::where('KdProd', $item->KdProd)->first();
-
-                if ($this->usesCashierArtworkPrice($item)) {
-                    return Rupiah::bulatkan((float) $item->harga_satuan_kasir * (int) $item->Qty);
-                }
 
                 return $harga
                     ? $this->lineTotalArtwork(
@@ -183,7 +183,7 @@ class OrderPricingService
         return Rupiah::bulatkan($order->items->sum(function ($item) {
             $harga = HargaArtwork::where('KdProd', $item->KdProd)->first();
 
-            if ($this->usesCashierArtworkPrice($item)) {
+            if ($this->usesCashierUnitPrice($item)) {
                 return Rupiah::bulatkan((float) $item->harga_satuan_kasir * (int) $item->Qty);
             }
 
@@ -224,15 +224,24 @@ class OrderPricingService
                 // same order (jenis_produk per line) — look up whichever
                 // catalog/formula that specific line was priced from.
                 'indoor' => (function () use ($item) {
+                    if ($this->usesCashierUnitPrice($item)) {
+                        $unitPrice = (float) $item->harga_satuan_kasir;
+                        $isArtwork = $item->isArtwork();
+                        $catalog = $isArtwork ? $this->artwork($item->KdProd, true) : $this->produk($item->KdProd);
+
+                        return [
+                            $item->Judul,
+                            Rupiah::bulatkan($unitPrice * (int) $item->Qty),
+                            $unitPrice,
+                            $catalog?->kategori?->NmDivs,
+                            $this->produkNama($item),
+                            'Harga diinput Kasir',
+                        ];
+                    }
+
                     if ($item->isArtwork()) {
                         $harga = $this->artwork($item->KdProd, true);
                         $nilaiX = $harga?->isJasaPotong() ? $this->artworkCuttingValue() : null;
-
-                        if ($this->usesCashierArtworkPrice($item)) {
-                            $unitPrice = (float) $item->harga_satuan_kasir;
-
-                            return [$item->Judul, Rupiah::bulatkan($unitPrice * (int) $item->Qty), $unitPrice, $harga?->kategori?->NmDivs, $this->produkNama($item), 'Harga Artwork diinput Kasir'];
-                        }
 
                         return [
                             $item->Judul,
@@ -298,7 +307,7 @@ class OrderPricingService
                     $harga = $this->artwork($item->KdProd);
                     $nilaiX = $harga?->isJasaPotong() ? $this->artworkCuttingValue() : null;
 
-                    if ($this->usesCashierArtworkPrice($item)) {
+                    if ($this->usesCashierUnitPrice($item)) {
                         $unitPrice = (float) $item->harga_satuan_kasir;
 
                         return [$item->Judul, Rupiah::bulatkan($unitPrice * (int) $item->Qty), $unitPrice, $this->produkNama($item), null, 'Harga Artwork diinput Kasir'];
@@ -328,17 +337,25 @@ class OrderPricingService
                 'detail_id' => $item->id,
                 'kd_prod' => (string) $item->KdProd,
                 'harga_satuan_kasir' => $item->harga_satuan_kasir !== null ? (float) $item->harga_satuan_kasir : null,
-                'harga_kasir_dapat_diisi' => (string) $item->KdProd === '1706'
-                    && ($type === 'artwork' || ($type === 'indoor' && $item->isArtwork())),
+                'harga_kasir_dapat_diisi' => $this->cashierUnitPriceAllowed($item),
             ];
         });
     }
 
-    private function usesCashierArtworkPrice($item): bool
+    private function usesCashierUnitPrice($item): bool
     {
-        return (string) $item->KdProd === '1706'
+        return $this->cashierUnitPriceAllowed($item)
             && $item->harga_satuan_kasir !== null
             && (float) $item->harga_satuan_kasir > 0;
+    }
+
+    private function cashierUnitPriceAllowed($item): bool
+    {
+        $isArtworkCatalog = $item instanceof \App\Models\OrderArtworkDetail
+            || (method_exists($item, 'isArtwork') && $item->isArtwork());
+
+        return ($isArtworkCatalog && (string) $item->KdProd === '1706')
+            || (! $isArtworkCatalog && (string) $item->KdProd === '2001');
     }
 
     /**
