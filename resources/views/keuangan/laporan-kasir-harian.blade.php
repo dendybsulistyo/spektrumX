@@ -42,11 +42,6 @@
                 #daily-cashier-ledger .ledger .invoice { width:22%; }
                 #daily-cashier-ledger .ledger .money { width:15%; }
                 #daily-cashier-ledger .ledger tfoot { break-inside:avoid; }
-                body.print-paper-a5 #daily-cashier-ledger .report-head h3 { font-size:10pt; }
-                body.print-paper-a5 #daily-cashier-ledger .report-meta { font-size:6.5pt; }
-                body.print-paper-a5 #daily-cashier-ledger .report-head { padding-bottom:6px; }
-                body.print-paper-a5 #daily-cashier-ledger .ledger-wrap { padding-top:2.5mm; padding-bottom:2.5mm; }
-                body.print-paper-a5 #daily-cashier-ledger .ledger th, body.print-paper-a5 #daily-cashier-ledger .ledger td { padding:1.5px 2px; font-size:5.8pt; }
             }
         </style>
     @endpush
@@ -78,7 +73,7 @@
                     </button>
                     <a href="{{ route('keuangan.laporan-kasir-harian', array_filter(['kasir' => $kasirId])) }}" class="btn btn-secondary" style="height:36px;">Hari Ini</a>
                     <a href="{{ route('keuangan.laporan-kasir-harian.excel', array_filter(['tanggal' => $tanggal, 'kasir' => $kasirId])) }}" class="btn btn-secondary" style="height:36px;">Export Excel</a>
-                    <x-print-paper-controls />
+                    <button type="button" class="btn btn-secondary" style="height:36px;" onclick="window.print()">Cetak</button>
                 </form>
             </div>
 
