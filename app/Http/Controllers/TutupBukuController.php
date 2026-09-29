@@ -7,6 +7,7 @@ use App\Models\Pengeluaran;
 use App\Models\PeriodeTutupBuku;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class TutupBukuController extends Controller
@@ -60,16 +61,20 @@ class TutupBukuController extends Controller
             return back()->with('error', 'Tidak bisa menutup periode yang belum terjadi.');
         }
 
-        if (PeriodeTutupBuku::isClosed($data['periode'])) {
-            return back()->with('error', 'Periode ini sudah ditutup sebelumnya.');
-        }
+        DB::transaction(function () use ($data) {
+            DB::table('accounting_period_locks')->insertOrIgnore([
+                'periode' => $data['periode'], 'created_at' => now(), 'updated_at' => now(),
+            ]);
+            DB::table('accounting_period_locks')->where('periode', $data['periode'])->lockForUpdate()->first();
+            abort_if(PeriodeTutupBuku::isClosed($data['periode']), 422, 'Periode ini sudah ditutup sebelumnya.');
 
-        PeriodeTutupBuku::create([
-            'periode' => $data['periode'],
-            'ditutup_oleh' => auth()->id(),
-            'ditutup_at' => now(),
-            'catatan' => $data['catatan'] ?? null,
-        ]);
+            PeriodeTutupBuku::create([
+                'periode' => $data['periode'],
+                'ditutup_oleh' => auth()->id(),
+                'ditutup_at' => now(),
+                'catatan' => $data['catatan'] ?? null,
+            ]);
+        }, attempts: 3);
 
         return redirect()->route('keuangan.tutup-buku')
             ->with('status', "Periode {$data['periode']} berhasil ditutup. Pengeluaran & payroll periode ini terkunci.");
@@ -78,7 +83,13 @@ class TutupBukuController extends Controller
     public function destroy(PeriodeTutupBuku $periodeTutupBuku): RedirectResponse
     {
         $periode = $periodeTutupBuku->periode;
-        $periodeTutupBuku->delete();
+        DB::transaction(function () use ($periodeTutupBuku, $periode) {
+            DB::table('accounting_period_locks')->insertOrIgnore([
+                'periode' => $periode, 'created_at' => now(), 'updated_at' => now(),
+            ]);
+            DB::table('accounting_period_locks')->where('periode', $periode)->lockForUpdate()->first();
+            PeriodeTutupBuku::query()->lockForUpdate()->findOrFail($periodeTutupBuku->id)->delete();
+        }, attempts: 3);
 
         return redirect()->route('keuangan.tutup-buku')
             ->with('status', "Periode {$periode} dibuka kembali.");

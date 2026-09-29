@@ -15,6 +15,7 @@ use App\Models\OrderStatusNote;
 use App\Models\Produk;
 use App\Services\ApproverNotificationService;
 use App\Services\OrderPricingService;
+use App\Services\OrderNumberService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -25,6 +26,7 @@ class OrderIndoorController extends Controller
     public function __construct(
         private readonly OrderPricingService $pricingService,
         private readonly ApproverNotificationService $notifier,
+        private readonly OrderNumberService $orderNumbers,
     ) {}
 
     public function index(Request $request): View
@@ -115,7 +117,7 @@ class OrderIndoorController extends Controller
                 );
             }
 
-            $noOrder = $this->generateNoOrder($data['TglOrder']);
+            $noOrder = $this->orderNumbers->next('indoor', $data['TglOrder']);
 
             $order = OrderIndoor::create([
                 'TglOrder' => $data['TglOrder'],
@@ -135,7 +137,7 @@ class OrderIndoorController extends Controller
             $this->saveItems($order, $data['items']);
 
             $order->update(['total' => $this->pricingService->totalIndoor($order)]);
-        });
+        }, attempts: 3);
 
         return redirect()->route($replacement ? 'kasir.index' : 'order-indoor.index')
             ->with('status', $replacement
@@ -199,21 +201,15 @@ class OrderIndoorController extends Controller
             'cancel_reason' => ['required', 'string', 'max:255'],
         ]);
 
-        $orderIndoor->update([
-            'cancel_requested_at' => now(),
-            'cancel_requested_by' => auth()->id(),
-            'cancel_reason' => $data['cancel_reason'],
-        ]);
-
-        OrderStatusNote::create([
-            'order_type' => 'indoor',
-            'order_id' => $orderIndoor->id,
-            'stage' => 'pembatalan',
-            'action' => 'diajukan',
-            'catatan' => $data['cancel_reason'],
-            'user_id' => auth()->id(),
-            'created_at' => now(),
-        ]);
+        DB::transaction(function () use ($orderIndoor, $data) {
+            $orderIndoor = $orderIndoor->newQuery()->lockForUpdate()->findOrFail($orderIndoor->id);
+            abort_if($orderIndoor->status === 'batal' || $orderIndoor->cancel_requested_at, 422, 'Order batal atau sudah punya pengajuan pembatalan.');
+            $orderIndoor->update(['cancel_requested_at' => now(), 'cancel_requested_by' => auth()->id(), 'cancel_reason' => $data['cancel_reason']]);
+            OrderStatusNote::create([
+                'order_type' => 'indoor', 'order_id' => $orderIndoor->id, 'stage' => 'pembatalan',
+                'action' => 'diajukan', 'catatan' => $data['cancel_reason'], 'user_id' => auth()->id(), 'created_at' => now(),
+            ]);
+        }, attempts: 3);
 
         $this->notifier->notify(
             'order-indoor.approve-cancel',
@@ -262,7 +258,7 @@ class OrderIndoorController extends Controller
                 'user_id' => auth()->id(),
                 'created_at' => now(),
             ]);
-        });
+        }, attempts: 3);
 
         if ($isReplacement) {
             return redirect()->route('kasir.replacement.create.indoor', $orderIndoor)
@@ -274,25 +270,16 @@ class OrderIndoorController extends Controller
 
     public function rejectCancel(OrderIndoor $orderIndoor): RedirectResponse
     {
-        if (! $orderIndoor->cancel_requested_at) {
-            return back()->with('error', 'Order ini tidak punya pengajuan pembatalan yang menunggu persetujuan.');
-        }
+        DB::transaction(function () use ($orderIndoor) {
+            $orderIndoor = $orderIndoor->newQuery()->lockForUpdate()->findOrFail($orderIndoor->id);
+            abort_if($orderIndoor->status === 'batal' || ! $orderIndoor->cancel_requested_at, 422, 'Pembatalan sudah diproses atau pengajuan sudah berubah.');
 
-        $orderIndoor->update([
-            'cancel_requested_at' => null,
-            'cancel_requested_by' => null,
-            'cancel_reason' => null,
-        ]);
-
-        OrderStatusNote::create([
-            'order_type' => 'indoor',
-            'order_id' => $orderIndoor->id,
-            'stage' => 'pembatalan',
-            'action' => 'ditolak',
-            'catatan' => null,
-            'user_id' => auth()->id(),
-            'created_at' => now(),
-        ]);
+            $orderIndoor->update(['cancel_requested_at' => null, 'cancel_requested_by' => null, 'cancel_reason' => null]);
+            OrderStatusNote::create([
+                'order_type' => 'indoor', 'order_id' => $orderIndoor->id, 'stage' => 'pembatalan',
+                'action' => 'ditolak', 'catatan' => null, 'user_id' => auth()->id(), 'created_at' => now(),
+            ]);
+        }, attempts: 3);
 
         return redirect()->route('order-desain.index', ['tab' => 'indoor'])->with('status', 'Pengajuan pembatalan ditolak, order lanjut diproses normal.');
     }
@@ -351,16 +338,4 @@ class OrderIndoorController extends Controller
             ->get();
     }
 
-    private function generateNoOrder(string $tglOrder): string
-    {
-        $prefix = 'IND.2.'.date('ymd', strtotime($tglOrder));
-
-        $last = OrderIndoor::where('NoOrder', 'like', $prefix.'%')
-            ->orderByDesc('NoOrder')
-            ->value('NoOrder');
-
-        $nextSeq = $last ? ((int) substr($last, strlen($prefix), 5)) + 1 : 1;
-
-        return $prefix.str_pad((string) $nextSeq, 5, '0', STR_PAD_LEFT);
-    }
 }

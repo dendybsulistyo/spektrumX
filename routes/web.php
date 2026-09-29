@@ -216,13 +216,18 @@ Route::middleware('auth')->group(function () {
         Route::post('/payroll/{slipGaji}/bayar', [PayrollController::class, 'bayar'])->name('payroll.bayar');
     });
 
+    // Route statis harus didaftarkan sebelum /customers/{customer}; jika tidak,
+    // kata "create" dibaca sebagai KdCust dan implicit binding mengembalikan 404.
+    Route::middleware('permission:customers.manage')->group(function () {
+        Route::get('/customers/create', [CustomerController::class, 'create'])->name('customers.create');
+    });
     Route::middleware('permission:customers.view')->group(function () {
         Route::resource('customers', CustomerController::class)->only(['index', 'edit'])->names('customers');
         Route::get('/customers-aktif', [CustomerController::class, 'aktif'])->name('customers.aktif');
         Route::get('/customers/{customer:KdCust}', [CustomerController::class, 'show'])->name('customers.show');
     });
     Route::middleware('permission:customers.manage')->group(function () {
-        Route::resource('customers', CustomerController::class)->only(['create', 'store', 'update', 'destroy'])->names('customers');
+        Route::resource('customers', CustomerController::class)->only(['store', 'update', 'destroy'])->names('customers');
         Route::get('/customers-suggest-code', [CustomerController::class, 'suggestCode'])->name('customers.suggest-code');
     });
 

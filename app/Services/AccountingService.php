@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\JurnalEntry;
 use App\Models\PengaturanKeuangan;
+use App\Models\PeriodeTutupBuku;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
@@ -188,12 +189,44 @@ class AccountingService
             throw new InvalidArgumentException("Kode akun {$invalidAccount} tidak ditemukan atau bukan akun yang dapat diposting.");
         }
 
-        // Fits the legacy column's varchar(14) exactly: 6-digit date +
-        // 6-digit time + 2-digit random tiebreaker for same-second posts.
-        $noTrans = now()->format('ymdHis').rand(10, 99);
         $perio = substr(str_replace('-', '', $tanggal), 0, 6);
 
-        DB::transaction(function () use ($lines, $tanggal, $bukti, $keterangan, $noTrans, $perio) {
+        return DB::transaction(function () use ($lines, $tanggal, $bukti, $keterangan, $perio) {
+            $period = substr($tanggal, 0, 7);
+            DB::table('accounting_period_locks')->insertOrIgnore([
+                'periode' => $period,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+            DB::table('accounting_period_locks')->where('periode', $period)->lockForUpdate()->first();
+            if (PeriodeTutupBuku::isClosed($period)) {
+                throw new InvalidArgumentException("Periode {$period} sudah ditutup (closing) — jurnal tidak dapat diposting.");
+            }
+
+            $sequenceDate = now()->format('Y-m-d');
+            DB::table('accounting_number_sequences')->insertOrIgnore([
+                'scope' => 'journal',
+                'sequence_date' => $sequenceDate,
+                'last_number' => 0,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            $sequence = DB::table('accounting_number_sequences')
+                ->where('scope', 'journal')
+                ->where('sequence_date', $sequenceDate)
+                ->lockForUpdate()
+                ->first();
+            $next = ((int) $sequence->last_number) + 1;
+            DB::table('accounting_number_sequences')->where('id', $sequence->id)->update([
+                'last_number' => $next,
+                'updated_at' => now(),
+            ]);
+
+            // Exactly 14 characters for the legacy column. The J marker
+            // keeps this sequence disjoint from historical numeric IDs.
+            $noTrans = now()->format('ymd').'J'.str_pad((string) $next, 7, '0', STR_PAD_LEFT);
+
             foreach ($lines as $line) {
                 JurnalEntry::create([
                     'Perio' => $perio,
@@ -207,8 +240,8 @@ class AccountingService
                     'KdBantu' => mb_substr($line['kd_bantu'] ?? '', 0, 10),
                 ]);
             }
-        });
 
-        return $noTrans;
+            return $noTrans;
+        }, attempts: 3);
     }
 }

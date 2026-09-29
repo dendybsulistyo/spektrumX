@@ -310,8 +310,14 @@ class AccountingPurchaseController extends Controller
         }
 
         DB::transaction(function () use ($data, $purchase) {
-            $purchase->refresh()->load('supplier');
+            $purchase = AccountingPurchase::query()
+                ->with('supplier')
+                ->lockForUpdate()
+                ->findOrFail($purchase->id);
             $amount = round((float) $data['jumlah']);
+            if ($purchase->jumlah_hutang <= 0) {
+                abort(422, 'Nota pembelian ini sudah lunas.');
+            }
             if ($amount > $purchase->jumlah_hutang) {
                 abort(422, 'Sisa hutang sudah berubah. Silakan ulangi.');
             }
@@ -326,7 +332,7 @@ class AccountingPurchaseController extends Controller
             $remaining = round($purchase->jumlah_hutang - $amount);
             $purchase->update(['jumlah_dibayar' => $purchase->jumlah_dibayar + $amount, 'jumlah_hutang' => $remaining, 'status' => $remaining <= 0 ? 'lunas' : 'hutang']);
             $payment->update(['no_trans_jurnal' => $noTrans]);
-        });
+        }, attempts: 3);
 
         return back()->with('status', 'Pelunasan hutang supplier berhasil dicatat.');
     }
@@ -350,7 +356,10 @@ class AccountingPurchaseController extends Controller
         }
 
         DB::transaction(function () use ($data, $purchase) {
-            $purchase->refresh()->load('supplier');
+            $purchase = AccountingPurchase::query()
+                ->with('supplier')
+                ->lockForUpdate()
+                ->findOrFail($purchase->id);
             $available = round($purchase->total - $purchase->jumlah_retur);
             $total = $data['jenis'] === 'batal' ? $available : round((float) $data['total']);
             if ($available <= 0) {
@@ -393,7 +402,7 @@ class AccountingPurchaseController extends Controller
                 'jumlah_dibayar' => max(0, $purchase->jumlah_dibayar - $refund),
                 'status' => $newHutang <= 0 && $purchase->status === 'hutang' ? 'lunas' : $purchase->status,
             ]);
-        });
+        }, attempts: 3);
 
         return back()->with('status', $data['jenis'] === 'batal' ? 'Nota pembelian dibatalkan dengan jurnal pembalik.' : 'Retur pembelian berhasil dicatat.');
     }
@@ -401,9 +410,31 @@ class AccountingPurchaseController extends Controller
     private function nextReturnCode(string $date): string
     {
         $prefix = 'RT-'.str_replace('-', '', substr($date, 2));
-        $count = AccountingPurchaseReturn::where('nomor_bukti', 'like', $prefix.'-%')->count() + 1;
+        $lastExisting = AccountingPurchaseReturn::query()
+            ->where('nomor_bukti', 'like', $prefix.'-%')
+            ->pluck('nomor_bukti')
+            ->map(fn (string $code) => (int) str($code)->afterLast('-')->toString())
+            ->max() ?? 0;
+        DB::table('accounting_number_sequences')->insertOrIgnore([
+            'scope' => 'purchase_return',
+            'sequence_date' => $date,
+            'last_number' => $lastExisting,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
 
-        return $prefix.'-'.str_pad((string) $count, 3, '0', STR_PAD_LEFT);
+        $sequence = DB::table('accounting_number_sequences')
+            ->where('scope', 'purchase_return')
+            ->where('sequence_date', $date)
+            ->lockForUpdate()
+            ->first();
+        $next = ((int) $sequence->last_number) + 1;
+        DB::table('accounting_number_sequences')->where('id', $sequence->id)->update([
+            'last_number' => $next,
+            'updated_at' => now(),
+        ]);
+
+        return $prefix.'-'.str_pad((string) $next, 3, '0', STR_PAD_LEFT);
     }
 
     private function insertLines(int $purchaseId, Collection $lines): void

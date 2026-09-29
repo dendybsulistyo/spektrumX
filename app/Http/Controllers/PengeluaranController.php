@@ -7,6 +7,7 @@ use App\Models\PeriodeTutupBuku;
 use App\Services\AccountingService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class PengeluaranController extends Controller
@@ -49,8 +50,14 @@ class PengeluaranController extends Controller
             return back()->withInput()->with('error', 'Periode tanggal ini sudah ditutup (closing) — tidak bisa mencatat pengeluaran baru.');
         }
 
-        $pengeluaran = Pengeluaran::create($data + ['user_id' => auth()->id()]);
-        $pengeluaran->update(['no_trans_jurnal' => $this->postJurnal($pengeluaran)]);
+        DB::transaction(function () use ($data): void {
+            if (PeriodeTutupBuku::isClosed($data['tanggal'])) {
+                abort(422, 'Periode tanggal ini sudah ditutup (closing).');
+            }
+
+            $pengeluaran = Pengeluaran::create($data + ['user_id' => auth()->id()]);
+            $pengeluaran->update(['no_trans_jurnal' => $this->postJurnal($pengeluaran)]);
+        }, attempts: 3);
 
         return redirect()->route('pengeluaran.index')->with('status', 'Pengeluaran berhasil dicatat.');
     }
@@ -63,13 +70,17 @@ class PengeluaranController extends Controller
             return back()->withInput()->with('error', 'Periode pengeluaran ini sudah ditutup (closing) — tidak bisa diubah.');
         }
 
-        // Journal entries are append-only — editing means reversing the old
-        // posting and posting a fresh one for the updated values, rather
-        // than mutating history in place.
-        $this->accounting->reverse($pengeluaran->no_trans_jurnal, 'Koreksi pengeluaran #'.$pengeluaran->id);
+        DB::transaction(function () use ($data, $pengeluaran): void {
+            $pengeluaran = Pengeluaran::query()->lockForUpdate()->findOrFail($pengeluaran->id);
+            if (PeriodeTutupBuku::isClosed($pengeluaran->tanggal->format('Y-m-d')) || PeriodeTutupBuku::isClosed($data['tanggal'])) {
+                abort(422, 'Periode pengeluaran ini sudah ditutup (closing).');
+            }
 
-        $pengeluaran->update($data);
-        $pengeluaran->update(['no_trans_jurnal' => $this->postJurnal($pengeluaran)]);
+            // Jurnal bersifat append-only: balik jurnal lama lalu buat jurnal baru.
+            $this->accounting->reverse($pengeluaran->no_trans_jurnal, 'Koreksi pengeluaran #'.$pengeluaran->id);
+            $pengeluaran->update($data);
+            $pengeluaran->update(['no_trans_jurnal' => $this->postJurnal($pengeluaran)]);
+        }, attempts: 3);
 
         return redirect()->route('pengeluaran.index')->with('status', 'Pengeluaran berhasil diperbarui.');
     }
@@ -80,9 +91,15 @@ class PengeluaranController extends Controller
             return back()->with('error', 'Periode pengeluaran ini sudah ditutup (closing) — tidak bisa dihapus.');
         }
 
-        $this->accounting->reverse($pengeluaran->no_trans_jurnal, 'Hapus pengeluaran #'.$pengeluaran->id);
+        DB::transaction(function () use ($pengeluaran): void {
+            $pengeluaran = Pengeluaran::query()->lockForUpdate()->findOrFail($pengeluaran->id);
+            if (PeriodeTutupBuku::isClosed($pengeluaran->tanggal->format('Y-m-d'))) {
+                abort(422, 'Periode pengeluaran ini sudah ditutup (closing).');
+            }
 
-        $pengeluaran->delete();
+            $this->accounting->reverse($pengeluaran->no_trans_jurnal, 'Hapus pengeluaran #'.$pengeluaran->id);
+            $pengeluaran->delete();
+        }, attempts: 3);
 
         return redirect()->route('pengeluaran.index')->with('status', 'Pengeluaran dihapus.');
     }

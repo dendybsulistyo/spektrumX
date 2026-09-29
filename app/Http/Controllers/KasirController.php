@@ -532,12 +532,15 @@ class KasirController extends Controller
     public function rejectHutang(string $type, int $id): RedirectResponse
     {
         $order = $this->resolveOrder($type, $id);
-        abort_if($order->hutangApprovalStatus() !== 'pending', 422, 'Tidak ada pengajuan hutang yang menunggu persetujuan untuk order ini.');
+        DB::transaction(function () use ($order): void {
+            $order = $order->newQuery()->lockForUpdate()->findOrFail($order->id);
+            abort_if($order->status_bayar !== 'belum_bayar' || $order->hutangApprovalStatus() !== 'pending', 422, 'Tidak ada pengajuan hutang yang menunggu persetujuan untuk order ini.');
 
-        $order->update([
-            'hutang_rejected_at' => now(),
-            'hutang_rejected_by' => auth()->id(),
-        ]);
+            $order->update([
+                'hutang_rejected_at' => now(),
+                'hutang_rejected_by' => auth()->id(),
+            ]);
+        }, attempts: 3);
 
         return back()->with('status', "Pengajuan hutang order {$order->NoOrder} ditolak.");
     }
@@ -714,39 +717,38 @@ class KasirController extends Controller
     {
         $order = $this->resolveOrder($type, $id);
 
-        if ($order->status_bayar === 'lunas') {
-            return back()->with('error', 'Order ini sudah lunas, tidak bisa diajukan diskon.');
-        }
-
-        if ($order->diskonStatus() === 'pending') {
-            return back()->with('error', 'Order ini sudah punya pengajuan diskon yang masih menunggu persetujuan.');
-        }
-
         $data = $request->validate([
             'diskon_tipe' => ['required', 'in:persen,nominal'],
             'diskon_persen' => ['required_if:diskon_tipe,persen', 'nullable', 'numeric', 'min:0.01', 'max:100'],
-            'diskon_nominal' => ['required_if:diskon_tipe,nominal', 'nullable', 'numeric', 'min:100', 'multiple_of:100', 'max:'.(float) $order->total],
+            'diskon_nominal' => ['required_if:diskon_tipe,nominal', 'nullable', 'numeric', 'min:100', 'multiple_of:100'],
             'diskon_alasan' => ['required', 'string', 'max:255'],
-        ]);
-
-        $order->update([
-            'diskon_tipe' => $data['diskon_tipe'],
-            'diskon_requested_persen' => $data['diskon_tipe'] === 'persen' ? $data['diskon_persen'] : null,
-            'diskon_requested_nominal' => $data['diskon_tipe'] === 'nominal' ? $data['diskon_nominal'] : null,
-            'diskon_alasan' => $data['diskon_alasan'],
-            'diskon_requested_at' => now(),
-            'diskon_requested_by' => auth()->id(),
-            'diskon_approved_at' => null,
-            'diskon_approved_by' => null,
-            'diskon_rejected_at' => null,
-            'diskon_rejected_by' => null,
         ]);
 
         $label = $data['diskon_tipe'] === 'persen'
             ? "{$data['diskon_persen']}%"
             : 'Rp '.number_format((float) $data['diskon_nominal'], 0, ',', '.');
 
-        $this->notifyDiskonApprovers($order, $label, $data['diskon_alasan']);
+        DB::transaction(function () use ($data, $label, $order): void {
+            $order = $order->newQuery()->lockForUpdate()->findOrFail($order->id);
+            abort_if($order->status_bayar === 'lunas', 422, 'Order ini sudah lunas, tidak bisa diajukan diskon.');
+            abort_if($order->diskonStatus() === 'pending', 422, 'Order ini sudah punya pengajuan diskon yang masih menunggu persetujuan.');
+            abort_if($data['diskon_tipe'] === 'nominal' && (float) $data['diskon_nominal'] > (float) $order->total, 422, 'Nominal diskon tidak boleh melebihi total order.');
+
+            $order->update([
+                'diskon_tipe' => $data['diskon_tipe'],
+                'diskon_requested_persen' => $data['diskon_tipe'] === 'persen' ? $data['diskon_persen'] : null,
+                'diskon_requested_nominal' => $data['diskon_tipe'] === 'nominal' ? $data['diskon_nominal'] : null,
+                'diskon_alasan' => $data['diskon_alasan'],
+                'diskon_requested_at' => now(),
+                'diskon_requested_by' => auth()->id(),
+                'diskon_approved_at' => null,
+                'diskon_approved_by' => null,
+                'diskon_rejected_at' => null,
+                'diskon_rejected_by' => null,
+            ]);
+
+            $this->notifyDiskonApprovers($order, $label, $data['diskon_alasan']);
+        }, attempts: 3);
 
         return back()->with('status', 'Pengajuan diskon terkirim, menunggu persetujuan Admin/Owner/Admin Kasir.');
     }
@@ -754,17 +756,19 @@ class KasirController extends Controller
     public function approveDiskon(Request $request, string $type, int $id): RedirectResponse
     {
         $order = $this->resolveOrder($type, $id);
+        DB::transaction(function () use ($order): void {
+            $order = $order->newQuery()->lockForUpdate()->findOrFail($order->id);
+            abort_if($order->status_bayar !== 'belum_bayar' || $order->diskonStatus() !== 'pending', 422, 'Tidak ada pengajuan diskon yang menunggu persetujuan untuk order ini.');
 
-        if ($order->diskonStatus() !== 'pending') {
-            return back()->with('error', 'Tidak ada pengajuan diskon yang menunggu persetujuan untuk order ini.');
-        }
+            $order->update([
+                'diskon_persen' => $order->diskon_tipe === 'persen' ? $order->diskon_requested_persen : null,
+                'diskon_nominal_tetap' => $order->diskon_tipe === 'nominal' ? $order->diskon_requested_nominal : null,
+                'diskon_approved_at' => now(),
+                'diskon_approved_by' => auth()->id(),
+            ]);
+        }, attempts: 3);
 
-        $order->update([
-            'diskon_persen' => $order->diskon_tipe === 'persen' ? $order->diskon_requested_persen : null,
-            'diskon_nominal_tetap' => $order->diskon_tipe === 'nominal' ? $order->diskon_requested_nominal : null,
-            'diskon_approved_at' => now(),
-            'diskon_approved_by' => auth()->id(),
-        ]);
+        $order->refresh();
 
         return back()->with('status', "Diskon {$order->diskonRequestedLabel()} untuk order {$order->NoOrder} disetujui.");
     }
@@ -772,15 +776,15 @@ class KasirController extends Controller
     public function rejectDiskon(Request $request, string $type, int $id): RedirectResponse
     {
         $order = $this->resolveOrder($type, $id);
+        DB::transaction(function () use ($order): void {
+            $order = $order->newQuery()->lockForUpdate()->findOrFail($order->id);
+            abort_if($order->status_bayar !== 'belum_bayar' || $order->diskonStatus() !== 'pending', 422, 'Tidak ada pengajuan diskon yang menunggu persetujuan untuk order ini.');
 
-        if ($order->diskonStatus() !== 'pending') {
-            return back()->with('error', 'Tidak ada pengajuan diskon yang menunggu persetujuan untuk order ini.');
-        }
-
-        $order->update([
-            'diskon_rejected_at' => now(),
-            'diskon_rejected_by' => auth()->id(),
-        ]);
+            $order->update([
+                'diskon_rejected_at' => now(),
+                'diskon_rejected_by' => auth()->id(),
+            ]);
+        }, attempts: 3);
 
         return back()->with('status', "Pengajuan diskon untuk order {$order->NoOrder} ditolak.");
     }

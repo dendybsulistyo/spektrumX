@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\AccountingInventoryCount;
 use App\Models\AccountingInventoryItem;
 use App\Models\JurnalEntry;
+use App\Models\PeriodeTutupBuku;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -60,7 +61,19 @@ class InventoryHppController extends Controller
         $data = $request->validate(['tanggal' => ['required', 'date'], 'qty' => ['required', 'numeric', 'min:0'], 'harga_satuan' => ['required', 'numeric', 'min:0'], 'keterangan' => ['nullable', 'string', 'max:255']]);
         $data['nilai'] = round((float) $data['qty'] * (float) $data['harga_satuan']);
         $data['user_id'] = auth()->id();
-        AccountingInventoryCount::updateOrCreate(['inventory_item_id' => $item->id, 'tanggal' => $data['tanggal']], $data);
+        DB::transaction(function () use ($item, $data) {
+            $period = substr($data['tanggal'], 0, 7);
+            DB::table('accounting_period_locks')->insertOrIgnore([
+                'periode' => $period, 'created_at' => now(), 'updated_at' => now(),
+            ]);
+            DB::table('accounting_period_locks')->where('periode', $period)->lockForUpdate()->first();
+            abort_if(PeriodeTutupBuku::isClosed($period), 422, "Periode {$period} sudah ditutup (closing).");
+
+            AccountingInventoryCount::updateOrCreate(
+                ['inventory_item_id' => $item->id, 'tanggal' => $data['tanggal']],
+                $data
+            );
+        }, attempts: 3);
 
         return back()->with('status', 'Stok opname '.$item->nama.' disimpan.');
     }

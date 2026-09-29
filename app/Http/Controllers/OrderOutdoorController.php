@@ -14,6 +14,7 @@ use App\Models\OrderStatusNote;
 use App\Models\PrinterOutdoor;
 use App\Services\ApproverNotificationService;
 use App\Services\OrderPricingService;
+use App\Services\OrderNumberService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -24,6 +25,7 @@ class OrderOutdoorController extends Controller
     public function __construct(
         private readonly OrderPricingService $pricingService,
         private readonly ApproverNotificationService $notifier,
+        private readonly OrderNumberService $orderNumbers,
     ) {}
 
     public function index(Request $request): View
@@ -109,7 +111,7 @@ class OrderOutdoorController extends Controller
                     'Nota asal tidak tersedia untuk dibuatkan pengganti.'
                 );
             }
-            $noOrder = $this->generateNoOrder($data['TglOrder']);
+            $noOrder = $this->orderNumbers->next('outdoor', $data['TglOrder']);
 
             $order = OrderOutdoor::create([
                 'TglOrder' => $data['TglOrder'],
@@ -128,7 +130,7 @@ class OrderOutdoorController extends Controller
             $this->saveItems($order, $data['items']);
 
             $order->update(['total' => $this->pricingService->totalOutdoor($order->fresh())]);
-        });
+        }, attempts: 3);
 
         return redirect()->route($replacement ? 'kasir.index' : 'order-outdoor.index')
             ->with('status', $replacement
@@ -191,21 +193,15 @@ class OrderOutdoorController extends Controller
             'cancel_reason' => ['required', 'string', 'max:255'],
         ]);
 
-        $orderOutdoor->update([
-            'cancel_requested_at' => now(),
-            'cancel_requested_by' => auth()->id(),
-            'cancel_reason' => $data['cancel_reason'],
-        ]);
-
-        OrderStatusNote::create([
-            'order_type' => 'outdoor',
-            'order_id' => $orderOutdoor->id,
-            'stage' => 'pembatalan',
-            'action' => 'diajukan',
-            'catatan' => $data['cancel_reason'],
-            'user_id' => auth()->id(),
-            'created_at' => now(),
-        ]);
+        DB::transaction(function () use ($orderOutdoor, $data) {
+            $orderOutdoor = $orderOutdoor->newQuery()->lockForUpdate()->findOrFail($orderOutdoor->id);
+            abort_if($orderOutdoor->status === 'batal' || $orderOutdoor->cancel_requested_at, 422, 'Order batal atau sudah punya pengajuan pembatalan.');
+            $orderOutdoor->update(['cancel_requested_at' => now(), 'cancel_requested_by' => auth()->id(), 'cancel_reason' => $data['cancel_reason']]);
+            OrderStatusNote::create([
+                'order_type' => 'outdoor', 'order_id' => $orderOutdoor->id, 'stage' => 'pembatalan',
+                'action' => 'diajukan', 'catatan' => $data['cancel_reason'], 'user_id' => auth()->id(), 'created_at' => now(),
+            ]);
+        }, attempts: 3);
 
         $this->notifier->notify(
             'order-outdoor.approve-cancel',
@@ -259,7 +255,7 @@ class OrderOutdoorController extends Controller
                 'user_id' => auth()->id(),
                 'created_at' => now(),
             ]);
-        });
+        }, attempts: 3);
 
         if ($isReplacement) {
             return redirect()->route('kasir.replacement.create', $orderOutdoor)
@@ -271,25 +267,16 @@ class OrderOutdoorController extends Controller
 
     public function rejectCancel(OrderOutdoor $orderOutdoor): RedirectResponse
     {
-        if (! $orderOutdoor->cancel_requested_at) {
-            return back()->with('error', 'Order ini tidak punya pengajuan pembatalan yang menunggu persetujuan.');
-        }
+        DB::transaction(function () use ($orderOutdoor) {
+            $orderOutdoor = $orderOutdoor->newQuery()->lockForUpdate()->findOrFail($orderOutdoor->id);
+            abort_if($orderOutdoor->status === 'batal' || ! $orderOutdoor->cancel_requested_at, 422, 'Pembatalan sudah diproses atau pengajuan sudah berubah.');
 
-        $orderOutdoor->update([
-            'cancel_requested_at' => null,
-            'cancel_requested_by' => null,
-            'cancel_reason' => null,
-        ]);
-
-        OrderStatusNote::create([
-            'order_type' => 'outdoor',
-            'order_id' => $orderOutdoor->id,
-            'stage' => 'pembatalan',
-            'action' => 'ditolak',
-            'catatan' => null,
-            'user_id' => auth()->id(),
-            'created_at' => now(),
-        ]);
+            $orderOutdoor->update(['cancel_requested_at' => null, 'cancel_requested_by' => null, 'cancel_reason' => null]);
+            OrderStatusNote::create([
+                'order_type' => 'outdoor', 'order_id' => $orderOutdoor->id, 'stage' => 'pembatalan',
+                'action' => 'ditolak', 'catatan' => null, 'user_id' => auth()->id(), 'created_at' => now(),
+            ]);
+        }, attempts: 3);
 
         return redirect()->route('order-desain.index', ['tab' => 'outdoor'])->with('status', 'Pengajuan pembatalan ditolak, order lanjut diproses normal.');
     }
@@ -318,16 +305,4 @@ class OrderOutdoorController extends Controller
         }
     }
 
-    private function generateNoOrder(string $tglOrder): string
-    {
-        $prefix = 'OUT.1.'.date('ymd', strtotime($tglOrder));
-
-        $last = OrderOutdoor::where('NoOrder', 'like', $prefix.'%')
-            ->orderByDesc('NoOrder')
-            ->value('NoOrder');
-
-        $nextSeq = $last ? ((int) substr($last, strlen($prefix), 5)) + 1 : 1;
-
-        return $prefix.str_pad((string) $nextSeq, 5, '0', STR_PAD_LEFT);
-    }
 }

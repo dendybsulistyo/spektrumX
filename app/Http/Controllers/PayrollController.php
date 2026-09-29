@@ -79,21 +79,30 @@ class PayrollController extends Controller
             return back()->with('error', "Periode {$periode} sudah ditutup (closing) — tidak bisa memproses gajian baru.");
         }
 
-        $existing = SlipGaji::where('periode', $periode)->pluck('user_id');
-
-        $dibuat = 0;
-        foreach (GajiPegawai::whereNotIn('user_id', $existing)->get() as $config) {
-            SlipGaji::create([
-                'user_id' => $config->user_id,
-                'periode' => $periode,
-                'gaji_pokok' => $config->gaji_pokok,
-                'tunjangan' => $config->tunjangan,
-                'potongan' => 0,
-                'total' => $config->totalGaji(),
-                'status' => 'draft',
+        $dibuat = DB::transaction(function () use ($periode) {
+            DB::table('accounting_period_locks')->insertOrIgnore([
+                'periode' => $periode, 'created_at' => now(), 'updated_at' => now(),
             ]);
-            $dibuat++;
-        }
+            DB::table('accounting_period_locks')->where('periode', $periode)->lockForUpdate()->first();
+            abort_if(PeriodeTutupBuku::isClosed($periode), 422, "Periode {$periode} sudah ditutup (closing).");
+
+            $count = 0;
+            foreach (GajiPegawai::query()->get() as $config) {
+                $count += SlipGaji::query()->insertOrIgnore([
+                    'user_id' => $config->user_id,
+                    'periode' => $periode,
+                    'gaji_pokok' => $config->gaji_pokok,
+                    'tunjangan' => $config->tunjangan,
+                    'potongan' => 0,
+                    'total' => $config->totalGaji(),
+                    'status' => 'draft',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+
+            return $count;
+        }, attempts: 3);
 
         return redirect()->route('payroll.index', ['periode' => $periode])
             ->with('status', $dibuat > 0 ? "{$dibuat} slip gaji draft dibuat untuk periode {$periode}." : 'Semua pegawai sudah punya slip untuk periode ini.');
@@ -128,6 +137,18 @@ class PayrollController extends Controller
         }
 
         DB::transaction(function () use ($slipGaji, $data, $potongan, $total) {
+            $slipGaji = SlipGaji::query()
+                ->with('user')
+                ->lockForUpdate()
+                ->findOrFail($slipGaji->id);
+
+            if ($slipGaji->status === 'dibayar') {
+                abort(422, 'Slip gaji ini sudah dibayar.');
+            }
+            if (PeriodeTutupBuku::isClosed($slipGaji->periode)) {
+                abort(422, "Periode {$slipGaji->periode} sudah ditutup (closing).");
+            }
+
             $namaPegawai = $slipGaji->user?->name ?? "User #{$slipGaji->user_id}";
 
             $pengeluaran = Pengeluaran::create([
@@ -163,7 +184,7 @@ class PayrollController extends Controller
                 'pengeluaran_id' => $pengeluaran->id,
                 'no_trans_jurnal' => $noTrans,
             ]);
-        });
+        }, attempts: 3);
 
         return back()->with('status', 'Gaji berhasil dibayar dan dicatat.');
     }

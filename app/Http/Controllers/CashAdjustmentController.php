@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 
@@ -55,21 +56,27 @@ class CashAdjustmentController extends Controller
             'pengeluaran' => 'Pengeluaran',
         };
         $amount = (float) $validated['amount'];
-        $sequence = (int) CashDailyEntry::query()
-            ->whereDate('tanggal', $occurredAt->toDateString())
-            ->max('urutan') + 1;
+        DB::transaction(function () use ($amount, $cashier, $occurredAt, $type, $typeLabel, $validated): void {
+            // Semua penyesuaian memakai user Yovita. Mengunci baris user ini
+            // membuat perhitungan MAX(urutan)+1 aman dari request bersamaan.
+            User::query()->lockForUpdate()->findOrFail($cashier->id);
+            $sequence = (int) CashDailyEntry::query()
+                ->whereDate('tanggal', $occurredAt->toDateString())
+                ->where('user_id', $cashier->id)
+                ->max('urutan') + 1;
 
-        CashDailyEntry::create([
-            'tanggal' => $occurredAt->toDateString(),
-            'occurred_at' => $occurredAt,
-            'user_id' => $cashier->id,
-            'source_key' => 'cash-adjustment:'.Str::uuid(),
-            'no_nota' => $validated['reference'] ?: null,
-            'keterangan' => $typeLabel.' - '.$validated['reason'],
-            'debet' => $type === 'setor_tunai' ? $amount : 0,
-            'kredit' => $type !== 'setor_tunai' ? $amount : 0,
-            'urutan' => $sequence,
-        ]);
+            CashDailyEntry::create([
+                'tanggal' => $occurredAt->toDateString(),
+                'occurred_at' => $occurredAt,
+                'user_id' => $cashier->id,
+                'source_key' => 'cash-adjustment:'.Str::uuid(),
+                'no_nota' => $validated['reference'] ?: null,
+                'keterangan' => $typeLabel.' - '.$validated['reason'],
+                'debet' => $type === 'setor_tunai' ? $amount : 0,
+                'kredit' => $type !== 'setor_tunai' ? $amount : 0,
+                'urutan' => $sequence,
+            ]);
+        }, attempts: 3);
 
         return redirect()->route('keuangan.cash-adjustments.index')
             ->with('success', 'Penyesuaian kas berhasil dicatat atas nama Yovita.');

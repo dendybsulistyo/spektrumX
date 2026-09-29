@@ -91,6 +91,12 @@ class JurnalManualController extends Controller
         }
 
         DB::transaction(function () use ($data, $postLines) {
+            abort_if(
+                PeriodeTutupBuku::isClosed($data['tanggal']),
+                422,
+                'Periode tanggal ini sudah ditutup (closing) — tidak bisa posting jurnal baru.'
+            );
+
             $jurnalManual = JurnalManual::create([
                 'tanggal' => $data['tanggal'],
                 'keterangan' => $data['keterangan'],
@@ -101,28 +107,31 @@ class JurnalManualController extends Controller
             $noTrans = $this->accounting->post($data['tanggal'], 'JM-'.$jurnalManual->id, $data['keterangan'], $postLines);
 
             $jurnalManual->update(['no_trans_jurnal' => $noTrans]);
-        });
+        }, attempts: 3);
 
         return redirect()->route('keuangan.jurnal-manual')->with('status', 'Jurnal penyesuaian berhasil diposting.');
     }
 
     public function batalkan(JurnalManual $jurnalManual): RedirectResponse
     {
-        if ($jurnalManual->status === 'dibatalkan') {
-            return back()->with('error', 'Jurnal ini sudah dibatalkan.');
-        }
+        DB::transaction(function () use ($jurnalManual) {
+            $jurnalManual = JurnalManual::query()->lockForUpdate()->findOrFail($jurnalManual->id);
 
-        if (PeriodeTutupBuku::isClosed($jurnalManual->tanggal->format('Y-m-d'))) {
-            return back()->with('error', 'Periode jurnal ini sudah ditutup (closing) — tidak bisa dibatalkan.');
-        }
+            abort_if($jurnalManual->status === 'dibatalkan', 422, 'Jurnal ini sudah dibatalkan.');
+            abort_if(
+                PeriodeTutupBuku::isClosed($jurnalManual->tanggal->format('Y-m-d')),
+                422,
+                'Periode jurnal ini sudah ditutup (closing) — tidak bisa dibatalkan.'
+            );
 
-        $this->accounting->reverse($jurnalManual->no_trans_jurnal, 'Pembatalan jurnal manual #'.$jurnalManual->id);
+            $this->accounting->reverse($jurnalManual->no_trans_jurnal, 'Pembatalan jurnal manual #'.$jurnalManual->id);
 
-        $jurnalManual->update([
-            'status' => 'dibatalkan',
-            'dibatalkan_oleh' => auth()->id(),
-            'dibatalkan_at' => now(),
-        ]);
+            $jurnalManual->update([
+                'status' => 'dibatalkan',
+                'dibatalkan_oleh' => auth()->id(),
+                'dibatalkan_at' => now(),
+            ]);
+        }, attempts: 3);
 
         return redirect()->route('keuangan.jurnal-manual')->with('status', 'Jurnal penyesuaian dibatalkan.');
     }

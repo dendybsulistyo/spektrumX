@@ -11,6 +11,7 @@ use App\Models\OrderArtworkDetail;
 use App\Models\OrderStatusNote;
 use App\Services\ApproverNotificationService;
 use App\Services\OrderPricingService;
+use App\Services\OrderNumberService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -21,6 +22,7 @@ class OrderArtworkController extends Controller
     public function __construct(
         private readonly OrderPricingService $pricingService,
         private readonly ApproverNotificationService $notifier,
+        private readonly OrderNumberService $orderNumbers,
     ) {}
 
     public function index(Request $request): View
@@ -91,7 +93,7 @@ class OrderArtworkController extends Controller
                 );
             }
 
-            $noOrder = $this->generateNoOrder($data['TglOrder']);
+            $noOrder = $this->orderNumbers->next('artwork', $data['TglOrder']);
 
             $order = OrderArtwork::create([
                 'TglOrder' => $data['TglOrder'],
@@ -108,7 +110,7 @@ class OrderArtworkController extends Controller
             $this->saveItems($order, $data['items']);
 
             $order->update(['total' => $this->pricingService->totalArtwork($order->fresh('items'))]);
-        });
+        }, attempts: 3);
 
         return redirect()->route($replacement ? 'kasir.index' : 'order-artwork.index')
             ->with('status', $replacement ? 'Nota pengganti berhasil dibuat dan siap diproses kasir.' : 'Order artwork berhasil dibuat.');
@@ -163,21 +165,15 @@ class OrderArtworkController extends Controller
             'cancel_reason' => ['required', 'string', 'max:255'],
         ]);
 
-        $orderArtwork->update([
-            'cancel_requested_at' => now(),
-            'cancel_requested_by' => auth()->id(),
-            'cancel_reason' => $data['cancel_reason'],
-        ]);
-
-        OrderStatusNote::create([
-            'order_type' => 'artwork',
-            'order_id' => $orderArtwork->id,
-            'stage' => 'pembatalan',
-            'action' => 'diajukan',
-            'catatan' => $data['cancel_reason'],
-            'user_id' => auth()->id(),
-            'created_at' => now(),
-        ]);
+        DB::transaction(function () use ($orderArtwork, $data) {
+            $orderArtwork = $orderArtwork->newQuery()->lockForUpdate()->findOrFail($orderArtwork->id);
+            abort_if($orderArtwork->status === 'batal' || $orderArtwork->cancel_requested_at, 422, 'Order batal atau sudah punya pengajuan pembatalan.');
+            $orderArtwork->update(['cancel_requested_at' => now(), 'cancel_requested_by' => auth()->id(), 'cancel_reason' => $data['cancel_reason']]);
+            OrderStatusNote::create([
+                'order_type' => 'artwork', 'order_id' => $orderArtwork->id, 'stage' => 'pembatalan',
+                'action' => 'diajukan', 'catatan' => $data['cancel_reason'], 'user_id' => auth()->id(), 'created_at' => now(),
+            ]);
+        }, attempts: 3);
 
         $this->notifier->notify(
             'order-artwork.approve-cancel',
@@ -226,7 +222,7 @@ class OrderArtworkController extends Controller
                 'user_id' => auth()->id(),
                 'created_at' => now(),
             ]);
-        });
+        }, attempts: 3);
 
         if ($isReplacement) {
             return redirect()->route('kasir.replacement.create.artwork', $orderArtwork)
@@ -238,25 +234,16 @@ class OrderArtworkController extends Controller
 
     public function rejectCancel(OrderArtwork $orderArtwork): RedirectResponse
     {
-        if (! $orderArtwork->cancel_requested_at) {
-            return back()->with('error', 'Order ini tidak punya pengajuan pembatalan yang menunggu persetujuan.');
-        }
+        DB::transaction(function () use ($orderArtwork) {
+            $orderArtwork = $orderArtwork->newQuery()->lockForUpdate()->findOrFail($orderArtwork->id);
+            abort_if($orderArtwork->status === 'batal' || ! $orderArtwork->cancel_requested_at, 422, 'Pembatalan sudah diproses atau pengajuan sudah berubah.');
 
-        $orderArtwork->update([
-            'cancel_requested_at' => null,
-            'cancel_requested_by' => null,
-            'cancel_reason' => null,
-        ]);
-
-        OrderStatusNote::create([
-            'order_type' => 'artwork',
-            'order_id' => $orderArtwork->id,
-            'stage' => 'pembatalan',
-            'action' => 'ditolak',
-            'catatan' => null,
-            'user_id' => auth()->id(),
-            'created_at' => now(),
-        ]);
+            $orderArtwork->update(['cancel_requested_at' => null, 'cancel_requested_by' => null, 'cancel_reason' => null]);
+            OrderStatusNote::create([
+                'order_type' => 'artwork', 'order_id' => $orderArtwork->id, 'stage' => 'pembatalan',
+                'action' => 'ditolak', 'catatan' => null, 'user_id' => auth()->id(), 'created_at' => now(),
+            ]);
+        }, attempts: 3);
 
         return redirect()->route('order-desain.index', ['tab' => 'artwork'])->with('status', 'Pengajuan pembatalan ditolak, order lanjut diproses normal.');
     }
@@ -291,16 +278,4 @@ class OrderArtworkController extends Controller
         }
     }
 
-    private function generateNoOrder(string $tglOrder): string
-    {
-        $prefix = 'ART'.date('ymd', strtotime($tglOrder));
-
-        $last = OrderArtwork::where('NoOrder', 'like', $prefix.'%')
-            ->orderByDesc('NoOrder')
-            ->value('NoOrder');
-
-        $nextSeq = $last ? ((int) substr($last, 9, 5)) + 1 : 1;
-
-        return $prefix.str_pad((string) $nextSeq, 5, '0', STR_PAD_LEFT);
-    }
 }
