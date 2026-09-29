@@ -3,6 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\OrderDocument;
+use App\Models\OrderArtwork;
+use App\Models\OrderIndoor;
+use App\Models\OrderOutdoor;
 use App\Models\OrderPickupSignature;
 use App\Models\PengaturanKeuangan;
 use App\Services\OrderDocumentService;
@@ -25,11 +28,39 @@ class OrderDocumentController extends Controller
     public function index(Request $request)
     {
         $this->authorizeAccess();
-        $documents = OrderDocument::query()->when($request->filled('search'), function ($query) use ($request) {
-            $query->where('number', 'like', '%'.$request->string('search').'%');
+        $search = trim($request->string('search')->toString());
+        $documents = OrderDocument::query()->when($search !== '', function ($query) use ($search) {
+            $query->where(function ($query) use ($search) {
+                $query->where('number', 'like', "%{$search}%")
+                    ->orWhere('snapshot->sales_order', 'like', "%{$search}%")
+                    ->orWhere('snapshot->customer', 'like', "%{$search}%");
+            });
         })->latest('issued_at')->paginate(30)->withQueryString();
 
-        return view('order-documents.index', compact('documents'));
+        $hutangOrders = collect();
+        foreach (['indoor' => OrderIndoor::class, 'outdoor' => OrderOutdoor::class, 'artwork' => OrderArtwork::class] as $orderType => $model) {
+            $model::query()
+                ->with('customer')
+                ->where('status_bayar', 'hutang')
+                ->where('jumlah_piutang', '>', 0)
+                ->where('status', '!=', 'batal')
+                ->when($search !== '', function ($query) use ($search) {
+                    $query->where(function ($query) use ($search) {
+                        $query->where('NoOrder', 'like', "%{$search}%")
+                            ->orWhereHas('customer', fn ($customer) => $customer
+                                ->where('NmCust', 'like', "%{$search}%")
+                                ->orWhere('KdCust', 'like', "%{$search}%"));
+                    });
+                })
+                ->get()
+                ->each(function ($order) use (&$hutangOrders, $orderType) {
+                    $order->order_type = $orderType;
+                    $hutangOrders->push($order);
+                });
+        }
+        $hutangOrders = $hutangOrders->sortByDesc('TglOrder')->values();
+
+        return view('order-documents.index', compact('documents', 'hutangOrders'));
     }
 
     public function show(OrderDocument $document)

@@ -6,7 +6,7 @@
     <div class="bg-white rounded-lg border border-gray-200 overflow-hidden"
          x-data="{
             tab: '{{ $initialTab }}',
-            lunasiModalOpen: false, lunasiType: '', lunasiId: null, lunasiNoOrder: '', lunasiSisa: '', lunasiSisaRaw: 0,
+            lunasiModalOpen: false, lunasiMode: 'dp', lunasiType: '', lunasiId: null, lunasiNoOrder: '', lunasiSisa: '', lunasiSisaRaw: 0,
             lunasiRincian: [{ cara_bayar: 'tunai', jumlah: '', no_referensi: '' }],
             get lunasiRincianTotal() { return this.lunasiRincian.reduce((sum, r) => sum + Number(r.jumlah || 0), 0); },
             get lunasiRincianDiff() { return Math.round((this.lunasiSisaRaw - this.lunasiRincianTotal) * 100) / 100; },
@@ -47,6 +47,10 @@
             <button @click="setTab('dp')" :class="tab === 'dp' ? 'bg-sky-100 text-sky-800' : 'text-gray-500 hover:bg-sky-50 hover:text-sky-700'"
                     class="px-4 py-2 rounded-md font-medium transition">
                 DP Belum Lunas ({{ $dpOrders->count() }})
+            </button>
+            <button @click="setTab('hutang')" :class="tab === 'hutang' ? 'bg-orange-100 text-orange-800' : 'text-gray-500 hover:bg-orange-50 hover:text-orange-700'"
+                    class="px-4 py-2 rounded-md font-medium transition">
+                Hutang ({{ $hutangOrders->count() }})
             </button>
             <button @click="setTab('lunas')" :class="tab === 'lunas' ? 'bg-green-100 text-green-800' : 'text-gray-500 hover:bg-green-50 hover:text-green-700'"
                     class="px-4 py-2 rounded-md font-medium transition">
@@ -235,7 +239,7 @@
                                                      :comments="$orderComments->get($order->order_type.'-'.$order->id, collect())"
                                                      :unread="$orderUnread->get($order->order_type.'-'.$order->id, 0)" />
                                 <button type="button"
-                                        @click="lunasiModalOpen = true; lunasiType = '{{ $order->order_type }}'; lunasiId = {{ $order->id }}; lunasiNoOrder = '{{ $order->NoOrder }}'; lunasiSisa = '{{ number_format($order->jumlah_piutang ?? 0, 0, ',', '.') }}'; lunasiSisaRaw = {{ (float) ($order->jumlah_piutang ?? 0) }}; lunasiRincian = [{ cara_bayar: 'tunai', jumlah: '', no_referensi: '' }]"
+                                        @click="lunasiModalOpen = true; lunasiMode = 'dp'; lunasiType = '{{ $order->order_type }}'; lunasiId = {{ $order->id }}; lunasiNoOrder = '{{ $order->NoOrder }}'; lunasiSisa = '{{ number_format($order->jumlah_piutang ?? 0, 0, ',', '.') }}'; lunasiSisaRaw = {{ (float) ($order->jumlah_piutang ?? 0) }}; lunasiRincian = [{ cara_bayar: 'tunai', jumlah: '', no_referensi: '' }]"
                                         class="inline-flex items-center px-3 py-1.5 bg-green-600 text-white text-xs font-semibold rounded-md hover:bg-green-700">
                                     Lunasi
                                 </button>
@@ -243,6 +247,45 @@
                         </tr>
                     @empty
                         <tr><td colspan="9" class="px-4 py-6 text-center text-gray-400">Tidak ada order indoor atau outdoor dengan sisa DP.</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+
+        <div x-show="tab === 'hutang'" x-cloak class="overflow-x-auto">
+            <table class="w-full text-[13px] min-w-[820px]">
+                <thead class="bg-gray-50 text-left text-xs uppercase text-gray-500">
+                    <tr>
+                        <th class="px-3 py-2 w-12">No</th><th class="px-3 py-2">No Order</th>
+                        <th class="px-3 py-2">Tipe</th><th class="px-3 py-2">Tanggal</th>
+                        <th class="px-3 py-2">Customer</th><th class="px-3 py-2 text-right">Total</th>
+                        <th class="px-3 py-2 text-right">Sisa Hutang</th><th class="px-3 py-2 text-right">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y">
+                    @forelse ($hutangOrders as $order)
+                        <tr>
+                            <td class="px-3 py-2 text-gray-400">{{ $loop->iteration }}</td>
+                            <td class="px-3 py-2 font-semibold text-gray-900">{{ $order->NoOrder }} <span class="ml-1 rounded-full bg-orange-100 px-2 py-0.5 text-[10px] text-orange-700">Hutang VIP</span></td>
+                            <td class="px-3 py-2 text-gray-600 capitalize">{{ $order->order_type }}</td>
+                            <td class="px-3 py-2 text-gray-600">{{ is_string($order->TglOrder) ? $order->TglOrder : $order->TglOrder?->format('Y-m-d') }}</td>
+                            <td class="px-3 py-2 text-gray-600">{{ $order->customer?->NmCust ? ucwords(mb_strtolower($order->customer->NmCust)) : '-' }}</td>
+                            <td class="px-3 py-2 text-right">Rp {{ number_format($order->total ?? 0, 0, ',', '.') }}</td>
+                            <td class="px-3 py-2 text-right font-semibold text-orange-700">Rp {{ number_format($order->jumlah_piutang ?? 0, 0, ',', '.') }}</td>
+                            <td class="px-3 py-2 text-right whitespace-nowrap">
+                                <x-order-discussion :type="$order->order_type" :order-id="$order->id" :no-order="$order->NoOrder"
+                                                     :comments="$orderComments->get($order->order_type.'-'.$order->id, collect())"
+                                                     :unread="$orderUnread->get($order->order_type.'-'.$order->id, 0)" />
+                                <a href="{{ route('invoice.show', ['type' => $order->order_type, 'id' => $order->id]) }}" class="inline-flex px-3 py-1.5 text-xs font-semibold text-indigo-700 border border-indigo-300 rounded-md hover:bg-indigo-50">Lihat SO</a>
+                                @can('kasir.manage')
+                                    <button type="button"
+                                            @click="lunasiModalOpen = true; lunasiMode = 'hutang'; lunasiType = '{{ $order->order_type }}'; lunasiId = {{ $order->id }}; lunasiNoOrder = '{{ $order->NoOrder }}'; lunasiSisa = '{{ number_format($order->jumlah_piutang ?? 0, 0, ',', '.') }}'; lunasiSisaRaw = {{ (float) ($order->jumlah_piutang ?? 0) }}; lunasiRincian = [{ cara_bayar: 'tunai', jumlah: '', no_referensi: '' }]"
+                                            class="inline-flex px-3 py-1.5 bg-green-600 text-white text-xs font-semibold rounded-md hover:bg-green-700">Lunasi</button>
+                                @endcan
+                            </td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="8" class="px-4 py-6 text-center text-gray-400">Tidak ada customer dengan hutang berjalan.</td></tr>
                     @endforelse
                 </tbody>
             </table>
@@ -321,11 +364,11 @@
             <div @click="lunasiModalOpen = false" class="absolute inset-0 bg-gray-900/50"></div>
 
             <div class="relative bg-white rounded-lg shadow-lg w-full max-w-sm">
-                <form method="POST" :action="`/kasir/${lunasiType}/${lunasiId}/lunasi`" class="p-5 space-y-4"
+                <form method="POST" :action="`/kasir/${lunasiType}/${lunasiId}/${lunasiMode === 'hutang' ? 'lunasi-hutang' : 'lunasi'}`" class="p-5 space-y-4"
                       @submit="if (lunasiRincianError) { $event.preventDefault(); }">
                     @csrf
-                    <h3 class="font-semibold text-gray-900">Pelunasan DP — <span x-text="lunasiNoOrder"></span></h3>
-                    <p class="text-sm text-gray-600">Sisa piutang: <span class="font-semibold" x-text="`Rp ${lunasiSisa}`"></span></p>
+                    <h3 class="font-semibold text-gray-900"><span x-text="lunasiMode === 'hutang' ? 'Pelunasan Hutang' : 'Pelunasan DP'"></span> — <span x-text="lunasiNoOrder"></span></h3>
+                    <p class="text-sm text-gray-600">Sisa <span x-text="lunasiMode === 'hutang' ? 'hutang' : 'piutang'"></span>: <span class="font-semibold" x-text="`Rp ${lunasiSisa}`"></span></p>
 
                     <div>
                         <x-input-label value="Rincian Pembayaran" />
