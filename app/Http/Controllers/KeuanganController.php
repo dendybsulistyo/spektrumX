@@ -144,7 +144,7 @@ class KeuanganController extends Controller
                 'sort' => '1-'.str_pad((string) $entry->urutan, 10, '0', STR_PAD_LEFT),
             ]);
 
-        $discountRows = FinalSalesDiscount::with('user')
+        $discountRows = FinalSalesDiscount::with(['user', 'customer'])
             ->whereDate('transaction_date', $tanggal)
             ->when($kasirId, fn ($query) => $query->where('user_id', $kasirId))
             ->orderBy('id')
@@ -153,7 +153,8 @@ class KeuanganController extends Controller
                 'user_id' => $discount->user_id,
                 'kasir' => $discount->user?->name ?? '-',
                 'no_nota' => $discount->order_number,
-                'keterangan' => 'Potongan Penjualan Rp '.number_format($discount->discount_amount, 0, ',', '.').' - '.$discount->reason,
+                'keterangan' => 'Potongan Penjualan Rp '.number_format($discount->discount_amount, 0, ',', '.')
+                    .' - '.($discount->customer?->NmCust ?? 'Customer tidak tersedia').' - '.$discount->reason,
                 'debet' => 0.0,
                 'kredit' => 0.0,
                 'sort' => '3-'.str_pad((string) $discount->id, 10, '0', STR_PAD_LEFT),
@@ -444,14 +445,15 @@ class KeuanganController extends Controller
             }
         }
 
-        FinalSalesDiscount::query()
+        FinalSalesDiscount::with('customer')
             ->whereBetween('transaction_date', [$dari, $sampai])
             ->when($kasirId, fn ($query) => $query->where('user_id', $kasirId))
             ->orderBy('transaction_date')->orderBy('id')->get()
             ->each(function (FinalSalesDiscount $discount) use ($details) {
                 $details->push([
-                    'category' => 'sales_discount',
-                    'description' => $discount->order_number.' · Potongan Penjualan Rp '.number_format($discount->discount_amount, 0, ',', '.').' - '.$discount->reason,
+                    'category' => 'other_transaction',
+                    'description' => $discount->order_number.' · '.($discount->customer?->NmCust ?? 'Customer tidak tersedia')
+                        .' · Potongan Penjualan Rp '.number_format($discount->discount_amount, 0, ',', '.').' - '.$discount->reason,
                     'debit' => 0.0,
                     'credit' => 0.0,
                     'user_id' => $discount->user_id,
@@ -468,7 +470,6 @@ class KeuanganController extends Controller
             'non_cash' => 'Penerimaan Non Tunai (Transfer atau QRIS)',
             'refund' => 'Refund / Pengeluaran Kas',
             'other_transaction' => 'Transaksi Lain-lain',
-            'sales_discount' => 'Potongan Penjualan (Tidak Memengaruhi Saldo Kas)',
         ];
 
         $sections = collect($sectionDefinitions)->map(function (string $label, string $key) use ($details) {
@@ -681,7 +682,7 @@ class KeuanganController extends Controller
             return $rows;
         });
 
-        $discountRows = FinalSalesDiscount::with('user')
+        $discountRows = FinalSalesDiscount::with(['user', 'customer'])
             ->whereDate('transaction_date', $tanggal)
             ->when($kasirId, fn ($query) => $query->where('user_id', $kasirId))
             ->orderBy('id')->get()
@@ -693,7 +694,8 @@ class KeuanganController extends Controller
                 return [
                     'occurred_at' => $occurredAt,
                     'no_nota' => $discount->order_number,
-                    'keterangan' => 'Potongan Penjualan Rp '.number_format($discount->discount_amount, 0, ',', '.').' - '.$discount->reason,
+                    'keterangan' => 'Potongan Penjualan Rp '.number_format($discount->discount_amount, 0, ',', '.')
+                        .' - '.($discount->customer?->NmCust ?? 'Customer tidak tersedia').' - '.$discount->reason,
                     'debet' => 0.0,
                     'kredit' => 0.0,
                     'kasir' => $discount->user?->name,

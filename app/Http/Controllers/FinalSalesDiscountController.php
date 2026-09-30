@@ -103,10 +103,11 @@ class FinalSalesDiscountController extends Controller
             'order_key' => ['required', 'regex:/^(indoor|outdoor|artwork):[0-9]+$/'],
             'transaction_date' => ['required', 'date', 'before_or_equal:today'],
             'discount_amount' => ['required', 'numeric', 'min:100', 'multiple_of:100'],
-            'reason' => ['required', 'string', 'max:255'],
+            'reason' => ['nullable', 'string', 'max:255'],
             'refund_method' => ['nullable', 'in:tunai,qris,transfer'],
             'reference_number' => ['nullable', 'string', 'max:50'],
         ]);
+        $data['reason'] = trim((string) ($data['reason'] ?? '')) ?: 'Potongan penjualan akhir';
 
         if (PeriodeTutupBuku::isClosed($data['transaction_date'])) {
             return back()->withInput()->with('error', 'Periode potongan penjualan ini sudah ditutup.');

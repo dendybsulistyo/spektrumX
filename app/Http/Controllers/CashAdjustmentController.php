@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class CashAdjustmentController extends Controller
@@ -40,10 +41,17 @@ class CashAdjustmentController extends Controller
         $validated = $request->validate([
             'occurred_at' => ['required', 'date'],
             'adjustment_type' => ['required', 'in:setor_tunai,setor_bank,pengeluaran'],
+            'entry_side' => ['required', 'in:debet,kredit'],
             'amount' => ['required', 'integer', 'min:1', 'max:9999999999999'],
             'reference' => ['nullable', 'string', 'max:80'],
             'reason' => ['required', 'string', 'max:255'],
         ]);
+
+        if ($validated['adjustment_type'] === 'setor_bank' && $validated['entry_side'] !== 'kredit') {
+            throw ValidationException::withMessages([
+                'entry_side' => 'Setor ke Bank hanya dapat dicatat sebagai Kredit.',
+            ]);
+        }
 
         $cashier = $this->cashier();
         abort_unless($cashier, 422, 'Akun Yovita belum tersedia.');
@@ -55,8 +63,9 @@ class CashAdjustmentController extends Controller
             'setor_bank' => 'Setor ke Bank',
             'pengeluaran' => 'Pengeluaran',
         };
+        $entrySide = $validated['entry_side'];
         $amount = (float) $validated['amount'];
-        DB::transaction(function () use ($amount, $cashier, $occurredAt, $type, $typeLabel, $validated): void {
+        DB::transaction(function () use ($amount, $cashier, $entrySide, $occurredAt, $typeLabel, $validated): void {
             // Semua penyesuaian memakai user Yovita. Mengunci baris user ini
             // membuat perhitungan MAX(urutan)+1 aman dari request bersamaan.
             User::query()->lockForUpdate()->findOrFail($cashier->id);
@@ -72,8 +81,8 @@ class CashAdjustmentController extends Controller
                 'source_key' => 'cash-adjustment:'.Str::uuid(),
                 'no_nota' => $validated['reference'] ?: null,
                 'keterangan' => $typeLabel.' - '.$validated['reason'],
-                'debet' => in_array($type, ['setor_tunai', 'pengeluaran'], true) ? $amount : 0,
-                'kredit' => $type === 'setor_bank' ? $amount : 0,
+                'debet' => $entrySide === 'debet' ? $amount : 0,
+                'kredit' => $entrySide === 'kredit' ? $amount : 0,
                 'urutan' => $sequence,
             ]);
         }, attempts: 3);

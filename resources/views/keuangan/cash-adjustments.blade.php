@@ -17,7 +17,10 @@
                 </div>
             </div>
 
-            <form method="POST" action="{{ route('keuangan.cash-adjustments.store') }}" class="grid gap-4 p-6 md:grid-cols-2 xl:grid-cols-6">
+            <form method="POST" action="{{ route('keuangan.cash-adjustments.store') }}"
+                  x-data="{ type: @js(old('adjustment_type', 'setor_tunai')), position: @js(old('entry_side', 'debet')) }"
+                  x-effect="if (type === 'setor_bank') position = 'kredit'"
+                  class="grid gap-4 p-6 md:grid-cols-2 xl:grid-cols-6">
                 @csrf
                 <div>
                     <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-600">Tanggal & Jam</label>
@@ -26,12 +29,21 @@
                 </div>
                 <div>
                     <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-600">Jenis Penyesuaian</label>
-                    <select name="adjustment_type" required class="w-full rounded border-slate-300 text-sm">
+                    <select name="adjustment_type" x-model="type" required class="w-full rounded border-slate-300 text-sm">
                         <option value="setor_tunai" @selected(old('adjustment_type') === 'setor_tunai')>Setor Tunai</option>
                         <option value="setor_bank" @selected(old('adjustment_type') === 'setor_bank')>Setor ke Bank</option>
                         <option value="pengeluaran" @selected(old('adjustment_type') === 'pengeluaran')>Pengeluaran</option>
                     </select>
                     <x-input-error :messages="$errors->get('adjustment_type')" class="mt-1" />
+                </div>
+                <div>
+                    <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-600">Posisi</label>
+                    <select name="entry_side" x-model="position" required class="w-full rounded border-slate-300 text-sm">
+                        <option value="debet" :disabled="type === 'setor_bank'">Debet</option>
+                        <option value="kredit">Kredit</option>
+                    </select>
+                    <p x-show="type === 'setor_bank'" class="mt-1 text-xs text-slate-500">Setor ke Bank wajib Kredit.</p>
+                    <x-input-error :messages="$errors->get('entry_side')" class="mt-1" />
                 </div>
                 <div>
                     <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-600">Nominal</label>
