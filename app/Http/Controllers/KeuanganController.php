@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Akun;
 use App\Models\CashDailyEntry;
 use App\Models\Customer;
+use App\Models\FinalSalesDiscount;
 use App\Models\JurnalEntry;
 use App\Models\LaporanPpnFinal;
 use App\Models\OrderArtwork;
@@ -42,6 +43,7 @@ class KeuanganController extends Controller
 
         $activityUserIds = OrderPayment::query()->whereNotNull('user_id')->pluck('user_id')
             ->merge(CashDailyEntry::query()->whereNotNull('user_id')->pluck('user_id'))
+            ->merge(FinalSalesDiscount::query()->whereNotNull('user_id')->pluck('user_id'))
             ->unique();
 
         $kasirUsers = User::query()
@@ -142,6 +144,21 @@ class KeuanganController extends Controller
                 'sort' => '1-'.str_pad((string) $entry->urutan, 10, '0', STR_PAD_LEFT),
             ]);
 
+        $discountRows = FinalSalesDiscount::with('user')
+            ->whereDate('transaction_date', $tanggal)
+            ->when($kasirId, fn ($query) => $query->where('user_id', $kasirId))
+            ->orderBy('id')
+            ->get()
+            ->map(fn (FinalSalesDiscount $discount) => [
+                'user_id' => $discount->user_id,
+                'kasir' => $discount->user?->name ?? '-',
+                'no_nota' => $discount->order_number,
+                'keterangan' => 'Potongan Penjualan Rp '.number_format($discount->discount_amount, 0, ',', '.').' - '.$discount->reason,
+                'debet' => 0.0,
+                'kredit' => 0.0,
+                'sort' => '3-'.str_pad((string) $discount->id, 10, '0', STR_PAD_LEFT),
+            ]);
+
         if (! $seededRows->contains(fn (array $row) => $row['user_id'] === null)) {
             $openingBalance = $this->openingCashBalance($tanggal);
             $seededRows->prepend([
@@ -155,7 +172,7 @@ class KeuanganController extends Controller
             ]);
         }
 
-        $rows = $seededRows->concat($paymentRows)->sortBy('sort')->values();
+        $rows = $seededRows->concat($paymentRows)->concat($discountRows)->sortBy('sort')->values();
         $groups = collect();
 
         $openingRows = $rows->whereNull('user_id')->values();
@@ -300,6 +317,7 @@ class KeuanganController extends Controller
 
         $activityUserIds = OrderPayment::query()->whereNotNull('user_id')->pluck('user_id')
             ->merge(CashDailyEntry::query()->whereNotNull('user_id')->pluck('user_id'))
+            ->merge(FinalSalesDiscount::query()->whereNotNull('user_id')->pluck('user_id'))
             ->unique();
 
         $kasirUsers = User::query()
@@ -340,7 +358,7 @@ class KeuanganController extends Controller
                 $description = $entry->keterangan;
                 $category = match (true) {
                     $entry->user_id === null || strcasecmp($description, 'Saldo Awal') === 0 => 'opening',
-                    str_starts_with($entry->source_key, 'cash-adjustment:') => 'adjustment',
+                    str_starts_with($entry->source_key, 'cash-adjustment:') => 'other_transaction',
                     (float) $entry->kredit > 0 && str_starts_with(mb_strtolower($description), 'bayar via') => 'non_cash',
                     str_starts_with(mb_strtolower($description), 'piutang ') => 'receivable',
                     str_starts_with(mb_strtolower($description), 'dp -') || str_starts_with((string) $entry->no_nota, 'UM-') => 'advance',
@@ -426,6 +444,21 @@ class KeuanganController extends Controller
             }
         }
 
+        FinalSalesDiscount::query()
+            ->whereBetween('transaction_date', [$dari, $sampai])
+            ->when($kasirId, fn ($query) => $query->where('user_id', $kasirId))
+            ->orderBy('transaction_date')->orderBy('id')->get()
+            ->each(function (FinalSalesDiscount $discount) use ($details) {
+                $details->push([
+                    'category' => 'sales_discount',
+                    'description' => $discount->order_number.' · Potongan Penjualan Rp '.number_format($discount->discount_amount, 0, ',', '.').' - '.$discount->reason,
+                    'debit' => 0.0,
+                    'credit' => 0.0,
+                    'user_id' => $discount->user_id,
+                    'sort' => '3-'.$discount->transaction_date->format('Ymd').'-'.str_pad((string) $discount->id, 10, '0', STR_PAD_LEFT),
+                ]);
+            });
+
         $details = $details->sortBy('sort')->values();
         $sectionDefinitions = [
             'opening' => 'Saldo Awal',
@@ -434,7 +467,8 @@ class KeuanganController extends Controller
             'advance' => 'Uang Muka (DP)',
             'non_cash' => 'Penerimaan Non Tunai (Transfer atau QRIS)',
             'refund' => 'Refund / Pengeluaran Kas',
-            'adjustment' => 'Penyesuaian Kas',
+            'other_transaction' => 'Transaksi Lain-lain',
+            'sales_discount' => 'Potongan Penjualan (Tidak Memengaruhi Saldo Kas)',
         ];
 
         $sections = collect($sectionDefinitions)->map(function (string $label, string $key) use ($details) {
@@ -536,6 +570,7 @@ class KeuanganController extends Controller
 
         $activityUserIds = OrderPayment::query()->whereNotNull('user_id')->pluck('user_id')
             ->merge(CashDailyEntry::query()->whereNotNull('user_id')->pluck('user_id'))
+            ->merge(FinalSalesDiscount::query()->whereNotNull('user_id')->pluck('user_id'))
             ->unique();
         $kasirUsers = User::query()
             ->where(function ($query) use ($activityUserIds) {
@@ -646,7 +681,28 @@ class KeuanganController extends Controller
             return $rows;
         });
 
-        $rows = $manualRows->concat($paymentRows)->sortBy('sort')->values();
+        $discountRows = FinalSalesDiscount::with('user')
+            ->whereDate('transaction_date', $tanggal)
+            ->when($kasirId, fn ($query) => $query->where('user_id', $kasirId))
+            ->orderBy('id')->get()
+            ->map(function (FinalSalesDiscount $discount) {
+                $occurredAt = $discount->created_at
+                    ? Carbon::parse($discount->transaction_date->format('Y-m-d').' '.$discount->created_at->format('H:i:s'))
+                    : $discount->transaction_date->copy()->setTime(12, 0);
+
+                return [
+                    'occurred_at' => $occurredAt,
+                    'no_nota' => $discount->order_number,
+                    'keterangan' => 'Potongan Penjualan Rp '.number_format($discount->discount_amount, 0, ',', '.').' - '.$discount->reason,
+                    'debet' => 0.0,
+                    'kredit' => 0.0,
+                    'kasir' => $discount->user?->name,
+                    'user_id' => $discount->user_id,
+                    'sort' => $occurredAt->format('YmdHis').'-2-'.str_pad((string) $discount->id, 10, '0', STR_PAD_LEFT),
+                ];
+            });
+
+        $rows = $manualRows->concat($paymentRows)->concat($discountRows)->sortBy('sort')->values();
         $totalDebet = (float) $rows->sum('debet');
         $totalKredit = (float) $rows->sum('kredit');
 
@@ -1001,11 +1057,17 @@ class KeuanganController extends Controller
                 ->where('jenis', 'pelunasan_hutang')->whereIn('order_id', $orders->pluck('id'))
                 ->where('created_at', '<=', "{$asOf} 23:59:59")
                 ->get()->groupBy('order_id');
+            $finalDiscountsByOrder = FinalSalesDiscount::query()
+                ->where('order_type', $type)->whereIn('order_id', $orders->pluck('id'))
+                ->whereDate('transaction_date', '<=', $asOf)
+                ->selectRaw('order_id, SUM(discount_amount) AS total_discount')
+                ->groupBy('order_id')->pluck('total_discount', 'order_id');
 
             foreach ($orders as $order) {
                 $gross = (float) $order->total;
-                $discount = $order->diskon_approved_at && $order->diskon_approved_at->format('Y-m-d') <= $asOf
-                    ? $order->diskonNominal() : 0.0;
+                $initialDiscount = $order->diskon_approved_at && $order->diskon_approved_at->format('Y-m-d') <= $asOf
+                    ? $order->diskonAwalNominal() : 0.0;
+                $discount = $initialDiscount + (float) ($finalDiscountsByOrder[$order->id] ?? 0);
                 $net = max(0, $gross - $discount);
                 $paid = min($net, max(0, (float) ($paymentsByOrder[$order->id] ?? collect())->sum('jumlah')));
                 $remaining = max(0, $net - $paid);
@@ -1060,14 +1122,20 @@ class KeuanganController extends Controller
                 $payments = OrderPayment::query()->where('order_type', $type)->where('jenis', 'pelunasan_hutang')
                     ->whereIn('order_id', $orders->pluck('id'))->where('created_at', '<=', "{$to} 23:59:59")
                     ->get()->groupBy('order_id');
+                $finalDiscountsByOrder = FinalSalesDiscount::query()
+                    ->where('order_type', $type)->whereIn('order_id', $orders->pluck('id'))
+                    ->whereDate('transaction_date', '<=', $to)
+                    ->selectRaw('order_id, SUM(discount_amount) AS total_discount')
+                    ->groupBy('order_id')->pluck('total_discount', 'order_id');
                 $invoiceNumbers = DB::table('order_documents')->where('kind', 'inv')->where('order_type', $type)
                     ->whereIn('order_id', $orders->pluck('id'))->orderByDesc('sequence')->get(['order_id', 'number'])
                     ->unique('order_id')->pluck('number', 'order_id');
 
                 foreach ($orders as $order) {
                     $gross = (float) $order->total;
-                    $discount = $order->diskon_approved_at && $order->diskon_approved_at->format('Y-m-d') <= $to
-                        ? $order->diskonNominal() : 0.0;
+                    $initialDiscount = $order->diskon_approved_at && $order->diskon_approved_at->format('Y-m-d') <= $to
+                        ? $order->diskonAwalNominal() : 0.0;
+                    $discount = $initialDiscount + (float) ($finalDiscountsByOrder[$order->id] ?? 0);
                     $net = max(0, $gross - $discount);
                     $paid = min($net, max(0, (float) ($payments[$order->id] ?? collect())->sum('jumlah')));
                     $remaining = max(0, $net - $paid);

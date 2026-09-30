@@ -72,8 +72,8 @@ class CashAdjustmentController extends Controller
                 'source_key' => 'cash-adjustment:'.Str::uuid(),
                 'no_nota' => $validated['reference'] ?: null,
                 'keterangan' => $typeLabel.' - '.$validated['reason'],
-                'debet' => $type === 'setor_tunai' ? $amount : 0,
-                'kredit' => $type !== 'setor_tunai' ? $amount : 0,
+                'debet' => in_array($type, ['setor_tunai', 'pengeluaran'], true) ? $amount : 0,
+                'kredit' => $type === 'setor_bank' ? $amount : 0,
                 'urutan' => $sequence,
             ]);
         }, attempts: 3);
