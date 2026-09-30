@@ -396,6 +396,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/kasir/{type}/{id}/bayar', [KasirController::class, 'bayar'])->name('kasir.bayar');
         Route::post('/kasir/{type}/{id}/lunasi', [KasirController::class, 'lunasi'])->name('kasir.lunasi');
         Route::post('/kasir/{type}/{id}/lunasi-hutang', [KasirController::class, 'lunasiHutang'])->name('kasir.lunasi-hutang');
+        Route::post('/kasir/{type}/{id}/cicil-hutang', [KasirController::class, 'cicilHutang'])->name('kasir.cicil-hutang');
         Route::post('/kasir/{type}/{id}/artwork-price/{detail}', [KasirController::class, 'updateArtworkPrice'])->name('kasir.artwork-price.update');
         Route::post('/kasir/{type}/{id}/diskon/request', [KasirController::class, 'requestDiskon'])->name('kasir.diskon.request');
     });

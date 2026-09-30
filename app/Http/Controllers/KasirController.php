@@ -722,6 +722,77 @@ class KasirController extends Controller
         );
     }
 
+    public function cicilHutang(Request $request, string $type, int $id): RedirectResponse
+    {
+        return app(OrderPaymentWorkflow::class)->run(
+            $this->resolveOrder($type, $id),
+            'hutang',
+            fn (Model $order) => $this->cicilHutangLocked($request, $type, $order),
+        );
+    }
+
+    private function cicilHutangLocked(Request $request, string $type, Model $order): RedirectResponse
+    {
+        $order->loadMissing('customer.limit');
+
+        if ($order->status_bayar !== 'hutang' || (float) $order->jumlah_piutang <= 0) {
+            return back()->with('error', 'Order ini tidak memiliki piutang aktif.');
+        }
+
+        $data = $request->validate([
+            'rincian' => ['required', 'array', 'size:1'],
+            'rincian.*.cara_bayar' => ['required', 'in:tunai,qris,transfer'],
+            'rincian.*.jumlah' => ['required', 'numeric', 'min:100', 'multiple_of:100'],
+            'rincian.*.no_referensi' => ['nullable', 'string', 'max:50'],
+        ]);
+
+        $payment = $data['rincian'][0];
+        $amount = (float) $payment['jumlah'];
+        $remaining = (float) $order->jumlah_piutang;
+
+        if ($payment['cara_bayar'] !== 'tunai' && empty($payment['no_referensi'])) {
+            return back()->with('error', 'No. Referensi wajib diisi untuk pembayaran QRIS/Transfer.')->withInput();
+        }
+        if ($amount >= $remaining) {
+            return back()->with('error', 'Nominal cicilan harus lebih kecil dari sisa piutang. Gunakan tombol Lunasi untuk pembayaran penuh.')->withInput();
+        }
+
+        DB::transaction(function () use ($amount, $order, $payment, $type): void {
+            $newRemaining = (float) $order->jumlah_piutang - $amount;
+            $newPaid = (float) $order->jumlah_dibayar + $amount;
+
+            $order->update([
+                'jumlah_dibayar' => $newPaid,
+                'jumlah_piutang' => $newRemaining,
+            ]);
+
+            if ($order->customer?->limit) {
+                $order->customer->limit->decrement('Total', $amount);
+            }
+
+            OrderStatusNote::create([
+                'order_type' => $type,
+                'order_id' => $order->id,
+                'stage' => 'kasir',
+                'action' => 'cicilan_hutang',
+                'catatan' => 'Cicilan hutang Rp '.number_format($amount, 0, ',', '.').' — '.$this->caraBayarLabel($payment['cara_bayar'], $payment['no_referensi'] ?? null),
+                'user_id' => auth()->id(),
+                'created_at' => now(),
+            ]);
+
+            $this->createPaymentRows($type, $order->id, 'pelunasan_hutang', [$payment]);
+            $this->accounting->post(
+                now()->format('Y-m-d'), $order->NoOrder, 'Cicilan hutang '.$order->NoOrder,
+                [
+                    ...$this->kasLines([$payment], AccountingService::kodeBantuCustomer($order->customer?->KdCust)),
+                    ['akun' => AccountingService::AKUN_PIUTANG_DAGANG, 'kredit' => $amount, 'kd_bantu' => AccountingService::kodeBantuCustomer($order->customer?->KdCust)],
+                ]
+            );
+        }, attempts: 3);
+
+        return back()->with('status', 'Cicilan piutang Rp '.number_format($amount, 0, ',', '.').' berhasil dicatat.');
+    }
+
     private function lunasiHutangLocked(Request $request, string $type, Model $order): RedirectResponse
     {
         $order->loadMissing('customer.limit');
@@ -784,9 +855,14 @@ class KasirController extends Controller
             );
         });
 
+        $message = 'Hutang berhasil dilunasi.'.($kembalian > 0 ? ' Kembalian: Rp '.number_format($kembalian, 0, ',', '.').'.' : '');
+        if ($request->input('return_to') === 'customer_receivables') {
+            return redirect()->route('keuangan.customer-receivable-details', ['customer' => $order->KdCust])
+                ->with('status', $message);
+        }
+
         return redirect()->route('kasir.show', ['type' => $type, 'id' => $order->id])
-            ->with('status', 'Hutang berhasil dilunasi.'.($kembalian > 0 ? ' Kembalian: Rp '.number_format($kembalian, 0, ',', '.').'.' : ''))
-            ->with('autoPrintSalesOrder', true);
+            ->with('status', $message)->with('autoPrintSalesOrder', true);
     }
 
     /**

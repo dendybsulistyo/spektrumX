@@ -1100,11 +1100,6 @@ class KeuanganController extends Controller
 
     public function customerReceivableDetails(Request $request): View
     {
-        $from = $request->filled('dari') ? $request->string('dari')->toString() : now()->startOfMonth()->format('Y-m-d');
-        $to = $request->filled('sampai') ? $request->string('sampai')->toString() : now()->format('Y-m-d');
-        if ($from > $to) {
-            [$from, $to] = [$to, $from];
-        }
         $customerCode = $request->string('customer')->trim()->toString();
         $customers = Customer::query()->orderBy('NmCust')->get(['KdCust', 'NmCust']);
         $selectedCustomer = $customerCode !== '' ? $customers->firstWhere('KdCust', $customerCode) : null;
@@ -1112,21 +1107,13 @@ class KeuanganController extends Controller
 
         if ($selectedCustomer) {
             foreach (['indoor' => OrderIndoor::class, 'outdoor' => OrderOutdoor::class, 'artwork' => OrderArtwork::class] as $type => $model) {
-                $settledIds = OrderPayment::query()->where('order_type', $type)->where('jenis', 'pelunasan_hutang')->pluck('order_id');
                 $orders = $model::query()->where('KdCust', $customerCode)
-                    ->whereBetween('TglOrder', [$from, $to])->where('status', '!=', 'batal')
-                    ->where(function ($query) use ($settledIds) {
-                        $query->where('status_bayar', 'hutang');
-                        if ($settledIds->isNotEmpty()) {
-                            $query->orWhereIn('id', $settledIds);
-                        }
-                    })->orderBy('TglOrder')->orderBy('NoOrder')->get();
-                $payments = OrderPayment::query()->where('order_type', $type)->where('jenis', 'pelunasan_hutang')
-                    ->whereIn('order_id', $orders->pluck('id'))->where('created_at', '<=', "{$to} 23:59:59")
-                    ->get()->groupBy('order_id');
+                    ->where('status', '!=', 'batal')
+                    ->where('status_bayar', 'hutang')
+                    ->where('jumlah_piutang', '>', 0)
+                    ->orderBy('TglOrder')->orderBy('NoOrder')->get();
                 $finalDiscountsByOrder = FinalSalesDiscount::query()
                     ->where('order_type', $type)->whereIn('order_id', $orders->pluck('id'))
-                    ->whereDate('transaction_date', '<=', $to)
                     ->selectRaw('order_id, SUM(discount_amount) AS total_discount')
                     ->groupBy('order_id')->pluck('total_discount', 'order_id');
                 $invoiceNumbers = DB::table('order_documents')->where('kind', 'inv')->where('order_type', $type)
@@ -1135,16 +1122,14 @@ class KeuanganController extends Controller
 
                 foreach ($orders as $order) {
                     $gross = (float) $order->total;
-                    $initialDiscount = $order->diskon_approved_at && $order->diskon_approved_at->format('Y-m-d') <= $to
-                        ? $order->diskonAwalNominal() : 0.0;
+                    $initialDiscount = $order->diskon_approved_at ? $order->diskonAwalNominal() : 0.0;
                     $discount = $initialDiscount + (float) ($finalDiscountsByOrder[$order->id] ?? 0);
                     $net = max(0, $gross - $discount);
-                    $paid = min($net, max(0, (float) ($payments[$order->id] ?? collect())->sum('jumlah')));
-                    $remaining = max(0, $net - $paid);
-                    if ($remaining <= 0) {
-                        continue;
-                    }
+                    $remaining = max(0, (float) $order->jumlah_piutang);
+                    $paid = max(0, $net - $remaining);
                     $rows->push((object) [
+                        'type' => $type,
+                        'id' => $order->id,
                         'date' => $order->TglOrder,
                         'invoice' => $invoiceNumbers[$order->id] ?? $order->NoOrder,
                         'receivable' => $gross, 'discount' => $discount,
@@ -1159,7 +1144,7 @@ class KeuanganController extends Controller
             ->mapWithKeys(fn ($column) => [$column => (float) $rows->sum($column)])->all();
 
         return view('keuangan.customer-receivable-details', compact(
-            'from', 'to', 'customers', 'selectedCustomer', 'customerCode', 'rows', 'totals'
+            'customers', 'selectedCustomer', 'customerCode', 'rows', 'totals'
         ));
     }
 
