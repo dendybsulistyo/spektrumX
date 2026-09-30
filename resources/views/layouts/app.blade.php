@@ -217,7 +217,7 @@
                                                 <a href="{{ route('keuangan.laporan-ppn') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.laporan-ppn')) }}">Rekap PPN</a>
                                                 <div class="mx-2 my-2 border-t border-slate-200"></div>
                                                 <a href="{{ route('keuangan.global-customer-receivables') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.global-customer-receivables')) }}">Rekap Piutang Customer Global</a>
-                                                <a href="{{ route('keuangan.customer-receivable-details') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.customer-receivable-details')) }}">Rekap Piutang per Customer</a>
+                                                <a href="{{ route('keuangan.customer-receivable-details') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.customer-receivable-details')) }}">Pembayaran Piutang per Customer</a>
                                                 <a href="{{ route('keuangan.daily-receivable-collections') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.daily-receivable-collections')) }}">Penerimaan Piutang Harian</a>
                                                 <a href="{{ route('keuangan.credit-limits') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.credit-limits')) }}">Rekap Limit Piutang</a>
                                             </div>
@@ -551,7 +551,7 @@
                                 <a href="{{ route('keuangan.laporan-ppn') }}" class="{{ $mobileLink(request()->routeIs('keuangan.laporan-ppn')) }}">Rekap PPN</a>
                                 <div class="mx-2 my-2 border-t border-slate-200"></div>
                                 <a href="{{ route('keuangan.global-customer-receivables') }}" class="{{ $mobileLink(request()->routeIs('keuangan.global-customer-receivables')) }}">Rekap Piutang Customer Global</a>
-                                <a href="{{ route('keuangan.customer-receivable-details') }}" class="{{ $mobileLink(request()->routeIs('keuangan.customer-receivable-details')) }}">Rekap Piutang per Customer</a>
+                                <a href="{{ route('keuangan.customer-receivable-details') }}" class="{{ $mobileLink(request()->routeIs('keuangan.customer-receivable-details')) }}">Pembayaran Piutang per Customer</a>
                                 <a href="{{ route('keuangan.daily-receivable-collections') }}" class="{{ $mobileLink(request()->routeIs('keuangan.daily-receivable-collections')) }}">Penerimaan Piutang Harian</a>
                                 <a href="{{ route('keuangan.credit-limits') }}" class="{{ $mobileLink(request()->routeIs('keuangan.credit-limits')) }}">Rekap Limit Piutang</a>
                                 <div class="mx-2 my-2 border-t border-slate-200"></div><p class="mx-2 rounded-md border border-slate-200 bg-slate-100 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-600">Kas, Pembelian & Piutang</p>

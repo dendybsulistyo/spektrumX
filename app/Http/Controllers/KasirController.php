@@ -722,15 +722,6 @@ class KasirController extends Controller
         );
     }
 
-    public function cicilHutang(Request $request, string $type, int $id): RedirectResponse
-    {
-        return app(OrderPaymentWorkflow::class)->run(
-            $this->resolveOrder($type, $id),
-            'hutang',
-            fn (Model $order) => $this->cicilHutangLocked($request, $type, $order),
-        );
-    }
-
     private function cicilHutangLocked(Request $request, string $type, Model $order): RedirectResponse
     {
         $order->loadMissing('customer.limit');
@@ -809,6 +800,11 @@ class KasirController extends Controller
         ]);
 
         $sisaPiutang = (float) $order->jumlah_piutang;
+
+        if ($request->boolean('allow_partial')
+            && (float) collect($data['rincian'])->sum('jumlah') < $sisaPiutang) {
+            return $this->cicilHutangLocked($request, $type, $order);
+        }
 
         if ($rincianError = $this->checkRincian($data['rincian'], $sisaPiutang)) {
             return back()->with('error', $rincianError)->withInput();
