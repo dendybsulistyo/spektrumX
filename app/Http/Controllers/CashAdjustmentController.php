@@ -44,7 +44,7 @@ class CashAdjustmentController extends Controller
             'entry_side' => ['required', 'in:debet,kredit'],
             'amount' => ['required', 'integer', 'min:1', 'max:9999999999999'],
             'reference' => ['nullable', 'string', 'max:80'],
-            'reason' => ['required', 'string', 'max:255'],
+            'reason' => ['nullable', 'required_unless:adjustment_type,setor_bank', 'string', 'max:255'],
         ]);
 
         if ($validated['adjustment_type'] === 'setor_bank' && $validated['entry_side'] !== 'kredit') {
@@ -80,7 +80,7 @@ class CashAdjustmentController extends Controller
                 'user_id' => $cashier->id,
                 'source_key' => 'cash-adjustment:'.Str::uuid(),
                 'no_nota' => $validated['reference'] ?: null,
-                'keterangan' => $typeLabel.' - '.$validated['reason'],
+                'keterangan' => $typeLabel.($validated['reason'] !== '' ? ' - '.$validated['reason'] : ''),
                 'debet' => $entrySide === 'debet' ? $amount : 0,
                 'kredit' => $entrySide === 'kredit' ? $amount : 0,
                 'urutan' => $sequence,

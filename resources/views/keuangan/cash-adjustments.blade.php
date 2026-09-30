@@ -58,9 +58,11 @@
                     <input type="text" name="reference" value="{{ old('reference') }}" maxlength="80" class="w-full rounded border-slate-300 text-sm" placeholder="Opsional">
                 </div>
                 <div class="md:col-span-2 xl:col-span-6">
-                    <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-600">Alasan Penyesuaian</label>
+                    <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-600">
+                        Alasan Penyesuaian <span x-show="type === 'setor_bank'" class="font-normal normal-case text-slate-400">(opsional)</span>
+                    </label>
                     <div class="flex flex-col gap-3 sm:flex-row">
-                        <input type="text" name="reason" value="{{ old('reason') }}" maxlength="255" required class="min-w-0 flex-1 rounded border-slate-300 text-sm" placeholder="Contoh: koreksi metode pembayaran SO ...">
+                        <input type="text" name="reason" value="{{ old('reason') }}" maxlength="255" :required="type !== 'setor_bank'" class="min-w-0 flex-1 rounded border-slate-300 text-sm" :placeholder="type === 'setor_bank' ? 'Opsional' : 'Contoh: koreksi metode pembayaran SO ...'">
                         <button type="submit" @disabled(!$cashier) class="rounded bg-blue-600 px-5 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300">Simpan Penyesuaian</button>
                     </div>
                     <x-input-error :messages="$errors->get('reason')" class="mt-1" />
