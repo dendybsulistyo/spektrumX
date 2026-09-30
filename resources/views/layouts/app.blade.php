@@ -223,8 +223,8 @@
                                             </div>
                                             <div class="space-y-1 border-l border-gray-100 pl-2">
                                                 <p class="mx-2 rounded-md border border-slate-200 bg-slate-100 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-600">Kas, Pembelian & Piutang</p>
-                                                <a href="{{ route('keuangan.kas-harian') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.kas-harian')) }}">Kas Harian</a>
-                                                <a href="{{ route('keuangan.rekap-kasir') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.rekap-kasir*')) }}">Rekap Kasir per User</a>
+                                                <a href="{{ route('keuangan.rekap-kasir') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.rekap-kasir*')) }}">Kas Harian</a>
+                                                <a href="{{ route('keuangan.kas-harian') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.kas-harian')) }}">Rekap Kasir per User</a>
                                                 <a href="{{ route('keuangan.laporan-kasir-harian') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.laporan-kasir-harian')) }}">Laporan Kasir Harian</a>
                                                 <a href="{{ route('keuangan.cash-adjustments.index') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.cash-adjustments.*')) }}">Penyesuaian Kas</a>
                                                 <a href="{{ route('keuangan.final-sales-discounts.index') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.final-sales-discounts.*')) }}">Potongan Penjualan Akhir</a>
@@ -555,8 +555,8 @@
                                 <a href="{{ route('keuangan.daily-receivable-collections') }}" class="{{ $mobileLink(request()->routeIs('keuangan.daily-receivable-collections')) }}">Penerimaan Piutang Harian</a>
                                 <a href="{{ route('keuangan.credit-limits') }}" class="{{ $mobileLink(request()->routeIs('keuangan.credit-limits')) }}">Rekap Limit Piutang</a>
                                 <div class="mx-2 my-2 border-t border-slate-200"></div><p class="mx-2 rounded-md border border-slate-200 bg-slate-100 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-600">Kas, Pembelian & Piutang</p>
-                                <a href="{{ route('keuangan.kas-harian') }}" class="{{ $mobileLink(request()->routeIs('keuangan.kas-harian')) }}">Kas Harian</a>
-                                <a href="{{ route('keuangan.rekap-kasir') }}" class="{{ $mobileLink(request()->routeIs('keuangan.rekap-kasir*')) }}">Rekap Kasir per User</a>
+                                <a href="{{ route('keuangan.rekap-kasir') }}" class="{{ $mobileLink(request()->routeIs('keuangan.rekap-kasir*')) }}">Kas Harian</a>
+                                <a href="{{ route('keuangan.kas-harian') }}" class="{{ $mobileLink(request()->routeIs('keuangan.kas-harian')) }}">Rekap Kasir per User</a>
                                 <a href="{{ route('keuangan.laporan-kasir-harian') }}" class="{{ $mobileLink(request()->routeIs('keuangan.laporan-kasir-harian')) }}">Laporan Kasir Harian</a>
                                 <a href="{{ route('keuangan.cash-adjustments.index') }}" class="{{ $mobileLink(request()->routeIs('keuangan.cash-adjustments.*')) }}">Penyesuaian Kas</a>
                                 <a href="{{ route('keuangan.final-sales-discounts.index') }}" class="{{ $mobileLink(request()->routeIs('keuangan.final-sales-discounts.*')) }}">Potongan Penjualan Akhir</a>
