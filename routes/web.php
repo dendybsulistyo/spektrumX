@@ -56,6 +56,7 @@ use App\Http\Controllers\PengaturanKeuanganController;
 use App\Http\Controllers\PengeluaranController;
 use App\Http\Controllers\PreviewCetakController;
 use App\Http\Controllers\PrinterController;
+use App\Http\Controllers\PrinterPerformanceController;
 use App\Http\Controllers\PrinterOutdoorController;
 use App\Http\Controllers\ProdukController;
 use App\Http\Controllers\ProfileController;
@@ -103,6 +104,10 @@ Route::middleware('auth')->group(function () {
     Route::middleware('permission:monitoring-kinerja.view')->group(function () {
         Route::get('/monitoring-kinerja', [MonitoringKinerjaController::class, 'index'])->name('monitoring-kinerja.index');
         Route::get('/monitoring-kinerja/staf/{staff}', [MonitoringKinerjaController::class, 'show'])->name('monitoring-kinerja.show');
+    });
+
+    Route::middleware('permission:printer-performance.view')->group(function () {
+        Route::get('/kinerja-printer', [PrinterPerformanceController::class, 'index'])->name('printer-performance.index');
     });
 
     Route::middleware('permission:monitoring-transaksi.view')->group(function () {

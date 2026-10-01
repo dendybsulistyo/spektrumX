@@ -132,6 +132,7 @@
             $operatorActive = request()->routeIs('file.*', 'kasir.*', 'customer-service.payment-queue', 'order-desain.*', 'order-cetak.*', 'order-finishing.*', 'order-qc.*', 'order-bungkus.*', 'pengambilan.*')
                 || ($canViewOperationalDocuments && request()->routeIs('order-documents.*'));
             $analitikActive = request()->routeIs('data-warehouse.*', 'monitoring-kinerja.*', 'monitoring-transaksi.*', 'papan-pantau.*');
+            $ownerActive = request()->routeIs('printer-performance.*');
             $keuanganActive = request()->routeIs('akuntansi.*', 'keuangan.*', 'pengeluaran.*', 'payroll.*')
                 || (! $canViewOperationalDocuments && Auth::user()->hasPermission('keuangan.view') && request()->routeIs('order-documents.*'));
             $canApproveCancel = Auth::user()->hasPermission('order-indoor.approve-cancel') || Auth::user()->hasPermission('order-outdoor.approve-cancel') || Auth::user()->hasPermission('order-artwork.approve-cancel');
@@ -150,6 +151,7 @@
             $showTransaksi = Auth::user()->hasPermission('order-indoor.view') || Auth::user()->hasPermission('order-outdoor.view') || Auth::user()->hasPermission('order-artwork.view') || Auth::user()->hasPermission('customer-service.view');
             $showOperator = Auth::user()->hasPermission('customer-service.view') || Auth::user()->hasPermission('kasir.view') || Auth::user()->hasPermission('order-desain.view') || Auth::user()->hasPermission('order-cetak.view') || Auth::user()->hasPermission('order-finishing.view') || Auth::user()->hasPermission('order-qc.view') || Auth::user()->hasPermission('order-bungkus.view') || Auth::user()->hasPermission('pengambilan.view') || Auth::user()->hasPermission('file-monitor.view');
             $showAnalitik = Auth::user()->hasPermission('data-warehouse.view') || Auth::user()->hasPermission('monitoring-kinerja.view') || Auth::user()->hasPermission('monitoring-transaksi.view') || Auth::user()->hasPermission('papan-pantau.view');
+            $showOwner = Auth::user()->hasPermission('printer-performance.view');
             $showPengaturan = Auth::user()->hasPermission('keuangan.pengaturan') || Auth::user()->hasPermission('roles.manage') || Auth::user()->hasPermission('jasa-potong.manage') || Auth::user()->hasPermission('jasa-potong-artwork.manage');
 
             $navTopLink = fn (bool $active) => 'nav-top-link inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-[14px] font-semibold transition '
@@ -443,6 +445,18 @@
                                     </div>
                                 @endif
 
+                                @if ($showOwner)
+                                    <div class="relative" x-data="{ open: false }" @click.outside="open = false" @keydown.escape="open = false">
+                                        <button type="button" @click="open = !open" class="{{ $navTopLink($ownerActive) }}">
+                                            Owner
+                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3 h-3 transition-transform" :class="open ? 'rotate-180' : ''">{!! $navIcon('chevron-down') !!}</svg>
+                                        </button>
+                                        <div x-show="open" x-cloak class="absolute left-0 z-50 mt-2 w-52 rounded-lg border border-gray-200 bg-white py-2 shadow-lg">
+                                            <a href="{{ route('printer-performance.index') }}" class="{{ $dropdownLink(request()->routeIs('printer-performance.*')) }}">Kinerja Printer</a>
+                                        </div>
+                                    </div>
+                                @endif
+
                                 @if ($showPengaturan)
                                     <div class="relative" x-data="{ open: false }" @click.outside="open = false" @keydown.escape="open = false">
                                         <button type="button" @click="open = !open" class="{{ $navTopLink($pengaturanActive) }}">
@@ -694,6 +708,11 @@
                             @can('papan-pantau.view')
                                 <a href="{{ route('papan-pantau.index') }}" class="{{ $mobileLink(request()->routeIs('papan-pantau.*')) }}">Papan Pantau</a>
                             @endcan
+                        @endif
+
+                        @if ($showOwner)
+                            <p class="px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">Owner</p>
+                            <a href="{{ route('printer-performance.index') }}" class="{{ $mobileLink(request()->routeIs('printer-performance.*')) }}">Kinerja Printer</a>
                         @endif
 
                         @if ($showPengaturan)
