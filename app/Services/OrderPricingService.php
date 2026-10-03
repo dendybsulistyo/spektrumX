@@ -15,6 +15,7 @@ use App\Models\PrinterOutdoor;
 use App\Models\Produk;
 use App\Support\Rupiah;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 class OrderPricingService
 {
@@ -209,7 +210,7 @@ class OrderPricingService
      * @param  Collection<int, mixed>  $rawItems
      * @return Collection<int, object{name: string, bahan: ?string, printer: ?string, panjang: mixed, lebar: mixed, qty: mixed, harga_satuan: ?float, subtotal: float, breakdown: ?string}>
      */
-    public function detailedLineItems(string $type, OrderIndoor|OrderOutdoor|OrderArtwork $order, Collection $rawItems): Collection
+    public function detailedLineItems(string $type, OrderIndoor|OrderOutdoor|OrderArtwork $order, Collection $rawItems, bool $live = false): Collection
     {
         $printerNames = $type === 'outdoor'
             ? ($this->printerNames ??= PrinterOutdoor::pluck('NmPrn', 'KdPrn'))
@@ -218,7 +219,7 @@ class OrderPricingService
             ? ($this->bahanNames ??= BahanCetakOutdoor::pluck('NmBhn', 'NoCetak'))
             : collect();
 
-        return $rawItems->map(function ($item) use ($type, $order, $printerNames, $bahanNames) {
+        $lines = $rawItems->map(function ($item) use ($type, $order, $printerNames, $bahanNames, $live) {
             [$name, $subtotal, $hargaSatuan, $bahan, $printer, $breakdown] = match ($type) {
                 // Order Indoor now also holds Artwork-catalog items in the
                 // same order (jenis_produk per line) — look up whichever
@@ -324,6 +325,13 @@ class OrderPricingService
                 })(),
             };
 
+            // The price list can change after an order is charged. Show the
+            // price that was snapshotted when the order total was computed.
+            if (! $live && $item->subtotal_snapshot !== null) {
+                $subtotal = (float) $item->subtotal_snapshot;
+                $hargaSatuan = $item->harga_satuan_snapshot !== null ? (float) $item->harga_satuan_snapshot : null;
+            }
+
             return (object) [
                 'name' => $name,
                 'bahan' => $bahan,
@@ -339,6 +347,63 @@ class OrderPricingService
                 'harga_satuan_kasir' => $item->harga_satuan_kasir !== null ? (float) $item->harga_satuan_kasir : null,
                 'harga_kasir_dapat_diisi' => $this->cashierUnitPriceAllowed($item),
             ];
+        });
+
+        return $live ? $lines : $this->reconcileWithOrderTotal($order, $rawItems, $lines);
+    }
+
+    /**
+     * Store the live per-line price on each detail row. Call this wherever
+     * the order total is (re)computed, so the nota keeps showing the price
+     * that was charged even after the price list changes.
+     */
+    public function snapshotLinePrices(string $type, OrderIndoor|OrderOutdoor|OrderArtwork $order): void
+    {
+        $order->unsetRelation('items');
+        $rawItems = $type === 'outdoor' ? $order->items()->with('hargaCetak')->get() : $order->detailItems();
+        $lines = $this->detailedLineItems($type, $order, $rawItems, live: true);
+        $table = $rawItems->first()?->getTable();
+
+        foreach ($lines as $line) {
+            DB::table($table)->where('id', $line->detail_id)->update([
+                'harga_satuan_snapshot' => $line->harga_satuan !== null ? round((float) $line->harga_satuan, 2) : null,
+                'subtotal_snapshot' => round((float) $line->subtotal, 2),
+            ]);
+        }
+    }
+
+    /**
+     * Orders saved before price snapshots existed are re-priced from today's
+     * price list, so their lines may not add up to the total that was
+     * actually charged (and journaled). Scale those lines so the nota and
+     * reports always agree with order.total. Differences below Rp100 are the
+     * normal rounding of the total and are left alone.
+     */
+    private function reconcileWithOrderTotal(OrderIndoor|OrderOutdoor|OrderArtwork $order, Collection $rawItems, Collection $lines): Collection
+    {
+        $target = (float) $order->total;
+        $sum = (float) $lines->sum('subtotal');
+
+        if ($lines->isEmpty() || $target <= 0 || $sum <= 0
+            || abs($target - $sum) < Rupiah::UNIT_PEMBULATAN
+            || $rawItems->count() !== $order->detailItems()->count()) {
+            return $lines;
+        }
+
+        $factor = $target / $sum;
+        $allocated = 0.0;
+        $lastIndex = $lines->keys()->last();
+
+        return $lines->map(function ($line, $index) use ($factor, $target, &$allocated, $lastIndex) {
+            $original = (float) $line->subtotal;
+            $line->subtotal = $index === $lastIndex ? $target - $allocated : round($original * $factor);
+            $allocated += $line->subtotal;
+            if ($line->harga_satuan !== null && $original > 0) {
+                $line->harga_satuan = round((float) $line->harga_satuan * $line->subtotal / $original, 2);
+            }
+            $line->breakdown = null;
+
+            return $line;
         });
     }
 

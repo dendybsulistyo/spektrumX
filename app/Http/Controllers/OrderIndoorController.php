@@ -137,6 +137,7 @@ class OrderIndoorController extends Controller
             $this->saveItems($order, $data['items']);
 
             $order->update(['total' => $this->pricingService->totalIndoor($order)]);
+            $this->pricingService->snapshotLinePrices('indoor', $order);
         }, attempts: 3);
 
         return redirect()->route($replacement ? 'kasir.index' : 'order-indoor.index')
@@ -176,6 +177,7 @@ class OrderIndoorController extends Controller
             $this->saveItems($orderIndoor, $data['items']);
 
             $orderIndoor->update(['total' => $this->pricingService->totalIndoor($orderIndoor)]);
+            $this->pricingService->snapshotLinePrices('indoor', $orderIndoor);
         });
 
         return redirect()->route('order-indoor.index')->with('status', 'Order berhasil diperbarui.');

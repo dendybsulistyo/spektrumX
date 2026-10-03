@@ -110,6 +110,7 @@ class OrderArtworkController extends Controller
             $this->saveItems($order, $data['items']);
 
             $order->update(['total' => $this->pricingService->totalArtwork($order->fresh('items'))]);
+            $this->pricingService->snapshotLinePrices('artwork', $order);
         }, attempts: 3);
 
         return redirect()->route($replacement ? 'kasir.index' : 'order-artwork.index')
@@ -143,6 +144,7 @@ class OrderArtworkController extends Controller
             $this->saveItems($orderArtwork, $data['items']);
 
             $orderArtwork->update(['total' => $this->pricingService->totalArtwork($orderArtwork->fresh('items'))]);
+            $this->pricingService->snapshotLinePrices('artwork', $orderArtwork);
         });
 
         return redirect()->route('order-artwork.index')->with('status', 'Order artwork berhasil diperbarui.');

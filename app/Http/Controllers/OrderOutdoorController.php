@@ -130,6 +130,7 @@ class OrderOutdoorController extends Controller
             $this->saveItems($order, $data['items']);
 
             $order->update(['total' => $this->pricingService->totalOutdoor($order->fresh())]);
+            $this->pricingService->snapshotLinePrices('outdoor', $order);
         }, attempts: 3);
 
         return redirect()->route($replacement ? 'kasir.index' : 'order-outdoor.index')
@@ -165,6 +166,7 @@ class OrderOutdoorController extends Controller
             $this->saveItems($orderOutdoor, $data['items']);
 
             $orderOutdoor->update(['total' => $this->pricingService->totalOutdoor($orderOutdoor->fresh())]);
+            $this->pricingService->snapshotLinePrices('outdoor', $orderOutdoor);
         });
 
         return redirect()->route('order-outdoor.index')->with('status', 'Order outdoor berhasil diperbarui.');

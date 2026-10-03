@@ -339,15 +339,17 @@ class ReportController extends Controller
                     $gross = (float) $items->sum('subtotal');
                     $net = $order->diskonStatus() === 'approved' ? $order->totalSetelahDiskon() : (float) $order->total;
                     $discount = max(0, $gross - $net);
-                    $advance = max(0, (float) $order->jumlah_dibayar);
+                    // Hutang orders never take a DP; jumlah_dibayar holds the
+                    // installments already paid against the receivable.
+                    $payment = max(0, (float) $order->jumlah_dibayar);
                     $credit = max(0, (float) $order->jumlah_piutang);
-                    $allocated = ['discount' => 0.0, 'advance' => 0.0, 'credit' => 0.0];
+                    $allocated = ['discount' => 0.0, 'payment' => 0.0, 'credit' => 0.0];
 
                     foreach ($items->values() as $index => $item) {
                         $last = $index === $items->count() - 1;
                         $ratio = $gross > 0 ? (float) $item->subtotal / $gross : ($last ? 1 : 0);
                         $part = [];
-                        foreach (['discount' => $discount, 'advance' => $advance, 'credit' => $credit] as $key => $amount) {
+                        foreach (['discount' => $discount, 'payment' => $payment, 'credit' => $credit] as $key => $amount) {
                             $part[$key] = $last ? $amount - $allocated[$key] : round($amount * $ratio);
                             $allocated[$key] += $part[$key];
                         }
@@ -357,7 +359,7 @@ class ReportController extends Controller
                             'description' => $item->name, 'length' => $item->panjang, 'width' => $item->lebar,
                             'qty' => $item->qty, 'price' => $item->harga_satuan, 'subtotal' => (float) $item->subtotal,
                             'discount' => $part['discount'], 'total' => (float) $item->subtotal - $part['discount'],
-                            'advance' => $part['advance'], 'payment' => 0, 'credit' => $part['credit'],
+                            'advance' => 0, 'payment' => $part['payment'], 'credit' => $part['credit'],
                         ]);
                     }
                 }

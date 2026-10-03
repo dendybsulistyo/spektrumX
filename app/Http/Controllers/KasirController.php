@@ -471,6 +471,7 @@ class KasirController extends Controller
                 ? $this->pricingService->totalIndoor($order->fresh())
                 : $this->pricingService->totalArtwork($order->fresh('items'));
             $order->update(['total' => $total]);
+            $this->pricingService->snapshotLinePrices($type, $order);
         }, attempts: 3);
 
         return back()->with('status', 'Harga Art Work berhasil disimpan dan total order diperbarui.');
