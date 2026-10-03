@@ -122,13 +122,18 @@ Route::middleware('auth')->group(function () {
         Route::get('/papan-pantau', [PapanPantauController::class, 'index'])->name('papan-pantau.index');
     });
 
+    // Kasir needs the plafon customer recap to check outstanding credit
+    // before accepting a new hutang order.
+    Route::middleware('permission.any:keuangan.view,kasir.view')->group(function () {
+        Route::get('/report/order-customer-piutang', [ReportController::class, 'creditOrdersByCustomer'])->name('report.credit-orders-by-customer');
+    });
+
     Route::middleware('permission:keuangan.view')->group(function () {
         Route::get('/report/rekap-transaksi-harian', [ReportController::class, 'dailyTransactions'])->name('report.daily-transactions');
         Route::get('/report/omzet-pod', [ReportController::class, 'podTurnover'])->name('report.pod-turnover');
         Route::get('/report/omzet-ctp', [ReportController::class, 'ctpTurnover'])->name('report.ctp-turnover');
         Route::get('/report/order-outdoor', [ReportController::class, 'outdoorOrders'])->name('report.outdoor-orders');
         Route::get('/report/order-customer-lunas', [ReportController::class, 'paidOrdersByCustomer'])->name('report.paid-orders-by-customer');
-        Route::get('/report/order-customer-piutang', [ReportController::class, 'creditOrdersByCustomer'])->name('report.credit-orders-by-customer');
         Route::get('/report/order-belum-invoice', [ReportController::class, 'uninvoicedOrders'])->name('report.uninvoiced-orders');
         Route::get('/report/potongan-penjualan', [ReportController::class, 'salesDiscounts'])->name('report.sales-discounts');
         Route::get('/akuntansi/akun', [AkunController::class, 'index'])->name('akuntansi.akun.index');

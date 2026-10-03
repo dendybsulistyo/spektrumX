@@ -385,6 +385,9 @@
                                             @endcan
                                             @can('kasir.view')
                                                 <a href="{{ route('kasir.index') }}" class="{{ $dropdownLink(request()->routeIs('kasir.*')) }}">Kasir</a>
+                                                @cannot('keuangan.view')
+                                                    <a href="{{ route('report.credit-orders-by-customer') }}" class="{{ $dropdownLink(request()->routeIs('report.credit-orders-by-customer')) }}">Rekap Order Customer (Piutang)</a>
+                                                @endcannot
                                             @endcan
                                             @can('customer-service.view')
                                                 <a href="{{ route('customer-service.payment-queue') }}" class="{{ $dropdownLink(request()->routeIs('customer-service.payment-queue')) }}">Customer Service</a>
@@ -659,6 +662,9 @@
                             @endcan
                             @can('kasir.view')
                                 <a href="{{ route('kasir.index') }}" class="{{ $mobileLink(request()->routeIs('kasir.*')) }}">Kasir</a>
+                                @cannot('keuangan.view')
+                                    <a href="{{ route('report.credit-orders-by-customer') }}" class="{{ $mobileLink(request()->routeIs('report.credit-orders-by-customer')) }}">Rekap Order Customer (Piutang)</a>
+                                @endcannot
                             @endcan
                             @can('customer-service.view')
                                 <a href="{{ route('customer-service.payment-queue') }}" class="{{ $mobileLink(request()->routeIs('customer-service.payment-queue')) }}">Customer Service</a>
