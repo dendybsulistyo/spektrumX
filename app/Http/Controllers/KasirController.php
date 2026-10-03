@@ -657,9 +657,17 @@ class KasirController extends Controller
             'rincian.*.no_referensi' => ['nullable', 'string', 'max:50'],
         ]);
 
-        $sisaPiutang = (float) $order->jumlah_piutang;
         $totalFinal = Rupiah::bulatkan($order->diskonStatus() === 'approved' ? $order->totalSetelahDiskon() : (float) $order->total);
         $dpDiterima = (float) $order->jumlah_dibayar;
+        // Some older/edited orders still carry the original jumlah_piutang
+        // even though their final total or DP has changed. Using that stale
+        // snapshot makes cash + DP differ from the sales credit. Derive the
+        // live balance from the two values that form the journal instead.
+        $sisaPiutang = max($totalFinal - $dpDiterima, 0);
+
+        if ($sisaPiutang <= 0) {
+            return back()->with('error', 'Order ini tidak memiliki sisa DP. Muat ulang halaman untuk memperbarui status pembayaran.');
+        }
 
         if ($rincianError = $this->checkRincian($data['rincian'], $sisaPiutang)) {
             return back()->with('error', $rincianError)->withInput();

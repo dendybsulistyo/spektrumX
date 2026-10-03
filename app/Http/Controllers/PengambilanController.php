@@ -11,6 +11,7 @@ use App\Models\PrinterOutdoor;
 use App\Services\DeliveryOrderService;
 use App\Services\StageProgressService;
 use App\Support\ResolvesOrderDetailType;
+use App\Support\Rupiah;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -103,12 +104,44 @@ class PengambilanController extends Controller
             $query->unionAll($other);
         }
 
-        return DB::query()->fromSub($query, 'sales_transactions')
+        $paginator = DB::query()->fromSub($query, 'sales_transactions')
             ->orderByRaw('LOWER(customer)')
             ->orderBy('sales_order_date')
             ->orderBy('invoice')
             ->paginate(50, ['*'], 'transaksi_page')
             ->withQueryString();
+
+        // Do not present a stale jumlah_piutang for DP orders. It is a
+        // denormalized snapshot and historical/edited orders can differ
+        // from the current final total, which previously produced an
+        // unbalanced journal at settlement time.
+        $rows = $paginator->getCollection();
+        $orders = [
+            'indoor' => OrderIndoor::query()
+                ->whereIn('id', $rows->where('order_type', 'indoor')->pluck('order_id'))
+                ->get()->keyBy('id'),
+            'outdoor' => OrderOutdoor::query()
+                ->whereIn('id', $rows->where('order_type', 'outdoor')->pluck('order_id'))
+                ->get()->keyBy('id'),
+        ];
+
+        $paginator->setCollection($rows->map(function ($transaction) use ($orders) {
+            if ($transaction->status_bayar !== 'dp') {
+                return $transaction;
+            }
+
+            $order = $orders[$transaction->order_type]->get($transaction->order_id);
+            if ($order) {
+                $totalFinal = Rupiah::bulatkan(
+                    $order->diskonStatus() === 'approved' ? $order->totalSetelahDiskon() : (float) $order->total
+                );
+                $transaction->jumlah_piutang = max($totalFinal - (float) $order->jumlah_dibayar, 0);
+            }
+
+            return $transaction;
+        }));
+
+        return $paginator;
     }
 
     public function archiveTransaction(string $type, int $id): RedirectResponse
