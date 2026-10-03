@@ -2,7 +2,12 @@
     <x-slot name="header"><h2 class="font-semibold text-xl text-gray-800">Rekap Order Customer ber-Plafon (Piutang)</h2></x-slot>
     <style>
         .customer-credit-report { color:#111827; }
-        .customer-credit-report table { width:100%; border-collapse:collapse; table-layout:fixed; font-size:9px; line-height:1.25; }
+        /* Auto layout sized to content: columns take only the width their data
+           needs instead of fixed percentages that left empty space. */
+        .customer-credit-report table { width:auto; max-width:100%; margin:0 auto; border-collapse:collapse; table-layout:auto; font-size:10px; line-height:1.25; }
+        .customer-credit-report td.nowrap { white-space:nowrap; }
+        .customer-credit-report td.text { min-width:9em; }
+        .customer-credit-report td.product { min-width:15em; }
         .customer-credit-report th,.customer-credit-report td { border:1px solid #94a3b8; padding:2px 3px; vertical-align:top; }
         .customer-credit-report thead th { background:#e2e8f0; text-align:center; white-space:nowrap; font-weight:700; }
         .customer-credit-report td { overflow-wrap:anywhere; }
@@ -26,7 +31,7 @@
             .customer-credit-report .print-title { display:table-row; }
             .customer-credit-report .print-title th { background:#fff !important; border:0; padding:0 0 4px; text-align:center; white-space:normal; font-weight:400; }
             .customer-credit-report .report-scroll { overflow:visible; }
-            .customer-credit-report table { font-family:Arial,sans-serif; font-size:7pt; }
+            .customer-credit-report table { font-family:Arial,sans-serif; font-size:8pt; }
             .customer-credit-report th,.customer-credit-report td { padding:1.5px 2.5px; }
             .customer-credit-report thead th { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
             .customer-credit-report tbody tr:nth-child(even) td { background:#fff; }
@@ -54,9 +59,8 @@
                 @if($selectedCustomer)<p class="text-xs">Plafon: Rp {{ number_format($selectedCustomer->limit->Batas,0,',','.') }} · Terpakai: Rp {{ number_format($selectedCustomer->limit->Total,0,',','.') }} · Sisa: Rp {{ number_format(max(0,$selectedCustomer->limit->Batas-$selectedCustomer->limit->Total),0,',','.') }}</p>@endif
                 <p class="text-sm">{{ \Carbon\Carbon::parse($from)->translatedFormat('d F Y') }} s/d {{ \Carbon\Carbon::parse($to)->translatedFormat('d F Y') }}</p></div>
             <div class="report-scroll"><table>
-                <colgroup><col style="width:5%"><col style="width:9.5%"><col style="width:15%"><col><col style="width:3.6%"><col style="width:3.6%"><col style="width:2.6%"><col style="width:5.2%"><col style="width:6.4%"><col style="width:4.6%"><col style="width:6.4%"><col style="width:5.4%"><col style="width:4%"><col style="width:6.4%"></colgroup>
                 <thead><tr class="print-title"><th colspan="14"><div style="font-size:9pt;font-weight:700;">REKAP ORDER PER CUSTOMER - SPEKTRUM</div><div style="font-size:8pt;font-weight:700;">{{ $selectedCustomer?->NmCust }}</div><div style="font-size:7pt;">@if($selectedCustomer)Plafon Rp {{ number_format($selectedCustomer->limit->Batas,0,',','.') }} · Terpakai Rp {{ number_format($selectedCustomer->limit->Total,0,',','.') }} · Sisa Rp {{ number_format(max(0,$selectedCustomer->limit->Batas-$selectedCustomer->limit->Total),0,',','.') }} · @endif{{ \Carbon\Carbon::parse($from)->translatedFormat('d F Y') }} s/d {{ \Carbon\Carbon::parse($to)->translatedFormat('d F Y') }}</div></th></tr><tr><th>Tanggal</th><th>No. Nota</th><th>Nama Produk</th><th>Keterangan</th><th>Pj.</th><th>Leb.</th><th>Qty</th><th>Harga</th><th>Sub Total</th><th>Diskon</th><th>Total</th><th>DP</th><th>Bayar</th><th>Kredit</th></tr></thead>
-                <tbody>@forelse($rows as $row)<tr><td>{{ \Carbon\Carbon::parse($row->date)->format('d-m-y') }}</td><td>{{ $row->invoice }}</td><td>{{ $row->product }}</td><td>{{ $row->description }}</td>
+                <tbody>@forelse($rows as $row)<tr><td class="nowrap">{{ \Carbon\Carbon::parse($row->date)->format('d-m-y') }}</td><td class="nowrap">{{ $row->invoice }}</td><td class="text product">{{ $row->product }}</td><td class="text">{{ $row->description }}</td>
                     <td class="number">{{ number_format((float)$row->length,2,',','.') }}</td><td class="number">{{ number_format((float)$row->width,2,',','.') }}</td><td class="number">{{ number_format((float)$row->qty,0,',','.') }}</td>
                     <td class="number">{{ $row->price !== null ? number_format($row->price,0,',','.') : '-' }}</td><td class="number">{{ number_format($row->subtotal,0,',','.') }}</td><td class="number">{{ number_format($row->discount,0,',','.') }}</td><td class="number">{{ number_format($row->total,0,',','.') }}</td><td class="number">{{ number_format($row->advance,0,',','.') }}</td><td class="number">{{ number_format($row->payment,0,',','.') }}</td><td class="number">{{ number_format($row->credit,0,',','.') }}</td>
                 </tr>@empty<tr><td colspan="14" style="padding:28px;text-align:center">{{ $selectedCustomer ? 'Tidak ada order piutang pada periode ini.' : 'Pilih customer ber-plafon untuk menampilkan laporan.' }}</td></tr>@endforelse</tbody>
