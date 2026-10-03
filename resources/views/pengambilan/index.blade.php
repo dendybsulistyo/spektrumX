@@ -159,7 +159,7 @@
                     <p class="text-muted" style="margin: 0 0 var(--space-4);"><span x-text="paymentOrder"></span> · Sisa Rp <span x-text="Number(paymentRemaining).toLocaleString('id-ID')"></span></p>
                     <form method="POST" :action="`/kasir/${paymentType}/${paymentId}/${paymentMode === 'hutang' ? 'lunasi-hutang' : 'lunasi'}`" style="display: flex; flex-direction: column; gap: var(--space-3);">
                         @csrf
-                        <input type="hidden" name="return_to" value="pengambilan">
+                        <input type="hidden" name="return_to" value="pengambilan_payment_preview">
                         <input type="hidden" name="rincian[0][jumlah]" :value="paymentRemaining">
                         <div>
                             <label class="label" style="display:block;margin-bottom:4px;">Cara Bayar</label>

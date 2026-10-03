@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ request()->boolean('draft') ? 'Draft SO' : 'Surat Pesanan' }} {{ $order->NoOrder }}</title>
+    <title>{{ request()->boolean('payment_preview') ? 'Invoice' : (request()->boolean('draft') ? 'Draft SO' : 'Surat Pesanan') }} {{ $order->NoOrder }}</title>
     <x-app-favicon />
     <style>
         :root { --ink:#155f60; --line:#5f7474; --muted:#536b6b; }
@@ -198,11 +198,24 @@
     @endforeach
 
     <div class="actions no-print" id="standaloneActions">
-        <a href="#" id="backLink" class="link-back">← Kembali</a>
-        @if (request('source') !== 'pengambilan' && ! request()->boolean('draft') && $printRecord && ! $canReprintSalesOrder)
+        @if (request()->boolean('payment_preview') && request('source') === 'pengambilan')
+            <a href="{{ route('pengambilan.index', ['tab' => 'transaksi']) }}" class="link-back">← Kembali ke Pengambilan</a>
+            <div style="display:flex;align-items:center;gap:10px;">
+                <button class="btn" type="button" id="paymentPrintButton" onclick="printPaymentInvoice()">Cetak Invoice</button>
+                <form method="POST" action="{{ route('pengambilan.transaksi.archive', ['type' => $type, 'id' => $order->id]) }}" style="margin:0;">
+                    @csrf
+                    <button class="btn" type="submit" id="paymentSaveButton" disabled
+                            title="Cetak invoice terlebih dahulu"
+                            style="background:#3156d3;opacity:.45;cursor:not-allowed;">Simpan</button>
+                </form>
+            </div>
+        @else
+            <a href="#" id="backLink" class="link-back">← Kembali</a>
+        @endif
+        @if (! request()->boolean('payment_preview') && request('source') !== 'pengambilan' && ! request()->boolean('draft') && $printRecord && ! $canReprintSalesOrder)
             <p class="print-warning">SO sudah dicetak {{ $printRecord->first_printed_at->format('d-m-Y H:i') }}. Cetak ulang hanya melalui Admin Kasir.</p>
         @endif
-        @if (request('source') !== 'pengambilan')
+        @if (! request()->boolean('payment_preview') && request('source') !== 'pengambilan')
             @if (request()->boolean('draft') || $canPrintSalesOrder)
                 <button class="btn" type="button" onclick="requestSalesOrderPrint()">{{ request()->boolean('draft') ? 'Cetak Draft SO' : ($printRecord ? 'Cetak Ulang Surat Pesanan' : 'Cetak Surat Pesanan') }}</button>
             @endif
@@ -210,6 +223,22 @@
     </div>
     <script>
         let salesOrderPrintPending = false;
+
+        function printPaymentInvoice() {
+            document.body.classList.add('print-authorized');
+            window.focus();
+            window.print();
+        }
+
+        function enablePaymentSave() {
+            const saveButton = document.getElementById('paymentSaveButton');
+            if (! saveButton) return;
+
+            saveButton.disabled = false;
+            saveButton.title = 'Simpan dan hilangkan transaksi dari daftar';
+            saveButton.style.opacity = '1';
+            saveButton.style.cursor = 'pointer';
+        }
 
         async function requestSalesOrderPrint() {
             if (salesOrderPrintPending) return false;
@@ -248,13 +277,19 @@
         }
 
         window.requestSalesOrderPrint = requestSalesOrderPrint;
-        window.addEventListener('afterprint', () => document.body.classList.remove('print-authorized'));
+        window.printPaymentInvoice = printPaymentInvoice;
+        window.addEventListener('afterprint', () => {
+            document.body.classList.remove('print-authorized');
+            enablePaymentSave();
+        });
         if (window.self !== window.top) document.getElementById('standaloneActions').style.display = 'none';
         else {
             const backLink = document.getElementById('backLink');
-            if (history.length > 1) backLink.addEventListener('click', (event) => { event.preventDefault(); history.back(); });
-            else if (document.referrer) backLink.href = document.referrer;
-            else backLink.style.display = 'none';
+            if (backLink) {
+                if (history.length > 1) backLink.addEventListener('click', (event) => { event.preventDefault(); history.back(); });
+                else if (document.referrer) backLink.href = document.referrer;
+                else backLink.style.display = 'none';
+            }
         }
     </script>
 </body>

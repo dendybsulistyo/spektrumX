@@ -703,9 +703,16 @@ class KasirController extends Controller
             );
         });
 
-        $redirect = $request->input('return_to') === 'pengambilan'
-            ? redirect()->route('pengambilan.index', ['tab' => 'transaksi'])
-            : redirect()->route('kasir.show', ['type' => $type, 'id' => $order->id]);
+        $redirect = match ($request->input('return_to')) {
+            'pengambilan_payment_preview' => redirect()->route('invoice.show', [
+                'type' => $type,
+                'id' => $order->id,
+                'source' => 'pengambilan',
+                'payment_preview' => 1,
+            ]),
+            'pengambilan' => redirect()->route('pengambilan.index', ['tab' => 'transaksi']),
+            default => redirect()->route('kasir.show', ['type' => $type, 'id' => $order->id]),
+        };
 
         return $redirect
             ->with('status', 'Sisa DP berhasil dilunasi.'.($kembalian > 0 ? ' Kembalian: Rp '.number_format($kembalian, 0, ',', '.').'.' : ''))
@@ -859,6 +866,14 @@ class KasirController extends Controller
         if ($request->input('return_to') === 'customer_receivables') {
             return redirect()->route('keuangan.customer-receivable-details', ['customer' => $order->KdCust])
                 ->with('status', $message);
+        }
+        if ($request->input('return_to') === 'pengambilan_payment_preview') {
+            return redirect()->route('invoice.show', [
+                'type' => $type,
+                'id' => $order->id,
+                'source' => 'pengambilan',
+                'payment_preview' => 1,
+            ])->with('status', $message);
         }
         if ($request->input('return_to') === 'pengambilan') {
             return redirect()->route('pengambilan.index', ['tab' => 'transaksi'])->with('status', $message);
