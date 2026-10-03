@@ -49,6 +49,7 @@
         .actions { width:21.6cm; margin:14px auto 0; display:flex; justify-content:space-between; align-items:center; }
         .btn { padding:10px 18px; border:0; border-radius:7px; background:var(--ink); color:#fff; cursor:pointer; font-weight:700; text-decoration:none; }
         .link-back { color:#506363; font-size:14px; text-decoration:none; }
+        .print-warning { flex:1; margin:0 16px; color:#9a3412; font-size:13px; font-weight:700; text-align:right; }
         @media print {
             @page { size:21.6cm 13.9cm; margin:0; }
             html, body { width:21.6cm; height:13.9cm; background:#fff; }
@@ -92,6 +93,8 @@
             .sheet { transform:translateY(var(--cform-page-offset, 0cm)); }
             main.sheet:last-of-type { break-after:auto; page-break-after:auto; }
             .no-print { display:none !important; }
+            body:not(.print-authorized) .sheet { display:none !important; }
+            body:not(.print-authorized)::after { content:'Pencetakan Sales Order harus dilakukan melalui tombol Cetak.'; display:block; padding:24px; font:700 14pt Arial,sans-serif; }
         }
     </style>
 </head>
@@ -196,11 +199,56 @@
 
     <div class="actions no-print" id="standaloneActions">
         <a href="#" id="backLink" class="link-back">← Kembali</a>
+        @if (! request()->boolean('draft') && $printRecord && ! $canReprintSalesOrder)
+            <p class="print-warning">SO sudah dicetak {{ $printRecord->first_printed_at->format('d-m-Y H:i') }}. Cetak ulang hanya melalui Admin Kasir.</p>
+        @endif
         @if (request('source') !== 'pengambilan' || ($order->status_bayar === 'lunas' && ! $order->invoice_voided_at))
-            <button class="btn" onclick="window.print()">{{ request()->boolean('draft') ? 'Cetak Draft SO' : 'Cetak Surat Pesanan' }}</button>
+            @if (request()->boolean('draft') || $canPrintSalesOrder)
+                <button class="btn" type="button" onclick="requestSalesOrderPrint()">{{ request()->boolean('draft') ? 'Cetak Draft SO' : ($printRecord ? 'Cetak Ulang Surat Pesanan' : 'Cetak Surat Pesanan') }}</button>
+            @endif
         @endif
     </div>
     <script>
+        let salesOrderPrintPending = false;
+
+        async function requestSalesOrderPrint() {
+            if (salesOrderPrintPending) return false;
+
+            @if (request()->boolean('draft'))
+                document.body.classList.add('print-authorized');
+                window.print();
+                return true;
+            @else
+                salesOrderPrintPending = true;
+                try {
+                    const response = await fetch(@json(route('invoice.register-print', ['type' => $type, 'id' => $order->id])), {
+                        method: 'POST',
+                        headers: {
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': @json(csrf_token()),
+                        },
+                    });
+                    const payload = await response.json();
+                    if (! response.ok) {
+                        alert(payload.message || 'Sales Order tidak dapat dicetak.');
+                        return false;
+                    }
+
+                    document.body.classList.add('print-authorized');
+                    window.focus();
+                    window.print();
+                    return true;
+                } catch (error) {
+                    alert('Gagal meminta izin cetak. Silakan coba kembali.');
+                    return false;
+                } finally {
+                    salesOrderPrintPending = false;
+                }
+            @endif
+        }
+
+        window.requestSalesOrderPrint = requestSalesOrderPrint;
+        window.addEventListener('afterprint', () => document.body.classList.remove('print-authorized'));
         if (window.self !== window.top) document.getElementById('standaloneActions').style.display = 'none';
         else {
             const backLink = document.getElementById('backLink');

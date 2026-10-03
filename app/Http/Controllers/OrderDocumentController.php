@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\OrderDocument;
 use App\Models\OrderArtwork;
+use App\Models\OrderDocument;
 use App\Models\OrderIndoor;
 use App\Models\OrderOutdoor;
 use App\Models\OrderPickupSignature;
@@ -17,10 +17,7 @@ class OrderDocumentController extends Controller
     private function authorizeAccess(): void
     {
         abort_unless(
-            auth()->user()->hasPermission('kasir.view')
-                || auth()->user()->hasPermission('pengambilan.view')
-                || auth()->user()->hasPermission('customer-service.view')
-                || auth()->user()->hasPermission('keuangan.view'),
+            auth()->user()->hasPermission('keuangan.view'),
             403
         );
     }

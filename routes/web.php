@@ -57,12 +57,12 @@ use App\Http\Controllers\PengaturanKeuanganController;
 use App\Http\Controllers\PengeluaranController;
 use App\Http\Controllers\PreviewCetakController;
 use App\Http\Controllers\PrinterController;
-use App\Http\Controllers\PrinterPerformanceController;
 use App\Http\Controllers\PrinterOutdoorController;
+use App\Http\Controllers\PrinterPerformanceController;
 use App\Http\Controllers\ProdukController;
 use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\ReportController;
 use App\Http\Controllers\RekapPenerimaanController;
+use App\Http\Controllers\ReportController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\ServerMonitorController;
 use App\Http\Controllers\TutupBukuController;
@@ -381,12 +381,16 @@ Route::middleware('auth')->group(function () {
         Route::post('/customer-service/job-sheets/{jobSheet}/claim', [CustomerServiceController::class, 'claimJobSheet'])->name('customer-service.job-sheets.claim');
     });
 
-    // Not gated to a single permission group — Kasir, Pengambilan, and CS
-    // need to preview the SO; each endpoint checks its own permission.
-    Route::get('/order-documents', [OrderDocumentController::class, 'index'])->name('order-documents.index');
-    Route::get('/order-documents/{document}/kwitansi', [OrderDocumentController::class, 'receipt'])->name('order-documents.receipt');
-    Route::get('/order-documents/{document}', [OrderDocumentController::class, 'show'])->name('order-documents.show');
+    Route::middleware('permission:keuangan.view')->group(function () {
+        Route::get('/order-documents', [OrderDocumentController::class, 'index'])->name('order-documents.index');
+        Route::get('/order-documents/{document}/kwitansi', [OrderDocumentController::class, 'receipt'])->name('order-documents.receipt');
+        Route::get('/order-documents/{document}', [OrderDocumentController::class, 'show'])->name('order-documents.show');
+    });
+
+    // Operational roles still need the individual SO preview in their own
+    // workflow, without gaining access to the accounting document archive.
     Route::get('/invoice/{type}/{id}', [InvoiceController::class, 'show'])->name('invoice.show');
+    Route::post('/invoice/{type}/{id}/register-print', [InvoiceController::class, 'registerPrint'])->name('invoice.register-print');
 
     Route::middleware('permission:kasir.view')->group(function () {
         Route::get('/kasir', [KasirController::class, 'index'])->name('kasir.index');

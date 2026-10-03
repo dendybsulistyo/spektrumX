@@ -475,11 +475,11 @@
             <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200">
                 <h3 class="font-semibold text-gray-900">Surat Pesanan {{ $order->NoOrder }}</h3>
                 <div class="flex items-center gap-2">
-                    <button type="button" @click="$refs.invoiceFrame.contentWindow.focus(); $refs.invoiceFrame.contentWindow.print()"
+                    <button type="button" @click="$refs.invoiceFrame.contentWindow.requestSalesOrderPrint()"
                             class="inline-flex items-center px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-md hover:bg-blue-700">
                         Cetak
                     </button>
-                    <button type="button" @click="$refs.invoiceFrame.contentDocument.title = '{{ $order->NoOrder }}'; $refs.invoiceFrame.contentWindow.focus(); $refs.invoiceFrame.contentWindow.print()"
+                    <button type="button" @click="$refs.invoiceFrame.contentDocument.title = '{{ $order->NoOrder }}'; $refs.invoiceFrame.contentWindow.requestSalesOrderPrint()"
                             class="inline-flex items-center px-3 py-1.5 bg-gray-100 text-gray-700 text-xs font-semibold rounded-md hover:bg-gray-200">
                         PDF
                     </button>
@@ -493,7 +493,7 @@
                 <iframe x-ref="invoiceFrame"
                         x-show="invoiceModalOpen"
                         :src="invoiceModalOpen ? '{{ route('invoice.show', ['type' => $type, 'id' => $order->id]) }}' : ''"
-                        @load="if (autoPrintPending && $refs.invoiceFrame.contentDocument?.readyState === 'complete' && $refs.invoiceFrame.contentWindow.location.href !== 'about:blank') { autoPrintPending = false; $refs.invoiceFrame.contentWindow.focus(); $refs.invoiceFrame.contentWindow.print(); }"
+                        @load="if (autoPrintPending && $refs.invoiceFrame.contentDocument?.readyState === 'complete' && $refs.invoiceFrame.contentWindow.location.href !== 'about:blank') { autoPrintPending = false; $refs.invoiceFrame.contentWindow.requestSalesOrderPrint(); }"
                         class="w-full h-full border-0"></iframe>
             </div>
         </div>
