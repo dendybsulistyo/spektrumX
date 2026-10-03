@@ -19,12 +19,16 @@ class HargaCetakOutdoorKhususController extends Controller
      * Mirrors HargaCetakOutdoorController's Printer × Bahan matrix, but
      * scoped to one VIP customer + one printer at a time (matches how the
      * shop's paper price list is actually organized per customer). Only
-     * customers with a CustomerLimit row (i.e. is_vip) are selectable —
-     * this feature exists specifically for VIP pricing.
+     * customers with a CustomerLimit row (i.e. is_vip) and at least one
+     * special outdoor price are selectable.
      */
+    
     public function index(Request $request): View
     {
-        $vipCustomers = Customer::whereHas('limit')->orderBy('NmCust')->get();
+        $vipCustomers = Customer::whereHas('limit')
+            ->whereHas('hargaCetakOutdoorKhusus')
+            ->orderBy('NmCust')
+            ->get();
         $printers = PrinterOutdoor::orderBy('NoUrut')->get();
         $bahanList = BahanCetakOutdoor::orderBy('NoUrut')->get();
 

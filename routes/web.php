@@ -33,6 +33,7 @@ use App\Http\Controllers\KategoriController;
 use App\Http\Controllers\KategoriProdukIndoorController;
 use App\Http\Controllers\KeuanganController;
 use App\Http\Controllers\LaporanAkuntansiController;
+use App\Http\Controllers\LaporanOperatorIndoorController;
 use App\Http\Controllers\MonitoringKinerjaController;
 use App\Http\Controllers\MonitoringTransaksiController;
 use App\Http\Controllers\OperatorController;
@@ -99,6 +100,7 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware('permission:data-warehouse.view')->group(function () {
         Route::get('/data-warehouse', [DataWarehouseController::class, 'index'])->name('data-warehouse.index');
+        Route::get('/laporan/operator-indoor', [LaporanOperatorIndoorController::class, 'index'])->name('laporan-operator-indoor.index');
     });
 
     Route::middleware('permission:monitoring-kinerja.view')->group(function () {

@@ -6,7 +6,7 @@
     <div class="space-y-4 max-w-2xl">
         <div class="bg-white rounded-lg border border-gray-200 p-4">
             <p class="text-xs text-gray-500 mb-3">
-                Cuma customer VIP (punya plafon hutang) yang bisa diset harga khususnya. Kosongkan harga untuk kembali pakai Standar Harga Outdoor.
+                Hanya customer VIP yang sudah mempunyai harga khusus yang ditampilkan. Kosongkan harga untuk kembali pakai Standar Harga Outdoor.
             </p>
             <form method="GET" class="flex flex-wrap items-end gap-3">
                 <div class="w-64">
@@ -20,7 +20,7 @@
                     </select>
                 </div>
                 @if ($vipCustomers->isEmpty())
-                    <p class="text-xs text-gray-400 pb-2">Belum ada customer VIP — set plafon hutang dulu di menu Customer.</p>
+                    <p class="text-xs text-gray-400 pb-2">Belum ada customer VIP yang mempunyai harga khusus.</p>
                 @endif
                 <div class="w-56">
                     <x-input-label value="Printer" />
