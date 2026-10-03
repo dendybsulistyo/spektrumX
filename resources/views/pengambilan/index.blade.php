@@ -19,6 +19,9 @@
             #industry-pengambilan .item-row:last-child { border-bottom: none; }
             #industry-pengambilan .progress-tag { font-family: var(--font-heading); font-weight: 600; font-size: 13px; color: var(--color-text-muted, #666); }
             #industry-pengambilan .signature-pad { display:block; width:100%; height:160px; border:1px dashed var(--color-divider); background:#fff; touch-action:none; cursor:crosshair; }
+            #industry-pengambilan .sales-table { width: 100%; border-collapse: collapse; background: var(--color-bg); }
+            #industry-pengambilan .sales-table th { padding: 10px 12px; border-bottom: 2px solid var(--color-divider); color: var(--color-text-muted); font-family: var(--font-heading); font-size: 12px; letter-spacing: .04em; text-align: left; text-transform: uppercase; }
+            #industry-pengambilan .sales-table td { padding: 11px 12px; border-bottom: 1px solid var(--color-divider); font-size: 13px; }
         </style>
         <x-operator-workspace-styles />
     @endpush
@@ -33,6 +36,7 @@
         $tabs = [
             'indoor' => ['label' => 'Indoor', 'count' => $indoorItems->count()],
             'outdoor' => ['label' => 'Outdoor', 'count' => $outdoorItems->count()],
+            'transaksi' => ['label' => 'Transaksi Penjualan', 'count' => $salesTransactions->total()],
         ];
         $initialTab = array_key_exists(request('tab'), $tabs) ? request('tab') : 'indoor';
     @endphp
@@ -83,6 +87,34 @@
                     @endforelse
                 </div>
             @endforeach
+
+            <div x-show="tab === 'transaksi'" x-cloak style="margin-top: var(--space-4);">
+                <div class="blueprint" style="overflow-x: auto;">
+                    <table class="sales-table">
+                        <thead>
+                            <tr>
+                                <th>No Invoice</th>
+                                <th>Nama Customer</th>
+                                <th>Tanggal SO</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse ($salesTransactions as $transaction)
+                                <tr>
+                                    <td style="font-family: var(--font-heading); font-weight: 600; white-space: nowrap;">{{ $transaction->invoice }}</td>
+                                    <td>{{ $transaction->customer }}</td>
+                                    <td style="white-space: nowrap;">{{ \Carbon\CarbonImmutable::parse($transaction->sales_order_date)->format('d-m-Y') }}</td>
+                                </tr>
+                            @empty
+                                <tr><td colspan="3" class="text-muted" style="padding: var(--space-6); text-align: center;">Belum ada transaksi penjualan Indoor atau Outdoor.</td></tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+                @if ($salesTransactions->hasPages())
+                    <div style="margin-top: var(--space-4);">{{ $salesTransactions->links() }}</div>
+                @endif
+            </div>
 
             <div x-show="penerimaOpen" x-cloak @keydown.escape.window="penerimaOpen = false"
                  style="position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; padding: var(--space-4);">

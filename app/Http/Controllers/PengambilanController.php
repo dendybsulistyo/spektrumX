@@ -10,6 +10,7 @@ use App\Services\StageProgressService;
 use App\Support\ResolvesOrderDetailType;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -54,7 +55,36 @@ class PengambilanController extends Controller
         $pendingRework = OrderReworkRequest::pendingMap();
         $canApproveRework = auth()->user()->hasPermission('order-rework.approve');
 
-        return compact('indoorItems', 'outdoorItems', 'outdoorComments', 'outdoorUnread', 'printerNames', 'pendingRework', 'canApproveRework');
+        $salesTransactions = $this->salesTransactions();
+
+        return compact('indoorItems', 'outdoorItems', 'outdoorComments', 'outdoorUnread', 'printerNames', 'pendingRework', 'canApproveRework', 'salesTransactions');
+    }
+
+    private function salesTransactions()
+    {
+        $queries = collect(['indoor' => 'order_indoor', 'outdoor' => 'order_outdoor'])
+            ->map(function (string $orderTable, string $type) {
+                return DB::table('order_documents as document')
+                    ->join($orderTable.' as orders', 'orders.id', '=', 'document.order_id')
+                    ->leftJoin('customers as customer', 'customer.KdCust', '=', 'orders.KdCust')
+                    ->where('document.kind', 'inv')
+                    ->where('document.order_type', $type)
+                    ->where('orders.status', '!=', 'batal')
+                    ->whereNull('orders.invoice_voided_at')
+                    ->selectRaw("document.number as invoice, COALESCE(NULLIF(TRIM(customer.NmCust), ''), orders.KdCust) as customer, orders.TglOrder as sales_order_date, ? as order_type", [$type]);
+            });
+
+        $query = $queries->shift();
+        foreach ($queries as $other) {
+            $query->unionAll($other);
+        }
+
+        return DB::query()->fromSub($query, 'sales_transactions')
+            ->orderByRaw('LOWER(customer)')
+            ->orderBy('sales_order_date')
+            ->orderBy('invoice')
+            ->paginate(50, ['*'], 'transaksi_page')
+            ->withQueryString();
     }
 
     /**

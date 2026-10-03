@@ -199,10 +199,10 @@
 
     <div class="actions no-print" id="standaloneActions">
         <a href="#" id="backLink" class="link-back">← Kembali</a>
-        @if (! request()->boolean('draft') && $printRecord && ! $canReprintSalesOrder)
+        @if (request('source') !== 'pengambilan' && ! request()->boolean('draft') && $printRecord && ! $canReprintSalesOrder)
             <p class="print-warning">SO sudah dicetak {{ $printRecord->first_printed_at->format('d-m-Y H:i') }}. Cetak ulang hanya melalui Admin Kasir.</p>
         @endif
-        @if (request('source') !== 'pengambilan' || ($order->status_bayar === 'lunas' && ! $order->invoice_voided_at))
+        @if (request('source') !== 'pengambilan')
             @if (request()->boolean('draft') || $canPrintSalesOrder)
                 <button class="btn" type="button" onclick="requestSalesOrderPrint()">{{ request()->boolean('draft') ? 'Cetak Draft SO' : ($printRecord ? 'Cetak Ulang Surat Pesanan' : 'Cetak Surat Pesanan') }}</button>
             @endif
