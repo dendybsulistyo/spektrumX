@@ -131,7 +131,7 @@
             $canViewOperationalDocuments = Auth::user()->hasPermission('kasir.view') || Auth::user()->hasPermission('pengambilan.view');
             $operatorActive = request()->routeIs('file.*', 'kasir.*', 'customer-service.payment-queue', 'order-desain.*', 'order-cetak.*', 'order-finishing.*', 'order-qc.*', 'order-bungkus.*', 'pengambilan.*')
                 || ($canViewOperationalDocuments && request()->routeIs('order-documents.*'));
-            $analitikActive = request()->routeIs('data-warehouse.*', 'laporan-operator-indoor.*', 'monitoring-kinerja.*', 'monitoring-transaksi.*', 'papan-pantau.*');
+            $analitikActive = request()->routeIs('data-warehouse.*', 'laporan-operator-indoor.*', 'rekap-penerimaan.*', 'monitoring-kinerja.*', 'monitoring-transaksi.*', 'papan-pantau.*');
             $ownerActive = request()->routeIs('printer-performance.*');
             $keuanganActive = request()->routeIs('akuntansi.*', 'keuangan.*', 'pengeluaran.*', 'payroll.*')
                 || (! $canViewOperationalDocuments && Auth::user()->hasPermission('keuangan.view') && request()->routeIs('order-documents.*'));
@@ -432,6 +432,7 @@
                                             @can('data-warehouse.view')
                                                 <a href="{{ route('data-warehouse.index') }}" class="{{ $dropdownLink(request()->routeIs('data-warehouse.*')) }}">Data Warehouse</a>
                                                 <a href="{{ route('laporan-operator-indoor.index') }}" class="{{ $dropdownLink(request()->routeIs('laporan-operator-indoor.*')) }}">Laporan Operator Indoor</a>
+                                                <a href="{{ route('rekap-penerimaan.index') }}" class="{{ $dropdownLink(request()->routeIs('rekap-penerimaan.*')) }}">Rekap Penerimaan</a>
                                             @endcan
                                             @can('monitoring-kinerja.view')
                                                 <a href="{{ route('monitoring-kinerja.index') }}" class="{{ $dropdownLink(request()->routeIs('monitoring-kinerja.*')) }}">Monitoring Kinerja</a>
@@ -700,6 +701,7 @@
                             @can('data-warehouse.view')
                                 <a href="{{ route('data-warehouse.index') }}" class="{{ $mobileLink(request()->routeIs('data-warehouse.*')) }}">Data Warehouse</a>
                                 <a href="{{ route('laporan-operator-indoor.index') }}" class="{{ $mobileLink(request()->routeIs('laporan-operator-indoor.*')) }}">Laporan Operator Indoor</a>
+                                <a href="{{ route('rekap-penerimaan.index') }}" class="{{ $mobileLink(request()->routeIs('rekap-penerimaan.*')) }}">Rekap Penerimaan</a>
                             @endcan
                             @can('monitoring-kinerja.view')
                                 <a href="{{ route('monitoring-kinerja.index') }}" class="{{ $mobileLink(request()->routeIs('monitoring-kinerja.*')) }}">Monitoring Kinerja</a>

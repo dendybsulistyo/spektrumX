@@ -62,6 +62,7 @@ use App\Http\Controllers\PrinterOutdoorController;
 use App\Http\Controllers\ProdukController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\RekapPenerimaanController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\ServerMonitorController;
 use App\Http\Controllers\TutupBukuController;
@@ -101,6 +102,7 @@ Route::middleware('auth')->group(function () {
     Route::middleware('permission:data-warehouse.view')->group(function () {
         Route::get('/data-warehouse', [DataWarehouseController::class, 'index'])->name('data-warehouse.index');
         Route::get('/laporan/operator-indoor', [LaporanOperatorIndoorController::class, 'index'])->name('laporan-operator-indoor.index');
+        Route::get('/analitik/rekap-penerimaan', [RekapPenerimaanController::class, 'index'])->name('rekap-penerimaan.index');
     });
 
     Route::middleware('permission:monitoring-kinerja.view')->group(function () {
