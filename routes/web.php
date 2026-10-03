@@ -124,7 +124,7 @@ Route::middleware('auth')->group(function () {
 
     // Kasir needs the plafon customer recap to check outstanding credit
     // before accepting a new hutang order.
-    Route::middleware('permission.any:keuangan.view,kasir.view')->group(function () {
+    Route::middleware('permission.any:keuangan.view,kasir.piutang-report.view')->group(function () {
         Route::get('/report/order-customer-piutang', [ReportController::class, 'creditOrdersByCustomer'])->name('report.credit-orders-by-customer');
     });
 

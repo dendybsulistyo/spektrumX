@@ -74,6 +74,7 @@ class Role extends Model
             'kasir.approve-diskon' => 'Setujui/tolak pengajuan diskon nota kasir',
             'kasir.approve-hutang' => 'Setujui/tolak pengajuan hutang customer VIP yang melebihi plafon',
             'kasir.replacement.manage' => 'Buat nota pengganti',
+            'kasir.piutang-report.view' => 'Lihat Rekap Order Customer (Piutang)',
         ],
         'Customer Service' => [
             'customer-service.view' => 'Lihat antrean order Customer Service',
