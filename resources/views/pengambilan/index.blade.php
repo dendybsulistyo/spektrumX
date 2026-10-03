@@ -130,13 +130,16 @@
                                                 Bayar
                                             </button>
                                         @else
-                                            <form method="POST" action="{{ route('pengambilan.transaksi.archive', ['type' => $transaction->order_type, 'id' => $transaction->order_id]) }}" style="display: inline;">
-                                                @csrf
-                                                <button type="submit" class="in-btn" @disabled((float) $transaction->payment_total + 0.01 < (float) $transaction->jumlah_dibayar)
-                                                        title="{{ (float) $transaction->payment_total + 0.01 < (float) $transaction->jumlah_dibayar ? 'Penerimaan belum tercatat lengkap di Keuangan' : 'Simpan dan hilangkan dari daftar' }}">
+                                            @php $paymentRecorded = (float) $transaction->payment_total + 0.01 >= (float) $transaction->jumlah_dibayar; @endphp
+                                            @if ($paymentRecorded)
+                                                <a href="{{ route('invoice.show', ['type' => $transaction->order_type, 'id' => $transaction->order_id, 'source' => 'pengambilan', 'payment_preview' => 1]) }}"
+                                                   class="in-btn" style="text-decoration:none;">Simpan</a>
+                                            @else
+                                                <button type="button" class="in-btn" disabled
+                                                        title="Penerimaan belum tercatat lengkap di Keuangan">
                                                     Simpan
                                                 </button>
-                                            </form>
+                                            @endif
                                         @endif
                                     </td>
                                 </tr>
