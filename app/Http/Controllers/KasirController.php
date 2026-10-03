@@ -37,7 +37,7 @@ class KasirController extends Controller
 
     public function index(Request $request): View
     {
-        $initialTab = in_array($request->query('tab'), ['indoor', 'outdoor', 'replacement', 'dp', 'hutang', 'lunas'], true)
+        $initialTab = in_array($request->query('tab'), ['indoor', 'outdoor', 'replacement', 'lunas'], true)
             ? $request->query('tab')
             : 'indoor';
 
@@ -56,41 +56,6 @@ class KasirController extends Controller
             ->orderByDesc('TglOrder')
             ->orderByDesc('NoOrder')
             ->get();
-
-        // Indoor and Outdoor orders paid via DP still owe a balance —
-        // surfaced together so kasir can record the pelunasan at any time.
-        $dpOrders = collect();
-        foreach (['indoor' => OrderIndoor::class, 'outdoor' => OrderOutdoor::class] as $orderType => $model) {
-            $model::query()
-                ->with('customer.limit')
-                ->where('status_bayar', 'dp')
-                ->where('jumlah_piutang', '>', 0)
-                ->orderByDesc('TglOrder')
-                ->orderByDesc('NoOrder')
-                ->get()
-                ->each(function ($order) use (&$dpOrders, $orderType) {
-                    $order->order_type = $orderType;
-                    $dpOrders->push($order);
-                });
-        }
-        $dpOrders = $dpOrders->sortByDesc('TglOrder')->values();
-
-        $hutangOrders = collect();
-        foreach (['indoor' => OrderIndoor::class, 'outdoor' => OrderOutdoor::class, 'artwork' => OrderArtwork::class] as $orderType => $model) {
-            $model::query()
-                ->with('customer.limit')
-                ->where('status_bayar', 'hutang')
-                ->where('jumlah_piutang', '>', 0)
-                ->where('status', '!=', 'batal')
-                ->orderByDesc('TglOrder')
-                ->orderByDesc('NoOrder')
-                ->get()
-                ->each(function ($order) use (&$hutangOrders, $orderType) {
-                    $order->order_type = $orderType;
-                    $hutangOrders->push($order);
-                });
-        }
-        $hutangOrders = $hutangOrders->sortByDesc('TglOrder')->values();
 
         // Voided invoices across all 3 order types, waiting for a kasir to
         // issue their nota pengganti — tagged with order_type so the view
@@ -146,8 +111,6 @@ class KasirController extends Controller
             $orders = collect()
                 ->merge($orderType === 'indoor' ? $indoorOrders : collect())
                 ->merge($orderType === 'outdoor' ? $outdoorOrders : collect())
-                ->merge($dpOrders->where('order_type', $orderType))
-                ->merge($hutangOrders->where('order_type', $orderType))
                 ->merge($lunasOrders->where('order_type', $orderType));
             $orderIds = $orders->pluck('id')->unique()->values();
 
@@ -171,7 +134,7 @@ class KasirController extends Controller
             }
         }
 
-        return view('kasir.index', compact('indoorOrders', 'outdoorOrders', 'dpOrders', 'hutangOrders', 'replacementOrders', 'lunasOrders', 'pendingRework', 'initialTab', 'orderComments', 'orderUnread'));
+        return view('kasir.index', compact('indoorOrders', 'outdoorOrders', 'replacementOrders', 'lunasOrders', 'pendingRework', 'initialTab', 'orderComments', 'orderUnread'));
     }
 
     public function show(string $type, int $id): View
