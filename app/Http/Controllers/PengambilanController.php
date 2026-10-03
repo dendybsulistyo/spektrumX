@@ -29,15 +29,17 @@ class PengambilanController extends Controller
 
     public function __construct(private StageProgressService $stageProgress) {}
 
-    public function index(): View
+    public function index(Request $request): View
     {
-        return view('pengambilan.index', $this->loadData());
+        $search = trim((string) $request->query('q', ''));
+
+        return view('pengambilan.index', $this->loadData($search) + ['search' => $search]);
     }
 
     /**
      * @return array<string, mixed>
      */
-    private function loadData(): array
+    private function loadData(string $search = ''): array
     {
         $itemsByType = $this->stageProgress->itemsAtStage(self::STAGE, [
             'indoor' => true, 'outdoor' => true,
@@ -45,6 +47,14 @@ class PengambilanController extends Controller
 
         $indoorItems = $itemsByType['indoor'] ?? collect();
         $outdoorItems = $itemsByType['outdoor'] ?? collect();
+
+        if ($search !== '') {
+            $matches = fn ($items) => Str::contains(
+                $items->first()->order->customer?->NmCust.' '.$items->first()->order->NoOrder, $search, ignoreCase: true
+            );
+            $indoorItems = $indoorItems->filter($matches);
+            $outdoorItems = $outdoorItems->filter($matches);
+        }
 
         $outdoorIds = $outdoorItems->keys();
 
@@ -59,12 +69,12 @@ class PengambilanController extends Controller
         $pendingRework = OrderReworkRequest::pendingMap();
         $canApproveRework = auth()->user()->hasPermission('order-rework.approve');
 
-        $salesTransactions = $this->salesTransactions();
+        $salesTransactions = $this->salesTransactions($search);
 
         return compact('indoorItems', 'outdoorItems', 'outdoorComments', 'outdoorUnread', 'printerNames', 'pendingRework', 'canApproveRework', 'salesTransactions');
     }
 
-    private function salesTransactions()
+    private function salesTransactions(string $search = '')
     {
         $queries = collect();
         foreach (['indoor' => 'order_indoor', 'outdoor' => 'order_outdoor'] as $type => $orderTable) {
@@ -105,6 +115,9 @@ class PengambilanController extends Controller
         }
 
         $paginator = DB::query()->fromSub($query, 'sales_transactions')
+            ->when($search !== '', fn ($query) => $query->where(fn ($query) => $query
+                ->where('customer', 'like', '%'.$search.'%')
+                ->orWhere('invoice', 'like', '%'.$search.'%')))
             ->orderByRaw('LOWER(customer)')
             ->orderBy('sales_order_date')
             ->orderBy('invoice')

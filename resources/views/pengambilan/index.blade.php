@@ -78,12 +78,23 @@
                  penerimaQty = penerimaItems[0]?.qty ?? 0;
                  penerimaNoOrder = $event.detail.noOrder;
              ">
-            <div style="display: flex;">
-                @foreach ($tabs as $key => $t)
-                    <button type="button" @click="setTab('{{ $key }}')" class="seg-tab" :class="tab === '{{ $key }}' ? 'active' : ''">
-                        {{ $t['label'] }} ({{ $t['count'] }})
-                    </button>
-                @endforeach
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap;">
+                <div style="display: flex;">
+                    @foreach ($tabs as $key => $t)
+                        <button type="button" @click="setTab('{{ $key }}')" class="seg-tab" :class="tab === '{{ $key }}' ? 'active' : ''">
+                            {{ $t['label'] }} ({{ $t['count'] }})
+                        </button>
+                    @endforeach
+                </div>
+                <form method="GET" action="{{ route('pengambilan.index') }}" style="display: flex; gap: 6px;">
+                    <input type="hidden" name="tab" :value="tab">
+                    <input type="search" name="q" value="{{ $search }}" maxlength="100" placeholder="Cari nama customer / no. order"
+                           class="in-input" style="width: 280px; min-height: 36px;" aria-label="Cari nama customer atau nomor order">
+                    <button type="submit" class="in-btn">Cari</button>
+                    @if ($search !== '')
+                        <a :href="`{{ route('pengambilan.index') }}?tab=${tab}`" class="btn btn-secondary" style="text-decoration: none; display: inline-flex; align-items: center;">Reset</a>
+                    @endif
+                </form>
             </div>
 
             @foreach (['indoor' => $indoorItems, 'outdoor' => $outdoorItems] as $tabKey => $itemGroups)
@@ -95,7 +106,7 @@
                                             :printer-names="$printerNames" :outdoor-comments="$outdoorComments" :outdoor-unread="$outdoorUnread"
                                             manage-ability="pengambilan.manage" :capture-penerima="true" :show-invoice-link="true" />
                     @empty
-                        <div class="blueprint text-muted" style="padding: var(--space-6); text-align: center;">Tidak ada order di antrian pengambilan.</div>
+                        <div class="blueprint text-muted" style="padding: var(--space-6); text-align: center;">{{ $search !== '' ? 'Tidak ada order yang cocok dengan pencarian "'.$search.'".' : 'Tidak ada order di antrian pengambilan.' }}</div>
                     @endforelse
                 </div>
             @endforeach
@@ -144,7 +155,7 @@
                                     </td>
                                 </tr>
                             @empty
-                                <tr><td colspan="6" class="text-muted" style="padding: var(--space-6); text-align: center;">Belum ada transaksi penjualan Indoor atau Outdoor.</td></tr>
+                                <tr><td colspan="6" class="text-muted" style="padding: var(--space-6); text-align: center;">{{ $search !== '' ? 'Tidak ada transaksi yang cocok dengan pencarian "'.$search.'".' : 'Belum ada transaksi penjualan Indoor atau Outdoor.' }}</td></tr>
                             @endforelse
                         </tbody>
                     </table>
