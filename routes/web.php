@@ -407,10 +407,12 @@ Route::middleware('auth')->group(function () {
     });
     Route::middleware('permission:kasir.manage')->group(function () {
         Route::post('/kasir/{type}/{id}/bayar', [KasirController::class, 'bayar'])->name('kasir.bayar');
-        Route::post('/kasir/{type}/{id}/lunasi', [KasirController::class, 'lunasi'])->name('kasir.lunasi');
-        Route::post('/kasir/{type}/{id}/lunasi-hutang', [KasirController::class, 'lunasiHutang'])->name('kasir.lunasi-hutang');
         Route::post('/kasir/{type}/{id}/artwork-price/{detail}', [KasirController::class, 'updateArtworkPrice'])->name('kasir.artwork-price.update');
         Route::post('/kasir/{type}/{id}/diskon/request', [KasirController::class, 'requestDiskon'])->name('kasir.diskon.request');
+    });
+    Route::middleware('permission.any:kasir.manage,pengambilan.manage')->group(function () {
+        Route::post('/kasir/{type}/{id}/lunasi', [KasirController::class, 'lunasi'])->name('kasir.lunasi');
+        Route::post('/kasir/{type}/{id}/lunasi-hutang', [KasirController::class, 'lunasiHutang'])->name('kasir.lunasi-hutang');
     });
     // Nota pengganti is created by Operator File, not by Kasir — its own
     // permission instead of piggybacking on kasir.manage.
@@ -494,6 +496,7 @@ Route::middleware('auth')->group(function () {
     });
     Route::middleware('permission:pengambilan.manage')->group(function () {
         Route::post('/pengambilan/{type}/{id}', [PengambilanController::class, 'updateItem'])->name('pengambilan.serahkan');
+        Route::post('/pengambilan/transaksi/{type}/{id}/simpan', [PengambilanController::class, 'archiveTransaction'])->name('pengambilan.transaksi.archive');
     });
 
     Route::prefix('chat')->name('chat.')->group(function () {

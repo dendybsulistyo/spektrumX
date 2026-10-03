@@ -31,6 +31,11 @@
             <div class="tag tag-danger" style="display: block; padding: var(--space-3);">{{ session('error') }}</div>
         </div>
     @endif
+    @if (session('status'))
+        <div class="mx-auto" style="max-width: 1480px;">
+            <div class="tag tag-success" style="display: block; padding: var(--space-3);">{{ session('status') }}</div>
+        </div>
+    @endif
 
     @php
         $tabs = [
@@ -45,6 +50,13 @@
         <div style="max-width: 1480px; margin: 0 auto; display: flex; flex-direction: column; gap: var(--space-6);"
              x-data="{
                  tab: '{{ $initialTab }}',
+                 paymentOpen: false,
+                 paymentType: '',
+                 paymentId: null,
+                 paymentMode: '',
+                 paymentOrder: '',
+                 paymentRemaining: 0,
+                 paymentMethod: 'tunai',
                  penerimaOpen: false,
                  penerimaType: '',
                  penerimaId: null,
@@ -96,6 +108,9 @@
                                 <th>No Invoice</th>
                                 <th>Nama Customer</th>
                                 <th>Tanggal SO</th>
+                                <th>Status</th>
+                                <th style="text-align: right;">Sisa Bayar</th>
+                                <th style="text-align: right;">Aksi</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -104,9 +119,29 @@
                                     <td style="font-family: var(--font-heading); font-weight: 600; white-space: nowrap;">{{ $transaction->invoice }}</td>
                                     <td>{{ $transaction->customer }}</td>
                                     <td style="white-space: nowrap;">{{ \Carbon\CarbonImmutable::parse($transaction->sales_order_date)->format('d-m-Y') }}</td>
+                                    <td>
+                                        <span class="tag {{ $transaction->status_bayar === 'lunas' ? 'tag-success' : 'tag-warning' }}">{{ strtoupper($transaction->status_bayar) }}</span>
+                                    </td>
+                                    <td style="text-align: right; white-space: nowrap;">Rp {{ number_format($transaction->jumlah_piutang, 0, ',', '.') }}</td>
+                                    <td style="text-align: right; white-space: nowrap;">
+                                        @if (in_array($transaction->status_bayar, ['dp', 'hutang']))
+                                            <button type="button" class="in-btn"
+                                                    @click="paymentOpen = true; paymentType = '{{ $transaction->order_type }}'; paymentId = {{ $transaction->order_id }}; paymentMode = '{{ $transaction->status_bayar }}'; paymentOrder = '{{ $transaction->invoice }}'; paymentRemaining = {{ (float) $transaction->jumlah_piutang }}; paymentMethod = 'tunai'">
+                                                Bayar
+                                            </button>
+                                        @else
+                                            <form method="POST" action="{{ route('pengambilan.transaksi.archive', ['type' => $transaction->order_type, 'id' => $transaction->order_id]) }}" style="display: inline;">
+                                                @csrf
+                                                <button type="submit" class="in-btn" @disabled((float) $transaction->payment_total + 0.01 < (float) $transaction->jumlah_dibayar)
+                                                        title="{{ (float) $transaction->payment_total + 0.01 < (float) $transaction->jumlah_dibayar ? 'Penerimaan belum tercatat lengkap di Keuangan' : 'Simpan dan hilangkan dari daftar' }}">
+                                                    Simpan
+                                                </button>
+                                            </form>
+                                        @endif
+                                    </td>
                                 </tr>
                             @empty
-                                <tr><td colspan="3" class="text-muted" style="padding: var(--space-6); text-align: center;">Belum ada transaksi penjualan Indoor atau Outdoor.</td></tr>
+                                <tr><td colspan="6" class="text-muted" style="padding: var(--space-6); text-align: center;">Belum ada transaksi penjualan Indoor atau Outdoor.</td></tr>
                             @endforelse
                         </tbody>
                     </table>
@@ -114,6 +149,34 @@
                 @if ($salesTransactions->hasPages())
                     <div style="margin-top: var(--space-4);">{{ $salesTransactions->links() }}</div>
                 @endif
+            </div>
+
+            <div x-show="paymentOpen" x-cloak @keydown.escape.window="paymentOpen = false"
+                 style="position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; padding: var(--space-4);">
+                <div @click="paymentOpen = false" style="position: absolute; inset: 0; background: rgba(17,24,39,0.5);"></div>
+                <div class="blueprint" style="position: relative; background: var(--color-bg); width: 100%; max-width: 420px; padding: var(--space-6);">
+                    <h4 style="margin: 0 0 var(--space-2);">Pelunasan <span x-text="paymentMode.toUpperCase()"></span></h4>
+                    <p class="text-muted" style="margin: 0 0 var(--space-4);"><span x-text="paymentOrder"></span> · Sisa Rp <span x-text="Number(paymentRemaining).toLocaleString('id-ID')"></span></p>
+                    <form method="POST" :action="`/kasir/${paymentType}/${paymentId}/${paymentMode === 'hutang' ? 'lunasi-hutang' : 'lunasi'}`" style="display: flex; flex-direction: column; gap: var(--space-3);">
+                        @csrf
+                        <input type="hidden" name="return_to" value="pengambilan">
+                        <input type="hidden" name="rincian[0][jumlah]" :value="paymentRemaining">
+                        <div>
+                            <label class="label" style="display:block;margin-bottom:4px;">Cara Bayar</label>
+                            <select name="rincian[0][cara_bayar]" x-model="paymentMethod" class="in-input" style="width:100%;">
+                                <option value="tunai">Tunai</option><option value="qris">QRIS</option><option value="transfer">Transfer</option>
+                            </select>
+                        </div>
+                        <div x-show="paymentMethod !== 'tunai'" x-cloak>
+                            <label class="label" style="display:block;margin-bottom:4px;">No. Referensi</label>
+                            <input type="text" name="rincian[0][no_referensi]" class="in-input" style="width:100%;" maxlength="50" :required="paymentMethod !== 'tunai'" placeholder="ID transaksi / referensi bank">
+                        </div>
+                        <div style="display:flex;justify-content:flex-end;gap:var(--space-2);margin-top:var(--space-2);">
+                            <button type="button" @click="paymentOpen = false" class="btn btn-secondary">Batal</button>
+                            <button type="submit" class="in-btn">Bayar &amp; Lunasi</button>
+                        </div>
+                    </form>
+                </div>
             </div>
 
             <div x-show="penerimaOpen" x-cloak @keydown.escape.window="penerimaOpen = false"

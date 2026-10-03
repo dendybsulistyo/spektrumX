@@ -667,7 +667,7 @@ class KasirController extends Controller
 
         [$rincian, $kembalian] = $this->capRincianToTarget($data['rincian'], $sisaPiutang);
 
-        DB::transaction(function () use ($order, $type, $sisaPiutang, $totalFinal, $dpDiterima, $rincian) {
+        DB::transaction(function () use ($order, $type, $totalFinal, $dpDiterima, $rincian) {
             $caraBayar = $this->dominantCaraBayar($rincian);
             $noReferensi = $this->dominantNoReferensi($rincian);
 
@@ -703,7 +703,11 @@ class KasirController extends Controller
             );
         });
 
-        return redirect()->route('kasir.show', ['type' => $type, 'id' => $order->id])
+        $redirect = $request->input('return_to') === 'pengambilan'
+            ? redirect()->route('pengambilan.index', ['tab' => 'transaksi'])
+            : redirect()->route('kasir.show', ['type' => $type, 'id' => $order->id]);
+
+        return $redirect
             ->with('status', 'Sisa DP berhasil dilunasi.'.($kembalian > 0 ? ' Kembalian: Rp '.number_format($kembalian, 0, ',', '.').'.' : ''))
             ->with('autoPrintSalesOrder', true);
     }
@@ -855,6 +859,9 @@ class KasirController extends Controller
         if ($request->input('return_to') === 'customer_receivables') {
             return redirect()->route('keuangan.customer-receivable-details', ['customer' => $order->KdCust])
                 ->with('status', $message);
+        }
+        if ($request->input('return_to') === 'pengambilan') {
+            return redirect()->route('pengambilan.index', ['tab' => 'transaksi'])->with('status', $message);
         }
 
         return redirect()->route('kasir.show', ['type' => $type, 'id' => $order->id])

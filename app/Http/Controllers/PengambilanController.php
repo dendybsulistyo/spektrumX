@@ -3,6 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\OrderComment;
+use App\Models\OrderIndoor;
+use App\Models\OrderOutdoor;
+use App\Models\OrderPayment;
 use App\Models\OrderReworkRequest;
 use App\Models\PrinterOutdoor;
 use App\Services\DeliveryOrderService;
@@ -62,17 +65,38 @@ class PengambilanController extends Controller
 
     private function salesTransactions()
     {
-        $queries = collect(['indoor' => 'order_indoor', 'outdoor' => 'order_outdoor'])
-            ->map(function (string $orderTable, string $type) {
-                return DB::table('order_documents as document')
-                    ->join($orderTable.' as orders', 'orders.id', '=', 'document.order_id')
-                    ->leftJoin('customers as customer', 'customer.KdCust', '=', 'orders.KdCust')
-                    ->where('document.kind', 'inv')
-                    ->where('document.order_type', $type)
-                    ->where('orders.status', '!=', 'batal')
-                    ->whereNull('orders.invoice_voided_at')
-                    ->selectRaw("document.number as invoice, COALESCE(NULLIF(TRIM(customer.NmCust), ''), orders.KdCust) as customer, orders.TglOrder as sales_order_date, ? as order_type", [$type]);
-            });
+        $queries = collect();
+        foreach (['indoor' => 'order_indoor', 'outdoor' => 'order_outdoor'] as $type => $orderTable) {
+            $payments = DB::table('order_payments')
+                ->where('order_type', $type)
+                ->select('order_id', DB::raw('SUM(jumlah) as payment_total'))
+                ->groupBy('order_id');
+
+            // Lunas is anchored on the indexed document list. Starting from
+            // the 150k+ historical order rows made MySQL scan the full order
+            // table even though only issued invoices belong in this screen.
+            $queries->push(DB::table('order_documents as document')
+                ->join($orderTable.' as orders', 'orders.id', '=', 'document.order_id')
+                ->leftJoin('customers as customer', 'customer.KdCust', '=', 'orders.KdCust')
+                ->leftJoinSub(clone $payments, 'payments', 'payments.order_id', '=', 'orders.id')
+                ->where('document.kind', 'inv')->where('document.order_type', $type)->where('document.sequence', 1)
+                ->where('orders.status_bayar', 'lunas')->where('orders.status', '!=', 'batal')->whereNull('orders.invoice_voided_at')
+                ->whereNotExists(fn ($query) => $query->selectRaw('1')->from('sales_transaction_archives as archive')
+                    ->where('archive.order_type', $type)->whereColumn('archive.order_id', 'orders.id'))
+                ->selectRaw("orders.id as order_id, document.number as invoice, COALESCE(NULLIF(TRIM(customer.NmCust), ''), orders.KdCust) as customer, orders.TglOrder as sales_order_date, orders.status_bayar, orders.jumlah_piutang, orders.jumlah_dibayar, COALESCE(payments.payment_total, 0) as payment_total, ? as order_type", [$type]));
+
+            // DP/Hutang may not have an invoice yet; they still need to be
+            // visible so Pengambilan can require settlement before release.
+            $queries->push(DB::table($orderTable.' as orders')
+                ->leftJoin('customers as customer', 'customer.KdCust', '=', 'orders.KdCust')
+                ->leftJoinSub(clone $payments, 'payments', 'payments.order_id', '=', 'orders.id')
+                ->where('orders.status', '!=', 'batal')
+                ->whereNull('orders.invoice_voided_at')
+                ->whereIn('orders.status_bayar', ['dp', 'hutang'])
+                ->whereNotExists(fn ($query) => $query->selectRaw('1')->from('sales_transaction_archives as archive')
+                    ->where('archive.order_type', $type)->whereColumn('archive.order_id', 'orders.id'))
+                ->selectRaw("orders.id as order_id, orders.NoOrder as invoice, COALESCE(NULLIF(TRIM(customer.NmCust), ''), orders.KdCust) as customer, orders.TglOrder as sales_order_date, orders.status_bayar, orders.jumlah_piutang, orders.jumlah_dibayar, COALESCE(payments.payment_total, 0) as payment_total, ? as order_type", [$type]));
+        }
 
         $query = $queries->shift();
         foreach ($queries as $other) {
@@ -85,6 +109,29 @@ class PengambilanController extends Controller
             ->orderBy('invoice')
             ->paginate(50, ['*'], 'transaksi_page')
             ->withQueryString();
+    }
+
+    public function archiveTransaction(string $type, int $id): RedirectResponse
+    {
+        abort_unless(in_array($type, ['indoor', 'outdoor'], true), 404);
+        $model = $type === 'indoor' ? OrderIndoor::class : OrderOutdoor::class;
+
+        DB::transaction(function () use ($model, $type, $id): void {
+            $order = $model::query()->lockForUpdate()->findOrFail($id);
+            abort_unless($order->status_bayar === 'lunas' && (float) $order->jumlah_piutang <= 0, 422, 'Transaksi belum lunas dan belum dapat disimpan.');
+
+            $received = (float) OrderPayment::query()->forOrder($type, $id)->sum('jumlah');
+            $expected = (float) $order->jumlah_dibayar;
+            abort_unless($expected > 0 && $received + 0.01 >= $expected, 422, 'Penerimaan pembayaran belum tercatat lengkap di Keuangan. Hubungi Kasir sebelum menyimpan transaksi.');
+
+            DB::table('sales_transaction_archives')->updateOrInsert(
+                ['order_type' => $type, 'order_id' => $id],
+                ['archived_by' => auth()->id(), 'archived_at' => now(), 'created_at' => now(), 'updated_at' => now()]
+            );
+        });
+
+        return redirect()->route('pengambilan.index', ['tab' => 'transaksi'])
+            ->with('status', 'Transaksi lunas sudah tersimpan dan dihilangkan dari daftar.');
     }
 
     /**
