@@ -841,7 +841,10 @@ class KasirController extends Controller
                 'kasir_user_id' => auth()->id(),
                 'cara_bayar' => $caraBayar,
                 'no_referensi' => $noReferensi,
-                'jumlah_dibayar' => $order->total,
+                // order->total ignores the approved discount and the Rp100
+                // rounding applied when the receivable was booked, so it
+                // could disagree with the cash actually received.
+                'jumlah_dibayar' => (float) $order->jumlah_dibayar + $sisaPiutang,
                 'jumlah_piutang' => 0,
             ]);
 

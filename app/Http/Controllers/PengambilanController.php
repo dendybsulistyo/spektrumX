@@ -149,19 +149,29 @@ class PengambilanController extends Controller
         abort_unless(in_array($type, ['indoor', 'outdoor'], true), 404);
         $model = $type === 'indoor' ? OrderIndoor::class : OrderOutdoor::class;
 
-        DB::transaction(function () use ($model, $type, $id): void {
+        $error = DB::transaction(function () use ($model, $type, $id): ?string {
             $order = $model::query()->lockForUpdate()->findOrFail($id);
-            abort_unless($order->status_bayar === 'lunas' && (float) $order->jumlah_piutang <= 0, 422, 'Transaksi belum lunas dan belum dapat disimpan.');
+            if ($order->status_bayar !== 'lunas' || (float) $order->jumlah_piutang > 0) {
+                return 'Transaksi belum lunas dan belum dapat disimpan.';
+            }
 
             $received = (float) OrderPayment::query()->forOrder($type, $id)->sum('jumlah');
             $expected = (float) $order->jumlah_dibayar;
-            abort_unless($expected > 0 && $received + 0.01 >= $expected, 422, 'Penerimaan pembayaran belum tercatat lengkap di Keuangan. Hubungi Kasir sebelum menyimpan transaksi.');
+            if ($expected <= 0 || $received + 0.01 < $expected) {
+                return 'Penerimaan pembayaran belum tercatat lengkap di Keuangan. Hubungi Kasir sebelum menyimpan transaksi.';
+            }
 
             DB::table('sales_transaction_archives')->updateOrInsert(
                 ['order_type' => $type, 'order_id' => $id],
                 ['archived_by' => auth()->id(), 'archived_at' => now(), 'created_at' => now(), 'updated_at' => now()]
             );
+
+            return null;
         });
+
+        if ($error) {
+            return redirect()->route('pengambilan.index', ['tab' => 'transaksi'])->with('error', $error);
+        }
 
         return redirect()->route('pengambilan.index', ['tab' => 'transaksi'])
             ->with('status', 'Transaksi lunas sudah tersimpan dan dihilangkan dari daftar.');

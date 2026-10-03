@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\OrderPayment;
 use App\Models\PengaturanKeuangan;
 use App\Models\SalesOrderPrint;
 use App\Services\OrderDocumentService;
@@ -41,10 +42,30 @@ class InvoiceController extends Controller
         $printRecord = SalesOrderPrint::query()->where('order_type', $type)->where('order_id', $id)->first();
         $canReprint = $this->canReprint();
 
+        // DP and hutang orders are paid in more than one visit. The nota
+        // lists every receipt so the customer can see how the balance was
+        // settled, even after the order has flipped to lunas.
+        $paymentHistory = OrderPayment::query()->forOrder($type, $id)
+            ->whereIn('jenis', ['dp', 'pelunasan_dp', 'pelunasan_hutang'])
+            ->orderBy('created_at')->orderBy('id')->get()
+            ->groupBy(fn (OrderPayment $payment) => $payment->jenis.'|'.$payment->created_at?->format('Y-m-d H:i'))
+            ->map(fn ($rows) => (object) [
+                'jenis' => $rows->first()->jenis,
+                'label' => match ($rows->first()->jenis) {
+                    'dp' => 'DP',
+                    default => 'Pelunasan',
+                },
+                'tanggal' => $rows->first()->created_at,
+                'cara_bayar' => $rows->pluck('cara_bayar')->unique()
+                    ->map(fn ($cara) => OrderPayment::CARA_BAYAR_LABELS[$cara] ?? $cara)->implode('+'),
+                'jumlah' => (float) $rows->sum('jumlah'),
+            ])->values();
+
         return view('invoice.show', [
             'type' => $type,
             'order' => $order,
             'items' => $items,
+            'paymentHistory' => $paymentHistory,
             'pengaturan' => PengaturanKeuangan::query()->first(),
             'printRecord' => $printRecord,
             'canPrintSalesOrder' => ! $printRecord || $canReprint,

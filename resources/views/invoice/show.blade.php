@@ -41,8 +41,8 @@
         .bottom-area--dp { min-height:2.7cm; }
         .print-meta { align-self:end; color:var(--muted); font-size:10pt; line-height:1.55; }
         .print-meta .key { display:inline-block; min-width:1.85cm; color:var(--ink); font-weight:700; }
-        .dp-breakdown { align-self:end; font-size:9pt; }
-        .dp-breakdown .row { display:flex; justify-content:space-between; gap:.45cm; padding:.06cm 0; }
+        .dp-breakdown { grid-column:2 / span 2; align-self:end; font-size:9pt; }
+        .dp-breakdown .row { display:flex; white-space:nowrap; justify-content:space-between; gap:.45cm; padding:.06cm 0; }
         .dp-breakdown .label { color:var(--ink); font-weight:700; }
         .dp-breakdown .amount { min-width:2.25cm; text-align:right; font-weight:700; }
         .dp-breakdown .balance { border-top:1px solid var(--line); margin-top:.05cm; padding-top:.1cm; }
@@ -110,10 +110,11 @@
         };
         $diskonStatus = $order->diskonStatus();
         $totalTagihan = $diskonStatus === 'approved' ? $order->totalSetelahDiskon() : (float) ($order->total ?? 0);
-        $jumlahPiutang = (float) ($order->jumlah_piutang ?? 0);
-        $jumlahDpDibayar = $totalTagihan - $jumlahPiutang;
-        $uangMuka = $totalTagihan * 0.5;
-        $kurangBayarDp = max($uangMuka - $jumlahDpDibayar, 0);
+        // Same rounded figure the journal books as sales/receivable.
+        $totalTagihanBulat = \App\Support\Rupiah::bulatkan($totalTagihan);
+        $sudahDibayar = (float) $paymentHistory->sum('jumlah');
+        $sisaTagihan = max($totalTagihanBulat - $sudahDibayar, 0);
+        $showPaymentHistory = $paymentHistory->isNotEmpty() && ! $order->invoice_voided_at;
         $tanggalOrder = is_string($order->TglOrder) ? $order->TglOrder : $order->TglOrder?->format('d-m-Y');
         $customerAddress = trim(collect([$order->customer?->Alamat, $order->customer?->Kota])->filter()->implode(', '));
         // A form sheet has limited usable height. Keep item rows together
@@ -121,7 +122,7 @@
         // The DP breakdown is four rows tall. CForm pages need a little more
         // reserved space for it so the last “Kurang Bayar” row never moves
         // on to a separate sheet.
-        $itemsPerPage = $order->status_bayar === 'dp' ? 5 : 7;
+        $itemsPerPage = $showPaymentHistory ? max(7 - $paymentHistory->count(), 3) : 7;
         $itemPages = $items->chunk($itemsPerPage);
         if ($itemPages->isEmpty()) {
             $itemPages = collect([collect()]);
@@ -176,7 +177,7 @@
             <div class="spacer"></div>
         </section>
 
-        <section class="bottom-area {{ $isLastPage && $order->status_bayar === 'dp' ? 'bottom-area--dp' : '' }}">
+        <section class="bottom-area {{ $isLastPage && $showPaymentHistory ? 'bottom-area--dp' : '' }}">
             <div>
                 @if ($pageIndex === 0)
                     <div class="print-meta">
@@ -185,12 +186,13 @@
                     </div>
                 @endif
             </div>
-            @if ($isLastPage && $order->status_bayar === 'dp')
+            @if ($isLastPage && $showPaymentHistory)
                 <div class="dp-breakdown">
-                    <div class="row"><span class="label">Total</span><span class="amount">Rp {{ number_format($totalTagihan, 0, ',', '.') }}</span></div>
-                    <div class="row"><span class="label">Uang Muka</span><span class="amount">Rp {{ number_format($uangMuka, 0, ',', '.') }}</span></div>
-                    <div class="row"><span class="label">Sudah Bayar</span><span class="amount">Rp {{ number_format($jumlahDpDibayar, 0, ',', '.') }}</span></div>
-                    <div class="row balance"><span class="label">Kurang Bayar</span><span class="amount">Rp {{ number_format($kurangBayarDp, 0, ',', '.') }}</span></div>
+                    <div class="row"><span class="label">Total</span><span class="amount">Rp {{ number_format($totalTagihanBulat, 0, ',', '.') }}</span></div>
+                    @foreach ($paymentHistory as $payment)
+                        <div class="row"><span class="label">{{ $payment->label }} {{ $payment->tanggal?->format('d/m/y') }} {{ $payment->cara_bayar }}</span><span class="amount">Rp {{ number_format($payment->jumlah, 0, ',', '.') }}</span></div>
+                    @endforeach
+                    <div class="row balance"><span class="label">{{ $sisaTagihan > 0 ? 'Kurang Bayar' : 'Sisa' }}</span><span class="amount">{{ $sisaTagihan > 0 ? 'Rp '.number_format($sisaTagihan, 0, ',', '.') : 'LUNAS' }}</span></div>
                 </div>
             @endif
         </section>
@@ -278,6 +280,10 @@
 
         window.requestSalesOrderPrint = requestSalesOrderPrint;
         window.printPaymentInvoice = printPaymentInvoice;
+        @if (request()->boolean('payment_preview') && session('status'))
+            // Just paid from Pengambilan: open the print dialog right away.
+            window.addEventListener('load', () => { if (window.self === window.top) printPaymentInvoice(); });
+        @endif
         window.addEventListener('afterprint', () => {
             document.body.classList.remove('print-authorized');
             enablePaymentSave();

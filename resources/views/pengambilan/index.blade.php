@@ -126,7 +126,7 @@
                                     <td style="text-align: right; white-space: nowrap;">
                                         @if (in_array($transaction->status_bayar, ['dp', 'hutang']))
                                             <button type="button" class="in-btn"
-                                                    @click="paymentOpen = true; paymentType = '{{ $transaction->order_type }}'; paymentId = {{ $transaction->order_id }}; paymentMode = '{{ $transaction->status_bayar }}'; paymentOrder = '{{ $transaction->invoice }}'; paymentRemaining = {{ (float) $transaction->jumlah_piutang }}; paymentMethod = 'tunai'">
+                                                    @click="paymentOpen = true; paymentType = @js($transaction->order_type); paymentId = @js((int) $transaction->order_id); paymentMode = @js($transaction->status_bayar); paymentOrder = @js($transaction->invoice); paymentRemaining = @js((float) $transaction->jumlah_piutang); paymentMethod = 'tunai'">
                                                 Bayar
                                             </button>
                                         @else
