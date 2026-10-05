@@ -9,7 +9,8 @@
             @csrf
             @if (isset($sourceJobSheet) && $sourceJobSheet)
                 <div class="mb-4 rounded border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
-                    Diambil dari Lembar Kerja CS #{{ $sourceJobSheet->id }} — {{ $sourceJobSheet->customer_name }}. Pilih produk sebelum menyimpan order.
+                    Diambil dari Lembar Kerja CS #{{ $sourceJobSheet->id }} — {{ $sourceJobSheet->customer_name }}.
+                    Folder: <strong>{{ $sourceJobSheet->indoorFolderLabel() ?? 'Belum ditentukan' }}</strong>. Pilih produk sebelum menyimpan order.
                 </div>
             @endif
             @if (isset($replacementOrder))

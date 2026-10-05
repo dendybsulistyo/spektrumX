@@ -7,6 +7,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class CustomerServiceJobSheet extends Model
 {
+    public const INDOOR_FOLDER_LABELS = [
+        'sublime' => 'Sublime',
+        'artwork' => 'Artwork',
+        'pod' => 'POD',
+    ];
+
     protected $fillable = [
         'customer_code',
         'customer_name',
@@ -17,6 +23,7 @@ class CustomerServiceJobSheet extends Model
         'opf',
         'notes',
         'order_type',
+        'indoor_folder',
         'items',
         'created_by',
         'claimed_by',
@@ -47,5 +54,10 @@ class CustomerServiceJobSheet extends Model
     public function claimant(): BelongsTo
     {
         return $this->belongsTo(User::class, 'claimed_by');
+    }
+
+    public function indoorFolderLabel(): ?string
+    {
+        return self::INDOOR_FOLDER_LABELS[$this->indoor_folder] ?? null;
     }
 }

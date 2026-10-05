@@ -57,6 +57,7 @@ class CustomerServiceController extends Controller
                         ->orWhere('customer_code', 'like', "%{$keyword}%")
                         ->orWhere('pc', 'like', "%{$keyword}%")
                         ->orWhere('folder_file', 'like', "%{$keyword}%")
+                        ->orWhere('indoor_folder', 'like', "%{$keyword}%")
                         ->orWhere('opf', 'like', "%{$keyword}%")
                         ->orWhere('items', 'like', "%{$keyword}%")
                         ->orWhereHas('claimant', fn ($user) => $user->where('name', 'like', "%{$keyword}%"));
@@ -176,6 +177,7 @@ class CustomerServiceController extends Controller
             'opf' => ['nullable', 'string', 'max:100'],
             'notes' => ['nullable', 'string', 'max:1000'],
             'order_type' => ['required', 'in:indoor,outdoor'],
+            'indoor_folder' => ['nullable', 'required_if:order_type,indoor', 'in:sublime,artwork,pod', 'prohibited_unless:order_type,indoor'],
         ]);
 
         $customer = Customer::where('KdCust', $data['customer_code'])->firstOrFail();
