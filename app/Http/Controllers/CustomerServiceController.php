@@ -57,7 +57,6 @@ class CustomerServiceController extends Controller
                         ->orWhere('customer_code', 'like', "%{$keyword}%")
                         ->orWhere('pc', 'like', "%{$keyword}%")
                         ->orWhere('folder_file', 'like', "%{$keyword}%")
-                        ->orWhere('indoor_folder', 'like', "%{$keyword}%")
                         ->orWhere('opf', 'like', "%{$keyword}%")
                         ->orWhere('items', 'like', "%{$keyword}%")
                         ->orWhereHas('claimant', fn ($user) => $user->where('name', 'like', "%{$keyword}%"));

@@ -101,7 +101,7 @@
             <table class="w-full min-w-[650px] text-sm">
                 <thead class="border-b border-slate-200 bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
                     <tr>
-                        <th class="px-4 py-3">Tujuan / Folder</th>
+                        <th class="px-4 py-3">Tujuan</th>
                         {{-- <th class="px-4 py-3">Tujuan</th> --}}
                         {{-- <th class="px-4 py-3">Deadline</th> --}}
                         <th class="px-4 py-3">Pembuat</th>
@@ -128,9 +128,6 @@
                                     'border-blue-200 bg-blue-50 text-blue-700' => $sheet->order_type === 'indoor',
                                     'border-amber-200 bg-amber-50 text-amber-700' => $sheet->order_type === 'outdoor',
                                 ])>{{ $sheet->order_type === 'indoor' ? 'Indoor' : 'Outdoor' }}</span>
-                                @if ($sheet->order_type === 'indoor')
-                                    <span class="ml-1 font-semibold text-slate-800">{{ $sheet->indoorFolderLabel() ?? 'Belum ditentukan' }}</span>
-                                @endif
                             </td>
                             <td class="px-4 py-3 text-slate-600">{{ $sheet->creator?->name ? ucwords(mb_strtolower($sheet->creator->name)) : '-' }}</td>
                             <td class="px-4 py-3 text-slate-600">
@@ -178,7 +175,6 @@
             <div class="grid gap-3 border-b border-slate-200 bg-slate-50 p-5 text-sm sm:grid-cols-2 lg:grid-cols-4">
                 <div><p class="text-xs text-slate-400">Tanggal Masuk</p><p class="mt-1 font-medium">{{ $sheet->received_at->format('d/m/Y') }}</p></div>
                 <div><p class="text-xs text-slate-400">Tujuan Order</p><p class="mt-1 font-medium">{{ $sheet->order_type ? 'Order '.ucfirst($sheet->order_type) : '-' }}</p></div>
-                <div><p class="text-xs text-slate-400">Folder Indoor</p><p class="mt-1 font-medium">{{ $sheet->indoorFolderLabel() ?? '-' }}</p></div>
                 <div><p class="text-xs text-slate-400">Deadline</p><p class="mt-1 font-medium">{{ $sheet->deadline?->format('d/m/Y') ?? '-' }}</p></div>
                 <div><p class="text-xs text-slate-400">PC</p><p class="mt-1 font-medium">{{ $sheet->pc ?: '-' }}</p></div>
                 <div><p class="text-xs text-slate-400">OPF</p><p class="mt-1 font-medium">{{ $sheet->opf ?: '-' }}</p></div>
