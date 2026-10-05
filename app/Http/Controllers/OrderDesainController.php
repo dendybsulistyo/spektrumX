@@ -28,10 +28,18 @@ class OrderDesainController extends Controller
 
     public function __construct(private StageProgressService $stageProgress) {}
 
-    public function index(): View
+    public function index(Request $request): View
     {
+        $groupBy = $request->string('group_by')->toString();
+        if (in_array($groupBy, ['order', 'division', 'product'], true)) {
+            $request->session()->put('order-desain.group-by', $groupBy);
+        } else {
+            $groupBy = $request->session()->get('order-desain.group-by', 'order');
+        }
+
         return view('order-desain.index', $this->loadData() + [
             'pageVersion' => PageVersion::get(self::PAGE_VERSION_KEY),
+            'groupBy' => $groupBy,
         ]);
     }
 
@@ -53,7 +61,7 @@ class OrderDesainController extends Controller
             'indoor' => $showIndoor,
             'outdoor' => $showOutdoor,
             'artwork' => false,
-        ], outdoorWith: ['order.customer', 'order.cancelRequestedBy', 'order.createdBy']);
+        ], indoorWith: ['order.customer', 'produk.kategori'], outdoorWith: ['order.customer', 'order.cancelRequestedBy', 'order.createdBy']);
 
         $indoorItems = $itemsByType['indoor'] ?? collect();
 

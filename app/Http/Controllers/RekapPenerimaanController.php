@@ -91,6 +91,7 @@ class RekapPenerimaanController extends Controller
     }
 
     /** @param class-string<OrderIndoor|OrderOutdoor|OrderArtwork> $model */
+    
     private function collectOrders(string $type, string $model, CarbonImmutable $from, CarbonImmutable $to, Collection $amounts): void
     {
         $relations = $type === 'outdoor' ? ['items.hargaCetak'] : ['items'];

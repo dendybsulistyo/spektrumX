@@ -21,6 +21,12 @@
             #industry-desain .item-row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--color-divider); flex-wrap: wrap; }
             #industry-desain .item-row:last-child { border-bottom: none; }
             #industry-desain .progress-tag { font-family: var(--font-heading); font-weight: 600; font-size: 13px; color: var(--color-text-muted, #666); }
+            #industry-desain .group-toolbar { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; padding: var(--space-3) var(--space-4); border: 1px solid var(--color-divider); background: var(--color-surface); }
+            #industry-desain .group-toolbar-label { font-family: var(--font-heading); font-size: 13px; font-weight: 600; color: var(--color-text-muted, #666); margin-right: var(--space-1); }
+            #industry-desain .group-heading { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin: var(--space-6) 0 var(--space-3); padding: var(--space-3) var(--space-4); color: var(--color-bg); background: var(--color-accent-900); border-left: 5px solid var(--color-accent); }
+            #industry-desain .group-heading:first-child { margin-top: 0; }
+            #industry-desain .group-heading-title { font-family: var(--font-heading); font-size: 16px; font-weight: 700; letter-spacing: 0.02em; }
+            #industry-desain .group-heading-count { font-size: 12px; white-space: nowrap; opacity: 0.8; }
             #industry-desain .operator-return-focus { animation: operator-return-focus 2.4s ease-out; }
             @keyframes operator-return-focus {
                 0%, 30% { background: #dbeafe; box-shadow: inset 4px 0 0 #2563eb; }
@@ -157,85 +163,48 @@
                     </button>
                 </div>
 
-                {{-- Indoor: 1 card per order (order bisa muncul di sini dengan
-                     sebagian baris item saja — baris lain mungkin sudah
-                     pindah ke tahap Cetak) --}}
+                @if (isset($tabs['indoor']))
+                    <div x-show="tab === 'indoor'" class="group-toolbar" style="margin-top: var(--space-4);">
+                        <span class="group-toolbar-label">Tampilkan berdasarkan:</span>
+                        @foreach (['order' => 'Per Order', 'division' => 'By Divisi', 'product' => 'By Produk'] as $mode => $label)
+                            <a href="{{ route('order-desain.index', ['tab' => 'indoor', 'group_by' => $mode]) }}"
+                               class="seg-tab {{ $groupBy === $mode ? 'active' : '' }}"
+                               aria-current="{{ $groupBy === $mode ? 'page' : 'false' }}">
+                                {{ $label }}
+                            </a>
+                        @endforeach
+                    </div>
+                @endif
+
+                {{-- Indoor dapat ditampilkan per order, divisi, atau produk. --}}
                 @if (isset($tabs['indoor']))
                     <div x-show="tab === 'indoor'" style="margin-top: var(--space-4);">
-                        @forelse ($indoorItems as $items)
-                            @php $order = $items->first()->order; @endphp
-                            <div class="order-card">
-                                <x-order-date-rail :date="$order->TglOrder" />
-                                <div class="order-card-head">
-                                    <div class="order-summary">
-                                        <div class="order-identity">
-                                            <x-order-number :number="$order->NoOrder" />
-                                            <x-macet-badge :show="$order->isMacet()" />
-                                        </div>
-                                        <div class="order-customer-line">
-                                            <span class="order-meta-customer">{{ $order->customer?->NmCust ? ucwords(mb_strtolower($order->customer->NmCust)) : '-' }}</span>
-                                        </div>
-                                    </div>
-                                    <div style="display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: flex-end;">
-                                        <x-order-rework type="indoor" :order-id="$order->id" :no-order="$order->NoOrder"
-                                                         current-stage="desain" :max-qty="$items->sum(fn ($i) => $i->qtyAt('desain'))"
-                                                         :pending="$pendingRework->get('indoor-'.$order->id)"
-                                                         :can-approve="$canApproveRework" :compact="true" />
-                                        @if ($order->cancel_requested_at)
-                                            <span class="tag tag-outline" title="{{ $order->cancel_reason }}">Menunggu Persetujuan Pembatalan</span>
-                                            @can('order-indoor.approve-cancel')
-                                                <form method="POST" action="{{ route('order-indoor.approve-cancel', $order->id) }}"
-                                                      onsubmit="return confirm('Setujui pembatalan order {{ $order->NoOrder }} dengan nota pengganti? Nota lama akan dihanguskan.')">
-                                                    @csrf
-                                                    <input type="hidden" name="resolution" value="nota_pengganti">
-                                                    <button type="submit" class="in-btn">Setujui + Nota Pengganti</button>
-                                                </form>
-                                                <form method="POST" action="{{ route('order-indoor.approve-cancel', $order->id) }}"
-                                                      onsubmit="return confirm('Setujui pembatalan TOTAL order {{ $order->NoOrder }}? Tidak akan ada nota pengganti.')">
-                                                    @csrf
-                                                    <input type="hidden" name="resolution" value="batal_total">
-                                                    <button type="submit" class="in-btn in-btn-danger">Setujui Batal Total</button>
-                                                </form>
-                                                <form method="POST" action="{{ route('order-indoor.reject-cancel', $order->id) }}"
-                                                      onsubmit="return confirm('Tolak pengajuan pembatalan order {{ $order->NoOrder }}?')">
-                                                    @csrf
-                                                    <button type="submit" class="in-btn in-btn-ghost">Tolak</button>
-                                                </form>
-                                            @endcan
-                                        @endif
-                                    </div>
-                                </div>
-
-                                @foreach ($items as $item)
-                                    <div id="layout-item-indoor-{{ $item->id }}" class="item-row">
-                                        <div>
-                                            {{ $item->Judul }}
-                                            @if ((float) $item->Panjang > 0 && (float) $item->Lebar > 0)
-                                                <span style="font-size: 14px; color: color-mix(in srgb, var(--color-text) 82%, transparent);">
-                                                    ({{ rtrim(rtrim(number_format((float) $item->Panjang, 2), '0'), '.') }} x {{ rtrim(rtrim(number_format((float) $item->Lebar, 2), '0'), '.') }} cm)
-                                                </span>
-                                            @endif
-                                        </div>
-                                        <div style="display: inline-flex; align-items: center; gap: var(--space-3);">
-                                            <span class="progress-tag">Progres Desain: {{ $item->Qty - $item->qtyAt('desain') }}/{{ $item->Qty }}</span>
-                                            @can('order-desain.manage')
-                                                <input type="checkbox" @change="toggle('indoor', {{ $item->id }}, $event.target.checked)" title="Pilih untuk kirim massal">
-                                                <form method="POST" action="{{ route('order-desain.progress', ['indoor', $item->id]) }}"
-                                                      @submit="rememberPosition('layout-item-indoor-{{ $item->id }}')"
-                                                      style="display: flex; align-items: center; gap: 4px;">
-                                                    @csrf
-                                                    <input type="number" id="qty-indoor-{{ $item->id }}" name="qty" min="1" max="{{ $item->qtyAt('desain') }}" value="{{ $item->qtyAt('desain') }}" required
-                                                           class="in-input no-spinner" style="width: 70px;">
-                                                    <button type="submit" class="in-btn">Kirim ke Cetak</button>
-                                                </form>
-                                            @endcan
-                                        </div>
-                                    </div>
-                                @endforeach
-                            </div>
-                        @empty
+                        @if ($indoorItems->isEmpty())
                             <div class="blueprint text-muted" style="padding: var(--space-6); text-align: center;">Tidak ada order di antrian desain.</div>
-                        @endforelse
+                        @elseif ($groupBy === 'order')
+                            @foreach ($indoorItems as $items)
+                                @include('order-desain._indoor-order-card', ['items' => $items])
+                            @endforeach
+                        @else
+                            @php
+                                $groupedIndoorItems = $indoorItems->flatten(1)
+                                    ->groupBy($groupBy === 'division'
+                                        ? fn ($item) => $item->produk?->kategori?->NmDivs ?: 'Tanpa Divisi'
+                                        : fn ($item) => $item->NmProd ?: ($item->produk?->NmProd ?: 'Tanpa Produk'))
+                                    ->sortKeys(SORT_NATURAL | SORT_FLAG_CASE);
+                            @endphp
+                            @foreach ($groupedIndoorItems as $groupName => $groupItems)
+                                <section>
+                                    <div class="group-heading">
+                                        <span class="group-heading-title">{{ $groupName }}</span>
+                                        <span class="group-heading-count">{{ $groupItems->count() }} item &middot; {{ $groupItems->sum(fn ($item) => $item->qtyAt('desain')) }} qty tersisa</span>
+                                    </div>
+                                    @foreach ($groupItems->groupBy('order_indoor_id') as $items)
+                                        @include('order-desain._indoor-order-card', ['items' => $items])
+                                    @endforeach
+                                </section>
+                            @endforeach
+                        @endif
                     </div>
                 @endif
 

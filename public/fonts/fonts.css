@@ -97,3 +97,18 @@
     font-display: swap;
     src: url('/fonts/instrument-sans/instrument-sans-600.woff2') format('woff2');
 }
+
+@font-face {
+    font-family: 'Overpass';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('/fonts/overpass/overpass-latin-400-normal.woff2') format('woff2');
+}
+@font-face {
+    font-family: 'Overpass';
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url('/fonts/overpass/overpass-latin-700-normal.woff2') format('woff2');
+}

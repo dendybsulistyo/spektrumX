@@ -69,6 +69,11 @@ class OrderIndoorDetail extends Model
         return $this->belongsTo(OrderIndoor::class, 'order_indoor_id');
     }
 
+    public function produk(): BelongsTo
+    {
+        return $this->belongsTo(Produk::class, 'KdProd', 'KdProd');
+    }
+
     public function orderTypeSlug(): string
     {
         return 'indoor';

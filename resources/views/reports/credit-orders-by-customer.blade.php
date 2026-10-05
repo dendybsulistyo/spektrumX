@@ -1,13 +1,13 @@
 <x-app-layout>
     <x-slot name="header"><h2 class="font-semibold text-xl text-gray-800">Rekap Order Customer ber-Plafon (Piutang)</h2></x-slot>
     <style>
-        .customer-credit-report { color:#111827; }
+        .customer-credit-report { color:#111827; font-family:'Overpass',Arial,sans-serif; }
         /* Auto layout sized to content: columns take only the width their data
            needs instead of fixed percentages that left empty space. */
         .customer-credit-report table { width:auto; max-width:100%; margin:0 auto; border-collapse:collapse; table-layout:auto; font-size:10px; line-height:1.25; }
         .customer-credit-report td.nowrap { white-space:nowrap; }
         .customer-credit-report td.text { min-width:9em; }
-        .customer-credit-report td.product { min-width:15em; }
+        .customer-credit-report td.product { min-width:16.5em; }
         .customer-credit-report th,.customer-credit-report td { border:1px solid #94a3b8; padding:2px 3px; vertical-align:top; }
         .customer-credit-report thead th { background:#e2e8f0; text-align:center; white-space:nowrap; font-weight:700; }
         .customer-credit-report td { overflow-wrap:anywhere; }
@@ -31,7 +31,7 @@
             .customer-credit-report .print-title { display:table-row; }
             .customer-credit-report .print-title th { background:#fff !important; border:0; padding:0 0 4px; text-align:center; white-space:normal; font-weight:400; }
             .customer-credit-report .report-scroll { overflow:visible; }
-            .customer-credit-report table { font-family:Arial,sans-serif; font-size:8pt; }
+            .customer-credit-report table { font-family:'Overpass',Arial,sans-serif; font-size:8pt; }
             .customer-credit-report th,.customer-credit-report td { padding:1.5px 2.5px; }
             .customer-credit-report thead th { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
             .customer-credit-report tbody tr:nth-child(even) td { background:#fff; }
