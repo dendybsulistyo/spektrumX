@@ -10,6 +10,7 @@ use App\Models\OrderReworkRequest;
 use App\Models\PrinterOutdoor;
 use App\Services\DeliveryOrderService;
 use App\Services\StageProgressService;
+use App\Support\OperatorQueueGrouping;
 use App\Support\ResolvesOrderDetailType;
 use App\Support\Rupiah;
 use Illuminate\Http\RedirectResponse;
@@ -33,7 +34,10 @@ class PengambilanController extends Controller
     {
         $search = trim((string) $request->query('q', ''));
 
-        return view('pengambilan.index', $this->loadData($search) + ['search' => $search]);
+        return view('pengambilan.index', $this->loadData($search) + [
+            'search' => $search,
+            'groupBy' => OperatorQueueGrouping::resolve($request, 'pengambilan'),
+        ]);
     }
 
     /**
@@ -43,7 +47,7 @@ class PengambilanController extends Controller
     {
         $itemsByType = $this->stageProgress->itemsAtStage(self::STAGE, [
             'indoor' => true, 'outdoor' => true,
-        ], outdoorWith: ['order.customer', 'order.cancelRequestedBy']);
+        ], indoorWith: ['order.customer', 'produk.kategori'], outdoorWith: ['order.customer', 'order.cancelRequestedBy']);
 
         $indoorItems = $itemsByType['indoor'] ?? collect();
         $outdoorItems = $itemsByType['outdoor'] ?? collect();

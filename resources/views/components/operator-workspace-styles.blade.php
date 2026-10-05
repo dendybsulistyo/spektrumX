@@ -31,6 +31,102 @@
         background: #3156d3;
     }
 
+    .operator-queue-viewport {
+        height: calc(100dvh - 132px);
+        min-height: 0 !important;
+        overflow: hidden;
+    }
+
+    .operator-queue-shell,
+    .operator-queue-workspace {
+        height: 100%;
+        min-height: 0;
+    }
+
+    .operator-queue-workspace {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .operator-queue-controls {
+        display: flex;
+        flex: 0 0 auto;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--space-3);
+    }
+
+    .operator-queue-controls-start,
+    .operator-group-toolbar,
+    .operator-queue-actions {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
+    .operator-queue-controls-start {
+        min-width: 0;
+        gap: var(--space-4);
+    }
+
+    .operator-group-toolbar {
+        gap: var(--space-2);
+        padding-left: var(--space-4);
+        border-left: 1px solid var(--operator-border);
+    }
+
+    .operator-group-toolbar-label {
+        margin-right: var(--space-1);
+        color: var(--operator-muted);
+        font-family: var(--font-heading);
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+    .operator-queue-actions {
+        justify-content: flex-end;
+        gap: 8px;
+    }
+
+    .operator-order-list {
+        min-height: 0;
+        flex: 1 1 auto;
+        margin-top: var(--space-4);
+        padding-right: 5px;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        scrollbar-gutter: stable;
+    }
+
+    .operator-group-heading {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--space-3);
+        margin: var(--space-6) 0 var(--space-3);
+        padding: var(--space-3) var(--space-4);
+        color: #ffffff;
+        background: var(--operator-navy);
+        border-left: 5px solid var(--operator-blue);
+    }
+
+    .operator-group-heading:first-child {
+        margin-top: 0;
+    }
+
+    .operator-group-heading-title {
+        font-family: var(--font-heading);
+        font-size: 16px;
+        font-weight: 700;
+        letter-spacing: .02em;
+    }
+
+    .operator-group-heading-count {
+        font-size: 12px;
+        white-space: nowrap;
+        opacity: .8;
+    }
+
     :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) > div {
         gap: 14px !important;
     }
@@ -323,6 +419,19 @@
     }
 
     @media (max-width: 768px) {
+        .operator-queue-viewport {
+            height: calc(100dvh - 116px);
+        }
+
+        .operator-queue-controls {
+            align-items: flex-start;
+        }
+
+        .operator-group-toolbar {
+            padding-left: 0;
+            border-left: 0;
+        }
+
         :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) {
             margin: -16px;
             padding: 14px !important;

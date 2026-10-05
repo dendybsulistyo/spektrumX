@@ -14,6 +14,7 @@
     'manageAbility',
     'capturePenerima' => false,
     'showInvoiceLink' => false,
+    'indoorGroupBy' => 'order',
 ])
 
 @php
@@ -109,6 +110,12 @@
                         </span>
                     @endif
                 @else
+                    @if ($indoorGroupBy !== 'product')
+                        <strong>{{ $item->NmProd ?: ($item->produk?->NmProd ?? 'Produk tanpa nama') }}</strong>
+                        @if ($item->Judul)
+                            <span class="item-meta-divider" aria-hidden="true"></span>
+                        @endif
+                    @endif
                     {{ $item->Judul }}
                     @if ((float) $item->Panjang > 0 && (float) $item->Lebar > 0)
                         <span style="font-size: 14px; color: color-mix(in srgb, var(--color-text) 82%, transparent);">

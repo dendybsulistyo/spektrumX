@@ -6,6 +6,7 @@ use App\Models\OrderComment;
 use App\Models\OrderReworkRequest;
 use App\Models\PrinterOutdoor;
 use App\Services\StageProgressService;
+use App\Support\OperatorQueueGrouping;
 use App\Support\ResolvesOrderDetailType;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -19,9 +20,11 @@ class OrderQcController extends Controller
 
     public function __construct(private StageProgressService $stageProgress) {}
 
-    public function index(): View
+    public function index(Request $request): View
     {
-        return view('order-qc.index', $this->loadData());
+        return view('order-qc.index', $this->loadData() + [
+            'groupBy' => OperatorQueueGrouping::resolve($request, 'qc'),
+        ]);
     }
 
     /**
@@ -31,7 +34,7 @@ class OrderQcController extends Controller
     {
         $itemsByType = $this->stageProgress->itemsAtStage(self::STAGE, [
             'indoor' => true, 'outdoor' => true,
-        ], outdoorWith: ['order.customer', 'order.cancelRequestedBy']);
+        ], indoorWith: ['order.customer', 'produk.kategori'], outdoorWith: ['order.customer', 'order.cancelRequestedBy']);
 
         $indoorItems = $itemsByType['indoor'] ?? collect();
         $outdoorItems = $itemsByType['outdoor'] ?? collect();

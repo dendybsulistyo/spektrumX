@@ -30,38 +30,30 @@
         $initialTab = array_key_exists(request('tab'), $tabs) ? request('tab') : 'indoor';
     @endphp
 
-    <div id="industry-bungkus">
-        <div style="max-width: 1480px; margin: 0 auto; display: flex; flex-direction: column; gap: var(--space-6);"
-             x-data="{ tab: '{{ $initialTab }}', setTab(key) { this.tab = key; const url = new URL(window.location.href); url.searchParams.set('tab', key); window.history.replaceState({}, '', url); } }">
-            <div style="display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap;">
-                <div style="display: flex;">
-                    @foreach ($tabs as $key => $t)
-                        <button type="button" @click="setTab('{{ $key }}')" class="seg-tab" :class="tab === '{{ $key }}' ? 'active' : ''">
-                            {{ $t['label'] }} ({{ $t['count'] }})
-                        </button>
-                    @endforeach
-                </div>
-                <div x-show="tab === 'outdoor'" x-cloak style="display: flex; gap: 8px; flex-wrap: wrap;">
+    <div id="industry-bungkus" class="operator-queue-viewport">
+        <div class="operator-queue-shell" style="max-width:1480px;margin:0 auto;"
+             x-data="{ tab: '{{ $initialTab }}', setTab(key) { this.tab = key; this.$nextTick(() => this.$refs.orderList?.scrollTo({ top: 0 })); const url = new URL(window.location.href); url.searchParams.set('tab', key); window.history.replaceState({}, '', url); } }">
+            <div class="operator-queue-workspace">
+                <x-operator-queue-toolbar :tabs="$tabs" route-name="order-bungkus.index" :group-by="$groupBy">
+                    <div x-show="tab === 'outdoor'" x-cloak style="display:flex;gap:8px;flex-wrap:wrap;">
                     <a href="{{ route('order-bungkus.print-outdoor', ['keterangan' => 1]) }}" target="_blank" rel="noopener"
                        class="in-btn">Cetak + Keterangan</a>
                     <a href="{{ route('order-bungkus.print-outdoor', ['keterangan' => 0]) }}" target="_blank" rel="noopener"
                        class="in-btn" style="background: var(--color-surface); color: var(--color-text); border-color: var(--color-divider);">Cetak Tanpa Keterangan</a>
+                    </div>
+                </x-operator-queue-toolbar>
+                <div x-ref="orderList" class="operator-order-list">
+                    @foreach (['indoor' => $indoorItems, 'outdoor' => $outdoorItems] as $tabKey => $itemGroups)
+                        <div x-show="tab === '{{ $tabKey }}'" @if($tabKey!=='indoor') x-cloak @endif>
+                            <x-stage-queue-items :type="$tabKey" :item-groups="$itemGroups" :group-by="$groupBy"
+                                                 stage="bungkus" stage-label="Bungkus" route-name="order-bungkus.update" next-label="Siap Diambil"
+                                                 :pending-rework="$pendingRework" :can-approve-rework="$canApproveRework"
+                                                 :printer-names="$printerNames" :outdoor-comments="$outdoorComments" :outdoor-unread="$outdoorUnread"
+                                                 manage-ability="order-bungkus.manage" empty-message="Tidak ada order di antrian bungkus." />
+                        </div>
+                    @endforeach
                 </div>
             </div>
-
-            @foreach (['indoor' => $indoorItems, 'outdoor' => $outdoorItems] as $tabKey => $itemGroups)
-                <div x-show="tab === '{{ $tabKey }}'" @if($tabKey!=='indoor') x-cloak @endif style="margin-top: var(--space-4);">
-                    @forelse ($itemGroups as $items)
-                        <x-stage-item-card :type="$tabKey" :order="$items->first()->order" :items="$items"
-                                            stage="bungkus" stage-label="Bungkus" route-name="order-bungkus.update" next-label="Siap Diambil"
-                                            :pending-rework="$pendingRework" :can-approve-rework="$canApproveRework"
-                                            :printer-names="$printerNames" :outdoor-comments="$outdoorComments" :outdoor-unread="$outdoorUnread"
-                                            manage-ability="order-bungkus.manage" />
-                    @empty
-                        <div class="blueprint text-muted" style="padding: var(--space-6); text-align: center;">Tidak ada order di antrian bungkus.</div>
-                    @endforelse
-                </div>
-            @endforeach
         </div>
     </div>
 </x-app-layout>

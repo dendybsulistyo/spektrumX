@@ -26,17 +26,6 @@
         <x-operator-workspace-styles />
     @endpush
 
-    @if (session('error'))
-        <div class="mx-auto" style="max-width: 1480px;">
-            <div class="tag tag-danger" style="display: block; padding: var(--space-3);">{{ session('error') }}</div>
-        </div>
-    @endif
-    @if (session('status'))
-        <div class="mx-auto" style="max-width: 1480px;">
-            <div class="tag tag-success" style="display: block; padding: var(--space-3);">{{ session('status') }}</div>
-        </div>
-    @endif
-
     @php
         $tabs = [
             'indoor' => ['label' => 'Indoor', 'count' => $indoorItems->count()],
@@ -46,8 +35,8 @@
         $initialTab = array_key_exists(request('tab'), $tabs) ? request('tab') : 'indoor';
     @endphp
 
-    <div id="industry-pengambilan">
-        <div style="max-width: 1480px; margin: 0 auto; display: flex; flex-direction: column; gap: var(--space-6);"
+    <div id="industry-pengambilan" class="operator-queue-viewport">
+        <div class="operator-queue-shell" style="max-width:1480px;margin:0 auto;"
              x-data="{
                  tab: '{{ $initialTab }}',
                  paymentOpen: false,
@@ -65,6 +54,7 @@
                  penerimaNoOrder: '',
                  setTab(key) {
                      this.tab = key;
+                     this.$nextTick(() => this.$refs.orderList?.scrollTo({ top: 0 }));
                      const url = new URL(window.location.href);
                      url.searchParams.set('tab', key);
                      window.history.replaceState({}, '', url);
@@ -78,40 +68,35 @@
                  penerimaQty = penerimaItems[0]?.qty ?? 0;
                  penerimaNoOrder = $event.detail.noOrder;
              ">
-            <div style="display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap;">
-                <div style="display: flex;">
-                    @foreach ($tabs as $key => $t)
-                        <button type="button" @click="setTab('{{ $key }}')" class="seg-tab" :class="tab === '{{ $key }}' ? 'active' : ''">
-                            {{ $t['label'] }} ({{ $t['count'] }})
-                        </button>
+            <div class="operator-queue-workspace">
+                <x-operator-queue-toolbar :tabs="$tabs" route-name="pengambilan.index" :group-by="$groupBy"
+                                          :query="$search !== '' ? ['q' => $search] : []">
+                    <form method="GET" action="{{ route('pengambilan.index') }}" style="display:flex;gap:6px;">
+                        <input type="hidden" name="tab" :value="tab">
+                        <input type="hidden" name="group_by" value="{{ $groupBy }}">
+                        <input type="search" name="q" value="{{ $search }}" maxlength="100" placeholder="Cari nama customer / no. order"
+                               class="in-input" style="width:280px;min-height:36px;" aria-label="Cari nama customer atau nomor order">
+                        <button type="submit" class="in-btn">Cari</button>
+                        @if ($search !== '')
+                            <a :href="`{{ route('pengambilan.index') }}?tab=${tab}&group_by={{ $groupBy }}`" class="btn btn-secondary" style="text-decoration:none;display:inline-flex;align-items:center;">Reset</a>
+                        @endif
+                    </form>
+                </x-operator-queue-toolbar>
+
+                <div x-ref="orderList" class="operator-order-list">
+                    @foreach (['indoor' => $indoorItems, 'outdoor' => $outdoorItems] as $tabKey => $itemGroups)
+                        <div x-show="tab === '{{ $tabKey }}'" @if($tabKey!=='indoor') x-cloak @endif>
+                            <x-stage-queue-items :type="$tabKey" :item-groups="$itemGroups" :group-by="$groupBy"
+                                                 stage="siap_diambil" stage-label="Siap Diambil" route-name="pengambilan.serahkan" next-label="ke Customer"
+                                                 :pending-rework="$pendingRework" :can-approve-rework="$canApproveRework"
+                                                 :printer-names="$printerNames" :outdoor-comments="$outdoorComments" :outdoor-unread="$outdoorUnread"
+                                                 manage-ability="pengambilan.manage"
+                                                 :empty-message="$search !== '' ? 'Tidak ada order yang cocok dengan pencarian “'.$search.'”.' : 'Tidak ada order di antrian pengambilan.'"
+                                                 :capture-penerima="true" :show-invoice-link="true" />
+                        </div>
                     @endforeach
-                </div>
-                <form method="GET" action="{{ route('pengambilan.index') }}" style="display: flex; gap: 6px;">
-                    <input type="hidden" name="tab" :value="tab">
-                    <input type="search" name="q" value="{{ $search }}" maxlength="100" placeholder="Cari nama customer / no. order"
-                           class="in-input" style="width: 280px; min-height: 36px;" aria-label="Cari nama customer atau nomor order">
-                    <button type="submit" class="in-btn">Cari</button>
-                    @if ($search !== '')
-                        <a :href="`{{ route('pengambilan.index') }}?tab=${tab}`" class="btn btn-secondary" style="text-decoration: none; display: inline-flex; align-items: center;">Reset</a>
-                    @endif
-                </form>
-            </div>
 
-            @foreach (['indoor' => $indoorItems, 'outdoor' => $outdoorItems] as $tabKey => $itemGroups)
-                <div x-show="tab === '{{ $tabKey }}'" @if($tabKey!=='indoor') x-cloak @endif style="margin-top: var(--space-4);">
-                    @forelse ($itemGroups as $items)
-                        <x-stage-item-card :type="$tabKey" :order="$items->first()->order" :items="$items"
-                                            stage="siap_diambil" stage-label="Siap Diambil" route-name="pengambilan.serahkan" next-label="ke Customer"
-                                            :pending-rework="$pendingRework" :can-approve-rework="$canApproveRework"
-                                            :printer-names="$printerNames" :outdoor-comments="$outdoorComments" :outdoor-unread="$outdoorUnread"
-                                            manage-ability="pengambilan.manage" :capture-penerima="true" :show-invoice-link="true" />
-                    @empty
-                        <div class="blueprint text-muted" style="padding: var(--space-6); text-align: center;">{{ $search !== '' ? 'Tidak ada order yang cocok dengan pencarian "'.$search.'".' : 'Tidak ada order di antrian pengambilan.' }}</div>
-                    @endforelse
-                </div>
-            @endforeach
-
-            <div x-show="tab === 'transaksi'" x-cloak style="margin-top: var(--space-4);">
+                    <div x-show="tab === 'transaksi'" x-cloak>
                 <div class="blueprint" style="overflow-x: auto;">
                     <table class="sales-table">
                         <thead>
@@ -163,9 +148,10 @@
                 @if ($salesTransactions->hasPages())
                     <div style="margin-top: var(--space-4);">{{ $salesTransactions->links() }}</div>
                 @endif
-            </div>
+                    </div>
+                </div>
 
-            <div x-show="paymentOpen" x-cloak @keydown.escape.window="paymentOpen = false"
+                <div x-show="paymentOpen" x-cloak @keydown.escape.window="paymentOpen = false"
                  style="position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; padding: var(--space-4);">
                 <div @click="paymentOpen = false" style="position: absolute; inset: 0; background: rgba(17,24,39,0.5);"></div>
                 <div class="blueprint" style="position: relative; background: var(--color-bg); width: 100%; max-width: 420px; padding: var(--space-6);">
@@ -191,9 +177,9 @@
                         </div>
                     </form>
                 </div>
-            </div>
+                </div>
 
-            <div x-show="penerimaOpen" x-cloak @keydown.escape.window="penerimaOpen = false"
+                <div x-show="penerimaOpen" x-cloak @keydown.escape.window="penerimaOpen = false"
                  style="position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; padding: var(--space-4);">
                 <div @click="penerimaOpen = false" style="position: absolute; inset: 0; background: rgba(17,24,39,0.5);"></div>
                 <div class="blueprint" style="position: relative; background: var(--color-bg); width: 100%; max-width: 420px; padding: var(--space-6);">
@@ -255,6 +241,7 @@
                             <button type="submit" class="in-btn">Serahkan</button>
                         </div>
                     </form>
+                </div>
                 </div>
             </div>
         </div>

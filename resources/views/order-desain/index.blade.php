@@ -6,7 +6,12 @@
     @push('styles')
         <link rel="stylesheet" href="{{ asset('_ds/industry-8c70c3bf-fa3d-4d54-8c9e-e44ac24ed178/styles.css') }}">
         <style>
-            #industry-desain { font-family: var(--font-body); color: var(--color-text); background: var(--color-bg); margin: calc(var(--space-8) * -1); padding: var(--space-8); }
+            #industry-desain { height: calc(100dvh - 132px); min-height: 0 !important; overflow: hidden; font-family: var(--font-body); color: var(--color-text); background: var(--color-bg); margin: calc(var(--space-8) * -1); padding: var(--space-8); }
+            #industry-desain .desain-shell { height: 100%; min-height: 0; }
+            #industry-desain .desain-workspace { display: flex; height: 100%; min-height: 0; flex-direction: column; }
+            #industry-desain .desain-controls { display: flex; flex: 0 0 auto; align-items: center; justify-content: space-between; gap: var(--space-3); }
+            #industry-desain .desain-controls-start { display: flex; min-width: 0; align-items: center; gap: var(--space-4); flex-wrap: wrap; }
+            #industry-desain .order-list-scroll { min-height: 0; flex: 1 1 auto; margin-top: var(--space-4); padding-right: 5px; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
             #industry-desain .seg-tab { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; font-family: var(--font-heading); font-weight: 600; font-size: 14px; letter-spacing: 0.02em; cursor: pointer; border: 1px solid var(--color-divider); border-right: none; background: transparent; color: var(--color-text); }
             #industry-desain .seg-tab:last-child { border-right: 1px solid var(--color-divider); }
             #industry-desain .seg-tab.active { background: var(--color-accent); color: var(--color-bg); border-color: var(--color-accent); }
@@ -21,7 +26,7 @@
             #industry-desain .item-row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--color-divider); flex-wrap: wrap; }
             #industry-desain .item-row:last-child { border-bottom: none; }
             #industry-desain .progress-tag { font-family: var(--font-heading); font-weight: 600; font-size: 13px; color: var(--color-text-muted, #666); }
-            #industry-desain .group-toolbar { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; padding: var(--space-3) var(--space-4); border: 1px solid var(--color-divider); background: var(--color-surface); }
+            #industry-desain .group-toolbar { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; padding-left: var(--space-4); border-left: 1px solid var(--color-divider); }
             #industry-desain .group-toolbar-label { font-family: var(--font-heading); font-size: 13px; font-weight: 600; color: var(--color-text-muted, #666); margin-right: var(--space-1); }
             #industry-desain .group-heading { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin: var(--space-6) 0 var(--space-3); padding: var(--space-3) var(--space-4); color: var(--color-bg); background: var(--color-accent-900); border-left: 5px solid var(--color-accent); }
             #industry-desain .group-heading:first-child { margin-top: 0; }
@@ -31,6 +36,11 @@
             @keyframes operator-return-focus {
                 0%, 30% { background: #dbeafe; box-shadow: inset 4px 0 0 #2563eb; }
                 100% { background: #fff; box-shadow: inset 4px 0 0 transparent; }
+            }
+            @media (max-width: 768px) {
+                #industry-desain { height: calc(100dvh - 116px); }
+                #industry-desain .desain-controls { align-items: flex-start; }
+                #industry-desain .group-toolbar { padding-left: 0; border-left: 0; }
             }
         </style>
         <x-operator-workspace-styles />
@@ -48,9 +58,9 @@
     @endphp
 
     <div id="industry-desain">
-        <div style="max-width: 1480px; margin: 0 auto; display: flex; flex-direction: column; gap: var(--space-6);">
+        <div class="desain-shell" style="max-width: 1480px; margin: 0 auto;">
 
-            <div x-data="{
+            <div class="desain-workspace" x-data="{
                     tab: '{{ $initialTab }}',
                     selected: {},
                     sending: false,
@@ -68,7 +78,7 @@
                             tab: this.tab,
                             anchorId,
                             anchorTop: anchor ? anchor.getBoundingClientRect().top : null,
-                            scrollY: window.scrollY,
+                            scrollTop: this.$refs.orderList ? this.$refs.orderList.scrollTop : 0,
                             savedAt: Date.now(),
                         }));
                     },
@@ -85,15 +95,17 @@
                         if (position.tab && ['indoor', 'outdoor'].includes(position.tab)) this.tab = position.tab;
 
                         setTimeout(() => {
+                            const list = this.$refs.orderList;
+                            if (!list) return;
                             const anchor = position.anchorId ? document.getElementById(position.anchorId) : null;
                             if (anchor && Number.isFinite(position.anchorTop)) {
-                                window.scrollBy({ top: anchor.getBoundingClientRect().top - position.anchorTop, behavior: 'auto' });
+                                list.scrollBy({ top: anchor.getBoundingClientRect().top - position.anchorTop, behavior: 'auto' });
                                 anchor.classList.add('operator-return-focus');
                                 setTimeout(() => anchor.classList.remove('operator-return-focus'), 2500);
                                 return;
                             }
 
-                            window.scrollTo({ top: Number(position.scrollY) || 0, behavior: 'auto' });
+                            list.scrollTo({ top: Number(position.scrollTop ?? position.scrollY) || 0, behavior: 'auto' });
                         }, 60);
                     },
                     pollVersion() {
@@ -112,6 +124,7 @@
                     switchTab(key) {
                         this.tab = key;
                         this.selected = {};
+                        this.$nextTick(() => this.$refs.orderList?.scrollTo({ top: 0, behavior: 'auto' }));
                         const url = new URL(window.location.href);
                         url.searchParams.set('tab', key);
                         window.history.replaceState({}, '', url);
@@ -149,13 +162,28 @@
                         }
                     },
                  }">
-                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--space-3);">
-                    <div style="display: flex;">
-                        @foreach ($tabs as $key => $t)
-                            <button type="button" @click="switchTab('{{ $key }}')" class="seg-tab" :class="tab === '{{ $key }}' ? 'active' : ''">
-                                {{ $t['label'] }} ({{ $t['count'] }})
-                            </button>
-                        @endforeach
+                <div class="desain-controls">
+                    <div class="desain-controls-start">
+                        <div style="display: flex;">
+                            @foreach ($tabs as $key => $t)
+                                <button type="button" @click="switchTab('{{ $key }}')" class="seg-tab" :class="tab === '{{ $key }}' ? 'active' : ''">
+                                    {{ $t['label'] }} ({{ $t['count'] }})
+                                </button>
+                            @endforeach
+                        </div>
+
+                        @if (isset($tabs['indoor']))
+                            <div x-show="tab === 'indoor'" class="group-toolbar">
+                                <span class="group-toolbar-label">Tampilkan berdasarkan:</span>
+                                @foreach (['order' => 'Per Order', 'division' => 'By Divisi', 'product' => 'By Produk'] as $mode => $label)
+                                    <a href="{{ route('order-desain.index', ['tab' => 'indoor', 'group_by' => $mode]) }}"
+                                       class="seg-tab {{ $groupBy === $mode ? 'active' : '' }}"
+                                       aria-current="{{ $groupBy === $mode ? 'page' : 'false' }}">
+                                        {{ $label }}
+                                    </a>
+                                @endforeach
+                            </div>
+                        @endif
                     </div>
                     <button type="button" class="in-btn" :disabled="selectedCount === 0 || sending" @click="bulkSend()"
                             :style="(selectedCount === 0 || sending) ? 'opacity:0.5; cursor:not-allowed;' : ''">
@@ -163,22 +191,10 @@
                     </button>
                 </div>
 
-                @if (isset($tabs['indoor']))
-                    <div x-show="tab === 'indoor'" class="group-toolbar" style="margin-top: var(--space-4);">
-                        <span class="group-toolbar-label">Tampilkan berdasarkan:</span>
-                        @foreach (['order' => 'Per Order', 'division' => 'By Divisi', 'product' => 'By Produk'] as $mode => $label)
-                            <a href="{{ route('order-desain.index', ['tab' => 'indoor', 'group_by' => $mode]) }}"
-                               class="seg-tab {{ $groupBy === $mode ? 'active' : '' }}"
-                               aria-current="{{ $groupBy === $mode ? 'page' : 'false' }}">
-                                {{ $label }}
-                            </a>
-                        @endforeach
-                    </div>
-                @endif
-
-                {{-- Indoor dapat ditampilkan per order, divisi, atau produk. --}}
-                @if (isset($tabs['indoor']))
-                    <div x-show="tab === 'indoor'" style="margin-top: var(--space-4);">
+                <div x-ref="orderList" class="order-list-scroll">
+                    {{-- Indoor dapat ditampilkan per order, divisi, atau produk. --}}
+                    @if (isset($tabs['indoor']))
+                        <div x-show="tab === 'indoor'">
                         @if ($indoorItems->isEmpty())
                             <div class="blueprint text-muted" style="padding: var(--space-6); text-align: center;">Tidak ada order di antrian desain.</div>
                         @elseif ($groupBy === 'order')
@@ -205,12 +221,12 @@
                                 </section>
                             @endforeach
                         @endif
-                    </div>
-                @endif
+                        </div>
+                    @endif
 
-                {{-- Outdoor: 1 card per order, per item input qty parsial --}}
-                @if (isset($tabs['outdoor']))
-                    <div x-show="tab === 'outdoor'" style="margin-top: var(--space-4);">
+                    {{-- Outdoor: 1 card per order, per item input qty parsial --}}
+                    @if (isset($tabs['outdoor']))
+                        <div x-show="tab === 'outdoor'">
                         @forelse ($outdoorItems as $items)
                             @php $order = $items->first()->order; @endphp
                             <div class="order-card">
@@ -375,8 +391,9 @@
                         @if ($outdoorItems->isEmpty() && $outdoorNeedsReply->isEmpty())
                             <div class="blueprint text-muted" style="padding: var(--space-6); text-align: center;">Tidak ada order di antrian desain.</div>
                         @endif
-                    </div>
-                @endif
+                        </div>
+                    @endif
+                </div>
             </div>
 
         </div>

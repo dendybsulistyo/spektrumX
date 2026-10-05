@@ -30,30 +30,23 @@
         $initialTab = array_key_exists(request('tab'), $tabs) ? request('tab') : 'indoor';
     @endphp
 
-    <div id="industry-finishing">
-        <div style="max-width: 1480px; margin: 0 auto; display: flex; flex-direction: column; gap: var(--space-6);"
-             x-data="{ tab: '{{ $initialTab }}', setTab(key) { this.tab = key; const url = new URL(window.location.href); url.searchParams.set('tab', key); window.history.replaceState({}, '', url); } }">
-            <div style="display: flex;">
-                @foreach ($tabs as $key => $t)
-                    <button type="button" @click="setTab('{{ $key }}')" class="seg-tab" :class="tab === '{{ $key }}' ? 'active' : ''">
-                        {{ $t['label'] }} ({{ $t['count'] }})
-                    </button>
-                @endforeach
-            </div>
-
-            @foreach (['indoor' => $indoorItems, 'outdoor' => $outdoorItems] as $tabKey => $itemGroups)
-                <div x-show="tab === '{{ $tabKey }}'" @if($tabKey!=='indoor') x-cloak @endif style="margin-top: var(--space-4);">
-                    @forelse ($itemGroups as $items)
-                        <x-stage-item-card :type="$tabKey" :order="$items->first()->order" :items="$items"
-                                            stage="finishing" stage-label="Finishing" route-name="order-finishing.update" next-label="QC"
-                                            :pending-rework="$pendingRework" :can-approve-rework="$canApproveRework"
-                                            :printer-names="$printerNames" :outdoor-comments="$outdoorComments" :outdoor-unread="$outdoorUnread"
-                                            manage-ability="order-finishing.manage" />
-                    @empty
-                        <div class="blueprint text-muted" style="padding: var(--space-6); text-align: center;">Tidak ada order di antrian finishing.</div>
-                    @endforelse
+    <div id="industry-finishing" class="operator-queue-viewport">
+        <div class="operator-queue-shell" style="max-width:1480px;margin:0 auto;"
+             x-data="{ tab: '{{ $initialTab }}', setTab(key) { this.tab = key; this.$nextTick(() => this.$refs.orderList?.scrollTo({ top: 0 })); const url = new URL(window.location.href); url.searchParams.set('tab', key); window.history.replaceState({}, '', url); } }">
+            <div class="operator-queue-workspace">
+                <x-operator-queue-toolbar :tabs="$tabs" route-name="order-finishing.index" :group-by="$groupBy" />
+                <div x-ref="orderList" class="operator-order-list">
+                    @foreach (['indoor' => $indoorItems, 'outdoor' => $outdoorItems] as $tabKey => $itemGroups)
+                        <div x-show="tab === '{{ $tabKey }}'" @if($tabKey!=='indoor') x-cloak @endif>
+                            <x-stage-queue-items :type="$tabKey" :item-groups="$itemGroups" :group-by="$groupBy"
+                                                 stage="finishing" stage-label="Finishing" route-name="order-finishing.update" next-label="QC"
+                                                 :pending-rework="$pendingRework" :can-approve-rework="$canApproveRework"
+                                                 :printer-names="$printerNames" :outdoor-comments="$outdoorComments" :outdoor-unread="$outdoorUnread"
+                                                 manage-ability="order-finishing.manage" empty-message="Tidak ada order di antrian finishing." />
+                        </div>
+                    @endforeach
                 </div>
-            @endforeach
+            </div>
         </div>
     </div>
 </x-app-layout>
