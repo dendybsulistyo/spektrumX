@@ -161,7 +161,7 @@
         border: 1px solid var(--operator-border);
         border-left: 3px solid #33445f;
         border-radius: 9px;
-        margin-bottom: 10px !important;
+        margin-bottom: 7px !important;
         box-shadow: 0 7px 20px rgba(23, 32, 51, .045);
     }
 
@@ -199,8 +199,8 @@
 
     :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .order-card-head {
         margin-left: 58px;
-        min-height: 46px;
-        padding: 9px 14px;
+        min-height: 38px;
+        padding: 5px 12px;
         background: #f6f8fb;
         border-bottom-color: var(--operator-border);
         color: var(--operator-navy);
@@ -277,8 +277,8 @@
 
     :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .item-row {
         margin-left: 58px;
-        min-height: 50px;
-        padding: 9px 14px;
+        min-height: 36px;
+        padding: 4px 12px;
         background: #ffffff;
         border-bottom-color: #e6ebf1;
         font-size: 13px;
@@ -301,8 +301,8 @@
     :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .progress-tag {
         display: inline-flex;
         align-items: center;
-        min-height: 32px;
-        padding: 0 8px;
+        min-height: 28px;
+        padding: 0 7px;
         color: #536178;
         background: #edf1f5;
         border: 1px solid #dce3eb;
@@ -312,9 +312,9 @@
     }
 
     :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .in-input {
-        height: 32px !important;
-        min-height: 32px !important;
-        padding: 0 8px !important;
+        height: 28px !important;
+        min-height: 28px !important;
+        padding: 0 7px !important;
         background: #ffffff;
         color: #0f172a;
         border-color: #cbd5e1;
@@ -339,8 +339,8 @@
     }
 
     :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .in-btn {
-        min-height: 32px;
-        padding: 6px 10px;
+        min-height: 28px;
+        padding: 4px 9px;
         background: var(--operator-blue);
         color: #ffffff;
         border-color: var(--operator-blue);
@@ -405,7 +405,7 @@
 
     #industry-desain .revision-source-tag {
         display: inline-flex;
-        min-height: 32px;
+        min-height: 28px;
         align-items: center;
         padding: 0 9px;
         box-sizing: border-box;
@@ -439,7 +439,7 @@
 
         :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .order-card-head,
         :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .item-row {
-            padding: 9px 11px;
+            padding: 5px 9px;
         }
 
         :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .order-date-rail {
