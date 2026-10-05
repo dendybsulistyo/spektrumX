@@ -32,7 +32,7 @@
     }
 
     .operator-queue-viewport {
-        height: calc(100dvh - 132px);
+        height: calc(100dvh - 64px);
         min-height: 0 !important;
         overflow: hidden;
     }
@@ -420,7 +420,7 @@
 
     @media (max-width: 768px) {
         .operator-queue-viewport {
-            height: calc(100dvh - 116px);
+            height: calc(100dvh - 64px);
         }
 
         .operator-queue-controls {

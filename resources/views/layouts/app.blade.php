@@ -50,6 +50,38 @@
             .industry-nav .nav-top-link:hover { background:#f0f3f7 !important; color:#172033 !important; }
             .industry-nav .nav-top-link.bg-indigo-50 { background:#172033 !important; color:#fff !important; box-shadow:0 5px 14px rgba(23,32,51,.14); }
             .industry-nav .nav-dropdown-link.bg-indigo-50 { background:#e9eefc !important; color:#294db6 !important; }
+            .industry-nav .operator-nav-page-title {
+                display: inline-flex;
+                min-width: 0;
+                align-items: center;
+                gap: 8px;
+                margin-left: 18px;
+                padding-left: 18px;
+                border-left: 1px solid #d9e1eb;
+                color: #172033;
+                font-size: 14px;
+                font-weight: 750;
+                line-height: 1.15;
+                white-space: nowrap;
+            }
+            .industry-nav .operator-nav-page-title::before {
+                content: "";
+                width: 4px;
+                height: 18px;
+                flex: 0 0 4px;
+                border-radius: 2px;
+                background: #3156d3;
+            }
+            @media (max-width: 639px) {
+                .industry-nav .operator-nav-page-title {
+                    max-width: calc(100vw - 150px);
+                    margin-left: 10px;
+                    padding-left: 10px;
+                    font-size: 12px;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                }
+            }
 
             /* Reskin global untuk halaman yang belum ditulis ulang manual ke
                markup Industry (Master Data, Order Indoor/Outdoor/Artwork,
@@ -151,6 +183,18 @@
             $showOwner = Auth::user()->hasPermission('printer-performance.view');
             $showPengaturan = Auth::user()->hasPermission('keuangan.pengaturan') || Auth::user()->hasPermission('roles.manage') || Auth::user()->hasPermission('jasa-potong.manage') || Auth::user()->hasPermission('jasa-potong-artwork.manage');
 
+            $operatorPageTitle = match (true) {
+                request()->routeIs('file.*') => 'Operator Penerima File',
+                request()->routeIs('order-desain.*') => 'Operator Layout / Desain',
+                request()->routeIs('order-cetak.*') => 'Operator Cetak',
+                request()->routeIs('order-finishing.*') => 'Operator Finishing',
+                request()->routeIs('order-qc.*') => 'Operator Back Office (QC)',
+                request()->routeIs('order-bungkus.*') => 'Operator Bungkus',
+                request()->routeIs('pengambilan.*') => 'Pengambilan Barang',
+                default => null,
+            };
+            $compactOperatorHeader = $operatorPageTitle !== null;
+
             $navTopLink = fn (bool $active) => 'nav-top-link inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-[14px] font-semibold transition '
                 .($active ? 'bg-indigo-50 text-indigo-600' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900');
             $dropdownLink = fn (bool $active) => 'nav-dropdown-link block px-3 py-1.5 rounded-md text-[13px] '
@@ -169,6 +213,12 @@
                                 <div class="brand-mark w-7 h-7 rounded-md bg-indigo-600 flex items-center justify-center text-white text-xs font-bold">S</div>
                                 <span class="hidden sm:block text-sm font-bold text-gray-900 truncate">{{ config('app.name', 'SpektrumX') }}</span>
                             </a>
+
+                            @if ($compactOperatorHeader)
+                                <div class="operator-nav-page-title" title="{{ $operatorPageTitle }}">
+                                    <span class="truncate">{{ $operatorPageTitle }}</span>
+                                </div>
+                            @endif
 
                             <div class="hidden lg:flex lg:items-center lg:ml-6 lg:gap-1">
                                 @php $active = request()->routeIs('dashboard'); @endphp
@@ -755,11 +805,13 @@
             </nav>
 
             @isset($header)
-                <header class="bg-white border-b border-gray-200">
-                    <div class="px-4 sm:px-6 py-4">
-                        {{ $header }}
-                    </div>
-                </header>
+                @unless ($compactOperatorHeader)
+                    <header class="bg-white border-b border-gray-200">
+                        <div class="px-4 sm:px-6 py-4">
+                            {{ $header }}
+                        </div>
+                    </header>
+                @endunless
             @endisset
 
             <main class="p-4 sm:p-6">

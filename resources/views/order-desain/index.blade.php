@@ -6,7 +6,7 @@
     @push('styles')
         <link rel="stylesheet" href="{{ asset('_ds/industry-8c70c3bf-fa3d-4d54-8c9e-e44ac24ed178/styles.css') }}">
         <style>
-            #industry-desain { height: calc(100dvh - 132px); min-height: 0 !important; overflow: hidden; font-family: var(--font-body); color: var(--color-text); background: var(--color-bg); margin: calc(var(--space-8) * -1); padding: var(--space-8); }
+            #industry-desain { height: calc(100dvh - 64px); min-height: 0 !important; overflow: hidden; font-family: var(--font-body); color: var(--color-text); background: var(--color-bg); margin: calc(var(--space-8) * -1); padding: var(--space-8); }
             #industry-desain .desain-shell { height: 100%; min-height: 0; }
             #industry-desain .desain-workspace { display: flex; height: 100%; min-height: 0; flex-direction: column; }
             #industry-desain .desain-controls { display: flex; flex: 0 0 auto; align-items: center; justify-content: space-between; gap: var(--space-3); }
@@ -38,7 +38,7 @@
                 100% { background: #fff; box-shadow: inset 4px 0 0 transparent; }
             }
             @media (max-width: 768px) {
-                #industry-desain { height: calc(100dvh - 116px); }
+                #industry-desain { height: calc(100dvh - 64px); }
                 #industry-desain .desain-controls { align-items: flex-start; }
                 #industry-desain .group-toolbar { padding-left: 0; border-left: 0; }
             }
@@ -236,8 +236,7 @@
                                         <div class="order-identity">
                                             <x-order-number :number="$order->NoOrder" />
                                             <x-macet-badge :show="$order->isMacet()" />
-                                        </div>
-                                        <div class="order-customer-line">
+                                            <span class="order-meta-divider" aria-hidden="true"></span>
                                             <span class="order-meta-customer">{{ $order->customer?->NmCust ? ucwords(mb_strtolower($order->customer->NmCust)) : '-' }}</span>
                                             <span class="order-meta-divider" aria-hidden="true"></span>
                                             <span class="order-meta-operator">Operator : {{ $order->createdBy?->name ?? '-' }}</span>
@@ -357,8 +356,7 @@
                                         <div class="order-identity">
                                             <x-order-number :number="$order->NoOrder" />
                                             <x-macet-badge :show="$order->isMacet()" />
-                                        </div>
-                                        <div class="order-customer-line">
+                                            <span class="order-meta-divider" aria-hidden="true"></span>
                                             <span class="order-meta-customer">{{ $order->customer?->NmCust ? ucwords(mb_strtolower($order->customer->NmCust)) : '-' }}</span>
                                         </div>
                                     </div>
