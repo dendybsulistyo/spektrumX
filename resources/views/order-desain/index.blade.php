@@ -18,6 +18,8 @@
             #industry-desain .in-input { width: 100%; min-height: 28px; padding: 4px 6px; font: inherit; font-size: 13px; color: var(--color-text); background: var(--color-surface); border: 1px solid var(--color-divider); }
             #industry-desain .in-btn { display: inline-flex; align-items: center; gap: 4px; font-family: var(--font-heading); font-weight: 600; font-size: 13px; padding: 5px 10px; background: var(--color-accent); color: var(--color-bg); border: 1px solid var(--color-accent); cursor: pointer; white-space: nowrap; }
             #industry-desain .in-btn:hover { background: var(--color-accent-600); }
+            #industry-desain .in-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+            #industry-desain .in-btn:disabled:hover { background: var(--color-accent); }
             #industry-desain .in-btn-danger { background: var(--color-accent-900); border-color: var(--color-accent-900); }
             #industry-desain .in-btn-danger:hover { background: var(--color-accent-800); }
             #industry-desain .in-btn-ghost { background: transparent; color: var(--color-text); border-color: var(--color-divider); }
@@ -276,7 +278,8 @@
                                 </div>
 
                                 @foreach ($items as $item)
-                                    <div id="layout-item-outdoor-{{ $item->id }}" class="item-row">
+                                    <div id="layout-item-outdoor-{{ $item->id }}" class="item-row"
+                                         x-data="{ gabungan: @js((string) $item->gabungan) }">
                                         <div>
                                             <x-printer-badge :code="$item->printerCode()" :name="$printerNames[$item->printerCode()] ?? null" />
                                             <span class="item-meta-divider" aria-hidden="true"></span>
@@ -318,6 +321,7 @@
                                                     @csrf
                                                     <input type="text" name="gabungan" value="{{ $item->gabungan }}" maxlength="255"
                                                            placeholder="Gabungan"
+                                                           x-model="gabungan"
                                                            @change="rememberPosition('layout-item-outdoor-{{ $item->id }}'); $el.form.submit()" class="in-input" style="width: 140px;">
                                                 </form>
                                             @else
@@ -325,7 +329,9 @@
                                             @endcan
                                             <span class="progress-tag">Progres Desain: {{ $item->Qty - $item->qtyAt('desain') }}/{{ $item->Qty }}</span>
                                             @can('order-desain.manage')
-                                                <input type="checkbox" @change="toggle('outdoor', {{ $item->id }}, $event.target.checked)" title="Pilih untuk kirim massal">
+                                                <input type="checkbox" :disabled="!gabungan.trim()"
+                                                       @change="toggle('outdoor', {{ $item->id }}, $event.target.checked)"
+                                                       :title="gabungan.trim() ? 'Pilih untuk kirim massal' : 'Isi nama Gabungan terlebih dahulu'">
                                                 <form method="POST" action="{{ route('order-desain.progress', ['outdoor', $item->id]) }}"
                                                       @submit="rememberPosition('layout-item-outdoor-{{ $item->id }}')"
                                                       style="display: flex; align-items: center; gap: 4px;">
@@ -334,7 +340,8 @@
                                                            oninput="this.setCustomValidity('')"
                                                            oninvalid="this.setCustomValidity(this.validity.valueMissing ? 'Isi jumlah qty dulu.' : (this.validity.rangeOverflow ? 'Maksimal {{ $item->qtyAt('desain') }} (sisa di Desain).' : (this.validity.rangeUnderflow ? 'Qty minimal 1.' : 'Qty tidak valid.')))"
                                                            class="in-input no-spinner" style="width: 70px;">
-                                                    <button type="submit" class="in-btn">Kirim ke Cetak</button>
+                                                    <button type="submit" class="in-btn" :disabled="!gabungan.trim()"
+                                                            :title="gabungan.trim() ? 'Kirim ke Cetak' : 'Isi nama Gabungan terlebih dahulu'">Kirim ke Cetak</button>
                                                 </form>
                                             @else
                                                 <span class="text-muted">-</span>

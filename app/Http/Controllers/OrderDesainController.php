@@ -16,6 +16,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class OrderDesainController extends Controller
@@ -113,6 +114,12 @@ class OrderDesainController extends Controller
     public function updateItem(Request $request, string $type, int $id): RedirectResponse
     {
         $item = $this->resolveDetailItem($type, $id);
+        if ($item instanceof OrderOutdoorDetail && blank($item->gabungan)) {
+            throw ValidationException::withMessages([
+                'gabungan' => 'Isi nama Gabungan terlebih dahulu sebelum mengirim item ke Cetak.',
+            ]);
+        }
+
         $layoutRevision = $item instanceof OrderOutdoorDetail
             ? $this->activeLayoutRevisionFor($item)
             : null;
