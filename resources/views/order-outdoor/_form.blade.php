@@ -319,7 +319,10 @@
 
     <div class="border-t pt-4">
         <div class="flex items-center justify-between mb-3">
-            <h3 class="text-sm font-semibold text-gray-700">Item Order</h3>
+            <div>
+                <h3 class="text-sm font-semibold text-gray-700">Item Order</h3>
+                <p class="mt-0.5 text-xs text-amber-700">Minimum tagihan Outdoor 1 m² per qty. Ukuran di bawah 1 m² dihitung dan ditampilkan di SO sebagai 100 × 100 cm.</p>
+            </div>
         </div>
 
         <template x-for="(item, index) in items" :key="index">

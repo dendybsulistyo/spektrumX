@@ -82,7 +82,8 @@ class OrderPricingService
      */
     public function lineTotalOutdoor(HargaCetakOutdoor $harga, float $panjangCm, float $lebarCm, int $qty, ?string $kdCust = null): float
     {
-        $areaM2 = ($panjangCm / 100) * ($lebarCm / 100);
+        [$panjangTagihan, $lebarTagihan] = $this->outdoorBillableDimensions($panjangCm, $lebarCm);
+        $areaM2 = ($panjangTagihan / 100) * ($lebarTagihan / 100);
 
         $hargaStd = (float) $harga->HargaStd;
 
@@ -104,6 +105,23 @@ class OrderPricingService
         // Rupiah amount once Panjang/Lebar aren't whole meters — always
         // round up to Rp100 so subtotal/total never show a sub-100 remainder.
         return Rupiah::bulatkan($hargaStd * $areaM2 * $qty);
+    }
+
+    /**
+     * Outdoor memiliki minimum tagihan satu meter persegi per lembar.
+     * Ukuran produksi asli tetap disimpan pada detail order; hanya ukuran
+     * perhitungan harga dan tampilan SO yang menjadi 100 × 100 cm ketika
+     * luas input kurang dari 1 m².
+     *
+     * @return array{0: float, 1: float}
+     */
+    public function outdoorBillableDimensions(float $panjangCm, float $lebarCm): array
+    {
+        if (($panjangCm / 100) * ($lebarCm / 100) < 1) {
+            return [100.0, 100.0];
+        }
+
+        return [$panjangCm, $lebarCm];
     }
 
     /**
@@ -289,7 +307,11 @@ class OrderPricingService
                     $bahan = null;
                     $printer = null;
                     if ($harga) {
-                        $areaM2 = ((float) $item->Panjang / 100) * ((float) $item->Lebar / 100);
+                        [$panjangTagihan, $lebarTagihan] = $this->outdoorBillableDimensions(
+                            (float) $item->Panjang,
+                            (float) $item->Lebar,
+                        );
+                        $areaM2 = ($panjangTagihan / 100) * ($lebarTagihan / 100);
                         $printer = $printerNames[$item->printerCode()] ?? $item->printerCode() ?? '-';
                         $bahan = $bahanNames[$item->bahanCode()] ?? $item->bahanCode() ?? '-';
                         // Back-derived from the subtotal (rather than
@@ -332,12 +354,16 @@ class OrderPricingService
                 $hargaSatuan = $item->harga_satuan_snapshot !== null ? (float) $item->harga_satuan_snapshot : null;
             }
 
+            [$displayPanjang, $displayLebar] = $type === 'outdoor'
+                ? $this->outdoorBillableDimensions((float) $item->Panjang, (float) $item->Lebar)
+                : [$item->Panjang, $item->Lebar];
+
             return (object) [
                 'name' => $name,
                 'bahan' => $bahan,
                 'printer' => $printer,
-                'panjang' => $item->Panjang,
-                'lebar' => $item->Lebar,
+                'panjang' => $displayPanjang,
+                'lebar' => $displayLebar,
                 'qty' => $item->Qty,
                 'harga_satuan' => $hargaSatuan,
                 'subtotal' => $subtotal,
