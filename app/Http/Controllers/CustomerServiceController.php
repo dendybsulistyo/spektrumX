@@ -150,13 +150,15 @@ class CustomerServiceController extends Controller
 
     public function paymentQueue(): View
     {
-        $indoor = OrderIndoor::with(['customer.limit', 'items'])
+        $indoor = OrderIndoor::with(['customer.limit', 'items.produkArtwork'])
             ->where('payment_queue', 'cs')
             ->where('status_bayar', 'belum_bayar')
             ->get()
             ->each(function (OrderIndoor $order): void {
                 $order->setAttribute('order_type', 'indoor');
-                $order->setAttribute('is_custom_artwork', $order->items->contains(fn ($item) => $item->isArtwork()));
+                $customItems = $this->customArtworkItems($order);
+                $customItems->each->setAttribute('requires_custom_price', true);
+                $order->setAttribute('is_custom_artwork', $customItems->isNotEmpty());
             });
         $outdoor = OrderOutdoor::with('customer.limit')
             ->where('payment_queue', 'cs')
@@ -235,14 +237,14 @@ class CustomerServiceController extends Controller
             abort_unless($order->payment_queue === 'cs' && $order->status_bayar === 'belum_bayar', 422, 'Order ini sudah tidak berada di antrean CS.');
             $order->loadMissing('customer.limit');
             if ($type === 'indoor') {
-                $order->loadMissing('items');
-                if ($order->items->contains(fn ($item) => $item->isArtwork())) {
+                $order->loadMissing('items.produkArtwork');
+                if ($this->customArtworkItems($order)->isNotEmpty()) {
                     $this->applyArtworkPrices($order, $artworkPrices);
                     $order->refresh()->loadMissing(['customer.limit', 'items']);
                 }
             }
             $isCustomArtwork = $type === 'indoor'
-                && $order->items->contains(fn ($item) => $item->isArtwork());
+                && $this->customArtworkItems($order)->isNotEmpty();
 
             if (($data['cs_payment_type'] ?? null) === 'hutang') {
                 if (! $order->customer?->isVip) {
@@ -322,8 +324,8 @@ class CustomerServiceController extends Controller
     /** @param array<int, float> $prices */
     private function applyArtworkPrices(OrderIndoor $order, array $prices): void
     {
-        $order->loadMissing('items');
-        $artworkItems = $order->items->filter(fn ($item) => $item->isArtwork());
+        $order->loadMissing('items.produkArtwork');
+        $artworkItems = $this->customArtworkItems($order);
         abort_if($artworkItems->isEmpty(), 422, 'Order ini tidak memiliki item Artwork.');
 
         $missing = $artworkItems->first(fn ($item) => ! isset($prices[$item->id]) && ! ((float) $item->harga_satuan_kasir > 0));
@@ -355,5 +357,11 @@ class CustomerServiceController extends Controller
                 'user_id' => auth()->id(), 'created_at' => now(),
             ]);
         }
+    }
+
+    private function customArtworkItems(OrderIndoor $order): \Illuminate\Support\Collection
+    {
+        return $order->items->filter(fn ($item) => $item->isArtwork()
+            && ($item->produkArtwork === null || (float) $item->produkArtwork->HargaStd <= 0));
     }
 }

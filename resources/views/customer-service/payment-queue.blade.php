@@ -45,7 +45,7 @@
                                 @if ($order->is_custom_artwork)
                                     <div class="mb-3 space-y-2 rounded border border-violet-200 bg-violet-50 p-2">
                                         <p class="text-[11px] font-semibold text-violet-800">Harga Custom Artwork / unit</p>
-                                        @foreach ($order->items->filter(fn ($item) => $item->isArtwork()) as $item)
+                                        @foreach ($order->items->filter(fn ($item) => $item->requires_custom_price) as $item)
                                             <label class="block text-[11px] text-violet-700">
                                                 {{ $item->Judul ?: $item->NmProd }} · Qty {{ $item->Qty }}
                                                 <input type="number" min="100" step="100" required

@@ -419,8 +419,13 @@ class OrderPricingService
         $isArtworkCatalog = $item instanceof \App\Models\OrderArtworkDetail
             || (method_exists($item, 'isArtwork') && $item->isArtwork());
 
-        return $isArtworkCatalog
-            || (! $isArtworkCatalog && (string) $item->KdProd === '2001');
+        if ($isArtworkCatalog) {
+            $artwork = $this->artwork((string) $item->KdProd);
+
+            return $artwork === null || (float) $artwork->HargaStd <= 0;
+        }
+
+        return (string) $item->KdProd === '2001';
     }
 
     /**
