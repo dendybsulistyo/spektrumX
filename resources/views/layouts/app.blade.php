@@ -265,7 +265,6 @@
                                             </div>
                                             <div class="space-y-1 border-l border-gray-100 pl-2">
                                                 <p class="mx-2 rounded-md border border-slate-200 bg-slate-100 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-600">Akuntansi</p>
-                                                <a href="{{ route('keuangan.customer-receivable-details') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.customer-receivable-details') && request('mode') !== 'report') }}">Piutang per Customer</a>
                                                 <a href="{{ route('keuangan.rekap-kasir') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.rekap-kasir*')) }}">Rekap Kas Harian</a>
                                                 <a href="{{ route('keuangan.kas-harian') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.kas-harian')) }}">Rekap Kasir per User</a>
                                                 <a href="{{ route('keuangan.laporan-kasir-harian') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.laporan-kasir-harian')) }}">Laporan Kasir Harian</a>
@@ -283,6 +282,7 @@
                                                 <a href="{{ route('keuangan.credit-limits') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.credit-limits')) }}">Rekap Limit Piutang</a>
                                                 <a href="{{ route('keuangan.total-tagihan-piutang') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.total-tagihan-piutang')) }}">Pembayaran Piutang</a>
                                                 <a href="{{ route('keuangan.pembatalan-order') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.pembatalan-order')) }}">Pembatalan Pre-Order &amp; Nota</a>
+                                                <a href="{{ route('keuangan.customer-receivable-details') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.customer-receivable-details') && request('mode') !== 'report') }}">Piutang per Customer</a>
                                             @endcan
                                             </div>
                                             <div class="space-y-1 border-l border-gray-100 pl-2">
@@ -624,7 +624,6 @@
                                 <a href="{{ route('keuangan.daily-receivable-collections') }}" class="{{ $mobileLink(request()->routeIs('keuangan.daily-receivable-collections')) }}">Penerimaan Piutang Harian</a>
                                 <a href="{{ route('keuangan.credit-limits') }}" class="{{ $mobileLink(request()->routeIs('keuangan.credit-limits')) }}">Rekap Limit Piutang</a>
                                 <div class="mx-2 my-2 border-t border-slate-200"></div><p class="mx-2 rounded-md border border-slate-200 bg-slate-100 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-600">Kas, Pembelian & Piutang</p>
-                                <a href="{{ route('keuangan.customer-receivable-details') }}" class="{{ $mobileLink(request()->routeIs('keuangan.customer-receivable-details') && request('mode') !== 'report') }}">Piutang per Customer</a>
                                 <a href="{{ route('keuangan.rekap-kasir') }}" class="{{ $mobileLink(request()->routeIs('keuangan.rekap-kasir*')) }}">Rekap Kas Harian</a>
                                 <a href="{{ route('keuangan.kas-harian') }}" class="{{ $mobileLink(request()->routeIs('keuangan.kas-harian')) }}">Rekap Kasir per User</a>
                                 <a href="{{ route('keuangan.laporan-kasir-harian') }}" class="{{ $mobileLink(request()->routeIs('keuangan.laporan-kasir-harian')) }}">Laporan Kasir Harian</a>
@@ -639,6 +638,7 @@
                                 <a href="{{ route('keuangan.total-tagihan-piutang') }}" class="{{ $mobileLink(request()->routeIs('keuangan.total-tagihan-piutang')) }}">Pembayaran Piutang</a>
                                 <a href="{{ route('keuangan.pembatalan-order') }}" class="{{ $mobileLink(request()->routeIs('keuangan.pembatalan-order')) }}">Pembatalan Pre-Order &amp; Nota</a>
                                 <a href="{{ route('akuntansi.piutang-customer') }}" class="{{ $mobileLink(request()->routeIs('akuntansi.piutang-customer')) }}">Buku Piutang Customer</a>
+                                <a href="{{ route('keuangan.customer-receivable-details') }}" class="{{ $mobileLink(request()->routeIs('keuangan.customer-receivable-details') && request('mode') !== 'report') }}">Piutang per Customer</a>
                             @endcan
                             @can('pengeluaran.view')
                                 <a href="{{ route('pengeluaran.index') }}" class="{{ $mobileLink(request()->routeIs('pengeluaran.*')) }}">Pengeluaran</a>
