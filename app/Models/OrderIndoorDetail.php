@@ -94,9 +94,9 @@ class OrderIndoorDetail extends Model
             return $produk->kategori->NmDivs;
         }
 
-        // Produk artwork yang divisinya tak terbaca dikumpulkan di "Artwork";
-        // selain itu tetap null agar tampil sebagai "Tanpa Divisi".
-        return $this->isArtwork() || $this->produkArtwork ? 'Artwork' : null;
+        // Item tanpa divisi terbaca dikumpulkan di grup "Artwork & Sublime"
+        // (label tampilan saja, permintaan user).
+        return null;
     }
 
     public function orderTypeSlug(): string

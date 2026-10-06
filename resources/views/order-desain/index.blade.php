@@ -205,7 +205,7 @@
                             @php
                                 $groupedIndoorItems = $indoorItems->flatten(1)
                                     ->groupBy($groupBy === 'division'
-                                        ? fn ($item) => $item->produk?->kategori?->NmDivs ?: 'Tanpa Divisi'
+                                        ? fn ($item) => $item->divisionName() ?: 'Artwork & Sublime'
                                         : fn ($item) => $item->NmProd ?: ($item->produk?->NmProd ?: 'Tanpa Produk'))
                                     ->sortKeys(SORT_NATURAL | SORT_FLAG_CASE);
                             @endphp
