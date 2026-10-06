@@ -21,7 +21,7 @@
     $groupedItems = $type === 'indoor' && $groupBy !== 'order'
         ? $itemGroups->flatten(1)
             ->groupBy($groupBy === 'division'
-                ? fn ($item) => $item->produk?->kategori?->NmDivs ?: 'Tanpa Divisi'
+                ? fn ($item) => $item->divisionName() ?: 'Tanpa Divisi'
                 : fn ($item) => $item->NmProd ?: ($item->produk?->NmProd ?: 'Tanpa Produk'))
             ->sortKeys(SORT_NATURAL | SORT_FLAG_CASE)
         : null;

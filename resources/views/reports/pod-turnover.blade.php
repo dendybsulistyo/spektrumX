@@ -1,5 +1,5 @@
 <x-app-layout>
-    <x-slot name="header"><h2 class="font-semibold text-xl text-gray-800">Laporan Omzet POD Spektrum</h2></x-slot>
+    <x-slot name="header"><h2 class="font-semibold text-xl text-gray-800">Laporan Omzet Kertas POD Spektrum</h2></x-slot>
 
     <style>
         .pod-report { color:#111827; }
@@ -37,7 +37,7 @@
 
             <section class="bg-white p-5 shadow-sm">
                 <div class="mb-4 text-center">
-                    <h1 class="text-base font-bold">LAPORAN OMZET POD SPEKTRUM</h1>
+                    <h1 class="text-base font-bold">LAPORAN OMZET KERTAS POD SPEKTRUM</h1>
                     <p class="text-sm">Dari Tanggal: {{ \Carbon\Carbon::parse($from)->translatedFormat('d F Y') }} s/d {{ \Carbon\Carbon::parse($to)->translatedFormat('d F Y') }}</p>
                 </div>
                 <table>
@@ -46,7 +46,7 @@
                     @forelse ($rows as $row)
                         <tr><td>{{ $row->product }}</td><td class="number">{{ number_format($row->quantity, 0, ',', '.') }}</td></tr>
                     @empty
-                        <tr><td colspan="2" class="text-center" style="padding:28px">Belum ada transaksi POD pada periode ini.</td></tr>
+                        <tr><td colspan="2" class="text-center" style="padding:28px">Belum ada transaksi kertas POD pada periode ini.</td></tr>
                     @endforelse
                     </tbody>
                     <tfoot class="font-bold"><tr><td>TOTAL</td><td class="number">{{ number_format($total, 0, ',', '.') }}</td></tr></tfoot>

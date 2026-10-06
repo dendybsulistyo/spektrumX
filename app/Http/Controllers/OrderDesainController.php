@@ -61,7 +61,7 @@ class OrderDesainController extends Controller
             'indoor' => $showIndoor,
             'outdoor' => $showOutdoor,
             'artwork' => false,
-        ], indoorWith: ['order.customer', 'produk.kategori'], outdoorWith: ['order.customer', 'order.cancelRequestedBy', 'order.createdBy']);
+        ], indoorWith: ['order.customer', 'produk.kategori', 'produkArtwork.kategori'], outdoorWith: ['order.customer', 'order.cancelRequestedBy', 'order.createdBy']);
 
         $indoorItems = $itemsByType['indoor'] ?? collect();
 

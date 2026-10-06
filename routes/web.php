@@ -44,6 +44,7 @@ use App\Http\Controllers\OrderCommentController;
 use App\Http\Controllers\OrderDesainController;
 use App\Http\Controllers\OrderDocumentController;
 use App\Http\Controllers\OrderFinishingController;
+use App\Http\Controllers\OrderFinancialAdjustmentController;
 use App\Http\Controllers\OrderIndoorController;
 use App\Http\Controllers\OrderOutdoorController;
 use App\Http\Controllers\OrderQcController;
@@ -134,6 +135,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/report/omzet-ctp', [ReportController::class, 'ctpTurnover'])->name('report.ctp-turnover');
         Route::get('/report/order-outdoor', [ReportController::class, 'outdoorOrders'])->name('report.outdoor-orders');
         Route::get('/report/order-customer-lunas', [ReportController::class, 'paidOrdersByCustomer'])->name('report.paid-orders-by-customer');
+        Route::get('/report/nota-invoice-customer', [ReportController::class, 'allOrdersByCustomer'])->name('report.all-orders-by-customer');
         Route::get('/report/order-belum-invoice', [ReportController::class, 'uninvoicedOrders'])->name('report.uninvoiced-orders');
         Route::get('/report/potongan-penjualan', [ReportController::class, 'salesDiscounts'])->name('report.sales-discounts');
         Route::get('/akuntansi/akun', [AkunController::class, 'index'])->name('akuntansi.akun.index');
@@ -162,6 +164,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/keuangan/laporan-kasir-harian/excel', [KeuanganController::class, 'exportLaporanKasirHarianExcel'])->name('keuangan.laporan-kasir-harian.excel');
         Route::get('/keuangan/penyesuaian-kas', [CashAdjustmentController::class, 'index'])->name('keuangan.cash-adjustments.index');
         Route::get('/keuangan/potongan-penjualan-akhir', [FinalSalesDiscountController::class, 'index'])->name('keuangan.final-sales-discounts.index');
+        Route::get('/keuangan/penyesuaian-nota-dp', [OrderFinancialAdjustmentController::class, 'index'])->name('keuangan.order-adjustments.index');
+        Route::get('/akuntansi/pembatalan-order', [KeuanganController::class, 'pembatalanOrder'])->name('keuangan.pembatalan-order');
         Route::get('/keuangan/rekap-kasir/{kasir}/customer', [KeuanganController::class, 'rekapKasirCustomer'])->name('keuangan.rekap-kasir.customer');
         Route::get('/keuangan/rekap-customer', [KeuanganController::class, 'rekapCustomer'])->name('keuangan.rekap-customer');
         Route::get('/keuangan/piutang', [KeuanganController::class, 'piutang'])->name('keuangan.piutang');
@@ -191,6 +195,7 @@ Route::middleware('auth')->group(function () {
     Route::middleware('permission:keuangan.pengaturan')->group(function () {
         Route::post('/keuangan/penyesuaian-kas', [CashAdjustmentController::class, 'store'])->name('keuangan.cash-adjustments.store');
         Route::post('/keuangan/potongan-penjualan-akhir', [FinalSalesDiscountController::class, 'store'])->name('keuangan.final-sales-discounts.store');
+        Route::post('/keuangan/penyesuaian-nota-dp', [OrderFinancialAdjustmentController::class, 'store'])->name('keuangan.order-adjustments.store');
         Route::post('/keuangan/laporan-ppn/draft', [KeuanganController::class, 'simpanDraftPpn'])->name('keuangan.laporan-ppn.draft');
         Route::post('/keuangan/laporan-ppn/{laporanPpnFinal}/finalkan', [KeuanganController::class, 'finalkanPpn'])->name('keuangan.laporan-ppn.finalkan');
     });
@@ -307,7 +312,7 @@ Route::middleware('auth')->group(function () {
     Route::middleware('permission:order-indoor.manage')->group(function () {
         Route::resource('order-indoor', OrderIndoorController::class)->only(['create', 'store', 'update', 'destroy'])->names('order-indoor');
     });
-    Route::middleware('permission:order-desain.manage')->group(function () {
+    Route::middleware('permission.any:order-desain.manage,keuangan.view')->group(function () {
         Route::post('/order-indoor/{orderIndoor}/request-cancel', [OrderIndoorController::class, 'requestCancel'])->name('order-indoor.request-cancel');
     });
     Route::middleware('permission:order-indoor.approve-cancel')->group(function () {
@@ -372,7 +377,7 @@ Route::middleware('auth')->group(function () {
     Route::middleware('permission:order-outdoor.manage')->group(function () {
         Route::resource('order-outdoor', OrderOutdoorController::class)->only(['create', 'store', 'update', 'destroy'])->names('order-outdoor');
     });
-    Route::middleware('permission:order-desain.manage')->group(function () {
+    Route::middleware('permission.any:order-desain.manage,keuangan.view')->group(function () {
         Route::post('/order-outdoor/{orderOutdoor}/request-cancel', [OrderOutdoorController::class, 'requestCancel'])->name('order-outdoor.request-cancel');
     });
     Route::middleware('permission:order-outdoor.approve-cancel')->group(function () {

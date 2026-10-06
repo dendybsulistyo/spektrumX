@@ -81,12 +81,14 @@
                                         @else
                                             @can('order-' . $row->order_type . '.approve-cancel')
                                                 <div style="display: inline-flex; flex-direction: column; gap: 4px; align-items: flex-end;">
-                                                    <form method="POST" action="{{ route('order-' . $row->order_type . '.approve-cancel', $row->id) }}"
-                                                          onsubmit="return confirm('Setujui pembatalan order {{ $row->NoOrder }} dengan nota pengganti? Nota lama akan dihanguskan.')">
-                                                        @csrf
-                                                        <input type="hidden" name="resolution" value="nota_pengganti">
-                                                        <button type="submit" class="in-btn">Setujui + Nota Pengganti</button>
-                                                    </form>
+                                                    @if ($row->status_bayar !== 'belum_bayar')
+                                                        <form method="POST" action="{{ route('order-' . $row->order_type . '.approve-cancel', $row->id) }}"
+                                                              onsubmit="return confirm('Setujui pembatalan order {{ $row->NoOrder }} dengan nota pengganti? Nota lama akan dihanguskan.')">
+                                                            @csrf
+                                                            <input type="hidden" name="resolution" value="nota_pengganti">
+                                                            <button type="submit" class="in-btn">Setujui + Nota Pengganti</button>
+                                                        </form>
+                                                    @endif
                                                     <form method="POST" action="{{ route('order-' . $row->order_type . '.approve-cancel', $row->id) }}"
                                                           onsubmit="return confirm('Setujui pembatalan TOTAL order {{ $row->NoOrder }}? Tidak akan ada nota pengganti.')">
                                                         @csrf

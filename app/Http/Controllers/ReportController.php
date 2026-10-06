@@ -139,6 +139,8 @@ class ReportController extends Controller
 
         $rows = DB::table('order_indoor_detail as detail')
             ->join('order_indoor as orders', 'orders.id', '=', 'detail.order_indoor_id')
+            // Hanya divisi 03 "Paper/Media POD" (kertas).
+            ->whereIn('detail.KdProd', DB::table('produk_indoor')->where('KdDivs', '03')->select('KdProd'))
             ->whereBetween('orders.TglOrder', [$from, $to])
             ->where('orders.status', '!=', 'batal')
             ->selectRaw("COALESCE(NULLIF(TRIM(detail.NmProd), ''), NULLIF(TRIM(detail.Judul), ''), detail.KdProd) AS product")
@@ -241,6 +243,77 @@ class ReportController extends Controller
             'grandTotal' => (float) $orders->where('status', '!=', 'batal')->sum(fn ($order) => $order->diskonStatus() === 'approved' ? $order->totalSetelahDiskon() : $order->total),
             'totalAdvance' => (float) $orders->where('status', '!=', 'batal')->sum('jumlah_dibayar'),
         ]);
+    }
+
+    public function allOrdersByCustomer(Request $request): View
+    {
+        $from = $request->date('dari')?->format('Y-m-d') ?? now()->startOfMonth()->format('Y-m-d');
+        $to = $request->date('sampai')?->format('Y-m-d') ?? now()->format('Y-m-d');
+        if ($from > $to) {
+            [$from, $to] = [$to, $from];
+        }
+
+        $customerCode = $request->string('customer')->trim()->toString();
+        $paymentStatus = $request->string('status_bayar')->trim()->toString();
+        $allowedStatuses = ['belum_bayar', 'dp', 'hutang', 'lunas'];
+        if (! in_array($paymentStatus, $allowedStatuses, true)) {
+            $paymentStatus = '';
+        }
+
+        $customers = Customer::query()->with('limit')->orderBy('NmCust')->get();
+        $selectedCustomer = $customerCode !== '' ? $customers->firstWhere('KdCust', $customerCode) : null;
+        $rows = collect();
+
+        if ($selectedCustomer) {
+            foreach (['indoor' => OrderIndoor::class, 'outdoor' => OrderOutdoor::class, 'artwork' => OrderArtwork::class] as $type => $model) {
+                $orders = $model::query()
+                    ->where('KdCust', $customerCode)
+                    ->where('status', '!=', 'batal')
+                    ->whereBetween('TglOrder', [$from, $to])
+                    ->when($paymentStatus !== '', fn ($query) => $query->where('status_bayar', $paymentStatus))
+                    ->orderBy('TglOrder')->orderBy('NoOrder')->get();
+
+                $invoices = DB::table('order_documents')
+                    ->where('kind', 'inv')->where('order_type', $type)
+                    ->whereIn('order_id', $orders->pluck('id'))
+                    ->orderByDesc('sequence')->get(['order_id', 'number', 'issued_at'])
+                    ->unique('order_id')->keyBy('order_id');
+
+                foreach ($orders as $order) {
+                    $invoice = $invoices->get($order->id);
+                    $total = $order->diskonStatus() === 'approved'
+                        ? (float) $order->totalSetelahDiskon()
+                        : (float) $order->total;
+                    $paid = max(0, (float) $order->jumlah_dibayar);
+                    $remaining = $order->status_bayar === 'lunas'
+                        ? 0.0
+                        : max((float) $order->jumlah_piutang, $total - $paid, 0);
+
+                    $rows->push((object) [
+                        'date' => $order->TglOrder,
+                        'type' => ucfirst($type),
+                        'order' => $order->NoOrder,
+                        'invoice' => $invoice?->number,
+                        'invoice_date' => $invoice?->issued_at,
+                        'status' => $order->status_bayar,
+                        'total' => $total,
+                        'paid' => $paid,
+                        'remaining' => $remaining,
+                    ]);
+                }
+            }
+        }
+
+        $rows = $rows->sortBy(fn ($row) => $row->date.'|'.$row->order)->values();
+        $totals = (object) [
+            'total' => (float) $rows->sum('total'),
+            'paid' => (float) $rows->sum('paid'),
+            'remaining' => (float) $rows->sum('remaining'),
+        ];
+
+        return view('reports.all-orders-by-customer', compact(
+            'from', 'to', 'customers', 'selectedCustomer', 'customerCode', 'paymentStatus', 'rows', 'totals'
+        ));
     }
 
     public function paidOrdersByCustomer(Request $request): View

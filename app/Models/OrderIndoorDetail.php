@@ -74,6 +74,25 @@ class OrderIndoorDetail extends Model
         return $this->belongsTo(Produk::class, 'KdProd', 'KdProd');
     }
 
+    public function produkArtwork(): BelongsTo
+    {
+        return $this->belongsTo(HargaArtwork::class, 'KdProd', 'KdProd');
+    }
+
+    /**
+     * Nama divisi untuk tampilan antrean "By Divisi". Item artwork diambil
+     * dari master Artwork; data lama yang tercatat 'indoor' tapi kodenya
+     * hanya ada di master Artwork ikut jatuh ke master Artwork.
+     */
+    public function divisionName(): ?string
+    {
+        $produk = $this->isArtwork()
+            ? $this->produkArtwork
+            : ($this->produk ?? $this->produkArtwork);
+
+        return $produk?->kategori?->NmDivs;
+    }
+
     public function orderTypeSlug(): string
     {
         return 'indoor';

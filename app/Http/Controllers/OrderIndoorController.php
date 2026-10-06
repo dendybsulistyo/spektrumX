@@ -220,7 +220,7 @@ class OrderIndoorController extends Controller
                 ." — alasan: {$data['cancel_reason']}. Menunggu persetujuan."
         );
 
-        return redirect()->route('order-desain.index', ['tab' => 'indoor'])->with('status', 'Pengajuan pembatalan order dikirim, menunggu persetujuan Admin/Admin Kasir.');
+        return back()->with('status', 'Pengajuan pembatalan order dikirim, menunggu persetujuan Admin/Admin Kasir.');
     }
 
     /**
@@ -238,6 +238,12 @@ class OrderIndoorController extends Controller
         ]);
 
         $isReplacement = $data['resolution'] === 'nota_pengganti';
+
+        abort_if(
+            $isReplacement && $orderIndoor->status_bayar === 'belum_bayar',
+            422,
+            'Pre-order yang belum dibayar hanya dapat dibatalkan total.'
+        );
 
         DB::transaction(function () use ($orderIndoor, $isReplacement) {
             $orderIndoor = $orderIndoor->newQuery()->lockForUpdate()->findOrFail($orderIndoor->id);

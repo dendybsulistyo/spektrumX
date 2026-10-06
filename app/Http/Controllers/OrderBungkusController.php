@@ -54,7 +54,7 @@ class OrderBungkusController extends Controller
     {
         $itemsByType = $this->stageProgress->itemsAtStage(self::STAGE, [
             'indoor' => true, 'outdoor' => true,
-        ], indoorWith: ['order.customer', 'produk.kategori'], outdoorWith: ['order.customer', 'order.cancelRequestedBy']);
+        ], indoorWith: ['order.customer', 'produk.kategori', 'produkArtwork.kategori'], outdoorWith: ['order.customer', 'order.cancelRequestedBy']);
 
         $indoorItems = $itemsByType['indoor'] ?? collect();
         $outdoorItems = $itemsByType['outdoor'] ?? collect();

@@ -12,6 +12,7 @@ use App\Models\OrderArtwork;
 use App\Models\OrderIndoor;
 use App\Models\OrderOutdoor;
 use App\Models\OrderPayment;
+use App\Models\OrderReworkRequest;
 use App\Models\PengaturanKeuangan;
 use App\Models\User;
 use App\Services\OrderDocumentService;
@@ -27,6 +28,84 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class KeuanganController extends Controller
 {
+    /** Pusat pengajuan dan pemantauan pembatalan pre-order/nota Indoor dan Outdoor. */
+    public function pembatalanOrder(): View
+    {
+        $models = [
+            'indoor' => OrderIndoor::class,
+            'outdoor' => OrderOutdoor::class,
+        ];
+        $preOrders = collect();
+        $pending = collect();
+        $history = collect();
+
+        foreach ($models as $type => $model) {
+            $decorate = function ($order) use ($type) {
+                $order->order_type = $type;
+                $order->jenis_pembatalan = $order->status_bayar === 'belum_bayar' ? 'Pre-Order' : 'Nota';
+
+                return $order;
+            };
+
+            $model::query()->with('customer')
+                ->where('status_bayar', 'belum_bayar')
+                ->where('status', '!=', 'batal')
+                ->whereNull('cancel_requested_at')
+                ->latest('TglOrder')->limit(100)->get()
+                ->each(fn ($order) => $preOrders->push($decorate($order)));
+
+            $model::query()->with(['customer', 'cancelRequestedBy'])
+                ->whereNotNull('cancel_requested_at')
+                ->whereNull('cancel_approved_at')
+                ->oldest('cancel_requested_at')->get()
+                ->each(fn ($order) => $pending->push($decorate($order)));
+
+            $model::query()->with(['customer', 'cancelRequestedBy', 'cancelApprovedBy'])
+                ->whereNotNull('cancel_approved_at')
+                ->latest('cancel_approved_at')->limit(100)->get()
+                ->each(fn ($order) => $history->push($decorate($order)));
+        }
+
+        $reworkRequests = OrderReworkRequest::query()
+            ->where('action', 'batal')
+            ->whereIn('order_type', array_keys($models))
+            ->whereIn('status', ['pending', 'approved'])
+            ->with(['requestedBy', 'resolvedBy'])
+            ->latest('requested_at')->limit(200)->get();
+        $reworkOrders = collect();
+
+        foreach ($reworkRequests->groupBy('order_type') as $type => $requests) {
+            $models[$type]::query()->with('customer')
+                ->whereIn('id', $requests->pluck('order_id')->unique())->get()
+                ->each(fn ($order) => $reworkOrders->put($type.':'.$order->id, $order));
+        }
+
+        foreach ($reworkRequests as $request) {
+            $order = $reworkOrders->get($request->order_type.':'.$request->order_id);
+            if (! $order) {
+                continue;
+            }
+
+            $order->order_type = $request->order_type;
+            $order->jenis_pembatalan = 'Nota';
+            $order->central_kind = 'rework_batal';
+            $order->cancellation_request_id = $request->id;
+            $order->cancel_reason = $request->reason;
+            $order->cancel_requested_at = $request->requested_at;
+            $order->setRelation('cancelRequestedBy', $request->requestedBy);
+            $order->cancel_approved_at = $request->resolved_at;
+            $order->setRelation('cancelApprovedBy', $request->resolvedBy);
+
+            ($request->status === 'pending' ? $pending : $history)->push($order);
+        }
+
+        return view('keuangan.pembatalan-order', [
+            'preOrders' => $preOrders->sortByDesc('TglOrder')->values(),
+            'pending' => $pending->sortBy('cancel_requested_at')->values(),
+            'history' => $history->sortByDesc(fn ($order) => $order->cancel_approved_at?->timestamp ?? 0)->values(),
+        ]);
+    }
+
     /**
      * Rekap harian per operator kasir. Nilai nota dicatat sebagai Debet;
      * pembayaran non-tunai mendapat pasangan Kredit sehingga selisih akhir
