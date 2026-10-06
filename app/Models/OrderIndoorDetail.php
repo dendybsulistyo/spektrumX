@@ -86,6 +86,12 @@ class OrderIndoorDetail extends Model
      */
     public function divisionName(): ?string
     {
+        // Semua Print Only (1801 Dye Sublimation, 2701 DTF) dikerjakan satu
+        // tim, jadi di antrean disatukan ke Dye Sublimation. Master tetap.
+        if (in_array($this->KdProd, ['1801', '2701'], true)) {
+            return 'Dye Sublimation';
+        }
+
         $produk = $this->isArtwork()
             ? $this->produkArtwork
             : ($this->produk ?? $this->produkArtwork);
@@ -94,7 +100,7 @@ class OrderIndoorDetail extends Model
             return $produk->kategori->NmDivs;
         }
 
-        // Item tanpa divisi terbaca dikumpulkan di grup "Artwork & Sublime"
+        // Item tanpa divisi terbaca dikumpulkan di grup "Artwork"
         // (label tampilan saja, permintaan user).
         return null;
     }
