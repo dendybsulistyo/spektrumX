@@ -58,14 +58,35 @@ class LaporanAkuntansiController extends Controller
 
         abort_unless($account, 404, 'Kode akun tidak ditemukan.');
 
+        // Riwayat koreksi tetap tersimpan di tabel jurnal untuk audit, tetapi
+        // Buku Besar hanya menampilkan posting pembelian yang terakhir berlaku.
+        $currentPurchaseJournals = AccountingPurchase::query()
+            ->whereNotNull('no_trans_jurnal')
+            ->get(['nomor_bukti', 'no_trans_jurnal'])
+            ->mapWithKeys(fn (AccountingPurchase $purchase) => [
+                mb_substr($purchase->nomor_bukti, 0, 20) => $purchase->no_trans_jurnal,
+            ]);
+        $correctedPurchaseProofs = JurnalEntry::query()
+            ->where('KetMT', 'like', 'Koreksi pembelian %')
+            ->pluck('Bukti')
+            ->flip();
+        $onlyCurrentPosting = function (JurnalEntry $entry) use ($currentPurchaseJournals, $correctedPurchaseProofs): bool {
+            $currentJournal = $currentPurchaseJournals->get($entry->Bukti);
+
+            return $currentJournal
+                ? $entry->NoTrans === $currentJournal
+                : ! $correctedPurchaseProofs->has($entry->Bukti);
+        };
+
         $opening = JurnalEntry::query()->where('NoAkun', $account->NoAkun)->where('TgTrans', '<', $dari)
-            ->selectRaw('COALESCE(SUM(Debet), 0) debet, COALESCE(SUM(Kredit), 0) kredit')->first();
+            ->get()->filter($onlyCurrentPosting);
         $saldoAwal = DB::table('accounting_opening_balances')
             ->where('NoAkun', $account->NoAkun)->where('kode_bantu', '')
             ->where('periode', '<=', substr($dari, 0, 7))
             ->selectRaw('COALESCE(SUM(debet), 0) debet, COALESCE(SUM(kredit), 0) kredit')->first();
-        $saldo = $this->balance((float) $opening->debet + (float) $saldoAwal->debet, (float) $opening->kredit + (float) $saldoAwal->kredit, $account->TipeDK);
+        $saldo = $this->balance((float) $opening->sum('Debet') + (float) $saldoAwal->debet, (float) $opening->sum('Kredit') + (float) $saldoAwal->kredit, $account->TipeDK);
         $entries = JurnalEntry::query()->where('NoAkun', $account->NoAkun)->whereBetween('TgTrans', [$dari, $sampai])->orderBy('TgTrans')->orderBy('NoTrans')->get()
+            ->filter($onlyCurrentPosting)
             ->map(function (JurnalEntry $entry) use (&$saldo, $account) {
                 $saldo += $this->balance((float) $entry->Debet, (float) $entry->Kredit, $account->TipeDK);
                 $entry->saldo = $saldo;
