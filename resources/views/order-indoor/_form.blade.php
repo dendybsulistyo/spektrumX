@@ -17,11 +17,13 @@
     $produkGabungan = $produkList->map(fn ($p) => [
         'key' => 'indoor|'.$p->KdProd, 'KdProd' => $p->KdProd, 'jenis_produk' => 'indoor',
         'NmProd' => $p->NmProd, 'HargaStd' => $p->HargaStd, 'HargaMin' => $p->HargaMin,
-        'isPjLb' => $p->isPjLb, 'Satuan' => $p->Satuan, 'KdDivs' => $p->KdDivs,
+        'isPjLb' => $p->isPjLb, 'isHPilih' => $p->isHPilih, 'Satuan' => $p->Satuan, 'KdDivs' => $p->KdDivs,
+        'tiers' => $p->hargaBertingkat->map(fn ($tier) => ['min' => $tier->BatasA, 'max' => $tier->BatasZ, 'price' => $tier->Harga])->values(),
     ])->concat(($artworkProdukList ?? collect())->map(fn ($p) => [
         'key' => 'artwork|'.$p->KdProd, 'KdProd' => $p->KdProd, 'jenis_produk' => 'artwork',
         'NmProd' => $p->NmProd, 'HargaStd' => $p->HargaStd, 'HargaMin' => $p->HargaMin,
-        'isPjLb' => $p->isPjLb, 'Satuan' => $p->Satuan, 'KdDivs' => $p->KdDivs,
+        'isPjLb' => $p->isPjLb, 'isHPilih' => $p->isHPilih, 'Satuan' => $p->Satuan, 'KdDivs' => $p->KdDivs,
+        'tiers' => $p->hargaBertingkat->map(fn ($tier) => ['min' => $tier->BatasA, 'max' => $tier->BatasZ, 'price' => $tier->Harga])->values(),
     ]));
 @endphp
 
@@ -29,7 +31,7 @@
         items: {{ old('items') ? json_encode(old('items')) : $initialItems->toJson() }},
         produkMap: @js($produkGabungan->keyBy('key')->map(fn ($p) => [
             'NmProd' => $p['NmProd'], 'HargaStd' => $p['HargaStd'], 'HargaMin' => $p['HargaMin'],
-            'isPjLb' => $p['isPjLb'], 'Satuan' => $p['Satuan'],
+            'isPjLb' => $p['isPjLb'], 'isHPilih' => $p['isHPilih'], 'Satuan' => $p['Satuan'], 'tiers' => $p['tiers'],
         ])),
         produkOptions: @js($produkGabungan->map(fn ($p) => [
             'KdProd' => $p['KdProd'], 'jenis_produk' => $p['jenis_produk'], 'NmProd' => $p['NmProd'], 'KdDivs' => $p['KdDivs'],
@@ -73,6 +75,11 @@
             const x = item.jenis_produk === 'artwork' ? this.nilaiXArtwork : this.nilaiX;
             return ((p * q * tb) / 10) + x;
         },
+        unitPrice(p, qty) {
+            if (Number(p.isHPilih) !== 1) return Number(p.HargaStd) || 0;
+            const tier = (p.tiers || []).find(t => qty >= Number(t.min) && (Number(t.max) === 0 || qty <= Number(t.max)));
+            return tier ? Number(tier.price) : (Number(p.HargaStd) || 0);
+        },
         syncPotongQty(index) {
             const item = this.items[index];
             item.Qty = Math.round(this.potongTotal(item));
@@ -81,13 +88,14 @@
             const p = this.produkMap[this.produkKey(item)];
             if (!p) return 0;
             const qty = Number(item.Qty) || 0;
+            const unitPrice = this.unitPrice(p, qty);
             let raw;
             if (p.isPjLb === 4) {
                 raw = this.potongTotal(item);
             } else if (p.isPjLb === 2) {
-                raw = p.HargaStd * (Number(item.Panjang) || 0) * (Number(item.Lebar) || 0) * qty;
+                raw = unitPrice * (Number(item.Panjang) || 0) * (Number(item.Lebar) || 0) * qty;
             } else {
-                raw = p.HargaStd * qty;
+                raw = unitPrice * qty;
             }
             return Math.max(raw, p.HargaMin || 0);
         },

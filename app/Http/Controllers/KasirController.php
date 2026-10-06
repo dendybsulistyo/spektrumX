@@ -144,6 +144,18 @@ class KasirController extends Controller
         $order->load(['customer.limit', 'replaces', 'customerService']);
 
         $rawItems = $type === 'indoor' ? $order->detailItems() : $order->items;
+        if ($order->status_bayar === 'belum_bayar' && $this->pricingService->containsTieredProduct($type, $rawItems)) {
+            $total = $type === 'indoor'
+                ? $this->pricingService->totalIndoor($order)
+                : $this->pricingService->totalArtwork($order);
+
+            if (abs((float) $order->total - $total) >= 0.01) {
+                $order->update(['total' => $total]);
+                $this->pricingService->snapshotLinePrices($type, $order);
+                $order->refresh()->load(['customer.limit', 'replaces', 'customerService']);
+                $rawItems = $type === 'indoor' ? $order->detailItems() : $order->items;
+            }
+        }
         $items = $this->pricingService->detailedLineItems($type, $order, $rawItems);
 
         $pendingRework = OrderReworkRequest::forOrder($type, $id)->pending()->exists();

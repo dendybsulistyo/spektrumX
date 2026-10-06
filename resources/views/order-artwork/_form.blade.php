@@ -17,7 +17,9 @@
             'HargaStd' => $p->HargaStd,
             'HargaMin' => $p->HargaMin,
             'isPjLb' => $p->isPjLb,
+            'isHPilih' => $p->isHPilih,
             'Satuan' => $p->Satuan,
+            'tiers' => $p->hargaBertingkat->map(fn ($tier) => ['min' => $tier->BatasA, 'max' => $tier->BatasZ, 'price' => $tier->Harga])->values(),
         ]])),
         produkOptions: @js($produkList->map(fn ($p) => ['KdProd' => $p->KdProd, 'NmProd' => $p->NmProd, 'KdDivs' => $p->KdDivs])),
         kategoriList: @js($kategoriList->map(fn ($k) => ['KdDivs' => $k->KdDivs, 'NmDivs' => $k->NmDivs])),
@@ -54,6 +56,11 @@
             const tb = Number(item.TebalKertas) || 0;
             return ((p * q * tb) / 10) + this.nilaiX;
         },
+        unitPrice(p, qty) {
+            if (Number(p.isHPilih) !== 1) return Number(p.HargaStd) || 0;
+            const tier = (p.tiers || []).find(t => qty >= Number(t.min) && (Number(t.max) === 0 || qty <= Number(t.max)));
+            return tier ? Number(tier.price) : (Number(p.HargaStd) || 0);
+        },
         syncPotongQty(index) {
             const item = this.items[index];
             item.Qty = Math.round(this.potongTotal(item));
@@ -62,13 +69,14 @@
             const p = this.produkMap[item.KdProd];
             if (!p) return 0;
             const qty = Number(item.Qty) || 0;
+            const unitPrice = this.unitPrice(p, qty);
             let raw;
             if (p.isPjLb === 4) {
                 raw = this.potongTotal(item);
             } else if (p.isPjLb === 2) {
-                raw = p.HargaStd * (Number(item.Panjang) || 0) * (Number(item.Lebar) || 0) * qty;
+                raw = unitPrice * (Number(item.Panjang) || 0) * (Number(item.Lebar) || 0) * qty;
             } else {
-                raw = p.HargaStd * qty;
+                raw = unitPrice * qty;
             }
             return Math.max(raw, p.HargaMin || 0);
         },

@@ -73,7 +73,7 @@ class OrderArtworkController extends Controller
             'replacementOrder' => $orderArtwork,
             'selectedCustomer' => $orderArtwork->customer,
             'items' => $orderArtwork->items,
-            'produkList' => HargaArtwork::orderBy('NoUrut')->get(),
+            'produkList' => HargaArtwork::with('hargaBertingkat')->orderBy('NoUrut')->get(),
             'kategoriList' => Kategori::whereHas('produkArtwork')->orderBy('NoUrut')->get(),
             'nilaiX' => KonfigurasiJasaPotongArtwork::current()->nilai_x,
         ]);
@@ -125,7 +125,7 @@ class OrderArtworkController extends Controller
             'order' => $orderArtwork,
             'items' => $orderArtwork->items,
             'selectedCustomer' => $orderArtwork->customer,
-            'produkList' => HargaArtwork::orderBy('NoUrut')->get(),
+            'produkList' => HargaArtwork::with('hargaBertingkat')->orderBy('NoUrut')->get(),
             'kategoriList' => Kategori::whereHas('produkArtwork')->orderBy('NoUrut')->get(),
             'nilaiX' => KonfigurasiJasaPotongArtwork::current()->nilai_x,
         ]);

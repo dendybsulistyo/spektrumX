@@ -7,6 +7,7 @@ use App\Http\Controllers\KeuanganController;
 use App\Models\OrderDocument;
 use App\Models\OrderIndoor;
 use App\Models\OrderIndoorDetail;
+use App\Models\Produk;
 use App\Services\AccountingService;
 use App\Services\CustomerCreditService;
 use App\Services\DeliveryOrderService;
@@ -66,6 +67,20 @@ class OrderDocumentsTest extends TestCase
         Schema::create('harga_artwork', function (Blueprint $t) {
             $t->id();
             $t->string('KdProd')->unique();
+        });
+        Schema::create('produk_indoor', function (Blueprint $t) {
+            $t->id();
+            $t->string('KdProd')->unique();
+            $t->decimal('HargaStd')->default(0);
+            $t->decimal('HargaMin')->default(0);
+            $t->integer('isPjLb')->default(1);
+            $t->integer('isHPilih')->default(2);
+        });
+        Schema::create('harga_bertingkat', function (Blueprint $t) {
+            $t->string('KdProd');
+            $t->integer('BatasA');
+            $t->integer('BatasZ')->default(0);
+            $t->decimal('Harga');
         });
         Schema::create('customers', function (Blueprint $t) {
             $t->id();
@@ -149,6 +164,25 @@ class OrderDocumentsTest extends TestCase
         ]);
 
         $this->assertSame(45000.0, app(OrderPricingService::class)->totalIndoor($order->fresh()));
+    }
+
+    public function test_indoor_tiered_price_uses_matching_quantity_range(): void
+    {
+        DB::table('produk_indoor')->insert([
+            'KdProd' => '0101', 'HargaStd' => 1500, 'HargaMin' => 5000,
+            'isPjLb' => 1, 'isHPilih' => 1,
+        ]);
+        DB::table('harga_bertingkat')->insert([
+            ['KdProd' => '0101', 'BatasA' => 1, 'BatasZ' => 4, 'Harga' => 1600],
+            ['KdProd' => '0101', 'BatasA' => 100, 'BatasZ' => 0, 'Harga' => 1200],
+        ]);
+
+        $produk = Produk::where('KdProd', '0101')->firstOrFail();
+        $pricing = app(OrderPricingService::class);
+
+        $this->assertSame(1600.0, $pricing->unitPriceForQuantity($produk, 4));
+        $this->assertSame(1200.0, $pricing->unitPriceForQuantity($produk, 154));
+        $this->assertSame(184800.0, $pricing->lineTotalIndoor($produk, 0, 0, 154));
     }
 
     public function test_two_pickups_create_two_dos_and_retry_does_not_move_stock_twice(): void

@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\BahanCetakOutdoor;
 use App\Models\HargaArtwork;
+use App\Models\HargaBertingkat;
 use App\Models\HargaCetakOutdoor;
 use App\Models\HargaCetakOutdoorKhusus;
 use App\Models\KonfigurasiJasaPotong;
@@ -28,6 +29,8 @@ class OrderPricingService
     private array $artworkCache = [];
 
     private array $outdoorSpecialPriceCache = [];
+
+    private array $tierPriceCache = [];
 
     private ?float $cuttingValue = null;
 
@@ -63,9 +66,10 @@ class OrderPricingService
             return Rupiah::bulatkan(max($raw, $produk->HargaMin));
         }
 
+        $unitPrice = $this->unitPriceForQuantity($produk, $qty);
         $raw = $produk->isAreaPriced()
-            ? $produk->HargaStd * $panjang * $lebar * $qty
-            : $produk->HargaStd * $qty;
+            ? $unitPrice * $panjang * $lebar * $qty
+            : $unitPrice * $qty;
 
         return Rupiah::bulatkan(max($raw, $produk->HargaMin));
     }
@@ -190,9 +194,10 @@ class OrderPricingService
             return Rupiah::bulatkan(max($raw, $harga->HargaMin));
         }
 
+        $unitPrice = $this->unitPriceForQuantity($harga, $qty);
         $raw = $harga->isAreaPriced()
-            ? $harga->HargaStd * $panjang * $lebar * $qty
-            : $harga->HargaStd * $qty;
+            ? $unitPrice * $panjang * $lebar * $qty
+            : $unitPrice * $qty;
 
         return Rupiah::bulatkan(max($raw, $harga->HargaMin));
     }
@@ -270,7 +275,7 @@ class OrderPricingService
                                     $item->PisauTurun, $item->JumlahKertas, $item->TebalKertas,
                                 )
                                 : 0,
-                            $harga && $nilaiX === null ? $harga->HargaStd : null,
+                            $harga && $nilaiX === null ? $this->unitPriceForQuantity($harga, (int) $item->Qty) : null,
                             $harga?->kategori?->NmDivs,
                             $this->produkNama($item),
                             $harga ? $this->produkBreakdown($item, $nilaiX) : null,
@@ -288,7 +293,7 @@ class OrderPricingService
                                 $item->PisauTurun, $item->JumlahKertas, $item->TebalKertas,
                             )
                             : 0,
-                        $produk && $nilaiX === null ? $produk->HargaStd : null,
+                        $produk && $nilaiX === null ? $this->unitPriceForQuantity($produk, (int) $item->Qty) : null,
                         $produk?->kategori?->NmDivs,
                         $this->produkNama($item),
                         $produk ? $this->produkBreakdown($item, $nilaiX) : null,
@@ -339,7 +344,7 @@ class OrderPricingService
                     return [
                         $item->Judul,
                         $harga ? $this->lineTotalArtwork($harga, $item->Panjang, $item->Lebar, $item->Qty) : 0,
-                        $harga && $nilaiX === null ? $harga->HargaStd : null,
+                        $harga && $nilaiX === null ? $this->unitPriceForQuantity($harga, (int) $item->Qty) : null,
                         $this->produkNama($item),
                         null,
                         $harga ? $this->produkBreakdown($item, $nilaiX) : null,
@@ -430,6 +435,45 @@ class OrderPricingService
             $line->breakdown = null;
 
             return $line;
+        });
+    }
+
+    /** Return the unit price matching the configured quantity range. */
+    public function unitPriceForQuantity(Produk|HargaArtwork $product, int $qty): float
+    {
+        if ((int) $product->isHPilih !== 1 || $qty < 1) {
+            return (float) $product->HargaStd;
+        }
+
+        $cacheKey = $product::class.'|'.$product->KdProd;
+        if (! array_key_exists($cacheKey, $this->tierPriceCache)) {
+            $this->tierPriceCache[$cacheKey] = $product->relationLoaded('hargaBertingkat')
+                ? $product->hargaBertingkat
+                : HargaBertingkat::query()->where('KdProd', $product->KdProd)->orderByDesc('BatasA')->get();
+        }
+
+        $tier = $this->tierPriceCache[$cacheKey]
+            ->sortByDesc('BatasA')
+            ->first(fn (HargaBertingkat $row) => $qty >= (int) $row->BatasA
+                && ((int) $row->BatasZ === 0 || $qty <= (int) $row->BatasZ));
+
+        return $tier ? (float) $tier->Harga : (float) $product->HargaStd;
+    }
+
+    public function containsTieredProduct(string $type, Collection $items): bool
+    {
+        if (! in_array($type, ['indoor', 'artwork'], true)) {
+            return false;
+        }
+
+        return $items->contains(function ($item) use ($type): bool {
+            $isArtwork = $type === 'artwork'
+                || (method_exists($item, 'isArtwork') && $item->isArtwork());
+            $product = $isArtwork
+                ? $this->artwork((string) $item->KdProd)
+                : $this->produk((string) $item->KdProd);
+
+            return (int) ($product?->isHPilih ?? 2) === 1;
         });
     }
 
