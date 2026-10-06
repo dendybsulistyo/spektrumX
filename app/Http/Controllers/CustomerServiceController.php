@@ -148,6 +148,27 @@ class CustomerServiceController extends Controller
         ]);
     }
 
+    public function destroyJobSheet(CustomerServiceJobSheet $jobSheet): RedirectResponse
+    {
+        $deleted = DB::transaction(function () use ($jobSheet): bool {
+            $lockedSheet = CustomerServiceJobSheet::query()->lockForUpdate()->findOrFail($jobSheet->id);
+
+            if ($lockedSheet->claimed_at) {
+                return false;
+            }
+
+            return (bool) $lockedSheet->delete();
+        });
+
+        if (! $deleted) {
+            return to_route('customer-service.job-sheets.index', ['tab' => 'pending'])
+                ->with('error', 'Lembar kerja sudah diambil operator sehingga tidak dapat dihapus.');
+        }
+
+        return to_route('customer-service.job-sheets.index', ['tab' => 'pending'])
+            ->with('status', 'Lembar kerja yang belum diambil berhasil dihapus.');
+    }
+
     public function paymentQueue(): View
     {
         $indoor = OrderIndoor::with(['customer.limit', 'items.produkArtwork'])

@@ -150,6 +150,14 @@
                                                 </form>
                                             @endif
                                         @endcan
+                                        @can('roles.manage')
+                                            <form method="POST" action="{{ route('customer-service.job-sheets.destroy', $sheet) }}"
+                                                  onsubmit="return confirm('Hapus lembar kerja yang belum diambil ini?')">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="rounded border border-red-300 bg-white px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50">Hapus</button>
+                                            </form>
+                                        @endcan
                                     @endif
                                 </div>
                             </td>

@@ -416,6 +416,9 @@ Route::middleware('auth')->group(function () {
         Route::post('/customer-service/indoor/{id}/artwork-prices', [CustomerServiceController::class, 'saveArtworkPrices'])->name('customer-service.artwork-prices.save');
         Route::post('/customer-service/{type}/{id}/forward', [CustomerServiceController::class, 'forward'])->name('customer-service.forward');
     });
+    Route::middleware('permission:roles.manage')->group(function () {
+        Route::delete('/customer-service/job-sheets/{jobSheet}', [CustomerServiceController::class, 'destroyJobSheet'])->name('customer-service.job-sheets.destroy');
+    });
     Route::middleware('permission:kasir.manage')->group(function () {
         Route::post('/kasir/{type}/{id}/bayar', [KasirController::class, 'bayar'])->name('kasir.bayar');
         Route::post('/kasir/{type}/{id}/artwork-price/{detail}', [KasirController::class, 'updateArtworkPrice'])->name('kasir.artwork-price.update');
