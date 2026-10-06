@@ -34,7 +34,7 @@
                     @forelse ($orders as $order)
                         @php $minimumTransfer = ceil(((float) $order->total * 0.5) / 100) * 100; @endphp
                         <tr class="align-middle hover:bg-slate-50/70"
-                            x-data="{ mode: 'payment', raw: '', display: '', total: {{ (float) $order->total }}, minimum: {{ (float) $minimumTransfer }}, customArtwork: {{ $order->is_custom_artwork ? 'true' : 'false' }}, format(event) { this.raw = event.target.value.replace(/\D/g, ''); this.display = this.raw ? 'Rp ' + Number(this.raw).toLocaleString('id-ID') : ''; } }">
+                            x-data="{ mode: 'payment', raw: '', display: '', total: {{ (float) $order->total }}, minimum: {{ (float) $minimumTransfer }}, customArtwork: @js((bool) $order->is_custom_artwork), format(event) { this.raw = event.target.value.replace(/\D/g, ''); this.display = this.raw ? 'Rp ' + Number(this.raw).toLocaleString('id-ID') : ''; } }">
                             <td class="whitespace-nowrap px-4 py-4 text-slate-600">{{ $order->TglOrder?->format('d/m/Y') ?? $order->TglOrder }}</td>
                             <td class="px-4 py-4 font-semibold text-slate-900">{{ $order->NoOrder }}</td>
                             <td class="px-4 py-4"><span class="rounded bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600">{{ ucfirst($order->order_type) }}</span></td>
@@ -52,7 +52,7 @@
                                        class="w-52 rounded border-slate-300 text-sm focus:border-blue-500 focus:ring-blue-500">
                                 <input type="hidden" name="cs_transfer_amount" :value="raw" form="cs-payment-{{ $order->order_type }}-{{ $order->id }}">
                                 <input type="hidden" name="cs_payment_type" :value="mode === 'debt' ? 'hutang' : ''" form="cs-payment-{{ $order->order_type }}-{{ $order->id }}">
-                                <p x-show="mode === 'payment'" class="mt-1 text-[11px] text-slate-400">Minimal 50%: Rp {{ number_format($minimumTransfer, 0, ',', '.') }}@if($order->is_custom_artwork) · Harga Artwork custom@endif</p>
+                                <p x-show="mode === 'payment'" class="mt-1 text-[11px] text-slate-400">Minimal 50%: Rp {{ number_format($minimumTransfer, 0, ',', '.') }}{{ $order->is_custom_artwork ? ' · Harga Artwork custom' : '' }}</p>
                                 <p x-show="mode === 'debt'" x-cloak class="mt-1 text-[11px] text-amber-600">Nilai penuh akan diajukan sebagai piutang.</p>
                             </td>
                             <td class="w-36 px-4 py-3">
