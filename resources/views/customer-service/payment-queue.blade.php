@@ -34,7 +34,7 @@
                     @forelse ($orders as $order)
                         @php $minimumTransfer = ceil(((float) $order->total * 0.5) / 100) * 100; @endphp
                         <tr class="align-middle hover:bg-slate-50/70"
-                            x-data="{ mode: 'payment', raw: '', display: '', total: {{ (float) $order->total }}, minimum: {{ (float) $minimumTransfer }}, format(event) { this.raw = event.target.value.replace(/\D/g, ''); this.display = this.raw ? 'Rp ' + Number(this.raw).toLocaleString('id-ID') : ''; } }">
+                            x-data="{ mode: 'payment', raw: '', display: '', total: {{ (float) $order->total }}, minimum: {{ (float) $minimumTransfer }}, customArtwork: {{ $order->is_custom_artwork ? 'true' : 'false' }}, format(event) { this.raw = event.target.value.replace(/\D/g, ''); this.display = this.raw ? 'Rp ' + Number(this.raw).toLocaleString('id-ID') : ''; } }">
                             <td class="whitespace-nowrap px-4 py-4 text-slate-600">{{ $order->TglOrder?->format('d/m/Y') ?? $order->TglOrder }}</td>
                             <td class="px-4 py-4 font-semibold text-slate-900">{{ $order->NoOrder }}</td>
                             <td class="px-4 py-4"><span class="rounded bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600">{{ ucfirst($order->order_type) }}</span></td>
@@ -52,13 +52,13 @@
                                        class="w-52 rounded border-slate-300 text-sm focus:border-blue-500 focus:ring-blue-500">
                                 <input type="hidden" name="cs_transfer_amount" :value="raw" form="cs-payment-{{ $order->order_type }}-{{ $order->id }}">
                                 <input type="hidden" name="cs_payment_type" :value="mode === 'debt' ? 'hutang' : ''" form="cs-payment-{{ $order->order_type }}-{{ $order->id }}">
-                                <p x-show="mode === 'payment'" class="mt-1 text-[11px] text-slate-400">Minimal 50%: Rp {{ number_format($minimumTransfer, 0, ',', '.') }}</p>
+                                <p x-show="mode === 'payment'" class="mt-1 text-[11px] text-slate-400">Minimal 50%: Rp {{ number_format($minimumTransfer, 0, ',', '.') }}@if($order->is_custom_artwork) · Harga Artwork custom@endif</p>
                                 <p x-show="mode === 'debt'" x-cloak class="mt-1 text-[11px] text-amber-600">Nilai penuh akan diajukan sebagai piutang.</p>
                             </td>
                             <td class="w-36 px-4 py-3">
                                 <span x-show="mode === 'payment' && !raw" class="text-xs text-slate-400">Otomatis</span>
-                                <span x-show="mode === 'payment' && raw" x-text="Number(raw) < minimum ? 'Di bawah minimum' : (Number(raw) < total ? 'DP' : (Number(raw) === total ? 'Pelunasan' : 'Melebihi total'))"
-                                      :class="Number(raw) < minimum || Number(raw) > total ? 'bg-red-100 text-red-700' : (Number(raw) < total ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700')"
+                                <span x-show="mode === 'payment' && raw" x-text="Number(raw) < minimum ? 'Di bawah minimum' : (customArtwork && Number(raw) > total ? 'Harga Custom' : (Number(raw) < total ? 'DP' : (Number(raw) === total ? 'Pelunasan' : 'Melebihi total')))"
+                                      :class="Number(raw) < minimum || (!customArtwork && Number(raw) > total) ? 'bg-red-100 text-red-700' : (customArtwork && Number(raw) > total ? 'bg-violet-100 text-violet-700' : (Number(raw) < total ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'))"
                                       class="rounded px-2.5 py-1 text-xs font-semibold"></span>
                                 <span x-show="mode === 'debt'" x-cloak class="rounded bg-orange-100 px-2.5 py-1 text-xs font-semibold text-orange-700">Hutang</span>
                             </td>

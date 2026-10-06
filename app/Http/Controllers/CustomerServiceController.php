@@ -147,11 +147,14 @@ class CustomerServiceController extends Controller
 
     public function paymentQueue(): View
     {
-        $indoor = OrderIndoor::with('customer.limit')
+        $indoor = OrderIndoor::with(['customer.limit', 'items'])
             ->where('payment_queue', 'cs')
             ->where('status_bayar', 'belum_bayar')
             ->get()
-            ->each->setAttribute('order_type', 'indoor');
+            ->each(function (OrderIndoor $order): void {
+                $order->setAttribute('order_type', 'indoor');
+                $order->setAttribute('is_custom_artwork', $order->items->contains(fn ($item) => $item->isArtwork()));
+            });
         $outdoor = OrderOutdoor::with('customer.limit')
             ->where('payment_queue', 'cs')
             ->where('status_bayar', 'belum_bayar')
@@ -212,6 +215,11 @@ class CustomerServiceController extends Controller
             $order = $model::lockForUpdate()->findOrFail($id);
             abort_unless($order->payment_queue === 'cs' && $order->status_bayar === 'belum_bayar', 422, 'Order ini sudah tidak berada di antrean CS.');
             $order->loadMissing('customer.limit');
+            if ($type === 'indoor') {
+                $order->loadMissing('items');
+            }
+            $isCustomArtwork = $type === 'indoor'
+                && $order->items->contains(fn ($item) => $item->isArtwork());
 
             if (($data['cs_payment_type'] ?? null) === 'hutang') {
                 if (! $order->customer?->isVip) {
@@ -225,7 +233,7 @@ class CustomerServiceController extends Controller
             } else {
                 $transferAmount = (float) $data['cs_transfer_amount'];
 
-                if ($transferAmount > (float) $order->total) {
+                if (! $isCustomArtwork && $transferAmount > (float) $order->total) {
                     throw ValidationException::withMessages([
                         'cs_transfer_amount' => 'Nominal transfer tidak boleh melebihi total order Rp '.number_format((float) $order->total, 0, ',', '.').'.',
                     ]);
@@ -238,7 +246,9 @@ class CustomerServiceController extends Controller
                     ]);
                 }
 
-                $paymentType = $transferAmount < (float) $order->total ? 'dp' : 'pelunasan';
+                $paymentType = $isCustomArtwork && $transferAmount > (float) $order->total
+                    ? 'dp'
+                    : ($transferAmount < (float) $order->total ? 'dp' : 'pelunasan');
             }
 
             $order->update([
