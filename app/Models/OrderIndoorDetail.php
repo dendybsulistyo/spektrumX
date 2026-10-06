@@ -90,7 +90,13 @@ class OrderIndoorDetail extends Model
             ? $this->produkArtwork
             : ($this->produk ?? $this->produkArtwork);
 
-        return $produk?->kategori?->NmDivs;
+        if ($produk?->kategori?->NmDivs) {
+            return $produk->kategori->NmDivs;
+        }
+
+        // Produk artwork yang divisinya tak terbaca dikumpulkan di "Artwork";
+        // selain itu tetap null agar tampil sebagai "Tanpa Divisi".
+        return $this->isArtwork() || $this->produkArtwork ? 'Artwork' : null;
     }
 
     public function orderTypeSlug(): string
