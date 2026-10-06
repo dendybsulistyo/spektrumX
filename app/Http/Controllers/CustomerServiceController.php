@@ -8,6 +8,7 @@ use App\Models\OrderIndoor;
 use App\Models\OrderOutdoor;
 use App\Models\OrderStatusNote;
 use App\Models\User;
+use App\Services\OrderPricingService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -16,6 +17,8 @@ use Illuminate\View\View;
 
 class CustomerServiceController extends Controller
 {
+    public function __construct(private readonly OrderPricingService $pricing) {}
+
     public function index(): View
     {
         $selectedCustomer = old('customer_code')
@@ -194,8 +197,24 @@ class CustomerServiceController extends Controller
         return to_route('customer-service.job-sheets.index')->with('status', 'Lembar kerja Customer Service berhasil disimpan.');
     }
 
+    public function saveArtworkPrices(Request $request, int $id): RedirectResponse
+    {
+        $prices = $this->validatedArtworkPrices($request);
+
+        DB::transaction(function () use ($id, $prices): void {
+            $order = OrderIndoor::query()->lockForUpdate()->findOrFail($id);
+            abort_unless($order->payment_queue === 'cs' && $order->status_bayar === 'belum_bayar', 422, 'Order ini sudah tidak berada di antrean CS.');
+            $this->applyArtworkPrices($order, $prices);
+        }, attempts: 3);
+
+        return redirect()->route('invoice.show', [
+            'type' => 'indoor', 'id' => $id, 'source' => 'cs', 'draft' => 1,
+        ]);
+    }
+
     public function forward(Request $request, string $type, int $id): RedirectResponse
     {
+        $artworkPrices = $type === 'indoor' ? $this->validatedArtworkPrices($request, required: false) : [];
         $data = $request->validate([
             'cs_payment_type' => ['nullable', 'in:hutang'],
             'cs_transfer_amount' => ['required_unless:cs_payment_type,hutang', 'nullable', 'numeric', 'min:100', 'multiple_of:100'],
@@ -211,12 +230,16 @@ class CustomerServiceController extends Controller
             default => abort(404),
         };
 
-        DB::transaction(function () use ($model, $id, $type, $data): void {
+        DB::transaction(function () use ($model, $id, $type, $data, $artworkPrices): void {
             $order = $model::lockForUpdate()->findOrFail($id);
             abort_unless($order->payment_queue === 'cs' && $order->status_bayar === 'belum_bayar', 422, 'Order ini sudah tidak berada di antrean CS.');
             $order->loadMissing('customer.limit');
             if ($type === 'indoor') {
                 $order->loadMissing('items');
+                if ($order->items->contains(fn ($item) => $item->isArtwork())) {
+                    $this->applyArtworkPrices($order, $artworkPrices);
+                    $order->refresh()->loadMissing(['customer.limit', 'items']);
+                }
             }
             $isCustomArtwork = $type === 'indoor'
                 && $order->items->contains(fn ($item) => $item->isArtwork());
@@ -274,5 +297,63 @@ class CustomerServiceController extends Controller
         });
 
         return to_route('customer-service.payment-queue')->with('status', 'Informasi transfer tersimpan dan order diteruskan ke Kasir.');
+    }
+
+    /** @return array<int, float> */
+    private function validatedArtworkPrices(Request $request, bool $required = true): array
+    {
+        $prices = collect($request->input('artwork_prices', []))
+            ->mapWithKeys(fn ($value, $key) => [(int) $key => preg_replace('/\D/', '', (string) $value)])
+            ->all();
+        $request->merge(['artwork_prices' => $prices]);
+
+        $validated = $request->validate([
+            'artwork_prices' => [$required ? 'required' : 'nullable', 'array'],
+            'artwork_prices.*' => ['required', 'numeric', 'min:100', 'multiple_of:100'],
+        ], [
+            'artwork_prices.required' => 'Harga custom Artwork wajib diisi.',
+            'artwork_prices.*.required' => 'Semua harga custom Artwork wajib diisi.',
+            'artwork_prices.*.multiple_of' => 'Harga custom Artwork harus kelipatan Rp100.',
+        ]);
+
+        return collect($validated['artwork_prices'] ?? [])->map(fn ($value) => (float) $value)->all();
+    }
+
+    /** @param array<int, float> $prices */
+    private function applyArtworkPrices(OrderIndoor $order, array $prices): void
+    {
+        $order->loadMissing('items');
+        $artworkItems = $order->items->filter(fn ($item) => $item->isArtwork());
+        abort_if($artworkItems->isEmpty(), 422, 'Order ini tidak memiliki item Artwork.');
+
+        $missing = $artworkItems->first(fn ($item) => ! isset($prices[$item->id]) && ! ((float) $item->harga_satuan_kasir > 0));
+        if ($missing) {
+            throw ValidationException::withMessages([
+                "artwork_prices.{$missing->id}" => 'Harga custom untuk '.$missing->Judul.' wajib diisi.',
+            ]);
+        }
+
+        $changes = [];
+        foreach ($artworkItems as $item) {
+            $newPrice = $prices[$item->id] ?? (float) $item->harga_satuan_kasir;
+            $oldPrice = (float) ($item->harga_satuan_kasir ?? 0);
+            if ($newPrice !== $oldPrice) {
+                $item->update(['harga_satuan_kasir' => $newPrice]);
+                $changes[] = ($item->Judul ?: $item->NmProd).': Rp '.number_format($oldPrice, 0, ',', '.').' → Rp '.number_format($newPrice, 0, ',', '.');
+            }
+        }
+
+        $oldTotal = (float) $order->total;
+        $newTotal = $this->pricing->totalIndoor($order->fresh());
+        $order->update(['total' => $newTotal, 'cs_order_total' => $newTotal]);
+
+        if ($changes || $oldTotal !== $newTotal) {
+            OrderStatusNote::create([
+                'order_type' => 'indoor', 'order_id' => $order->id,
+                'stage' => 'customer_service', 'action' => 'harga_artwork_custom',
+                'catatan' => 'Harga Artwork custom disimpan. Total Rp '.number_format($oldTotal, 0, ',', '.').' → Rp '.number_format($newTotal, 0, ',', '.').'. '.implode(' · ', $changes),
+                'user_id' => auth()->id(), 'created_at' => now(),
+            ]);
+        }
     }
 }

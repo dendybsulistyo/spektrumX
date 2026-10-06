@@ -419,7 +419,7 @@ class OrderPricingService
         $isArtworkCatalog = $item instanceof \App\Models\OrderArtworkDetail
             || (method_exists($item, 'isArtwork') && $item->isArtwork());
 
-        return ($isArtworkCatalog && (string) $item->KdProd === '1706')
+        return $isArtworkCatalog
             || (! $isArtworkCatalog && (string) $item->KdProd === '2001');
     }
 

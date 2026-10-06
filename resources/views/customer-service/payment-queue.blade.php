@@ -42,6 +42,23 @@
                             <td class="whitespace-nowrap px-4 py-4 text-right font-medium text-slate-900">Rp {{ number_format($order->total ?? 0, 0, ',', '.') }}</td>
                             <td class="w-56 px-4 py-3">
 
+                                @if ($order->is_custom_artwork)
+                                    <div class="mb-3 space-y-2 rounded border border-violet-200 bg-violet-50 p-2">
+                                        <p class="text-[11px] font-semibold text-violet-800">Harga Custom Artwork / unit</p>
+                                        @foreach ($order->items->filter(fn ($item) => $item->isArtwork()) as $item)
+                                            <label class="block text-[11px] text-violet-700">
+                                                {{ $item->Judul ?: $item->NmProd }} · Qty {{ $item->Qty }}
+                                                <input type="number" min="100" step="100" required
+                                                       name="artwork_prices[{{ $item->id }}]"
+                                                       value="{{ (float) $item->harga_satuan_kasir > 0 ? (int) $item->harga_satuan_kasir : '' }}"
+                                                       form="cs-payment-{{ $order->order_type }}-{{ $order->id }}"
+                                                       placeholder="Harga per unit"
+                                                       class="mt-1 block w-full rounded border-violet-300 py-1.5 text-xs focus:border-violet-500 focus:ring-violet-500">
+                                            </label>
+                                        @endforeach
+                                    </div>
+                                @endif
+
                                 <select x-model="mode" class="mb-2 w-52 rounded border-slate-300 py-1.5 text-xs focus:border-blue-500 focus:ring-blue-500">
                                     <option value="payment">DP / Pelunasan</option>
                                     <option value="debt" @disabled(! $order->customer?->isVip)>Hutang{{ $order->customer?->isVip ? '' : ' — khusus VIP' }}</option>
@@ -63,11 +80,19 @@
                                 <span x-show="mode === 'debt'" x-cloak class="rounded bg-orange-100 px-2.5 py-1 text-xs font-semibold text-orange-700">Hutang</span>
                             </td>
                             <td class="whitespace-nowrap px-4 py-3 text-right">
-                                <a href="{{ route('invoice.show', ['type' => $order->order_type, 'id' => $order->id, 'source' => 'cs', 'draft' => 1]) }}"
-                                   target="_blank" rel="noopener"
-                                   class="mr-2 inline-flex rounded border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50">
-                                    Draft SO
-                                </a>
+                                @if ($order->is_custom_artwork)
+                                    <button type="submit" form="cs-payment-{{ $order->order_type }}-{{ $order->id }}"
+                                            formaction="{{ route('customer-service.artwork-prices.save', $order->id) }}" formtarget="_blank"
+                                            class="mr-2 inline-flex rounded border border-violet-300 bg-violet-50 px-3 py-1.5 text-xs font-semibold text-violet-700 hover:bg-violet-100">
+                                        Simpan Harga &amp; Draft SO
+                                    </button>
+                                @else
+                                    <a href="{{ route('invoice.show', ['type' => $order->order_type, 'id' => $order->id, 'source' => 'cs', 'draft' => 1]) }}"
+                                       target="_blank" rel="noopener"
+                                       class="mr-2 inline-flex rounded border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50">
+                                        Draft SO
+                                    </a>
+                                @endif
                                 <form id="cs-payment-{{ $order->order_type }}-{{ $order->id }}" method="POST"
                                       action="{{ route('customer-service.forward', ['type' => $order->order_type, 'id' => $order->id]) }}">
                                     @csrf

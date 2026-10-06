@@ -413,6 +413,7 @@ Route::middleware('auth')->group(function () {
     });
     Route::middleware('permission:customer-service.manage')->group(function () {
         Route::post('/customer-service/job-sheet', [CustomerServiceController::class, 'storeJobSheet'])->name('customer-service.job-sheet.store');
+        Route::post('/customer-service/indoor/{id}/artwork-prices', [CustomerServiceController::class, 'saveArtworkPrices'])->name('customer-service.artwork-prices.save');
         Route::post('/customer-service/{type}/{id}/forward', [CustomerServiceController::class, 'forward'])->name('customer-service.forward');
     });
     Route::middleware('permission:kasir.manage')->group(function () {
