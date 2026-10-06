@@ -32,17 +32,32 @@
             <div class="mb-4 rounded-lg border bg-white p-4 shadow-sm">
                 <form method="GET" class="flex flex-wrap items-end gap-3">
                     <label class="text-sm text-gray-700">Customer
-                        <select name="customer" required onchange="this.form.submit()" class="mt-1 block min-w-72 rounded-md border-gray-300">
-                            <option value="">Pilih customer</option>
-                            @foreach($customers as $customer)<option value="{{ $customer->KdCust }}" @selected($customerCode === $customer->KdCust)>{{ $customer->NmCust }}</option>@endforeach
-                        </select>
+                        <input type="text" name="customer" list="customer-receivable-options"
+                               value="{{ $selectedCustomer?->NmCust ?? request('customer') }}"
+                               placeholder="Ketik nama customer..." autocomplete="off" required
+                               class="mt-1 block min-w-72 rounded-md border-gray-300">
+                        <datalist id="customer-receivable-options">
+                            @foreach($customers as $customer)
+                                <option value="{{ $customer->NmCust }}">{{ $customer->KdCust }}</option>
+                            @endforeach
+                        </datalist>
                     </label>
-                    <noscript><button class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white">Tampilkan</button></noscript>
+                    <label class="text-sm text-gray-700">Dari Tanggal
+                        <input type="date" name="dari" value="{{ $dari }}" required class="mt-1 block rounded-md border-gray-300">
+                    </label>
+                    <label class="text-sm text-gray-700">Sampai Tanggal
+                        <input type="date" name="sampai" value="{{ $sampai }}" required class="mt-1 block rounded-md border-gray-300">
+                    </label>
+                    <button class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">Tampilkan</button>
                 </form>
             </div>
 
             <section class="bg-white p-5 shadow-sm">
-                <div class="mb-4"><h1 class="text-base font-bold">PEMBAYARAN PIUTANG PER CUSTOMER - SPEKTRUM</h1><p class="text-sm font-semibold">Customer: {{ $selectedCustomer?->NmCust ?? 'Pilih customer terlebih dahulu' }}</p></div>
+                <div class="mb-4">
+                    <h1 class="text-base font-bold">PEMBAYARAN PIUTANG PER CUSTOMER - SPEKTRUM</h1>
+                    <p class="text-sm font-semibold">Dari Tanggal: {{ \Carbon\Carbon::parse($dari)->translatedFormat('d F Y') }} s/d {{ \Carbon\Carbon::parse($sampai)->translatedFormat('d F Y') }}</p>
+                    <p class="text-sm font-semibold">Customer: {{ $selectedCustomer?->NmCust ?? 'Pilih customer terlebih dahulu' }}</p>
+                </div>
                 <div class="overflow-x-auto">
                     <table style="min-width:980px;">
                         <thead><tr><th>Tanggal</th><th>No. Nota</th><th>Piutang</th><th>Discount</th><th>Bayar</th><th>Sisa Piutang</th><th style="width:145px;">Aksi</th></tr></thead>

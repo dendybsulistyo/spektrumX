@@ -1179,14 +1179,26 @@ class KeuanganController extends Controller
 
     public function customerReceivableDetails(Request $request): View
     {
-        $customerCode = $request->string('customer')->trim()->toString();
+        $customerSearch = $request->string('customer')->trim()->toString();
+        $dari = $request->date('dari')?->format('Y-m-d') ?? now()->startOfMonth()->format('Y-m-d');
+        $sampai = $request->date('sampai')?->format('Y-m-d') ?? now()->format('Y-m-d');
+        if ($dari > $sampai) {
+            [$dari, $sampai] = [$sampai, $dari];
+        }
         $customers = Customer::query()->orderBy('NmCust')->get(['KdCust', 'NmCust']);
-        $selectedCustomer = $customerCode !== '' ? $customers->firstWhere('KdCust', $customerCode) : null;
+        $needle = mb_strtolower($customerSearch);
+        $selectedCustomer = $customerSearch !== ''
+            ? ($customers->firstWhere('KdCust', $customerSearch)
+                ?? $customers->first(fn ($customer) => mb_strtolower((string) $customer->NmCust) === $needle)
+                ?? $customers->first(fn ($customer) => str_starts_with(mb_strtolower((string) $customer->NmCust), $needle)))
+            : null;
+        $customerCode = (string) ($selectedCustomer?->KdCust ?? '');
         $rows = collect();
 
         if ($selectedCustomer) {
             foreach (['indoor' => OrderIndoor::class, 'outdoor' => OrderOutdoor::class, 'artwork' => OrderArtwork::class] as $type => $model) {
                 $orders = $model::query()->where('KdCust', $customerCode)
+                    ->whereBetween(DB::raw('DATE(TglOrder)'), [$dari, $sampai])
                     ->where('status', '!=', 'batal')
                     ->where('status_bayar', 'hutang')
                     ->where('jumlah_piutang', '>', 0)
@@ -1223,7 +1235,7 @@ class KeuanganController extends Controller
             ->mapWithKeys(fn ($column) => [$column => (float) $rows->sum($column)])->all();
 
         return view('keuangan.customer-receivable-details', compact(
-            'customers', 'selectedCustomer', 'customerCode', 'rows', 'totals'
+            'customers', 'selectedCustomer', 'customerCode', 'dari', 'sampai', 'rows', 'totals'
         ));
     }
 
