@@ -369,6 +369,8 @@ class CustomerServiceController extends Controller
         $oldTotal = (float) $order->total;
         $newTotal = $this->pricing->totalIndoor($order->fresh());
         $order->update(['total' => $newTotal, 'cs_order_total' => $newTotal]);
+        // Perbarui harga per baris agar SO/nota menampilkan harga custom baru.
+        $this->pricing->snapshotLinePrices('indoor', $order);
 
         if ($changes || $oldTotal !== $newTotal) {
             OrderStatusNote::create([
