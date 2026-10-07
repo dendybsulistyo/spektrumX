@@ -86,12 +86,6 @@ class OrderIndoorDetail extends Model
      */
     public function divisionName(): ?string
     {
-        // Semua Print Only (1801 Dye Sublimation, 2701 DTF) dikerjakan satu
-        // tim, jadi di antrean disatukan ke Dye Sublimation. Master tetap.
-        if (in_array($this->KdProd, ['1801', '2701'], true)) {
-            return 'Dye Sublimation';
-        }
-
         $produk = $this->isArtwork()
             ? $this->produkArtwork
             : ($this->produk ?? $this->produkArtwork);
@@ -103,6 +97,35 @@ class OrderIndoorDetail extends Model
         // Item tanpa divisi terbaca dikumpulkan di grup "Artwork"
         // (label tampilan saja, permintaan user).
         return null;
+    }
+
+    /** @var array<string, true>|null Nama produk yang dipakai >1 kode di master Indoor/Artwork. */
+    private static ?array $sharedProductNames = null;
+
+    /**
+     * Nama grup untuk antrean "By Produk". Nama yang sama dipakai beberapa
+     * produk (mis. Print Only 1801 Dye Sublimation & 2701 DTF) diberi
+     * akhiran divisi agar tidak tercampur.
+     */
+    public function productGroupName(): string
+    {
+        $name = $this->NmProd ?: ($this->produk?->NmProd ?: 'Tanpa Produk');
+
+        self::$sharedProductNames ??= \Illuminate\Support\Facades\DB::query()
+            ->fromSub(
+                \Illuminate\Support\Facades\DB::table('produk_indoor')->select('KdProd', 'NmProd')
+                    ->unionAll(\Illuminate\Support\Facades\DB::table('harga_artwork')->select('KdProd', 'NmProd')),
+                'produk'
+            )
+            ->selectRaw('LOWER(TRIM(NmProd)) AS name')
+            ->groupBy('name')->havingRaw('COUNT(DISTINCT KdProd) > 1')
+            ->pluck('name')->mapWithKeys(fn ($shared) => [$shared => true])->all();
+
+        $division = $this->divisionName();
+
+        return isset(self::$sharedProductNames[mb_strtolower(trim($name))]) && $division
+            ? "{$name} — {$division}"
+            : $name;
     }
 
     public function orderTypeSlug(): string

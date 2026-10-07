@@ -387,7 +387,8 @@ class CustomerServiceController extends Controller
 
     private function customArtworkItems(OrderIndoor $order): \Illuminate\Support\Collection
     {
-        return $order->items->filter(fn ($item) => $item->isArtwork()
-            && ($item->produkArtwork === null || (float) $item->produkArtwork->HargaStd <= 0));
+        return $order->items->filter(fn ($item) => ($item->isArtwork()
+            && ($item->produkArtwork === null || (float) $item->produkArtwork->HargaStd <= 0))
+            || (! $item->isArtwork() && in_array((string) $item->KdProd, OrderPricingService::INDOOR_CUSTOM_PRICE_CODES, true)));
     }
 }

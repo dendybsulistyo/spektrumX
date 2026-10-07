@@ -475,8 +475,9 @@ class KasirController extends Controller
                 || ($type === 'indoor' && (
                     ((string) $item->KdProd === '1706' && $item->isArtwork())
                     || ((string) $item->KdProd === '2001' && ! $item->isArtwork())
+                    || (in_array((string) $item->KdProd, OrderPricingService::INDOOR_CUSTOM_PRICE_CODES, true) && ! $item->isArtwork())
                 ));
-            abort_unless($isCustomPriceItem, 422, 'Harga manual hanya berlaku untuk Art Work 1706 dan Ongkos Kirim 2001.');
+            abort_unless($isCustomPriceItem, 422, 'Harga manual hanya berlaku untuk Art Work 1706, produk custom 1005/1006, dan Ongkos Kirim 2001.');
 
             $item->update(['harga_satuan_kasir' => (int) $data['harga_satuan']]);
             $total = $type === 'indoor'
@@ -506,7 +507,8 @@ class KasirController extends Controller
             $query->where(function ($query) {
                 $query->where('jenis_produk', 'artwork')->where('KdProd', '1706');
             })->orWhere(function ($query) {
-                $query->where('jenis_produk', 'indoor')->where('KdProd', '2001');
+                $query->where('jenis_produk', 'indoor')
+                    ->whereIn('KdProd', ['2001', ...OrderPricingService::INDOOR_CUSTOM_PRICE_CODES]);
             });
         });
 

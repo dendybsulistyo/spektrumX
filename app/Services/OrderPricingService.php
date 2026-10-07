@@ -26,6 +26,9 @@ class OrderPricingService
 
     private array $produkCache = [];
 
+    /** Produk Indoor custom (DTV UV) yang harganya diisi manual oleh CS/Kasir. */
+    public const INDOOR_CUSTOM_PRICE_CODES = ['1005', '1006'];
+
     private array $artworkCache = [];
 
     private array $outdoorSpecialPriceCache = [];
@@ -495,7 +498,8 @@ class OrderPricingService
             return $artwork === null || (float) $artwork->HargaStd <= 0;
         }
 
-        return (string) $item->KdProd === '2001';
+        return (string) $item->KdProd === '2001'
+            || in_array((string) $item->KdProd, self::INDOOR_CUSTOM_PRICE_CODES, true);
     }
 
     /**
