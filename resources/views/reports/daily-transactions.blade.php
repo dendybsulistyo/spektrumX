@@ -1,5 +1,6 @@
+@php($title = ['lunas' => 'Rekap - Lunas', 'tagihan' => 'Rekap - Tagihan'][$kind] ?? 'Rekap Transaksi Harian')
 <x-app-layout>
-    <x-slot name="header"><h2 class="font-semibold text-xl text-gray-800">Rekap Transaksi Harian Spektrum</h2></x-slot>
+    <x-slot name="header"><h2 class="font-semibold text-xl text-gray-800">{{ $title }} Spektrum</h2></x-slot>
 
     <style>
         .daily-report { color:#111827; }
@@ -29,6 +30,7 @@
                     <label class="text-sm text-gray-700">Tanggal
                         <input type="date" name="tanggal" value="{{ $date }}" class="mt-1 block rounded-md border-gray-300">
                     </label>
+                    @if ($kind)<input type="hidden" name="jenis" value="{{ $kind }}">@endif
                     <button class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white">Tampilkan</button>
                 </form>
                 <button type="button" onclick="window.print()" class="rounded-md bg-slate-800 px-4 py-2 text-sm font-semibold text-white">Cetak Landscape</button>
@@ -36,13 +38,13 @@
 
             <section class="bg-white p-3 shadow-sm">
                 <div class="mb-3 text-center">
-                    <h1 class="text-base font-bold">REKAP TRANSAKSI HARIAN SPEKTRUM</h1>
+                    <h1 class="text-base font-bold">{{ mb_strtoupper($title) }} SPEKTRUM</h1>
                     <p class="text-sm">Tanggal: {{ \Carbon\Carbon::parse($date)->translatedFormat('d F Y') }}</p>
                 </div>
                 <div class="overflow-x-auto">
                     <table>
                         <thead><tr>
-                            <th>Tanggal</th><th>No. Invoice</th><th>Customer</th><th>Produk</th><th>Keterangan</th>
+                            <th>Tanggal</th><th>No. Invoice / Nota</th><th>Customer</th><th>Status Nota</th><th>Produk</th><th>Keterangan</th>
                             <th>Pj.</th><th>Leb.</th><th>Qty</th><th>Harga</th><th>Sub Total</th>
                             <th>Diskon</th><th>Total</th><th>Tunai</th><th>Kredit</th>
                         </tr></thead>
@@ -52,7 +54,7 @@
                                 <td class="center">{{ \Carbon\Carbon::parse($row->date)->format('d-m-Y') }}</td>
                                 <td class="document-number">
                                     @foreach ($row->invoices as $number)<div>{{ $number }}</div>@endforeach
-                                </td><td>{{ $row->customer }}</td><td>{{ $row->product }}</td><td>{{ $row->description }}</td>
+                                </td><td>{{ $row->customer }}</td><td class="center">{{ $row->note_status }}</td><td>{{ $row->product }}</td><td>{{ $row->description }}</td>
                                 <td class="number">{{ number_format((float) $row->length, 2, ',', '.') }}</td>
                                 <td class="number">{{ number_format((float) $row->width, 2, ',', '.') }}</td>
                                 <td class="number">{{ number_format((float) $row->qty, 0, ',', '.') }}</td>
@@ -64,11 +66,11 @@
                                 <td class="number">{{ $row->credit > 0 ? number_format($row->credit, 0, ',', '.') : '-' }}</td>
                             </tr>
                         @empty
-                            <tr><td colspan="14" class="center" style="padding:28px">Belum ada transaksi berinvoice pada tanggal ini.</td></tr>
+                            <tr><td colspan="15" class="center" style="padding:28px">{{ ['lunas' => 'Belum ada nota lunas pada tanggal ini.', 'tagihan' => 'Belum ada tagihan customer VIP pada tanggal ini.'][$kind] ?? 'Belum ada nota lunas atau tagihan customer VIP pada tanggal ini.' }}</td></tr>
                         @endforelse
                         </tbody>
                         <tfoot class="font-bold"><tr>
-                            <td colspan="9" class="number">Grand Total:</td>
+                            <td colspan="10" class="number">Grand Total:</td>
                             <td class="number">{{ number_format($totals->subtotal, 0, ',', '.') }}</td>
                             <td class="number">{{ number_format($totals->discount, 0, ',', '.') }}</td>
                             <td class="number">{{ number_format($totals->total, 0, ',', '.') }}</td>

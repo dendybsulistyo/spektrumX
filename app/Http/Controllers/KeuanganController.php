@@ -1069,7 +1069,8 @@ class KeuanganController extends Controller
         $byCustomer = collect();
 
         foreach ([OrderIndoor::class, OrderOutdoor::class, OrderArtwork::class] as $model) {
-            $model::query()->with('customer')
+            $model::query()->with('customer.limit')
+                ->whereHas('customer.limit')
                 ->whereDate('TglOrder', '<=', $asOf)
                 ->where('status', '!=', 'batal')
                 ->where('jumlah_piutang', '>', 0)
@@ -1179,12 +1180,8 @@ class KeuanganController extends Controller
 
     public function customerReceivableDetails(Request $request): View
     {
+        // Piutang tidak dibatasi periode: tampilkan seluruh nota yang belum lunas.
         $customerSearch = $request->string('customer')->trim()->toString();
-        $dari = $request->date('dari')?->format('Y-m-d') ?? now()->startOfMonth()->format('Y-m-d');
-        $sampai = $request->date('sampai')?->format('Y-m-d') ?? now()->format('Y-m-d');
-        if ($dari > $sampai) {
-            [$dari, $sampai] = [$sampai, $dari];
-        }
         $customers = Customer::query()->orderBy('NmCust')->get(['KdCust', 'NmCust']);
         $needle = mb_strtolower($customerSearch);
         $selectedCustomer = $customerSearch !== ''
@@ -1198,7 +1195,6 @@ class KeuanganController extends Controller
         if ($selectedCustomer) {
             foreach (['indoor' => OrderIndoor::class, 'outdoor' => OrderOutdoor::class, 'artwork' => OrderArtwork::class] as $type => $model) {
                 $orders = $model::query()->where('KdCust', $customerCode)
-                    ->whereBetween(DB::raw('DATE(TglOrder)'), [$dari, $sampai])
                     ->where('status', '!=', 'batal')
                     ->where('status_bayar', 'hutang')
                     ->where('jumlah_piutang', '>', 0)
@@ -1235,7 +1231,7 @@ class KeuanganController extends Controller
             ->mapWithKeys(fn ($column) => [$column => (float) $rows->sum($column)])->all();
 
         return view('keuangan.customer-receivable-details', compact(
-            'customers', 'selectedCustomer', 'customerCode', 'dari', 'sampai', 'rows', 'totals'
+            'customers', 'selectedCustomer', 'customerCode', 'rows', 'totals'
         ));
     }
 

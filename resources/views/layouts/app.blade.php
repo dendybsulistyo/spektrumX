@@ -244,9 +244,9 @@
                                         <div x-show="open" x-cloak
                                              x-transition:enter="transition ease-out duration-100" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
                                              x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
-                                             style="width: 1040px; max-width: calc(100vw - 10rem)"
+                                             style="width: 900px; max-width: calc(100vw - 10rem)"
                                              class="absolute left-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg p-2 z-50">
-                                            <div class="grid grid-cols-4 gap-2">
+                                            <div class="grid grid-cols-3 gap-2">
                                             <div class="space-y-1">
                                             @can('keuangan.view')
                                                 <p class="mx-2 mt-1 rounded-md border border-slate-200 bg-slate-100 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-600">Perpajakan</p>
@@ -271,20 +271,38 @@
                                                 <a href="{{ route('keuangan.cash-adjustments.index') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.cash-adjustments.*')) }}">Penyesuaian Kas</a>
                                                 <a href="{{ route('keuangan.final-sales-discounts.index') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.final-sales-discounts.*')) }}">Potongan Penjualan Akhir</a>
                                                 <a href="{{ route('keuangan.order-adjustments.index') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.order-adjustments.*')) }}">Penyesuaian Nota Order / DP</a>
-                                                <a href="{{ route('report.daily-transactions') }}" class="{{ $dropdownLink(request()->routeIs('report.daily-transactions')) }}">Rekap Transaksi Harian</a>
+                                                <div x-data="{ open: @js(request()->routeIs('report.daily-transactions') && request()->filled('jenis')) }">
+                                                    <div class="flex items-center">
+                                                        <a href="{{ route('report.daily-transactions') }}" class="{{ $dropdownLink(request()->routeIs('report.daily-transactions') && ! request('jenis')) }} flex-1">Rekap Transaksi Harian</a>
+                                                        <button type="button" @click.stop.prevent="open = ! open" class="rounded-md px-2 py-1 text-gray-500 hover:bg-gray-100" :aria-expanded="open" aria-label="Buka sub menu Rekap Transaksi Harian">
+                                                            <svg class="h-3.5 w-3.5 transition-transform" :class="open && 'rotate-180'" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.17l3.71-3.94a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd"/></svg>
+                                                        </button>
+                                                    </div>
+                                                    <div x-show="open" x-cloak>
+                                                        @foreach (['lunas' => 'Rekap - Lunas', 'tagihan' => 'Rekap - Tagihan', 'pelunasan' => 'Rekap - Pelunasan'] as $jenis => $label)
+                                                            <a href="{{ route('report.daily-transactions', ['jenis' => $jenis]) }}" class="{{ $dropdownLink(request()->routeIs('report.daily-transactions') && request('jenis') === $jenis) }} !pl-8 text-[13px]">&rsaquo; {{ $label }}</a>
+                                                        @endforeach
+                                                    </div>
+                                                </div>
                                                 <a href="{{ route('report.pod-turnover') }}" class="{{ $dropdownLink(request()->routeIs('report.pod-turnover')) }}">Laporan Omzet Kertas POD</a>
                                                 <a href="{{ route('report.ctp-turnover') }}" class="{{ $dropdownLink(request()->routeIs('report.ctp-turnover')) }}">Laporan Omzet CTP</a>
-                                                <a href="{{ route('report.outdoor-orders') }}" class="{{ $dropdownLink(request()->routeIs('report.outdoor-orders')) }}">Rekap Order Outdoor</a>
+                                                <a href="{{ route('report.outdoor-orders') }}" class="{{ $dropdownLink(request()->routeIs('report.outdoor-orders')) }}">Laporan Order</a>
+                                            @endcan
+                                            </div>
+                                            <div class="space-y-1 border-l border-gray-100 pl-2">
+                                            @can('keuangan.view')
+                                                <p class="mx-2 rounded-md border border-slate-200 bg-slate-100 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-600">Akuntansi -</p>
                                                 <a href="{{ route('report.uninvoiced-orders') }}" class="{{ $dropdownLink(request()->routeIs('report.uninvoiced-orders')) }}">Rekap Order Belum Di-Invoice</a>
                                                 <a href="{{ route('report.sales-discounts') }}" class="{{ $dropdownLink(request()->routeIs('report.sales-discounts')) }}">Rekap Potongan Penjualan</a>
                                                 <a href="{{ route('report.all-orders-by-customer') }}" class="{{ $dropdownLink(request()->routeIs('report.all-orders-by-customer')) }}">Nota/Invoice per Customer</a>
                                                 <a href="{{ route('keuangan.daily-receivable-collections') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.daily-receivable-collections')) }}">Penerimaan Piutang Harian</a>
                                                 <a href="{{ route('keuangan.credit-limits') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.credit-limits')) }}">Rekap Limit Piutang</a>
-                                                <a href="{{ route('keuangan.total-tagihan-piutang') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.total-tagihan-piutang')) }}">Pembayaran Piutang</a>
+                                                <a href="{{ route('keuangan.total-tagihan-piutang') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.total-tagihan-piutang')) }}">Total Tagihan</a>
                                                 <a href="{{ route('keuangan.pembatalan-order') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.pembatalan-order')) }}">Pembatalan Pre-Order &amp; Nota</a>
                                                 <a href="{{ route('keuangan.customer-receivable-details') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.customer-receivable-details') && request('mode') !== 'report') }}">Piutang per Customer</a>
                                             @endcan
                                             </div>
+                                            {{-- DISEMBUNYIKAN SEMENTARA (6 Okt 2026): kolom "Jurnal & Laporan" dan "Master". Hapus baris komentar ini & penutupnya untuk menampilkan lagi.
                                             <div class="space-y-1 border-l border-gray-100 pl-2">
                                             @can('keuangan.view')
                                                 <p class="mx-2 rounded-md border border-slate-200 bg-slate-100 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-600">Jurnal & Laporan</p>
@@ -323,6 +341,7 @@
                                                 <a href="{{ route('pengeluaran.index') }}" class="{{ $dropdownLink(request()->routeIs('pengeluaran.*')) }}">Pengeluaran</a>
                                             @endcan
                                             </div>
+                                            --}}
                                             </div>
                                         </div>
                                     </div>
@@ -608,10 +627,22 @@
                                 <a href="{{ route('order-documents.index') }}" class="{{ $mobileLink(request()->routeIs('order-documents.*')) }}">Dokumen SO / DO / Invoice</a>
                                 <a href="{{ route('akuntansi.gunggungan') }}" class="{{ $mobileLink(request()->routeIs('akuntansi.gunggungan')) }}">Gunggungan</a>
                                 <a href="{{ route('akuntansi.rekap-omset') }}" class="{{ $mobileLink(request()->routeIs('akuntansi.rekap-omset')) }}">Rekap Omset</a>
-                                <a href="{{ route('report.daily-transactions') }}" class="{{ $mobileLink(request()->routeIs('report.daily-transactions')) }}">Rekap Transaksi Harian</a>
+                                <div x-data="{ open: @js(request()->routeIs('report.daily-transactions') && request()->filled('jenis')) }">
+                                    <div class="flex items-center">
+                                        <a href="{{ route('report.daily-transactions') }}" class="{{ $mobileLink(request()->routeIs('report.daily-transactions') && ! request('jenis')) }} flex-1">Rekap Transaksi Harian</a>
+                                        <button type="button" @click="open = ! open" class="rounded-lg px-3 py-2 text-gray-500 hover:bg-gray-100" :aria-expanded="open" aria-label="Buka sub menu Rekap Transaksi Harian">
+                                            <svg class="h-4 w-4 transition-transform" :class="open && 'rotate-180'" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.17l3.71-3.94a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd"/></svg>
+                                        </button>
+                                    </div>
+                                    <div x-show="open" x-cloak>
+                                        @foreach (['lunas' => 'Rekap - Lunas', 'tagihan' => 'Rekap - Tagihan', 'pelunasan' => 'Rekap - Pelunasan'] as $jenis => $label)
+                                            <a href="{{ route('report.daily-transactions', ['jenis' => $jenis]) }}" class="{{ $mobileLink(request()->routeIs('report.daily-transactions') && request('jenis') === $jenis) }} !pl-8">&rsaquo; {{ $label }}</a>
+                                        @endforeach
+                                    </div>
+                                </div>
                                 <a href="{{ route('report.pod-turnover') }}" class="{{ $mobileLink(request()->routeIs('report.pod-turnover')) }}">Laporan Omzet Kertas POD</a>
                                 <a href="{{ route('report.ctp-turnover') }}" class="{{ $mobileLink(request()->routeIs('report.ctp-turnover')) }}">Laporan Omzet CTP</a>
-                                <a href="{{ route('report.outdoor-orders') }}" class="{{ $mobileLink(request()->routeIs('report.outdoor-orders')) }}">Rekap Order Outdoor</a>
+                                <a href="{{ route('report.outdoor-orders') }}" class="{{ $mobileLink(request()->routeIs('report.outdoor-orders')) }}">Laporan Order</a>
                                 <a href="{{ route('report.paid-orders-by-customer') }}" class="{{ $mobileLink(request()->routeIs('report.paid-orders-by-customer')) }}">Rekap Order Customer (Lunas)</a>
                                 <a href="{{ route('report.credit-orders-by-customer') }}" class="{{ $mobileLink(request()->routeIs('report.credit-orders-by-customer')) }}">Rekap Order Customer (Piutang)</a>
                                 <a href="{{ route('report.uninvoiced-orders') }}" class="{{ $mobileLink(request()->routeIs('report.uninvoiced-orders')) }}">Rekap Order Belum Di-Invoice</a>
@@ -635,7 +666,7 @@
                                 <a href="{{ route('akuntansi.purchases.report') }}" class="{{ $mobileLink(request()->routeIs('akuntansi.purchases.report')) }}">Laporan Pembelian</a>
                                 <a href="{{ route('akuntansi.hutang-supplier') }}" class="{{ $mobileLink(request()->routeIs('akuntansi.hutang-supplier')) }}">Laporan Hutang Supplier</a>
                                 <a href="{{ route('keuangan.piutang') }}" class="{{ $mobileLink(request()->routeIs('keuangan.piutang')) }}">Piutang</a>
-                                <a href="{{ route('keuangan.total-tagihan-piutang') }}" class="{{ $mobileLink(request()->routeIs('keuangan.total-tagihan-piutang')) }}">Pembayaran Piutang</a>
+                                <a href="{{ route('keuangan.total-tagihan-piutang') }}" class="{{ $mobileLink(request()->routeIs('keuangan.total-tagihan-piutang')) }}">Total Tagihan</a>
                                 <a href="{{ route('keuangan.pembatalan-order') }}" class="{{ $mobileLink(request()->routeIs('keuangan.pembatalan-order')) }}">Pembatalan Pre-Order &amp; Nota</a>
                                 <a href="{{ route('akuntansi.piutang-customer') }}" class="{{ $mobileLink(request()->routeIs('akuntansi.piutang-customer')) }}">Buku Piutang Customer</a>
                                 <a href="{{ route('keuangan.customer-receivable-details') }}" class="{{ $mobileLink(request()->routeIs('keuangan.customer-receivable-details') && request('mode') !== 'report') }}">Piutang per Customer</a>
@@ -646,6 +677,7 @@
                             @can('payroll.view')
                                 <a href="{{ route('payroll.index') }}" class="{{ $mobileLink(request()->routeIs('payroll.*')) }}">Payroll</a>
                             @endcan
+                            {{-- DISEMBUNYIKAN SEMENTARA (6 Okt 2026): Jurnal & Laporan + Master (mobile).
                             @can('keuangan.view')
                                 <div class="mx-2 my-2 border-t border-slate-200"></div><p class="mx-2 rounded-md border border-slate-200 bg-slate-100 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-600">Jurnal & Laporan</p>
                                 <a href="{{ route('akuntansi.jurnal-umum') }}" class="{{ $mobileLink(request()->routeIs('akuntansi.jurnal-umum')) }}">Jurnal Umum</a>
@@ -667,6 +699,7 @@
                                 <a href="{{ route('akuntansi.suppliers.index') }}" class="{{ $mobileLink(request()->routeIs('akuntansi.suppliers.*')) }}">Supplier</a>
                                 <a href="{{ route('keuangan.pengaturan.edit') }}" class="{{ $mobileLink(request()->routeIs('keuangan.pengaturan.edit')) }}">Pengaturan Data GL</a>
                             @endcan
+                            --}}
                         @endif
 
                         @if ($showMasterData)

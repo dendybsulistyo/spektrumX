@@ -43,20 +43,29 @@ class ReportController extends Controller
     public function dailyTransactions(Request $request): View
     {
         $date = $request->date('tanggal')?->format('Y-m-d') ?? now()->format('Y-m-d');
+        $kind = in_array($request->query('jenis'), ['lunas', 'tagihan', 'pelunasan'], true) ? $request->query('jenis') : null;
+        if ($kind === 'pelunasan') {
+            return $this->dailySettlements($date);
+        }
         $rows = collect();
 
         foreach (['indoor' => OrderIndoor::class, 'outdoor' => OrderOutdoor::class, 'artwork' => OrderArtwork::class] as $type => $model) {
-            $table = (new $model)->getTable();
-            $relations = $type === 'outdoor' ? ['customer', 'items.hargaCetak'] : ['customer', 'items'];
+            $relations = $type === 'outdoor' ? ['customer.limit', 'items.hargaCetak'] : ['customer.limit', 'items'];
             $orders = $model::query()
                 ->with($relations)
                 ->where('TglOrder', $date)
                 ->where('status', '!=', 'batal')
-                ->whereExists(fn ($query) => $query->selectRaw('1')
-                    ->from('order_documents')
-                    ->where('kind', 'inv')
-                    ->where('order_type', $type)
-                    ->whereColumn('order_id', $table.'.id'))
+                ->where(function ($query) use ($kind): void {
+                    if ($kind !== 'tagihan') {
+                        $query->where('status_bayar', 'lunas');
+                    }
+                    if ($kind !== 'lunas') {
+                        $query->orWhere(function ($vipDebt): void {
+                            $vipDebt->where('status_bayar', 'hutang')
+                                ->whereHas('customer.limit');
+                        });
+                    }
+                })
                 ->orderBy('NoOrder')
                 ->get();
 
@@ -83,7 +92,10 @@ class ReportController extends Controller
                 $gross = (float) $items->sum('subtotal');
                 $net = $order->diskonStatus() === 'approved' ? $order->totalSetelahDiskon() : (float) $order->total;
                 $discount = max(0, $gross - $net);
-                $paid = max(0, min($net, (float) $payments->get($order->id, collect())->sum('jumlah')));
+                $recordedPayment = (float) $payments->get($order->id, collect())->sum('jumlah');
+                $paid = $order->status_bayar === 'lunas' && $recordedPayment <= 0
+                    ? $net
+                    : max(0, min($net, $recordedPayment));
                 $credit = max(0, $net - $paid);
 
                 if ($items->isEmpty()) {
@@ -107,8 +119,11 @@ class ReportController extends Controller
 
                     $rows->push((object) [
                         'date' => $order->TglOrder, 'number' => $order->NoOrder,
-                        'invoices' => $orderDocuments->pluck('number')->values(),
+                        'invoices' => $orderDocuments->isNotEmpty()
+                            ? $orderDocuments->pluck('number')->values()
+                            : collect([$order->NoOrder]),
                         'customer' => $order->customer?->NmCust ?? '-',
+                        'note_status' => $order->status_bayar === 'hutang' ? 'Tagihan VIP' : 'Lunas',
                         'product' => collect([$item->printer, $item->bahan])->filter()->implode(' / ') ?: '-',
                         'description' => collect([$item->name, $item->breakdown])->filter()->implode(' — '),
                         'length' => $item->panjang, 'width' => $item->lebar, 'qty' => $item->qty,
@@ -123,9 +138,61 @@ class ReportController extends Controller
         $rows = $rows->sortBy(fn ($row) => $row->number.'|'.$row->description)->values();
 
         return view('reports.daily-transactions', [
-            'date' => $date, 'rows' => $rows,
+            'date' => $date, 'rows' => $rows, 'kind' => $kind,
             'totals' => (object) collect(['subtotal', 'discount', 'total', 'cash', 'credit'])
                 ->mapWithKeys(fn ($column) => [$column => (float) $rows->sum($column)])->all(),
+        ]);
+    }
+
+    /**
+     * Rekap - Pelunasan: pembayaran pelunasan (hutang VIP & sisa DP) yang
+     * diterima pada tanggal tersebut, apa pun tanggal order-nya.
+     */
+    private function dailySettlements(string $date): View
+    {
+        $models = ['indoor' => OrderIndoor::class, 'outdoor' => OrderOutdoor::class, 'artwork' => OrderArtwork::class];
+        $payments = OrderPayment::query()
+            ->whereIn('jenis', ['pelunasan_hutang', 'pelunasan_dp'])
+            ->where('jumlah', '>', 0)
+            ->whereDate('created_at', $date)
+            ->oldest('created_at')->oldest('id')
+            ->get();
+
+        $rows = $payments->groupBy('order_type')->flatMap(function ($group, $type) use ($models) {
+            $model = $models[$type] ?? null;
+            if (! $model) {
+                return [];
+            }
+            $orders = $model::query()->with('customer')->whereIn('id', $group->pluck('order_id'))->get()->keyBy('id');
+            $invoices = DB::table('order_documents')
+                ->where('order_type', $type)->where('kind', 'inv')->whereIn('order_id', $group->pluck('order_id'))
+                ->orderByDesc('sequence')->get(['order_id', 'number'])->unique('order_id')->pluck('number', 'order_id');
+
+            return $group->map(function ($payment) use ($orders, $invoices) {
+                $order = $orders->get($payment->order_id);
+                $total = $order ? ($order->diskonStatus() === 'approved' ? (float) $order->totalSetelahDiskon() : (float) $order->total) : 0.0;
+
+                return (object) [
+                    'paid_at' => $payment->created_at,
+                    'invoice' => $invoices[$payment->order_id] ?? $order?->NoOrder ?? '-',
+                    'order' => $order?->NoOrder ?? '-',
+                    'order_date' => $order?->TglOrder,
+                    'customer' => $order?->customer?->NmCust ?? '-',
+                    'kind' => OrderPayment::JENIS_LABELS[$payment->jenis] ?? $payment->jenis,
+                    'method' => OrderPayment::CARA_BAYAR_LABELS[$payment->cara_bayar] ?? strtoupper((string) $payment->cara_bayar),
+                    'reference' => $payment->no_referensi,
+                    'total' => $total,
+                    'amount' => (float) $payment->jumlah,
+                    'remaining' => $order ? max(0, (float) $order->jumlah_piutang) : 0.0,
+                ];
+            });
+        })->sortBy(fn ($row) => $row->paid_at?->timestamp)->values();
+
+        return view('reports.daily-settlements', [
+            'date' => $date,
+            'rows' => $rows,
+            'totals' => (object) ['amount' => (float) $rows->sum('amount')],
+            'byMethod' => $rows->groupBy('method')->map(fn ($group) => (float) $group->sum('amount')),
         ]);
     }
 
@@ -207,42 +274,65 @@ class ReportController extends Controller
         if ($from > $to) {
             [$from, $to] = [$to, $from];
         }
+        $selectedType = in_array($request->query('jenis'), ['indoor', 'outdoor'], true)
+            ? $request->query('jenis')
+            : 'indoor';
 
-        $orders = OrderOutdoor::with(['customer', 'createdBy', 'items.hargaCetak'])
-            ->whereBetween('TglOrder', [$from, $to])->orderBy('TglOrder')->orderBy('NoOrder')->get();
-        $invoiceNumbers = DB::table('order_documents')->where('kind', 'inv')->where('order_type', 'outdoor')
-            ->whereIn('order_id', $orders->pluck('id'))->orderByDesc('sequence')
-            ->get(['order_id', 'number'])->unique('order_id')->pluck('number', 'order_id');
-        $rows = collect();
+        $groups = collect();
 
-        foreach ($orders as $order) {
-            $items = $this->pricing->detailedLineItems('outdoor', $order, $order->items);
-            if ($items->isEmpty()) {
-                $items = collect([(object) ['name' => '-', 'bahan' => '-', 'printer' => '-',
-                    'panjang' => 0, 'lebar' => 0, 'qty' => 0]]);
+        foreach ([$selectedType => $selectedType === 'indoor' ? OrderIndoor::class : OrderOutdoor::class] as $type => $model) {
+            $relations = $type === 'indoor'
+                ? ['customer', 'createdBy', 'items']
+                : ['customer', 'createdBy', 'items.hargaCetak'];
+            $paginator = $model::with($relations)
+                ->whereBetween('TglOrder', [$from, $to])
+                ->where('status', '!=', 'batal')
+                ->orderBy('TglOrder')->orderBy('NoOrder')
+                ->paginate(100)->withQueryString();
+            $orders = collect($paginator->items());
+            $invoiceNumbers = DB::table('order_documents')->where('kind', 'inv')->where('order_type', $type)
+                ->whereIn('order_id', $orders->pluck('id'))->orderByDesc('sequence')
+                ->get(['order_id', 'number'])->unique('order_id')->pluck('number', 'order_id');
+            $rows = collect();
+
+            foreach ($orders as $order) {
+                $rawItems = $type === 'indoor' ? $order->detailItems() : $order->items;
+                $items = $this->pricing->detailedLineItems($type, $order, $rawItems);
+                if ($items->isEmpty()) {
+                    $items = collect([(object) ['name' => '-', 'bahan' => '-', 'printer' => '-',
+                        'panjang' => 0, 'lebar' => 0, 'qty' => 0]]);
+                }
+                $total = $order->diskonStatus() === 'approved' ? $order->totalSetelahDiskon() : (float) $order->total;
+                $advance = max(0, min($total, (float) $order->jumlah_dibayar));
+                $status = match ($order->status_bayar) {
+                    'lunas' => 'Lunas', 'dp' => 'DP', 'hutang' => 'Hutang', default => 'Pre Order',
+                };
+
+                foreach ($items->values() as $index => $item) {
+                    $rows->push((object) [
+                        'first' => $index === 0, 'date' => $order->TglOrder, 'order' => $order->NoOrder,
+                        'invoice' => $invoiceNumbers[$order->id] ?? '-',
+                        'operator' => $order->createdBy?->name ?? '-', 'customer' => $order->customer?->NmCust ?? '-',
+                        'product' => collect([$item->printer, $item->bahan])->filter(fn ($v) => $v && $v !== '-')->implode(' / ') ?: '-',
+                        'title' => $item->name ?: '-', 'length' => $item->panjang, 'width' => $item->lebar,
+                        'qty' => $item->qty, 'total' => $total, 'advance' => $advance, 'status' => $status,
+                    ]);
+                }
             }
-            $total = $order->status === 'batal' ? 0 : ($order->diskonStatus() === 'approved' ? $order->totalSetelahDiskon() : (float) $order->total);
-            $advance = $order->status === 'batal' ? 0 : max(0, min($total, (float) $order->jumlah_dibayar));
-            $status = $order->status === 'batal' ? 'Batal' : match ($order->status_bayar) {
-                'lunas' => 'Lunas', 'dp' => 'DP', 'hutang' => 'Hutang', default => 'Pre Order',
-            };
 
-            foreach ($items->values() as $index => $item) {
-                $rows->push((object) [
-                    'first' => $index === 0, 'date' => $order->TglOrder, 'order' => $order->NoOrder,
-                    'invoice' => $invoiceNumbers[$order->id] ?? '-',
-                    'operator' => $order->createdBy?->name ?? '-', 'customer' => $order->customer?->NmCust ?? '-',
-                    'product' => collect([$item->printer, $item->bahan])->filter(fn ($v) => $v && $v !== '-')->implode(' / ') ?: '-',
-                    'title' => $item->name ?: '-', 'length' => $item->panjang, 'width' => $item->lebar,
-                    'qty' => $item->qty, 'total' => $total, 'advance' => $advance, 'status' => $status,
-                ]);
-            }
+            $groups->put($type, (object) [
+                'label' => ucfirst($type),
+                'rows' => $rows,
+                'paginator' => $paginator,
+                'grandTotal' => (float) $orders->sum(fn ($order) => $order->diskonStatus() === 'approved' ? $order->totalSetelahDiskon() : $order->total),
+                'totalAdvance' => (float) $orders->sum(fn ($order) => min(
+                    $order->diskonStatus() === 'approved' ? $order->totalSetelahDiskon() : (float) $order->total,
+                    max(0, (float) $order->jumlah_dibayar),
+                )),
+            ]);
         }
 
-        return view('reports.outdoor-orders', compact('from', 'to', 'rows') + [
-            'grandTotal' => (float) $orders->where('status', '!=', 'batal')->sum(fn ($order) => $order->diskonStatus() === 'approved' ? $order->totalSetelahDiskon() : $order->total),
-            'totalAdvance' => (float) $orders->where('status', '!=', 'batal')->sum('jumlah_dibayar'),
-        ]);
+        return view('reports.outdoor-orders', compact('from', 'to', 'selectedType', 'groups'));
     }
 
     public function allOrdersByCustomer(Request $request): View

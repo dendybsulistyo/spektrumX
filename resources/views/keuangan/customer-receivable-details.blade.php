@@ -52,12 +52,6 @@
                             @endforeach
                         </datalist>
                     </label>
-                    <label class="text-sm text-gray-700">Dari Tanggal
-                        <input type="date" name="dari" value="{{ $dari }}" required class="mt-1 block rounded-md border-gray-300">
-                    </label>
-                    <label class="text-sm text-gray-700">Sampai Tanggal
-                        <input type="date" name="sampai" value="{{ $sampai }}" required class="mt-1 block rounded-md border-gray-300">
-                    </label>
                     <button class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">Tampilkan</button>
                     @if($reportMode)
                         <button type="button" onclick="window.print()" class="rounded-md bg-slate-700 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800">Cetak</button>
@@ -68,7 +62,7 @@
             <section class="print-sheet bg-white p-5 shadow-sm">
                 <div class="mb-4">
                     <h1 class="text-base font-bold">PIUTANG PER CUSTOMER - SPEKTRUM</h1>
-                    <p class="text-sm font-semibold">Dari Tanggal: {{ \Carbon\Carbon::parse($dari)->translatedFormat('d F Y') }} s/d {{ \Carbon\Carbon::parse($sampai)->translatedFormat('d F Y') }}</p>
+                    <p class="text-sm font-semibold">Posisi per: {{ now()->translatedFormat('d F Y') }} (semua piutang belum lunas)</p>
                     <p class="text-sm font-semibold">Customer: {{ $selectedCustomer?->NmCust ?? 'Pilih customer terlebih dahulu' }}</p>
                 </div>
                 <div class="overflow-x-auto">

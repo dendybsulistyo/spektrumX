@@ -6,64 +6,110 @@
         @if (session('error'))<div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{{ session('error') }}</div>@endif
         @if ($errors->any())<div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"><ul class="list-disc pl-5">@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>@endif
 
-        <section class="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
-            <h3 class="font-semibold text-slate-900">Aturan aman penyesuaian</h3>
-            <p class="mt-1">Nota asli dan pembayaran lama tidak dihapus. Tambahan/refund DP dicatat sebagai mutasi baru, memperbarui saldo, dan membuat jurnal otomatis. Koreksi harga menggunakan potongan akhir atau nota pengganti agar rincian produk dan invoice tetap konsisten.</p>
-            <div class="mt-3 flex flex-wrap gap-2">
-                <a href="{{ route('keuangan.final-sales-discounts.index') }}" class="rounded-md bg-indigo-600 px-3 py-2 text-xs font-semibold text-white">Potongan / Pengurangan Nota</a>
-                <a href="{{ route('keuangan.pembatalan-order') }}" class="rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-semibold">Batalkan / Nota Pengganti</a>
-            </div>
-        </section>
-
         <section class="rounded-lg border bg-white p-5 shadow-sm">
-            <div class="mb-4 flex flex-wrap items-end justify-between gap-3">
-                <div><h3 class="font-semibold text-gray-900">Tambah atau Refund DP</h3><p class="text-xs text-gray-500">Hanya order Indoor/Outdoor dengan DP aktif.</p></div>
-                <form method="GET" class="flex flex-wrap items-end gap-2">
-                    <label class="text-xs text-gray-600">Cari order/customer<input name="q" value="{{ $search }}" class="mt-1 block rounded-md border-gray-300 text-sm" placeholder="No. order atau customer"></label>
-                    <label class="text-xs text-gray-600">Histori dari<input type="date" name="dari" value="{{ $from }}" class="mt-1 block rounded-md border-gray-300 text-sm"></label>
-                    <label class="text-xs text-gray-600">Sampai<input type="date" name="sampai" value="{{ $to }}" class="mt-1 block rounded-md border-gray-300 text-sm"></label>
-                    <button class="rounded-md border px-3 py-2 text-sm font-semibold">Cari</button>
+            <h3 class="text-base font-semibold text-gray-900">Koreksi Metode Pembayaran</h3>
+            <div class="mt-4 grid gap-4 md:grid-cols-2">
+                <form method="GET" class="flex items-end gap-3 rounded-md border p-3">
+                    <label class="flex-1 text-sm text-gray-700">Nama customer / No. nota
+                        <input name="q" value="{{ $search }}" required class="mt-1 block w-full rounded-md border-gray-300" placeholder="Contoh: INV.1.26092100003 atau nama customer">
+                    </label>
+                    <button class="rounded-md bg-indigo-600 px-5 py-2 font-semibold text-white hover:bg-indigo-700">Cari</button>
+                </form>
+                <form method="GET" class="flex items-end gap-3 rounded-md border p-3">
+                    <label class="flex-1 text-sm text-gray-700">Tanggal pembayaran
+                        <input type="date" name="tanggal" value="{{ $date }}" required max="{{ now()->format('Y-m-d') }}" class="mt-1 block w-full rounded-md border-gray-300">
+                    </label>
+                    <button class="rounded-md bg-indigo-600 px-5 py-2 font-semibold text-white hover:bg-indigo-700">Cari</button>
                 </form>
             </div>
-
-            @can('keuangan.pengaturan')
-                <form method="POST" action="{{ route('keuangan.order-adjustments.store') }}" class="grid gap-4 lg:grid-cols-3">
-                    @csrf
-                    <label class="text-sm text-gray-700 lg:col-span-2">Order DP
-                        <select name="order_key" required class="mt-1 block w-full rounded-md border-gray-300">
-                            <option value="">Pilih order</option>
-                            @foreach($orders as $order)
-                                <option value="{{ $order->order_type }}:{{ $order->id }}" @selected(old('order_key') === $order->order_type.':'.$order->id)>
-                                    {{ $order->NoOrder }} · {{ $order->customer?->NmCust ?: '-' }} · DP Rp {{ number_format($order->jumlah_dibayar,0,',','.') }} · Sisa Rp {{ number_format($order->jumlah_piutang,0,',','.') }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </label>
-                    <label class="text-sm text-gray-700">Tanggal transaksi<input type="date" name="transaction_date" value="{{ old('transaction_date', now()->format('Y-m-d')) }}" required class="mt-1 block w-full rounded-md border-gray-300"></label>
-                    <label class="text-sm text-gray-700">Jenis penyesuaian
-                        <select name="adjustment_type" required class="mt-1 block w-full rounded-md border-gray-300"><option value="dp_tambah" @selected(old('adjustment_type')==='dp_tambah')>Tambah DP diterima</option><option value="dp_refund" @selected(old('adjustment_type')==='dp_refund')>Refund / kurangi DP</option></select>
-                    </label>
-                    <label class="text-sm text-gray-700">Nominal<input name="amount" inputmode="numeric" value="{{ old('amount') }}" required placeholder="Contoh: 500000" class="mt-1 block w-full rounded-md border-gray-300"></label>
-                    <label class="text-sm text-gray-700">Metode uang
-                        <select name="payment_method" required class="mt-1 block w-full rounded-md border-gray-300"><option value="tunai" @selected(old('payment_method')==='tunai')>Tunai</option><option value="qris" @selected(old('payment_method')==='qris')>QRIS</option><option value="transfer" @selected(old('payment_method')==='transfer')>Transfer</option></select>
-                    </label>
-                    <label class="text-sm text-gray-700">Nomor referensi<input name="reference_number" value="{{ old('reference_number') }}" maxlength="50" class="mt-1 block w-full rounded-md border-gray-300" placeholder="Wajib untuk QRIS/transfer"></label>
-                    <label class="text-sm text-gray-700 lg:col-span-2">Alasan penyesuaian<input name="reason" value="{{ old('reason') }}" required maxlength="255" class="mt-1 block w-full rounded-md border-gray-300" placeholder="Contoh: nominal transfer DP kurang tercatat"></label>
-                    <div class="flex items-end"><button class="w-full rounded-md bg-indigo-600 px-4 py-2 font-semibold text-white" onclick="return confirm('Simpan penyesuaian dan posting jurnal?')">Simpan &amp; Posting Jurnal</button></div>
-                </form>
-            @else
-                <p class="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800">Anda dapat melihat histori, tetapi pencatatan baru memerlukan hak akses Pengaturan Keuangan.</p>
-            @endcan
         </section>
+
+        @if ($search !== '' || $date)
+            <section class="overflow-hidden rounded-lg border bg-white shadow-sm">
+                <div class="flex items-center justify-between border-b px-5 py-3">
+                    <h3 class="font-semibold text-gray-900">
+                        Hasil pencarian
+                        @if ($search !== '') “{{ $search }}” @endif
+                        @if ($date) tanggal {{ \Illuminate\Support\Carbon::parse($date)->format('d/m/Y') }} @endif
+                    </h3>
+                    <span class="text-sm text-gray-500">{{ $rows->count() }} pembayaran</span>
+                </div>
+
+                <form method="POST" action="{{ route('keuangan.order-adjustments.store') }}"
+                      onsubmit="return confirm('Simpan semua koreksi metode pembayaran yang diubah?')">
+                    @csrf
+                    <input type="hidden" name="q" value="{{ $search }}">
+                    <input type="hidden" name="tanggal" value="{{ $date }}">
+                    <div class="overflow-x-auto">
+                        <table class="w-full min-w-[800px] text-left text-sm">
+                            <thead class="border-b bg-gray-50 text-xs uppercase text-gray-500">
+                                <tr>
+                                    <th class="w-12 px-4 py-3">No</th>
+                                    <th class="px-4 py-3">Nama Customer</th>
+                                    <th class="px-4 py-3">No. SO DP / Invoice</th>
+                                    <th class="px-4 py-3 text-right">Nilai Transaksi</th>
+                                    <th class="px-4 py-3">Metode Bayar</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y">
+                                @forelse ($rows as $payment)
+                                    @php($method = old("payments.{$payment->id}.method", $payment->cara_bayar))
+                                    <tr x-data="{ method: @js($method) }" :class="method !== @js($payment->cara_bayar) && 'bg-amber-50'">
+                                        <td class="px-4 py-2 text-gray-500">{{ $loop->iteration }}</td>
+                                        <td class="px-4 py-2 font-medium">{{ $payment->customer_name }}</td>
+                                        <td class="px-4 py-2 whitespace-nowrap">
+                                            <span class="font-semibold">{{ $payment->document_number }}</span>
+                                            <div class="text-xs text-gray-500">{{ \App\Models\OrderPayment::JENIS_LABELS[$payment->jenis] ?? ucfirst($payment->jenis) }} · {{ $payment->created_at?->format('d/m/Y H:i') }}</div>
+                                        </td>
+                                        <td class="px-4 py-2 text-right font-semibold whitespace-nowrap">Rp {{ number_format($payment->jumlah, 0, ',', '.') }}</td>
+                                        <td class="px-4 py-2">
+                                            <div class="flex items-center gap-2">
+                                                <select name="payments[{{ $payment->id }}][method]" x-model="method" class="w-32 rounded-md border-gray-300 text-sm">
+                                                    @foreach (\App\Models\OrderPayment::CARA_BAYAR_LABELS as $value => $label)
+                                                        <option value="{{ $value }}">{{ $label }}</option>
+                                                    @endforeach
+                                                </select>
+                                                <input name="payments[{{ $payment->id }}][reference]" x-show="method !== 'tunai'" maxlength="50"
+                                                       value="{{ old("payments.{$payment->id}.reference", $payment->no_referensi) }}"
+                                                       class="w-40 rounded-md border-gray-300 text-sm" placeholder="No. referensi">
+                                            </div>
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr><td colspan="5" class="px-4 py-10 text-center text-gray-500">Pembayaran nota DP atau Lunas tidak ditemukan.</td></tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                    @if ($rows->isNotEmpty())
+                        <div class="flex items-center justify-between border-t bg-gray-50 px-5 py-3">
+                            <span class="text-xs text-gray-500">Baris yang metodenya diubah ditandai kuning. Baris yang tidak diubah tidak ikut disimpan.</span>
+                            <button class="rounded-md bg-indigo-600 px-6 py-2 font-semibold text-white hover:bg-indigo-700">Update</button>
+                        </div>
+                    @endif
+                </form>
+            </section>
+        @endif
 
         <section class="overflow-hidden rounded-lg border bg-white shadow-sm">
-            <div class="border-b px-5 py-4"><h3 class="font-semibold text-gray-900">Histori Penyesuaian DP</h3></div>
+            <div class="flex flex-wrap items-end justify-between gap-3 border-b px-5 py-4">
+                <h3 class="font-semibold text-gray-900">Histori Koreksi Metode Pembayaran</h3>
+                <form method="GET" class="flex flex-wrap items-end gap-2">
+                    @if ($search !== '')<input type="hidden" name="q" value="{{ $search }}">@endif
+                    @if ($date)<input type="hidden" name="tanggal" value="{{ $date }}">@endif
+                    <label class="text-xs text-gray-600">Dari<input type="date" name="dari" value="{{ $from }}" class="mt-1 block rounded-md border-gray-300 text-sm"></label>
+                    <label class="text-xs text-gray-600">Sampai<input type="date" name="sampai" value="{{ $to }}" class="mt-1 block rounded-md border-gray-300 text-sm"></label>
+                    <button class="rounded-md border px-3 py-2 text-sm font-semibold">Tampilkan</button>
+                </form>
+            </div>
             <div class="overflow-x-auto"><table class="w-full min-w-[1100px] text-left text-xs">
-                <thead class="bg-gray-50 uppercase text-gray-500"><tr><th class="px-3 py-2">Tanggal</th><th class="px-3 py-2">Order</th><th class="px-3 py-2">Customer</th><th class="px-3 py-2">Jenis</th><th class="px-3 py-2 text-right">Nominal</th><th class="px-3 py-2 text-right">DP Sebelum → Sesudah</th><th class="px-3 py-2 text-right">Sisa Sebelum → Sesudah</th><th class="px-3 py-2">Metode</th><th class="px-3 py-2">Alasan / Jurnal</th><th class="px-3 py-2">User</th></tr></thead>
+                <thead class="bg-gray-50 uppercase text-gray-500"><tr><th class="px-3 py-2">Tanggal</th><th class="px-3 py-2">Nota / Order</th><th class="px-3 py-2 text-right">Nominal</th><th class="px-3 py-2">Metode Lama</th><th class="px-3 py-2">Metode Baru</th><th class="px-3 py-2">Referensi Baru</th><th class="px-3 py-2">Catatan</th><th class="px-3 py-2">Jurnal</th><th class="px-3 py-2">User</th></tr></thead>
                 <tbody class="divide-y">
-                @forelse($history as $row)
-                    <tr><td class="px-3 py-2 whitespace-nowrap">{{ $row->transaction_date->format('d/m/Y') }}</td><td class="px-3 py-2 font-semibold">{{ $row->order_number }}<div class="font-normal text-gray-500">{{ ucfirst($row->order_type) }}</div></td><td class="px-3 py-2">{{ $row->customer?->NmCust ?: '-' }}</td><td class="px-3 py-2">{{ $row->adjustment_type === 'dp_tambah' ? 'Tambah DP' : 'Refund DP' }}</td><td class="px-3 py-2 text-right font-semibold">{{ number_format($row->amount,0,',','.') }}</td><td class="px-3 py-2 text-right whitespace-nowrap">{{ number_format($row->paid_before,0,',','.') }} → {{ number_format($row->paid_after,0,',','.') }}</td><td class="px-3 py-2 text-right whitespace-nowrap">{{ number_format($row->receivable_before,0,',','.') }} → {{ number_format($row->receivable_after,0,',','.') }}</td><td class="px-3 py-2">{{ strtoupper($row->payment_method) }}<div class="text-gray-500">{{ $row->reference_number }}</div></td><td class="px-3 py-2">{{ $row->reason }}<div class="text-gray-500">Jurnal: {{ $row->journal_transaction_number }}</div></td><td class="px-3 py-2">{{ $row->user?->name ?: '-' }}</td></tr>
-                @empty<tr><td colspan="10" class="px-4 py-8 text-center text-gray-500">Belum ada penyesuaian DP pada periode ini.</td></tr>@endforelse
+                    @forelse ($history as $row)
+                        <tr><td class="px-3 py-2 whitespace-nowrap">{{ $row->correction_date->format('d/m/Y') }}</td><td class="px-3 py-2 font-semibold">{{ $row->invoice_number ?: $row->order_number }}<div class="font-normal text-gray-500">{{ $row->order_number }}</div></td><td class="px-3 py-2 text-right font-semibold">{{ number_format($row->amount, 0, ',', '.') }}</td><td class="px-3 py-2">{{ \App\Models\OrderPayment::CARA_BAYAR_LABELS[$row->old_method] ?? strtoupper($row->old_method) }}<div class="text-gray-500">{{ $row->old_reference }}</div></td><td class="px-3 py-2">{{ \App\Models\OrderPayment::CARA_BAYAR_LABELS[$row->new_method] ?? strtoupper($row->new_method) }}</td><td class="px-3 py-2">{{ $row->new_reference ?: '-' }}</td><td class="px-3 py-2">{{ $row->reason }}</td><td class="px-3 py-2">{{ $row->journal_transaction_number ?: 'Tidak perlu' }}</td><td class="px-3 py-2">{{ $row->user?->name ?: '-' }}</td></tr>
+                    @empty
+                        <tr><td colspan="9" class="px-4 py-8 text-center text-gray-500">Belum ada koreksi metode pembayaran pada periode ini.</td></tr>
+                    @endforelse
                 </tbody>
             </table></div>
         </section>
