@@ -48,13 +48,14 @@
                                     <th class="px-4 py-3">Nama Customer</th>
                                     <th class="px-4 py-3">No. SO DP / Invoice</th>
                                     <th class="px-4 py-3 text-right">Nilai Transaksi</th>
-                                    <th class="px-4 py-3">Metode Bayar</th>
+                                    <th class="px-4 py-3">Metode Kasir</th>
+                                    <th class="px-4 py-3">Pengganti</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y">
                                 @forelse ($rows as $payment)
-                                    @php($method = old("payments.{$payment->id}.method", $payment->cara_bayar))
-                                    <tr x-data="{ method: @js($method) }" :class="method !== @js($payment->cara_bayar) && 'bg-amber-50'">
+                                    @php($method = old("payments.{$payment->id}.method", ''))
+                                    <tr x-data="{ method: @js($method) }" :class="method && 'bg-amber-50'">
                                         <td class="px-4 py-2 text-gray-500">{{ $loop->iteration }}</td>
                                         <td class="px-4 py-2 font-medium">{{ $payment->customer_name }}</td>
                                         <td class="px-4 py-2 whitespace-nowrap">
@@ -62,28 +63,33 @@
                                             <div class="text-xs text-gray-500">{{ \App\Models\OrderPayment::JENIS_LABELS[$payment->jenis] ?? ucfirst($payment->jenis) }} · {{ $payment->created_at?->format('d/m/Y H:i') }}</div>
                                         </td>
                                         <td class="px-4 py-2 text-right font-semibold whitespace-nowrap">Rp {{ number_format($payment->jumlah, 0, ',', '.') }}</td>
+                                        <td class="px-4 py-2 whitespace-nowrap">
+                                            <span class="rounded bg-slate-100 px-2 py-1 text-xs font-semibold">{{ \App\Models\OrderPayment::CARA_BAYAR_LABELS[$payment->cara_bayar] ?? strtoupper($payment->cara_bayar) }}</span>
+                                            @if ($payment->no_referensi)<div class="mt-1 text-xs text-gray-500">{{ $payment->no_referensi }}</div>@endif
+                                        </td>
                                         <td class="px-4 py-2">
                                             <div class="flex items-center gap-2">
-                                                <select name="payments[{{ $payment->id }}][method]" x-model="method" class="w-32 rounded-md border-gray-300 text-sm">
-                                                    @foreach (\App\Models\OrderPayment::CARA_BAYAR_LABELS as $value => $label)
-                                                        <option value="{{ $value }}">{{ $label }}</option>
-                                                    @endforeach
+                                                <select name="payments[{{ $payment->id }}][method]" x-model="method" class="w-36 rounded-md border-gray-300 text-sm">
+                                                    <option value="">— Tidak diganti —</option>
+                                                    <option value="debit">Debit/Card</option>
+                                                    <option value="qris">QRIS</option>
+                                                    <option value="transfer">Transfer</option>
                                                 </select>
-                                                <input name="payments[{{ $payment->id }}][reference]" x-show="method !== 'tunai'" maxlength="50"
-                                                       value="{{ old("payments.{$payment->id}.reference", $payment->no_referensi) }}"
-                                                       class="w-40 rounded-md border-gray-300 text-sm" placeholder="No. referensi">
+                                                <input name="payments[{{ $payment->id }}][reference]" x-show="method" maxlength="50"
+                                                       value="{{ old("payments.{$payment->id}.reference") }}"
+                                                       class="w-40 rounded-md border-gray-300 text-sm" :placeholder="method === 'debit' ? 'No. referensi (opsional)' : 'No. referensi'">
                                             </div>
                                         </td>
                                     </tr>
                                 @empty
-                                    <tr><td colspan="5" class="px-4 py-10 text-center text-gray-500">Pembayaran nota DP atau Lunas tidak ditemukan.</td></tr>
+                                    <tr><td colspan="6" class="px-4 py-10 text-center text-gray-500">Pembayaran nota DP atau Lunas tidak ditemukan.</td></tr>
                                 @endforelse
                             </tbody>
                         </table>
                     </div>
                     @if ($rows->isNotEmpty())
                         <div class="flex items-center justify-between border-t bg-gray-50 px-5 py-3">
-                            <span class="text-xs text-gray-500">Baris yang metodenya diubah ditandai kuning. Baris yang tidak diubah tidak ikut disimpan.</span>
+                            <span class="text-xs text-gray-500">Baris yang diberi metode pengganti ditandai kuning. Baris tanpa pengganti tidak ikut disimpan.</span>
                             <button class="rounded-md bg-indigo-600 px-6 py-2 font-semibold text-white hover:bg-indigo-700">Update</button>
                         </div>
                     @endif

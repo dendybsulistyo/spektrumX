@@ -22,6 +22,7 @@ class OrderPayment extends Model
         'tunai' => 'Tunai',
         'qris' => 'QRIS',
         'transfer' => 'Transfer',
+        'debit' => 'Debit/Card',
     ];
 
     protected $fillable = [

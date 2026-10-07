@@ -45,7 +45,7 @@
                             <th>Jenis</th><th>Metode</th><th>No. Referensi</th><th>Total Nota</th><th>Dibayar</th><th>Sisa Tagihan</th>
                         </tr></thead>
                         <tbody>
-                        @forelse ($rows as $row)
+                        @forelse ($settlementRows as $row)
                             <tr>
                                 <td class="center">{{ $loop->iteration }}</td>
                                 <td class="center">{{ $row->paid_at?->format('H:i') }}</td>
@@ -67,7 +67,7 @@
                         <tfoot class="font-bold">
                             <tr>
                                 <td colspan="10" class="number">Grand Total:</td>
-                                <td class="number">{{ number_format($totals->amount, 0, ',', '.') }}</td>
+                                <td class="number">{{ number_format($settlementTotal, 0, ',', '.') }}</td>
                                 <td></td>
                             </tr>
                             @foreach ($byMethod as $method => $amount)

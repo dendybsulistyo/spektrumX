@@ -50,6 +50,7 @@ class MonitoringTransaksiController extends Controller
             // created_at and no computed total (see DashboardController) —
             // excluding them keeps this report scoped to orders actually
             // placed through the current pipeline, same as the Dashboard.
+            
             if ($table === 'order_indoor') {
                 $query->whereNotNull('created_at');
             }

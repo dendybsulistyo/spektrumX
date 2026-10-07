@@ -79,6 +79,46 @@
                         </tr></tfoot>
                     </table>
                 </div>
+
+                {{-- DISEMBUNYIKAN SEMENTARA (7 Okt 2026): tabel "Pelunasan Diterima". Hapus baris komentar ini & penutupnya untuk menampilkan lagi.
+                @isset($settlementRows)
+                    <h2 class="mb-2 mt-6 text-sm font-bold">PELUNASAN DITERIMA</h2>
+                    <div class="overflow-x-auto">
+                        <table>
+                            <thead><tr>
+                                <th>No</th><th>Jam Bayar</th><th>No. Invoice / Nota</th><th>No. Order</th><th>Tgl Order</th><th>Customer</th>
+                                <th>Jenis</th><th>Metode</th><th>No. Referensi</th><th>Total Nota</th><th>Dibayar</th><th>Sisa Tagihan</th>
+                            </tr></thead>
+                            <tbody>
+                            @forelse ($settlementRows as $row)
+                                <tr>
+                                    <td class="center">{{ $loop->iteration }}</td>
+                                    <td class="center">{{ $row->paid_at?->format('H:i') }}</td>
+                                    <td class="document-number">{{ $row->invoice }}</td>
+                                    <td class="center">{{ $row->order }}</td>
+                                    <td class="center">{{ $row->order_date ? \Carbon\Carbon::parse($row->order_date)->format('d-m-Y') : '-' }}</td>
+                                    <td>{{ $row->customer }}</td>
+                                    <td class="center">{{ $row->kind }}</td>
+                                    <td class="center">{{ $row->method }}</td>
+                                    <td>{{ $row->reference ?: '-' }}</td>
+                                    <td class="number">{{ number_format($row->total, 0, ',', '.') }}</td>
+                                    <td class="number">{{ number_format($row->amount, 0, ',', '.') }}</td>
+                                    <td class="number">{{ $row->remaining > 0 ? number_format($row->remaining, 0, ',', '.') : 'Lunas' }}</td>
+                                </tr>
+                            @empty
+                                <tr><td colspan="12" class="center" style="padding:16px">Belum ada pelunasan pada tanggal ini.</td></tr>
+                            @endforelse
+                            </tbody>
+                            <tfoot class="font-bold">
+                                <tr><td colspan="10" class="number">Total Pelunasan:</td><td class="number">{{ number_format($settlementTotal, 0, ',', '.') }}</td><td></td></tr>
+                                @foreach ($byMethod as $method => $amount)
+                                    <tr><td colspan="10" class="number" style="font-weight:400">Total {{ $method }}:</td><td class="number" style="font-weight:400">{{ number_format($amount, 0, ',', '.') }}</td><td></td></tr>
+                                @endforeach
+                            </tfoot>
+                        </table>
+                    </div>
+                @endisset
+                --}}
             </section>
         </div>
     </div>

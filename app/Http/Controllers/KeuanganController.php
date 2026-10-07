@@ -1178,6 +1178,87 @@ class KeuanganController extends Controller
         return view('keuangan.global-customer-receivables', compact('asOf', 'rows', 'totals'));
     }
 
+    /**
+     * Rekap Piutang Customer: semua piutang, VIP (nota hutang) maupun
+     * Reguler (sisa DP), posisi sampai tanggal tertentu.
+     */
+    public function customerReceivablesRecap(Request $request): View
+    {
+        $asOf = $request->date('tanggal')?->format('Y-m-d') ?? now()->format('Y-m-d');
+        $segment = in_array($request->query('jenis'), ['vip', 'reguler'], true) ? $request->query('jenis') : 'semua';
+        $customers = collect();
+
+        foreach (['indoor' => OrderIndoor::class, 'outdoor' => OrderOutdoor::class, 'artwork' => OrderArtwork::class] as $type => $model) {
+            // Order yang pernah berstatus piutang: hutang VIP, DP, atau sudah dilunasi setelah tanggal posisi.
+            $settledIds = OrderPayment::query()->where('order_type', $type)
+                ->whereIn('jenis', ['pelunasan_hutang', 'pelunasan_dp'])->pluck('order_id');
+            $orders = $model::query()->with('customer')
+                ->whereDate('TglOrder', '<=', $asOf)
+                ->where('status', '!=', 'batal')
+                ->where(function ($query) use ($settledIds) {
+                    $query->whereIn('status_bayar', ['hutang', 'dp']);
+                    if ($settledIds->isNotEmpty()) {
+                        $query->orWhereIn('id', $settledIds);
+                    }
+                })->get();
+            if ($orders->isEmpty()) {
+                continue;
+            }
+
+            $paymentsByOrder = OrderPayment::query()->where('order_type', $type)
+                ->whereIn('order_id', $orders->pluck('id'))
+                ->where('jumlah', '>', 0)->where('jenis', '!=', 'refund')
+                ->where('created_at', '<=', "{$asOf} 23:59:59")
+                ->get(['order_id', 'jenis', 'jumlah'])->groupBy('order_id');
+            $finalDiscountsByOrder = FinalSalesDiscount::query()
+                ->where('order_type', $type)->whereIn('order_id', $orders->pluck('id'))
+                ->whereDate('transaction_date', '<=', $asOf)
+                ->selectRaw('order_id, SUM(discount_amount) AS total_discount')
+                ->groupBy('order_id')->pluck('total_discount', 'order_id');
+
+            foreach ($orders as $order) {
+                $payments = $paymentsByOrder[$order->id] ?? collect();
+                $isRegular = $order->status_bayar === 'dp' || $payments->contains('jenis', 'dp');
+                if (($segment === 'vip' && $isRegular) || ($segment === 'reguler' && ! $isRegular)) {
+                    continue;
+                }
+
+                $gross = (float) $order->total;
+                $initialDiscount = $order->diskon_approved_at && $order->diskon_approved_at->format('Y-m-d') <= $asOf
+                    ? $order->diskonAwalNominal() : 0.0;
+                $discount = $initialDiscount + (float) ($finalDiscountsByOrder[$order->id] ?? 0);
+                $net = max(0, $gross - $discount);
+                // VIP: hanya pelunasan hutang; Reguler: DP + pelunasan DP.
+                $paidJenis = $isRegular ? ['dp', 'pelunasan_dp'] : ['pelunasan_hutang'];
+                $paid = min($net, max(0, (float) $payments->whereIn('jenis', $paidJenis)->sum('jumlah')));
+                $remaining = max(0, $net - $paid);
+                if ($remaining <= 0) {
+                    continue;
+                }
+
+                $key = $order->KdCust ?: 'tanpa-customer';
+                $row = $customers->get($key, [
+                    'code' => $order->KdCust,
+                    'customer' => $order->customer?->NmCust ?: ($order->KdCust ?: 'Tanpa Customer'),
+                    'has_vip' => false,
+                    'receivable' => 0.0, 'discount' => 0.0, 'paid' => 0.0, 'remaining' => 0.0,
+                ]);
+                $row['has_vip'] = $row['has_vip'] || ! $isRegular;
+                $row['receivable'] += $gross;
+                $row['discount'] += $discount;
+                $row['paid'] += $paid;
+                $row['remaining'] += $remaining;
+                $customers->put($key, $row);
+            }
+        }
+
+        $rows = $customers->sortBy(fn (array $row) => mb_strtolower($row['customer']))->values();
+        $totals = (object) collect(['receivable', 'discount', 'paid', 'remaining'])
+            ->mapWithKeys(fn ($column) => [$column => (float) $rows->sum($column)])->all();
+
+        return view('keuangan.customer-receivables-recap', compact('asOf', 'segment', 'rows', 'totals'));
+    }
+
     public function customerReceivableDetails(Request $request): View
     {
         // Piutang tidak dibatasi periode: tampilkan seluruh nota yang belum lunas.

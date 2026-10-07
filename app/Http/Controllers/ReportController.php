@@ -139,6 +139,8 @@ class ReportController extends Controller
 
         return view('reports.daily-transactions', [
             'date' => $date, 'rows' => $rows, 'kind' => $kind,
+            // Tabel pelunasan sedang disembunyikan di view; aktifkan lagi bersama view-nya.
+            // ...($kind === null ? $this->settlementData($date) : []),
             'totals' => (object) collect(['subtotal', 'discount', 'total', 'cash', 'credit'])
                 ->mapWithKeys(fn ($column) => [$column => (float) $rows->sum($column)])->all(),
         ]);
@@ -149,6 +151,12 @@ class ReportController extends Controller
      * diterima pada tanggal tersebut, apa pun tanggal order-nya.
      */
     private function dailySettlements(string $date): View
+    {
+        return view('reports.daily-settlements', ['date' => $date, ...$this->settlementData($date)]);
+    }
+
+    /** @return array{settlementRows: \Illuminate\Support\Collection, settlementTotal: float, byMethod: \Illuminate\Support\Collection} */
+    private function settlementData(string $date): array
     {
         $models = ['indoor' => OrderIndoor::class, 'outdoor' => OrderOutdoor::class, 'artwork' => OrderArtwork::class];
         $payments = OrderPayment::query()
@@ -188,12 +196,11 @@ class ReportController extends Controller
             });
         })->sortBy(fn ($row) => $row->paid_at?->timestamp)->values();
 
-        return view('reports.daily-settlements', [
-            'date' => $date,
-            'rows' => $rows,
-            'totals' => (object) ['amount' => (float) $rows->sum('amount')],
+        return [
+            'settlementRows' => $rows,
+            'settlementTotal' => (float) $rows->sum('amount'),
             'byMethod' => $rows->groupBy('method')->map(fn ($group) => (float) $group->sum('amount')),
-        ]);
+        ];
     }
 
     public function podTurnover(Request $request): View

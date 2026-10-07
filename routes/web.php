@@ -173,6 +173,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/keuangan/limit-piutang', [KeuanganController::class, 'creditLimits'])->name('keuangan.credit-limits');
         Route::get('/keuangan/piutang-customer-global', [KeuanganController::class, 'globalCustomerReceivables'])->name('keuangan.global-customer-receivables');
         Route::get('/keuangan/piutang-per-customer', [KeuanganController::class, 'customerReceivableDetails'])->name('keuangan.customer-receivable-details');
+        Route::get('/keuangan/rekap-piutang-customer', [KeuanganController::class, 'customerReceivablesRecap'])->name('keuangan.customer-receivables-recap');
         Route::get('/keuangan/penerimaan-piutang', [KeuanganController::class, 'dailyReceivableCollections'])->name('keuangan.daily-receivable-collections');
         Route::get('/keuangan/laba-rugi', [KeuanganController::class, 'labaRugi'])->name('keuangan.laba-rugi');
         Route::get('/keuangan/tutup-buku', [TutupBukuController::class, 'index'])->name('keuangan.tutup-buku');

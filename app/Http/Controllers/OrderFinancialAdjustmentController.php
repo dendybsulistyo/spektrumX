@@ -115,7 +115,7 @@ class OrderFinancialAdjustmentController extends Controller
     {
         $request->validate([
             'payments' => ['required', 'array'],
-            'payments.*.method' => ['required', 'in:tunai,qris,transfer'],
+            'payments.*.method' => ['nullable', 'in:debit,qris,transfer'],
             'payments.*.reference' => ['nullable', 'string', 'max:50'],
             'q' => ['nullable', 'string', 'max:100'],
             'tanggal' => ['nullable', 'date'],
@@ -127,13 +127,17 @@ class OrderFinancialAdjustmentController extends Controller
 
         $changes = [];
         foreach ($request->input('payments') as $paymentId => $input) {
-            $method = $input['method'];
-            $reference = $method === 'tunai' ? null : (trim((string) ($input['reference'] ?? '')) ?: null);
+            // Kosong = tidak diganti; metode kasir tetap.
+            $method = $input['method'] ?? null;
+            if (! $method) {
+                continue;
+            }
+            $reference = trim((string) ($input['reference'] ?? '')) ?: null;
             $payment = OrderPayment::query()->find((int) $paymentId);
             if (! $payment || ($payment->cara_bayar === $method && ($payment->no_referensi ?: null) === $reference)) {
                 continue;
             }
-            if ($method !== 'tunai' && $reference === null) {
+            if (in_array($method, ['qris', 'transfer'], true) && $reference === null) {
                 throw ValidationException::withMessages(["payments.{$paymentId}.reference" => 'No. referensi wajib diisi untuk QRIS/Transfer.']);
             }
             $changes[] = [
