@@ -287,7 +287,7 @@
                                                 <a href="{{ route('keuangan.credit-limits') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.credit-limits')) }}">Rekap Limit Piutang</a>
                                                 {{-- DISEMBUNYIKAN SEMENTARA (7 Okt 2026): <a href="{{ route('keuangan.total-tagihan-piutang') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.total-tagihan-piutang')) }}">Total Tagihan</a> --}}
                                                 <a href="{{ route('keuangan.pembatalan-order') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.pembatalan-order')) }}">Pembatalan Pre-Order &amp; Nota</a>
-                                                <a href="{{ route('keuangan.customer-receivable-details') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.customer-receivable-details') && request('mode') !== 'report') }}">Piutang per Customer</a>
+                                                <a href="{{ route('keuangan.customer-receivable-details') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.customer-receivable-details') && request('mode') !== 'report') }}">Pembayaran Piutang</a>
                                                 <a href="{{ route('keuangan.customer-receivables-recap') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.customer-receivables-recap')) }}">Rekap Piutang Customer</a>
                                             @endcan
                                             </div>
@@ -646,7 +646,7 @@
                                 {{-- DISEMBUNYIKAN SEMENTARA (7 Okt 2026): <a href="{{ route('keuangan.total-tagihan-piutang') }}" class="{{ $mobileLink(request()->routeIs('keuangan.total-tagihan-piutang')) }}">Total Tagihan</a> --}}
                                 <a href="{{ route('keuangan.pembatalan-order') }}" class="{{ $mobileLink(request()->routeIs('keuangan.pembatalan-order')) }}">Pembatalan Pre-Order &amp; Nota</a>
                                 <a href="{{ route('akuntansi.piutang-customer') }}" class="{{ $mobileLink(request()->routeIs('akuntansi.piutang-customer')) }}">Buku Piutang Customer</a>
-                                <a href="{{ route('keuangan.customer-receivable-details') }}" class="{{ $mobileLink(request()->routeIs('keuangan.customer-receivable-details') && request('mode') !== 'report') }}">Piutang per Customer</a>
+                                <a href="{{ route('keuangan.customer-receivable-details') }}" class="{{ $mobileLink(request()->routeIs('keuangan.customer-receivable-details') && request('mode') !== 'report') }}">Pembayaran Piutang</a>
                                 <a href="{{ route('keuangan.customer-receivables-recap') }}" class="{{ $mobileLink(request()->routeIs('keuangan.customer-receivables-recap')) }}">Rekap Piutang Customer</a>
                             @endcan
                             @can('pengeluaran.view')

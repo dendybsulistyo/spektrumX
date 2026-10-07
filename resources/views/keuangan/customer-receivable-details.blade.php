@@ -1,6 +1,6 @@
 <x-app-layout>
     @php($reportMode = request('mode') === 'report')
-    <x-slot name="header"><h2 class="font-semibold text-xl text-gray-800">Piutang per Customer</h2></x-slot>
+    <x-slot name="header"><h2 class="font-semibold text-xl text-gray-800">{{ $reportMode ? 'Piutang per Customer' : 'Pembayaran Piutang' }}</h2></x-slot>
     <style>
         .customer-receivable-detail { color:#111827; }
         .customer-receivable-detail table { width:100%; border-collapse:collapse; font-size:12px; }
@@ -61,7 +61,7 @@
 
             <section class="print-sheet bg-white p-5 shadow-sm">
                 <div class="mb-4">
-                    <h1 class="text-base font-bold">PIUTANG PER CUSTOMER - SPEKTRUM</h1>
+                    <h1 class="text-base font-bold">{{ $reportMode ? 'PIUTANG PER CUSTOMER' : 'PEMBAYARAN PIUTANG' }} - SPEKTRUM</h1>
                     <p class="text-sm font-semibold">Posisi per: {{ now()->translatedFormat('d F Y') }} (semua piutang belum lunas)</p>
                     <p class="text-sm font-semibold">Customer: {{ $selectedCustomer?->NmCust ?? 'Pilih customer terlebih dahulu' }}</p>
                 </div>
