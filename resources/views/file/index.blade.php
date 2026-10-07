@@ -20,25 +20,17 @@
                  data-endpoint="{{ route('file.live-queue-stats') }}"
                  class="ml-auto flex flex-wrap items-stretch justify-end gap-2"
                  aria-live="polite">
-                @can('customer-service.view')
-                    <a href="{{ route('customer-service.job-sheets.index', ['tab' => 'pending']) }}"
-                       class="group inline-flex min-w-[172px] items-center gap-3 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-blue-800 transition hover:border-blue-300 hover:bg-blue-100">
-                        <span class="relative flex h-2.5 w-2.5 shrink-0">
-                            <span id="file-live-pulse" class="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-400 opacity-50"></span>
-                            <span class="relative inline-flex h-2.5 w-2.5 rounded-full bg-blue-600"></span>
-                        </span>
-                        <span class="min-w-0">
-                            <span class="block text-[10px] font-bold uppercase tracking-wider text-blue-600">Antrean CS · Live</span>
-                            <span class="mt-0.5 block text-xs font-semibold"><strong id="file-cs-pending-count" class="text-base">{{ $liveQueueStats['cs_pending_count'] }}</strong> bisa diambil</span>
-                            <span id="file-cs-oldest" class="block text-[10px] text-blue-600">{{ $liveQueueStats['cs_oldest_received_at'] ? 'Terlama '.$liveQueueStats['cs_oldest_received_at'] : 'Tidak ada antrean' }}</span>
-                        </span>
-                    </a>
-                @else
-                    <div class="inline-flex min-w-[172px] items-center gap-3 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-blue-800">
-                        <span class="relative flex h-2.5 w-2.5 shrink-0"><span id="file-live-pulse" class="relative inline-flex h-2.5 w-2.5 rounded-full bg-blue-600"></span></span>
-                        <span><span class="block text-[10px] font-bold uppercase tracking-wider text-blue-600">Antrean CS · Live</span><span class="mt-0.5 block text-xs font-semibold"><strong id="file-cs-pending-count" class="text-base">{{ $liveQueueStats['cs_pending_count'] }}</strong> bisa diambil</span><span id="file-cs-oldest" class="block text-[10px] text-blue-600">{{ $liveQueueStats['cs_oldest_received_at'] ? 'Terlama '.$liveQueueStats['cs_oldest_received_at'] : 'Tidak ada antrean' }}</span></span>
-                    </div>
-                @endcan
+                @php($csQueueTag = auth()->user()->can('customer-service.view') ? 'a' : 'div')
+                <{{ $csQueueTag }} @if ($csQueueTag === 'a') href="{{ route('customer-service.job-sheets.index', ['tab' => 'pending']) }}" @endif
+                   class="relative flex min-w-[150px] flex-col items-center justify-center rounded-md border border-blue-200 bg-blue-50 px-4 py-2 text-center text-blue-800 transition {{ $csQueueTag === 'a' ? 'hover:border-blue-300 hover:bg-blue-100' : '' }}">
+                    <span class="absolute right-2 top-2 flex h-2 w-2" title="Live">
+                        <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-400 opacity-50"></span>
+                        <span id="file-live-pulse" class="relative inline-flex h-2 w-2 rounded-full bg-blue-600"></span>
+                    </span>
+                    <span class="text-xs font-bold uppercase tracking-wider text-blue-600">Antrian CS</span>
+                    <strong id="file-cs-pending-count" class="block text-4xl font-extrabold leading-tight text-blue-900 transition-transform">{{ $liveQueueStats['cs_pending_count'] }}</strong>
+                    <span class="text-xs font-semibold text-blue-700">Bisa Diambil</span>
+                </{{ $csQueueTag }}>
 
             @can('kasir.replacement.manage')
                 <a href="{{ route('kasir.index', ['tab' => 'replacement']) }}"

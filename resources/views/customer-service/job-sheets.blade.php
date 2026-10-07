@@ -111,7 +111,7 @@
                 </thead>
                 <tbody class="divide-y divide-slate-100">
                     @forelse ($jobSheets as $sheet)
-                        <tr class="align-middle hover:bg-slate-50/70">
+                        <tr @class(['align-middle hover:bg-slate-50/70', 'bg-amber-50/60' => $sheet->is_urgent])>
                             {{-- <td class="whitespace-nowrap px-4 py-3 text-slate-600">{{ $sheet->received_at->format('d/m/Y') }}</td>
                             <td class="px-4 py-3">
                                 <span @class([
@@ -123,6 +123,9 @@
                             </td> --}}
                             {{-- <td class="whitespace-nowrap px-4 py-3 text-slate-600">{{ $sheet->deadline?->format('d/m/Y') ?? '-' }}</td> --}}
                             <td class="px-4 py-3 text-slate-600">
+                                @if ($sheet->is_urgent)
+                                    <span class="mr-1 text-lg leading-none text-amber-500" title="Urgent — didahulukan">&#9733;</span>
+                                @endif
                                 <span @class([
                                     'inline-flex rounded border px-2 py-1 text-xs font-semibold',
                                     'border-blue-200 bg-blue-50 text-blue-700' => $sheet->order_type === 'indoor',
@@ -176,7 +179,7 @@
         <dialog id="sheet-detail-{{ $sheet->id }}" class="w-[min(1100px,calc(100%-2rem))] rounded border-0 p-0 shadow-2xl backdrop:bg-slate-950/60">
             <div class="border-b border-slate-700 px-5 py-4 text-white" style="background:#17233c">
                 <div class="flex items-start justify-between gap-4">
-                    <div><p class="text-xs uppercase tracking-widest text-blue-300">Lembar Kerja CS</p><h3 class="mt-1 text-lg font-semibold">{{ $sheet->customer_name }}</h3></div>
+                    <div><p class="text-xs uppercase tracking-widest text-blue-300">Lembar Kerja CS</p><h3 class="mt-1 text-lg font-semibold">@if ($sheet->is_urgent)<span class="text-amber-400" title="Urgent">&#9733;</span> @endif{{ $sheet->customer_name }}</h3></div>
                     <button type="button" onclick="this.closest('dialog').close()" class="text-xl text-slate-300 hover:text-white">&times;</button>
                 </div>
             </div>

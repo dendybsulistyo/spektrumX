@@ -117,6 +117,12 @@
                         <input name="opf" value="{{ old('opf') }}" maxlength="100"
                                class="mt-1.5 w-full rounded border-slate-300 text-sm normal-case tracking-normal focus:border-blue-500 focus:ring-blue-500">
                     </label>
+                    <label class="flex items-center gap-2 rounded border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800 md:col-span-2 xl:col-span-4">
+                        <input type="checkbox" name="is_urgent" value="1" @checked(old('is_urgent'))
+                               class="rounded border-amber-400 text-amber-500 focus:ring-amber-500">
+                        <span>&#9733; Urgent</span>
+                        <span class="font-normal text-amber-700">— didahulukan, mis. order owner</span>
+                    </label>
                     <label class="text-xs font-semibold uppercase tracking-wide text-slate-500 md:col-span-2 xl:col-span-4">
                         Keterangan
                         <textarea name="notes" rows="2" maxlength="1000"

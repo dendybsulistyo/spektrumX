@@ -22,6 +22,7 @@ class CustomerServiceJobSheet extends Model
         'deadline',
         'opf',
         'notes',
+        'is_urgent',
         'order_type',
         'indoor_folder',
         'items',
@@ -36,6 +37,7 @@ class CustomerServiceJobSheet extends Model
         return [
             'received_at' => 'date',
             'deadline' => 'date',
+            'is_urgent' => 'boolean',
             'items' => 'array',
             'claimed_at' => 'datetime',
         ];

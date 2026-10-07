@@ -66,7 +66,8 @@ class CustomerServiceController extends Controller
                 });
             })
             ->when($tab === 'claimed', fn ($query) => $query->latest('claimed_at'))
-            ->when($tab === 'pending', fn ($query) => $query->latest('received_at'))
+            // Order urgent (mis. order owner) selalu di atas antrean.
+            ->when($tab === 'pending', fn ($query) => $query->orderByDesc('is_urgent')->latest('received_at'))
             ->latest('id')
             ->paginate(25)
             ->withQueryString();
@@ -206,7 +207,9 @@ class CustomerServiceController extends Controller
             'notes' => ['nullable', 'string', 'max:1000'],
             'order_type' => ['required', 'in:indoor,outdoor'],
             'indoor_folder' => ['nullable', 'required_if:order_type,indoor', 'in:sublime,artwork,pod', 'prohibited_unless:order_type,indoor'],
+            'is_urgent' => ['nullable', 'boolean'],
         ]);
+        $data['is_urgent'] = $request->boolean('is_urgent');
 
         $customer = Customer::where('KdCust', $data['customer_code'])->firstOrFail();
 
