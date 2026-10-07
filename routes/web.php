@@ -52,6 +52,7 @@ use App\Http\Controllers\OrderReworkController;
 use App\Http\Controllers\PapanPantauController;
 use App\Http\Controllers\PayrollController;
 use App\Http\Controllers\PembatalanController;
+use App\Http\Controllers\SystemStatusController;
 use App\Http\Controllers\PengambilanController;
 use App\Http\Controllers\PengaturanCetakController;
 use App\Http\Controllers\PengaturanKeuanganController;
@@ -97,6 +98,7 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::middleware('permission:roles.manage')->group(function () {
+        Route::get('/sistem/opcache', [SystemStatusController::class, 'opcache'])->name('system.opcache');
         Route::get('/monitor-server', [ServerMonitorController::class, 'index'])->name('server-monitor.index');
     });
 
