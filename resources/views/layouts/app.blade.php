@@ -289,6 +289,7 @@
                                                 <a href="{{ route('keuangan.pembatalan-order') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.pembatalan-order')) }}">Pembatalan Pre-Order &amp; Nota</a>
                                                 <a href="{{ route('keuangan.customer-receivable-details') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.customer-receivable-details') && request('mode') !== 'report') }}">Pembayaran Piutang</a>
                                                 <a href="{{ route('keuangan.customer-receivables-recap') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.customer-receivables-recap')) }}">Rekap Piutang Customer</a>
+                                                <a href="{{ route('keuangan.customer-receivable-details', ['mode' => 'report']) }}" class="{{ $dropdownLink(request()->routeIs('keuangan.customer-receivable-details') && request('mode') === 'report') }}">Piutang per Customer</a>
                                             @endcan
                                             </div>
                                             {{-- DISEMBUNYIKAN SEMENTARA (6 Okt 2026): kolom "Jurnal & Laporan" dan "Master". Hapus baris komentar ini & penutupnya untuk menampilkan lagi.
@@ -648,6 +649,7 @@
                                 <a href="{{ route('akuntansi.piutang-customer') }}" class="{{ $mobileLink(request()->routeIs('akuntansi.piutang-customer')) }}">Buku Piutang Customer</a>
                                 <a href="{{ route('keuangan.customer-receivable-details') }}" class="{{ $mobileLink(request()->routeIs('keuangan.customer-receivable-details') && request('mode') !== 'report') }}">Pembayaran Piutang</a>
                                 <a href="{{ route('keuangan.customer-receivables-recap') }}" class="{{ $mobileLink(request()->routeIs('keuangan.customer-receivables-recap')) }}">Rekap Piutang Customer</a>
+                                <a href="{{ route('keuangan.customer-receivable-details', ['mode' => 'report']) }}" class="{{ $mobileLink(request()->routeIs('keuangan.customer-receivable-details') && request('mode') === 'report') }}">Piutang per Customer</a>
                             @endcan
                             @can('pengeluaran.view')
                                 <a href="{{ route('pengeluaran.index') }}" class="{{ $mobileLink(request()->routeIs('pengeluaran.*')) }}">Pengeluaran</a>
