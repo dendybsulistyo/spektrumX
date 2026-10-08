@@ -2,9 +2,7 @@
     <x-slot name="header">
         <div class="dashboard-page-header flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
-                <div class="dashboard-page-eyebrow">Pusat Kendali Operasional</div>
                 <h2 class="font-semibold text-xl text-gray-800">Dashboard</h2>
-                <p class="dashboard-page-subtitle">Ringkasan transaksi dan posisi produksi Spektrum.</p>
             </div>
             <form method="GET" class="dashboard-filter flex flex-wrap items-end gap-2">
                 <label class="grid gap-1 text-xs text-gray-500">

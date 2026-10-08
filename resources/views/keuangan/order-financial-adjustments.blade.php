@@ -69,7 +69,7 @@
                                         </td>
                                         <td class="px-4 py-2">
                                             <div class="flex items-center gap-2">
-                                                <select name="payments[{{ $payment->id }}][method]" x-model="method" class="w-36 rounded-md border-gray-300 text-sm">
+                                                <select name="payments[{{ $payment->id }}][method]" x-model="method" class="w-44 rounded-md border-gray-300 text-sm">
                                                     <option value="">— Tidak diganti —</option>
                                                     <option value="debit">Debit/Card</option>
                                                     <option value="qris">QRIS</option>

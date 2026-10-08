@@ -27,7 +27,8 @@ class DashboardController extends Controller
 
     public function index(Request $request): View
     {
-        return view('dashboard', $this->loadData($request));
+        // Tema "Ruang Cetak"; ganti ke view('dashboard', ...) untuk kembali ke dashboard lama.
+        return view('dashboard-ruang-cetak', $this->loadData($request));
     }
 
     /**

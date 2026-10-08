@@ -457,3 +457,5 @@
         }
     }
 </style>
+{{-- Tema "Ruang Cetak" untuk semua antrean operator; hapus baris ini untuk kembali ke tampilan lama. --}}
+<x-tema-ruang-cetak />

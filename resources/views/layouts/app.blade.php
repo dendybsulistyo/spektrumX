@@ -202,6 +202,8 @@
             $mobileLink = fn (bool $active) => 'block px-3 py-2 rounded-lg text-sm font-medium '
                 .($active ? 'bg-indigo-50 text-indigo-600' : 'text-gray-700 hover:bg-gray-100');
         @endphp
+        {{-- Tema "Ruang Cetak" global; hapus baris ini untuk kembali ke tampilan lama. --}}
+        <x-tema-ruang-cetak-global />
     </head>
     <body class="font-sans antialiased bg-gray-50">
         <div x-data="{ mobileMenuOpen: false }">
