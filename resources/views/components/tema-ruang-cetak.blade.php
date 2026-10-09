@@ -276,6 +276,12 @@
     :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan):not(.tanpa-tema) .tag:not(.tag-outline) { border-radius: 999px; }
     :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan):not(.tanpa-tema) .tag-outline { border-radius: 999px; font-family: var(--rc-sans); font-size: 11px; }
 
+    /* Label "Progress: x/y" tanpa bingkai pil (semua antrean operator). */
+    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan):not(.tanpa-tema) .item-row .progress-tag.progress-plain {
+        min-height: 0; padding: 0; border: 0; border-radius: 0; background: transparent;
+        color: var(--rc-muted); font-size: 11.5px;
+    }
+
     /* ---------- Scrollbar ---------- */
     :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan):not(.tanpa-tema) .order-list-scroll::-webkit-scrollbar { width: 8px; }
     :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan):not(.tanpa-tema) .order-list-scroll::-webkit-scrollbar-thumb { background: var(--rc-rule-strong); border-radius: 8px; }

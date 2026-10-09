@@ -128,11 +128,11 @@
                     {{-- Pengambilan perlu menampilkan Qty yang benar-benar
                          tersedia untuk diserahkan, bukan Qty yang sudah
                          keluar dari tahap Siap Diambil. --}}
-                    <span class="progress-tag">Siap Diserahkan: {{ $item->qtyAt($stage) }}/{{ $item->Qty }}</span>
+                    <span class="progress-tag progress-plain">Progress: {{ $item->qtyAt($stage) }}/{{ $item->Qty }}</span>
                 @else
                     {{-- Qty yang SUDAH dikirim maju dari tahap ini (0 di awal,
                          naik seiring diproses) — bukan qty yang masih tersisa. --}}
-                    <span class="progress-tag">Progres di {{ $stageLabel }}: {{ $item->Qty - $item->qtyAt($stage) }}/{{ $item->Qty }}</span>
+                    <span class="progress-tag progress-plain">Progress: {{ $item->Qty - $item->qtyAt($stage) }}/{{ $item->Qty }}</span>
                 @endif
                 @can($manageAbility)
                     @if ($capturePenerima && $canPickup && $type !== 'indoor')

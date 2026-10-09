@@ -13,3 +13,9 @@ Schedule::command('report:send-daily')
     ->timezone(config('daily-report.timezone'))
     ->skip(fn () => now(config('daily-report.timezone'))->isSunday())
     ->withoutOverlapping();
+
+// Hapus status (ala WhatsApp) yang sudah lewat 24 jam.
+Schedule::call(fn () => \App\Models\UserStatus::where('expires_at', '<=', now())->delete())
+    ->hourly()
+    ->name('status:prune')
+    ->withoutOverlapping();

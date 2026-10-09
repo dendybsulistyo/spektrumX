@@ -88,11 +88,6 @@
                             <label for="password" class="block text-xs font-semibold tracking-wide uppercase text-gray-500">
                                 Password
                             </label>
-                            @if (Route::has('password.request'))
-                                <a href="{{ route('password.request') }}" class="text-xs font-medium text-indigo-600 hover:text-indigo-700">
-                                    Lupa password?
-                                </a>
-                            @endif
                         </div>
                         <div class="relative">
                             <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-gray-400">

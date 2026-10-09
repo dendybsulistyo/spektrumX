@@ -53,6 +53,7 @@ use App\Http\Controllers\PapanPantauController;
 use App\Http\Controllers\PayrollController;
 use App\Http\Controllers\PembatalanController;
 use App\Http\Controllers\SystemStatusController;
+use App\Http\Controllers\UserStatusController;
 use App\Http\Controllers\PengambilanController;
 use App\Http\Controllers\PengaturanCetakController;
 use App\Http\Controllers\PengaturanKeuanganController;
@@ -79,6 +80,14 @@ Route::get('/dashboard', [DashboardController::class, 'index'])->middleware(['au
 Route::get('/dashboard/order-progress/{type}/{id}', [DashboardController::class, 'orderProgress'])->middleware(['auth', 'verified'])->name('dashboard.order-progress');
 
 Route::middleware('auth')->group(function () {
+    // Status ala WhatsApp (teks, 24 jam) — semua user.
+    Route::get('/status', [UserStatusController::class, 'index'])->name('status.index');
+    Route::post('/status', [UserStatusController::class, 'store'])->name('status.store');
+    Route::get('/status/pengguna', [UserStatusController::class, 'users'])->name('status.users');
+    Route::delete('/status/{status}', [UserStatusController::class, 'destroy'])->name('status.destroy');
+    Route::post('/status/{status}/lihat', [UserStatusController::class, 'view'])->name('status.view');
+    Route::get('/status/{status}/dilihat', [UserStatusController::class, 'viewers'])->name('status.viewers');
+
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');

@@ -145,6 +145,10 @@ class Role extends Model
         'Papan Pantau' => [
             'papan-pantau.view' => 'Lihat papan pantau produksi lintas tahap (read-only)',
         ],
+        'Menu Pajak & Akuntansi' => [
+            'menu.perpajakan' => 'Tampilkan kolom menu Perpajakan (butuh juga "Lihat rekap kas harian & laporan akuntansi")',
+            'menu.akuntansi' => 'Tampilkan kolom menu Akuntansi (butuh juga "Lihat rekap kas harian & laporan akuntansi")',
+        ],
         'Akuntansi' => [
             'keuangan.view' => 'Lihat rekap kas harian & laporan akuntansi',
             'pengeluaran.view' => 'Lihat catatan pengeluaran',

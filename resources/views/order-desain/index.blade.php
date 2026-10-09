@@ -327,7 +327,7 @@
                                             @else
                                                 <span class="text-muted" style="white-space: nowrap;">{{ $item->gabungan ?: '-' }}</span>
                                             @endcan
-                                            <span class="progress-tag">Progres Desain: {{ $item->Qty - $item->qtyAt('desain') }}/{{ $item->Qty }}</span>
+                                            <span class="progress-tag progress-plain">Progress: {{ $item->Qty - $item->qtyAt('desain') }}/{{ $item->Qty }}</span>
                                             @can('order-desain.manage')
                                                 <input type="checkbox" :disabled="!gabungan.trim()"
                                                        @change="toggle('outdoor', {{ $item->id }}, $event.target.checked)"

@@ -16,7 +16,8 @@ class AuthenticatedSessionController extends Controller
      */
     public function create(): View
     {
-        return view('auth.login');
+        // Tema "Ruang Cetak"; ganti ke view('auth.login') untuk kembali ke login lama.
+        return view('auth.login-ruang-cetak');
     }
 
     /**

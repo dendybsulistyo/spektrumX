@@ -64,7 +64,7 @@
                 @endif
             </div>
             <div style="display: inline-flex; align-items: center; gap: var(--space-3);">
-                <span class="progress-tag">Progres Desain: {{ $item->Qty - $item->qtyAt('desain') }}/{{ $item->Qty }}</span>
+                <span class="progress-tag progress-plain">Progress: {{ $item->Qty - $item->qtyAt('desain') }}/{{ $item->Qty }}</span>
                 @can('order-desain.manage')
                     <input type="checkbox" @change="toggle('indoor', {{ $item->id }}, $event.target.checked)" title="Pilih untuk kirim massal">
                     <form method="POST" action="{{ route('order-desain.progress', ['indoor', $item->id]) }}"

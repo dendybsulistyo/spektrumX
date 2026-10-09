@@ -95,12 +95,16 @@ class RekapPenerimaanController extends Controller
     private function collectOrders(string $type, string $model, CarbonImmutable $from, CarbonImmutable $to, Collection $amounts): void
     {
         $relations = $type === 'outdoor' ? ['items.hargaCetak'] : ['items'];
-        $orders = $model::query()->with($relations)
+        // Diproses per 200 order agar rentang tanggal panjang tidak menghabiskan memori.
+        $model::query()->with($relations)
             ->whereBetween('TglOrder', [$from->toDateString(), $to->toDateString()])
             ->where('status', '!=', 'batal')
             ->where('status_bayar', '!=', 'belum_bayar')
-            ->get();
+            ->chunkById(200, fn ($orders) => $this->addOrderAmounts($type, $orders, $amounts));
+    }
 
+    private function addOrderAmounts(string $type, Collection $orders, Collection $amounts): void
+    {
         foreach ($orders as $order) {
             $lines = $this->pricing->detailedLineItems($type, $order, $order->items);
             $gross = (float) $lines->sum('subtotal');
