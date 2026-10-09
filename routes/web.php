@@ -56,6 +56,7 @@ use App\Http\Controllers\SystemStatusController;
 use App\Http\Controllers\UserStatusController;
 use App\Http\Controllers\QuickSearchController;
 use App\Http\Controllers\DailySummaryController;
+use App\Http\Controllers\AvatarController;
 use App\Http\Controllers\PengambilanController;
 use App\Http\Controllers\PengaturanCetakController;
 use App\Http\Controllers\PengaturanKeuanganController;
@@ -84,6 +85,10 @@ Route::get('/dashboard/order-progress/{type}/{id}', [DashboardController::class,
 Route::middleware('auth')->group(function () {
     // Pencarian cepat (Ctrl+K) — semua user; tautan hasil mengikuti hak akses.
     Route::get('/cari', QuickSearchController::class)->name('quick-search');
+    // Avatar mini — tiap user hanya mengubah avatarnya sendiri.
+    Route::post('/profile/avatar', [AvatarController::class, 'store'])->name('avatar.store');
+    Route::delete('/profile/avatar', [AvatarController::class, 'destroy'])->name('avatar.destroy');
+    Route::get('/avatar/{user}.svg', [AvatarController::class, 'show'])->whereNumber('user')->name('avatar.show');
     // Ringkasan hari ini di menu user (operator, CS, kasir).
     Route::get('/ringkasan-hari-ini', DailySummaryController::class)->name('daily-summary');
 

@@ -562,8 +562,12 @@
                                            } }"
                                  class="relative" @click.outside="open = false">
                                 <button @click="open = !open; if (open) loadSummary()" class="flex items-center gap-2.5">
-                                    <div class="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs font-semibold shrink-0">
-                                        {{ collect(explode(' ', Auth::user()->name))->map(fn ($w) => mb_substr($w, 0, 1))->take(2)->implode('') }}
+                                    <div data-my-avatar data-initials="{{ collect(explode(' ', Auth::user()->name))->map(fn ($w) => mb_substr($w, 0, 1))->take(2)->implode('') }}" class="nav-avatar w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs font-semibold shrink-0 overflow-hidden">
+                                        @if (Auth::user()->avatarUrl())
+                                            <img src="{{ Auth::user()->avatarUrl() }}" alt="" onerror="this.remove()">
+                                        @else
+                                            {{ collect(explode(' ', Auth::user()->name))->map(fn ($w) => mb_substr($w, 0, 1))->take(2)->implode('') }}
+                                        @endif
                                     </div>
                                     <div class="text-left leading-tight">
                                         <div class="text-[13px] font-medium text-gray-800">{{ Auth::user()->name }}</div>
@@ -579,6 +583,7 @@
                                     @if ($showDailySummary)
                                         <x-ringkasan-harian />
                                     @endif
+                                    <a href="{{ route('profile.edit') }}#avatar" class="block px-3 py-2 text-gray-600 hover:bg-gray-50">🎨 Ubah avatar</a>
                                     <a href="{{ route('profile.edit') }}" class="block px-3 py-2 text-gray-600 hover:bg-gray-50">Profil</a>
                                     <form method="POST" action="{{ route('logout') }}">
                                         @csrf

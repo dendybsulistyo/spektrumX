@@ -34,7 +34,7 @@
 
         <button type="button" class="sw-row" @click="mine ? openViewer(mine) : openComposer()">
             <span class="sw-avatar" :class="mine ? 'ring-mine' : 'ring-none'">
-                <span x-text="myInitials"></span>
+                <span><template x-if="myAvatar"><img :src="myAvatar" alt=""></template><template x-if="!myAvatar"><b x-text="myInitials"></b></template></span>
                 <i class="sw-plus" @click.stop="openComposer()" title="Tambah status">+</i>
             </span>
             <span class="sw-row-text">
@@ -49,7 +49,7 @@
         </template>
         <template x-for="group in others.filter(g => g.unseen)" :key="'u' + group.user_id">
             <button type="button" class="sw-row" @click="openViewer(group)">
-                <span class="sw-avatar ring-new"><span x-text="group.initials"></span></span>
+                <span class="sw-avatar ring-new"><span><template x-if="group.avatar"><img :src="group.avatar" alt=""></template><template x-if="!group.avatar"><b x-text="group.initials"></b></template></span></span>
                 <span class="sw-row-text">
                     <strong x-text="group.name"></strong>
                     <small x-text="group.statuses[group.statuses.length - 1].time"></small>
@@ -63,7 +63,7 @@
         </template>
         <template x-for="group in others.filter(g => !g.unseen)" :key="'s' + group.user_id">
             <button type="button" class="sw-row" @click="openViewer(group)">
-                <span class="sw-avatar ring-seen"><span x-text="group.initials"></span></span>
+                <span class="sw-avatar ring-seen"><span><template x-if="group.avatar"><img :src="group.avatar" alt=""></template><template x-if="!group.avatar"><b x-text="group.initials"></b></template></span></span>
                 <span class="sw-row-text">
                     <strong x-text="group.name"></strong>
                     <small x-text="group.statuses[group.statuses.length - 1].time"></small>
@@ -99,7 +99,7 @@
                 <div class="sw-suggest" x-show="mention.open && mentionResults().length" x-cloak>
                     <template x-for="(user, i) in mentionResults()" :key="user.id">
                         <button type="button" class="sw-row" :class="i === mention.index && 'is-active'" @mousedown.prevent="insertMention(user)">
-                            <span class="sw-avatar ring-none" style="width:30px;height:30px;"><span x-text="user.initials"></span></span>
+                            <span class="sw-avatar ring-none" style="width:30px;height:30px;"><span><template x-if="user.avatar"><img :src="user.avatar" alt=""></template><template x-if="!user.avatar"><b x-text="user.initials"></b></template></span></span>
                             <span class="sw-row-text"><strong x-text="user.name"></strong></span>
                         </button>
                     </template>
@@ -125,7 +125,7 @@
                 </div>
                 <div class="sw-full-top">
                     <div class="sw-who">
-                        <span class="sw-avatar ring-none" style="width:36px;height:36px;"><span x-text="viewer.group?.initials"></span></span>
+                        <span class="sw-avatar ring-none" style="width:36px;height:36px;"><span><template x-if="viewer.group?.avatar"><img :src="viewer.group.avatar" alt=""></template><template x-if="!viewer.group?.avatar"><b x-text="viewer.group?.initials"></b></template></span></span>
                         <div>
                             <strong x-text="viewer.group?.mine ? 'Status saya' : viewer.group?.name"></strong>
                             <small x-text="current()?.time"></small>
@@ -191,7 +191,7 @@
                         <template x-if="!viewers.list.length"><div class="sw-empty">Belum ada yang melihat.</div></template>
                         <template x-for="(v, i) in viewers.list" :key="i">
                             <div class="sw-row" style="cursor:default;">
-                                <span class="sw-avatar ring-none" style="width:34px;height:34px;"><span x-text="v.initials"></span></span>
+                                <span class="sw-avatar ring-none" style="width:34px;height:34px;"><span><template x-if="v.avatar"><img :src="v.avatar" alt=""></template><template x-if="!v.avatar"><b x-text="v.initials"></b></template></span></span>
                                 <span class="sw-row-text"><strong x-text="v.name"></strong><small x-text="v.time"></small></span>
                                 <span class="sw-viewer-emoji" x-show="v.reaction" x-text="v.reaction"></span>
                             </div>
@@ -201,7 +201,7 @@
                         <template x-if="!viewers.replies.length"><div class="sw-empty">Belum ada balasan.</div></template>
                         <template x-for="(r, i) in viewers.replies" :key="i">
                             <div class="sw-row sw-reply-row" style="cursor:default;">
-                                <span class="sw-avatar ring-none" style="width:34px;height:34px;"><span x-text="r.initials"></span></span>
+                                <span class="sw-avatar ring-none" style="width:34px;height:34px;"><span><template x-if="r.avatar"><img :src="r.avatar" alt=""></template><template x-if="!r.avatar"><b x-text="r.initials"></b></template></span></span>
                                 <span class="sw-row-text">
                                     <strong><span x-text="r.name"></span> <em class="sw-new-badge" x-show="r.new">baru</em></strong>
                                     <span class="sw-reply-body" x-text="r.body"></span>
@@ -235,6 +235,9 @@
             .sw-row-text small { font-size: 11.5px; color: #77736a; }
             .sw-avatar { position: relative; flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; width: 42px; height: 42px; border-radius: 50%; padding: 2.5px; }
             .sw-avatar > span { display: flex; width: 100%; height: 100%; align-items: center; justify-content: center; border-radius: 50%; background: #1b2236; color: #fff; font-size: 12.5px; font-weight: 700; border: 2px solid #fffdf8; }
+            .sw-avatar > span img { width: 100%; height: 100%; display: block; border-radius: 50%; object-fit: cover; }
+            .sw-avatar > span:has(img) { background: #fff; }
+            .sw-avatar > span b { font-weight: 700; }
             .sw-avatar.ring-new { background: conic-gradient(#0f8fb3, #c8246c, #f2c200, #2e8b57, #0f8fb3); }
             .sw-avatar.ring-mine { background: #0f8fb3; }
             .sw-avatar.ring-seen { background: #cfc7b5; }
@@ -315,6 +318,7 @@
                     toast: '',
                     users: null,
                     mention: { open: false, query: '', start: 0, index: 0 },
+                    myAvatar: @js(auth()->user()->avatarUrl()),
                     myInitials: @js(mb_strtoupper(collect(preg_split('/\s+/', trim(auth()->user()->name)))->filter()->map(fn ($w) => mb_substr($w, 0, 1))->take(2)->implode(''))),
                     panelOpen: false,
                     composerOpen: false,

@@ -35,6 +35,7 @@ class User extends Authenticatable
     protected $hidden = [
         'password',
         'remember_token',
+        'avatar_svg',
     ];
 
     /**
@@ -47,6 +48,8 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'avatar_options' => 'array',
+            'avatar_updated_at' => 'datetime',
         ];
     }
 
@@ -58,5 +61,13 @@ class User extends Authenticatable
     public function hasPermission(string $key): bool
     {
         return $this->role?->hasPermission($key) ?? false;
+    }
+
+    /** URL gambar avatar (versi ikut waktu ubah agar cache browser diperbarui), atau null. */
+    public function avatarUrl(): ?string
+    {
+        return $this->avatar_updated_at
+            ? route('avatar.show', ['user' => $this->id, 'v' => $this->avatar_updated_at->timestamp])
+            : null;
     }
 }

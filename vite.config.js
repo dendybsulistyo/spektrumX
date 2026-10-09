@@ -19,7 +19,7 @@ export default defineConfig({
     plugins: [
         blockPort,
         laravel({
-            input: ['resources/css/app.css', 'resources/js/app.js'],
+            input: ['resources/css/app.css', 'resources/js/app.js', 'resources/js/avatar-editor.js'],
             refresh: true,
         }),
     ],

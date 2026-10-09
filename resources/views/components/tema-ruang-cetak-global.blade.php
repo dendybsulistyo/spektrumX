@@ -77,6 +77,10 @@
     }
     html body.font-sans .industry-nav .border-gray-100 { border-color: var(--rc-rule) !important; }
 
+    /* Avatar mini di menu atas. */
+    html body.font-sans .nav-avatar img { width: 100%; height: 100%; display: block; }
+    html body.font-sans .nav-avatar:has(img) { background: #fff; box-shadow: 0 0 0 1.5px #e3ddcf; }
+
     /* ---------- Judul halaman ---------- */
     html body.font-sans > div > header.bg-white,
     html body.font-sans header.bg-white.border-b {
