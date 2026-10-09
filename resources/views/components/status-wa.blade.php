@@ -8,6 +8,7 @@
         indexUrl: @js(route('status.index')),
         storeUrl: @js(route('status.store')),
         usersUrl: @js(route('status.users')),
+        emojis: @js(\App\Models\UserStatusResponse::EMOJIS),
         baseUrl: @js(url('/status')),
         backgrounds: @js($backgrounds),
      })"
@@ -16,12 +17,12 @@
      class="relative">
 
     {{-- Tombol di navbar --}}
-    <button type="button" @click="togglePanel()" class="sw-trigger" :class="unseenCount > 0 && 'has-new'" title="Status">
+    <button type="button" @click="togglePanel()" class="sw-trigger" :class="(unseenCount > 0 || responseCount > 0) && 'has-new'" title="Status">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" class="h-[18px] w-[18px]">
             <circle cx="12" cy="12" r="9" stroke-dasharray="3.2 2.4"/>
             <circle cx="12" cy="12" r="4.2"/>
         </svg>
-        <b x-show="unseenCount > 0" x-cloak x-text="mentionCount > 0 ? '@' : unseenCount" :class="mentionCount > 0 && 'is-mention'"></b>
+        <b x-show="unseenCount > 0 || responseCount > 0" x-cloak x-text="mentionCount > 0 ? '@' : (unseenCount + responseCount)" :class="mentionCount > 0 && 'is-mention'"></b>
     </button>
 
     {{-- Panel daftar status --}}
@@ -40,6 +41,7 @@
                 <strong>Status saya</strong>
                 <small x-text="mine ? mine.statuses.length + ' status · ' + mine.statuses[mine.statuses.length - 1].time : 'Ketuk untuk menulis status'"></small>
             </span>
+            <em class="sw-mention-tag" x-show="mine && mine.new_responses > 0" x-text="(mine?.new_responses ?? 0) + ' tanggapan baru'"></em>
         </button>
 
         <template x-if="others.filter(g => g.unseen).length">
@@ -152,20 +154,62 @@
                         <button type="button" class="sw-seen-btn" @click="toggleViewers()">
                             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" style="width:16px;height:16px"><path d="M1.5 10S4.5 4.5 10 4.5 18.5 10 18.5 10 15.5 15.5 10 15.5 1.5 10 1.5 10z"/><circle cx="10" cy="10" r="2.5"/></svg>
                             Dilihat <b x-text="current()?.views_count ?? 0"></b>
+                            <template x-for="(count, emoji) in (current()?.reactions ?? {})" :key="emoji">
+                                <span class="sw-react-sum"><span x-text="emoji"></span><b x-text="count"></b></span>
+                            </template>
+                            <span class="sw-react-sum" x-show="current()?.replies_count > 0">💬 <b x-text="current()?.replies_count"></b></span>
+                            <span class="sw-new-dot" x-show="current()?.new_responses > 0" x-text="current()?.new_responses + ' baru'"></span>
                         </button>
                     </template>
-                </div>
-
-                <div x-show="viewers.open" x-cloak class="sw-viewers" @click.outside="viewers.open = false; resume()">
-                    <div class="sw-viewers-head">Dilihat oleh <b x-text="viewers.list.length"></b></div>
-                    <template x-if="viewers.loading"><div class="sw-empty">Memuat…</div></template>
-                    <template x-if="!viewers.loading && !viewers.list.length"><div class="sw-empty">Belum ada yang melihat.</div></template>
-                    <template x-for="(v, i) in viewers.list" :key="i">
-                        <div class="sw-row" style="cursor:default;">
-                            <span class="sw-avatar ring-none" style="width:34px;height:34px;"><span x-text="v.initials"></span></span>
-                            <span class="sw-row-text"><strong x-text="v.name"></strong><small x-text="v.time"></small></span>
+                    <template x-if="viewer.group && !viewer.group.mine">
+                        <div class="sw-respond">
+                            <div class="sw-emojis">
+                                <template x-for="emoji in emojis" :key="emoji">
+                                    <button type="button" class="sw-emoji" :class="current()?.my_reaction === emoji && 'is-active'"
+                                            @click="react(emoji)" x-text="emoji" :title="current()?.my_reaction === emoji ? 'Batalkan reaksi' : 'Beri reaksi'"></button>
+                                </template>
+                            </div>
+                            <form class="sw-reply" @submit.prevent="sendReply()">
+                                <input type="text" x-model="replyText" maxlength="300" placeholder="Balas status…"
+                                       @focus="pause()" @blur="replyText.trim() || resume()" @keydown.stop>
+                                <button type="submit" :disabled="!replyText.trim() || replySending" title="Kirim balasan">
+                                    <svg viewBox="0 0 20 20" fill="currentColor" style="width:18px;height:18px"><path d="M2.5 3.2l15 6.8-15 6.8 2.2-6.8-2.2-6.8zm2.2 6.8h6.5"/></svg>
+                                </button>
+                            </form>
                         </div>
                     </template>
+                </div>
+                <div class="sw-toast" x-show="toast" x-cloak x-text="toast"></div>
+
+                <div x-show="viewers.open" x-cloak class="sw-viewers" @click.outside="viewers.open = false; resume()">
+                    <div class="sw-tabs">
+                        <button type="button" :class="viewers.tab === 'dilihat' && 'is-active'" @click="viewers.tab = 'dilihat'">Dilihat <b x-text="viewers.list.length"></b></button>
+                        <button type="button" :class="viewers.tab === 'balasan' && 'is-active'" @click="viewers.tab = 'balasan'">Balasan <b x-text="viewers.replies.length"></b></button>
+                    </div>
+                    <template x-if="viewers.loading"><div class="sw-empty">Memuat…</div></template>
+                    <div x-show="!viewers.loading && viewers.tab === 'dilihat'">
+                        <template x-if="!viewers.list.length"><div class="sw-empty">Belum ada yang melihat.</div></template>
+                        <template x-for="(v, i) in viewers.list" :key="i">
+                            <div class="sw-row" style="cursor:default;">
+                                <span class="sw-avatar ring-none" style="width:34px;height:34px;"><span x-text="v.initials"></span></span>
+                                <span class="sw-row-text"><strong x-text="v.name"></strong><small x-text="v.time"></small></span>
+                                <span class="sw-viewer-emoji" x-show="v.reaction" x-text="v.reaction"></span>
+                            </div>
+                        </template>
+                    </div>
+                    <div x-show="!viewers.loading && viewers.tab === 'balasan'">
+                        <template x-if="!viewers.replies.length"><div class="sw-empty">Belum ada balasan.</div></template>
+                        <template x-for="(r, i) in viewers.replies" :key="i">
+                            <div class="sw-row sw-reply-row" style="cursor:default;">
+                                <span class="sw-avatar ring-none" style="width:34px;height:34px;"><span x-text="r.initials"></span></span>
+                                <span class="sw-row-text">
+                                    <strong><span x-text="r.name"></span> <em class="sw-new-badge" x-show="r.new">baru</em></strong>
+                                    <span class="sw-reply-body" x-text="r.body"></span>
+                                    <small x-text="r.time"></small>
+                                </span>
+                            </div>
+                        </template>
+                    </div>
                 </div>
             </div>
         </div>
@@ -225,6 +269,7 @@
             .sw-progress span { flex: 1; height: 3px; overflow: hidden; background: rgba(255, 255, 255, .35); border-radius: 2px; }
             .sw-progress i { display: block; height: 100%; background: #fff; }
             .sw-who { display: flex; align-items: center; gap: 10px; }
+            .sw-who .sw-avatar > span { background: rgba(255, 255, 255, .22); border: 1.5px solid rgba(255, 255, 255, .6); }
             .sw-who strong { display: block; font-size: 14.5px; }
             .sw-who small { font-size: 12px; opacity: .8; }
             .sw-stage { position: relative; flex: 1; display: flex; align-items: center; justify-content: center; padding: 0 8vw; user-select: none; }
@@ -234,6 +279,27 @@
             .sw-tap-right { right: 0; }
             .sw-seen-btn { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 16px; font-size: 13px; font-weight: 600; color: #fff; background: rgba(0, 0, 0, .22); border: 0; border-radius: 999px; cursor: pointer; }
             .sw-viewers { position: absolute; left: 50%; bottom: 80px; width: min(360px, 92vw); max-height: 50vh; overflow-y: auto; padding: 6px; color: #262a33; background: #fffdf8; border-radius: 12px; transform: translateX(-50%); box-shadow: 0 18px 40px -10px rgba(0, 0, 0, .45); }
+            .sw-react-sum { display: inline-flex; align-items: center; gap: 2px; margin-left: 6px; padding-left: 8px; border-left: 1px solid rgba(255, 255, 255, .35); }
+            .sw-new-dot { margin-left: 8px; padding: 1px 8px; font-size: 11px; font-weight: 700; color: #1b2236; background: #fff; border-radius: 999px; }
+            .sw-respond { display: flex; flex-direction: column; align-items: center; gap: 10px; width: min(560px, 94vw); }
+            .sw-emojis { display: flex; gap: 6px; }
+            .sw-emoji { width: 42px; height: 42px; font-size: 22px; line-height: 1; background: rgba(0, 0, 0, .2); border: 2px solid transparent; border-radius: 50%; cursor: pointer; transition: transform .12s ease, background .12s ease; }
+            .sw-emoji:hover { transform: scale(1.15); background: rgba(0, 0, 0, .32); }
+            .sw-emoji.is-active { background: #fff; border-color: #fff; transform: scale(1.12); }
+            .sw-reply { display: flex; width: 100%; gap: 8px; }
+            .sw-reply input { flex: 1; height: 42px; padding: 0 16px; font: inherit; font-size: 14px; color: #fff; background: rgba(0, 0, 0, .22) !important; border: 1px solid rgba(255, 255, 255, .35) !important; border-radius: 999px; outline: none; box-shadow: none !important; }
+            .sw-reply input::placeholder { color: rgba(255, 255, 255, .7); }
+            .sw-reply input:focus { border-color: #fff !important; }
+            .sw-reply button { display: flex; width: 42px; height: 42px; align-items: center; justify-content: center; color: #1b2236; background: #fff; border: 0; border-radius: 50%; cursor: pointer; }
+            .sw-reply button:disabled { opacity: .45; cursor: not-allowed; }
+            .sw-toast { position: absolute; left: 50%; bottom: 140px; padding: 7px 16px; font-size: 13px; font-weight: 600; color: #1b2236; background: #fff; border-radius: 999px; transform: translateX(-50%); box-shadow: 0 8px 20px rgba(0, 0, 0, .25); }
+            .sw-tabs { display: flex; gap: 4px; padding: 4px 4px 8px; border-bottom: 1px dashed #cfc7b5; margin-bottom: 4px; }
+            .sw-tabs button { flex: 1; height: 32px; font-size: 13px; font-weight: 600; color: #77736a; background: transparent; border: 0; border-radius: 8px; cursor: pointer; }
+            .sw-tabs button.is-active { color: #fff; background: #1b2236; }
+            .sw-viewer-emoji { margin-left: auto; font-size: 20px; }
+            .sw-reply-row { align-items: flex-start; }
+            .sw-reply-body { margin: 2px 0; font-size: 13.5px; color: #262a33; white-space: pre-wrap; word-break: break-word; }
+            .sw-new-badge { padding: 0 6px; font-size: 10px; font-style: normal; font-weight: 700; color: #fff; background: #c8246c; border-radius: 999px; vertical-align: 1px; }
             .sw-viewers-head { padding: 8px 10px; font-size: 13px; font-weight: 600; color: #1b2236; border-bottom: 1px dashed #cfc7b5; }
         </style>
         <script>
@@ -243,6 +309,10 @@
                     groups: [],
                     unseenCount: 0,
                     mentionCount: 0,
+                    responseCount: 0,
+                    replyText: '',
+                    replySending: false,
+                    toast: '',
                     users: null,
                     mention: { open: false, query: '', start: 0, index: 0 },
                     myInitials: @js(mb_strtoupper(collect(preg_split('/\s+/', trim(auth()->user()->name)))->filter()->map(fn ($w) => mb_substr($w, 0, 1))->take(2)->implode(''))),
@@ -252,7 +322,7 @@
                     error: '',
                     draft: { body: '', background: config.backgrounds[0], mentions: [] },
                     viewer: { open: false, group: null, index: 0, progress: 0, paused: false, timer: null },
-                    viewers: { open: false, loading: false, list: [] },
+                    viewers: { open: false, loading: false, list: [], replies: [], tab: 'dilihat' },
                     duration: 6000,
                     get mine() { return this.groups.find(g => g.mine) || null; },
                     get others() { return this.groups.filter(g => !g.mine); },
@@ -265,6 +335,7 @@
                             this.groups = r.data.groups;
                             this.unseenCount = r.data.unseen_count;
                             this.mentionCount = r.data.mention_count;
+                            this.responseCount = r.data.response_count;
                         }).catch(() => {});
                     },
                     togglePanel() {
@@ -364,6 +435,7 @@
                         this.viewer.progress = 0;
                         this.viewer.paused = false;
                         this.viewers.open = false;
+                        this.replyText = '';
                         const status = this.current();
                         if (!status) return this.closeViewer();
                         if (!this.viewer.group.mine && !status.seen) {
@@ -405,9 +477,43 @@
                         this.viewers.open = true;
                         this.viewers.loading = true;
                         this.viewers.list = [];
-                        axios.get(`${this.baseUrl}/${this.current().id}/dilihat`)
-                            .then(r => { this.viewers.list = r.data; })
+                        this.viewers.replies = [];
+                        const status = this.current();
+                        this.viewers.tab = status.new_responses > 0 && status.replies_count > 0 ? 'balasan' : 'dilihat';
+                        axios.get(`${this.baseUrl}/${status.id}/dilihat`)
+                            .then(r => {
+                                this.viewers.list = r.data.viewers;
+                                this.viewers.replies = r.data.replies;
+                                this.responseCount = Math.max(0, this.responseCount - (status.new_responses || 0));
+                                if (this.viewer.group) this.viewer.group.new_responses = Math.max(0, (this.viewer.group.new_responses || 0) - (status.new_responses || 0));
+                                status.new_responses = 0;
+                            })
                             .finally(() => { this.viewers.loading = false; });
+                    },
+                    showToast(text) {
+                        this.toast = text;
+                        clearTimeout(this.toastTimer);
+                        this.toastTimer = setTimeout(() => { this.toast = ''; }, 1600);
+                    },
+                    react(emoji) {
+                        const status = this.current();
+                        if (!status) return;
+                        const next = status.my_reaction === emoji ? null : emoji;
+                        const previous = status.my_reaction;
+                        status.my_reaction = next;
+                        axios.post(`${this.baseUrl}/${status.id}/reaksi`, { emoji: next })
+                            .then(() => this.showToast(next ? `Reaksi ${next} terkirim` : 'Reaksi dibatalkan'))
+                            .catch(() => { status.my_reaction = previous; this.showToast('Gagal mengirim reaksi'); });
+                    },
+                    sendReply() {
+                        const status = this.current();
+                        const body = this.replyText.trim();
+                        if (!status || !body || this.replySending) return;
+                        this.replySending = true;
+                        axios.post(`${this.baseUrl}/${status.id}/balas`, { body })
+                            .then(() => { this.replyText = ''; this.showToast('Balasan terkirim'); document.activeElement?.blur(); this.resume(); })
+                            .catch(e => this.showToast(e.response?.data?.message || 'Gagal mengirim balasan'))
+                            .finally(() => { this.replySending = false; });
                     },
                     removeCurrent() {
                         if (!confirm('Hapus status ini?')) return;

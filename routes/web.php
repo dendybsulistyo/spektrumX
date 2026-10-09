@@ -54,6 +54,8 @@ use App\Http\Controllers\PayrollController;
 use App\Http\Controllers\PembatalanController;
 use App\Http\Controllers\SystemStatusController;
 use App\Http\Controllers\UserStatusController;
+use App\Http\Controllers\QuickSearchController;
+use App\Http\Controllers\DailySummaryController;
 use App\Http\Controllers\PengambilanController;
 use App\Http\Controllers\PengaturanCetakController;
 use App\Http\Controllers\PengaturanKeuanganController;
@@ -80,6 +82,11 @@ Route::get('/dashboard', [DashboardController::class, 'index'])->middleware(['au
 Route::get('/dashboard/order-progress/{type}/{id}', [DashboardController::class, 'orderProgress'])->middleware(['auth', 'verified'])->name('dashboard.order-progress');
 
 Route::middleware('auth')->group(function () {
+    // Pencarian cepat (Ctrl+K) — semua user; tautan hasil mengikuti hak akses.
+    Route::get('/cari', QuickSearchController::class)->name('quick-search');
+    // Ringkasan hari ini di menu user (operator, CS, kasir).
+    Route::get('/ringkasan-hari-ini', DailySummaryController::class)->name('daily-summary');
+
     // Status ala WhatsApp (teks, 24 jam) — semua user.
     Route::get('/status', [UserStatusController::class, 'index'])->name('status.index');
     Route::post('/status', [UserStatusController::class, 'store'])->name('status.store');
@@ -87,10 +94,12 @@ Route::middleware('auth')->group(function () {
     Route::delete('/status/{status}', [UserStatusController::class, 'destroy'])->name('status.destroy');
     Route::post('/status/{status}/lihat', [UserStatusController::class, 'view'])->name('status.view');
     Route::get('/status/{status}/dilihat', [UserStatusController::class, 'viewers'])->name('status.viewers');
+    Route::post('/status/{status}/reaksi', [UserStatusController::class, 'react'])->name('status.react');
+    Route::post('/status/{status}/balas', [UserStatusController::class, 'reply'])->name('status.reply');
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    // Hapus akun sendiri dinonaktifkan — akun dikelola admin.
 
     Route::middleware('permission.any:customers.view,customer-service.view,order-indoor.manage,order-outdoor.manage,order-artwork.manage')->group(function () {
         Route::get('/customers-search', [CustomerController::class, 'search'])->name('customers.search');

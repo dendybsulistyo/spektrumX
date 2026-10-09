@@ -32,6 +32,11 @@ class UserStatus extends Model
         return $this->hasMany(UserStatusView::class);
     }
 
+    public function responses(): HasMany
+    {
+        return $this->hasMany(UserStatusResponse::class);
+    }
+
     public function scopeActive(Builder $query): Builder
     {
         return $query->where('expires_at', '>', now());

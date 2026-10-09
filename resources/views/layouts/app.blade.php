@@ -549,9 +549,19 @@
                         </div>
 
                         <div class="hidden lg:flex lg:items-center">
+                            <x-cari-cepat />
                             <x-status-wa />
-                            <div x-data="{ open: false }" class="relative" @click.outside="open = false">
-                                <button @click="open = !open" class="flex items-center gap-2.5">
+                            @php
+                                $showDailySummary = \App\Http\Controllers\DailySummaryController::applies(Auth::user());
+                            @endphp
+                            <div x-data="{ open: false, summary: null, summaryLoading: false,
+                                           loadSummary() {
+                                               if (!{{ $showDailySummary ? 'true' : 'false' }} || this.summaryLoading) return;
+                                               this.summaryLoading = true;
+                                               axios.get('{{ route('daily-summary') }}').then(r => { this.summary = r.data; }).catch(() => {}).finally(() => { this.summaryLoading = false; });
+                                           } }"
+                                 class="relative" @click.outside="open = false">
+                                <button @click="open = !open; if (open) loadSummary()" class="flex items-center gap-2.5">
                                     <div class="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs font-semibold shrink-0">
                                         {{ collect(explode(' ', Auth::user()->name))->map(fn ($w) => mb_substr($w, 0, 1))->take(2)->implode('') }}
                                     </div>
@@ -565,7 +575,10 @@
                                 <div x-show="open" x-cloak
                                              x-transition:enter="transition ease-out duration-100" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
                                              x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
-                                     class="absolute right-0 mt-2 w-44 bg-white border border-gray-200 rounded-lg shadow-lg py-1 text-[13px] z-50">
+                                     class="absolute right-0 mt-2 {{ $showDailySummary ? 'w-80' : 'w-44' }} bg-white border border-gray-200 rounded-lg shadow-lg py-1 text-[13px] z-50">
+                                    @if ($showDailySummary)
+                                        <x-ringkasan-harian />
+                                    @endif
                                     <a href="{{ route('profile.edit') }}" class="block px-3 py-2 text-gray-600 hover:bg-gray-50">Profil</a>
                                     <form method="POST" action="{{ route('logout') }}">
                                         @csrf
