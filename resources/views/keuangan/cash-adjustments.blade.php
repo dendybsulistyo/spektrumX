@@ -18,8 +18,7 @@
             </div>
 
             <form method="POST" action="{{ route('keuangan.cash-adjustments.store') }}"
-                  x-data="{ type: @js(old('adjustment_type', 'setor_tunai')), position: @js(old('entry_side', 'debet')) }"
-                  x-effect="if (type === 'setor_bank') position = 'kredit'"
+                  x-data="{ type: @js(old('adjustment_type', 'setor_tunai')) }"
                   class="grid gap-4 p-6 md:grid-cols-2 xl:grid-cols-6">
                 @csrf
                 <div>
@@ -36,14 +35,31 @@
                     </select>
                     <x-input-error :messages="$errors->get('adjustment_type')" class="mt-1" />
                 </div>
-                <div>
-                    <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-600">Posisi</label>
-                    <select name="entry_side" x-model="position" required class="w-full rounded border-slate-300 text-sm">
-                        <option value="debet" :disabled="type === 'setor_bank'">Debet</option>
-                        <option value="kredit">Kredit</option>
+                {{-- Posisi Debet/Kredit kini otomatis sesuai jenis; akun lawan dipilih di sini. --}}
+                <div x-show="type === 'setor_tunai'">
+                    <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-600">Sumber Dana</label>
+                    <select name="cash_source" :required="type === 'setor_tunai'" :disabled="type !== 'setor_tunai'" class="w-full rounded border-slate-300 text-sm">
+                        @foreach ($cashSources as $key => $source)
+                            <option value="{{ $key }}" @selected(old('cash_source', 'tarik_bank') === $key)>{{ $source['label'] }}</option>
+                        @endforeach
                     </select>
-                    <p x-show="type === 'setor_bank'" class="mt-1 text-xs text-slate-500">Setor ke Bank wajib Kredit.</p>
-                    <x-input-error :messages="$errors->get('entry_side')" class="mt-1" />
+                    <p class="mt-1 text-xs text-slate-500">Kas masuk (Debet).</p>
+                    <x-input-error :messages="$errors->get('cash_source')" class="mt-1" />
+                </div>
+                <div x-show="type === 'pengeluaran'">
+                    <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-600">Akun Beban</label>
+                    <select name="expense_account" :required="type === 'pengeluaran'" :disabled="type !== 'pengeluaran'" class="w-full rounded border-slate-300 text-sm">
+                        @foreach ($expenseAccounts as $account)
+                            <option value="{{ $account->NoAkun }}" @selected(old('expense_account', $defaultExpense) === $account->NoAkun)>{{ $account->NoAkun }} · {{ $account->NmAkun }}</option>
+                        @endforeach
+                    </select>
+                    <p class="mt-1 text-xs text-slate-500">Kas keluar (Kredit).</p>
+                    <x-input-error :messages="$errors->get('expense_account')" class="mt-1" />
+                </div>
+                <div x-show="type === 'setor_bank'">
+                    <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-600">Tujuan</label>
+                    <div class="flex h-[38px] items-center rounded border border-slate-200 bg-slate-50 px-3 text-sm text-slate-600">11101 · Bank</div>
+                    <p class="mt-1 text-xs text-slate-500">Kas keluar (Kredit).</p>
                 </div>
                 <div>
                     <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-600">Nominal</label>
@@ -70,35 +86,6 @@
             </form>
         </section>
 
-        <section class="overflow-hidden rounded border border-slate-200 bg-white shadow-sm">
-            <div class="border-b border-slate-200 px-6 py-4">
-                <h3 class="font-semibold text-slate-800">Riwayat Penyesuaian</h3>
-                <p class="mt-1 text-sm text-slate-500">Entri berikut langsung masuk ke Kas Harian, Rekap Kasir per User, dan Laporan Kasir Harian.</p>
-            </div>
-            <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-slate-200 text-sm">
-                    <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-600">
-                        <tr><th class="px-5 py-3">Waktu</th><th class="px-5 py-3">Referensi</th><th class="px-5 py-3">Keterangan</th><th class="px-5 py-3">User</th><th class="px-5 py-3 text-right">Debet</th><th class="px-5 py-3 text-right">Kredit</th></tr>
-                    </thead>
-                    <tbody class="divide-y divide-slate-100">
-                        @forelse ($adjustments as $entry)
-                            <tr>
-                                <td class="whitespace-nowrap px-5 py-3">{{ ($entry->occurred_at ?? $entry->tanggal)->format('d/m/Y H:i') }}</td>
-                                <td class="px-5 py-3 font-medium text-slate-700">{{ $entry->no_nota ?: '-' }}</td>
-                                <td class="px-5 py-3">{{ $entry->keterangan }}</td>
-                                <td class="px-5 py-3">{{ $entry->user?->name ?? '-' }}</td>
-                                <td class="px-5 py-3 text-right tabular-nums">{{ number_format($entry->debet, 0, ',', '.') }}</td>
-                                <td class="px-5 py-3 text-right tabular-nums">{{ number_format($entry->kredit, 0, ',', '.') }}</td>
-                            </tr>
-                        @empty
-                            <tr><td colspan="6" class="px-5 py-10 text-center text-slate-500">Belum ada penyesuaian kas.</td></tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
-            @if ($adjustments->hasPages())
-                <div class="border-t border-slate-200 px-5 py-4">{{ $adjustments->links() }}</div>
-            @endif
-        </section>
+        <p class="px-1 text-sm text-slate-500">Setiap penyesuaian otomatis dijurnal dan tampil di <strong>Rekap Kas Harian</strong>, <strong>Rekap Kasir per User</strong>, dan <strong>Laporan Kasir Harian</strong>.</p>
     </div>
 </x-app-layout>

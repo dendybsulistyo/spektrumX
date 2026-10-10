@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Akun;
 use App\Models\CashDailyEntry;
+use App\Support\CashAdjustmentJournal;
 use App\Models\Customer;
 use App\Models\FinalSalesDiscount;
 use App\Models\JurnalEntry;
@@ -438,7 +439,13 @@ class KeuanganController extends Controller
                 $description = $entry->keterangan;
                 $category = match (true) {
                     $entry->user_id === null || strcasecmp($description, 'Saldo Awal') === 0 => 'opening',
-                    str_starts_with($entry->source_key, 'cash-adjustment:') => 'other_transaction',
+                    // Penyesuaian kas dipisah per jenis (bukan lagi digabung di Transaksi Lain-lain).
+                    str_starts_with($entry->source_key, 'cash-adjustment:') => match (CashAdjustmentJournal::inferType($entry)) {
+                        'setor_bank' => 'adj_bank',
+                        'pengeluaran' => 'adj_expense',
+                        'setor_tunai' => (float) $entry->debet > 0 ? 'adj_in' : 'adj_bank',
+                        default => 'other_transaction',
+                    },
                     (float) $entry->kredit > 0 && str_starts_with(mb_strtolower($description), 'bayar via') => 'non_cash',
                     str_starts_with(mb_strtolower($description), 'piutang ') => 'receivable',
                     str_starts_with(mb_strtolower($description), 'dp -') || str_starts_with((string) $entry->no_nota, 'UM-') => 'advance',
@@ -548,6 +555,9 @@ class KeuanganController extends Controller
             'advance' => 'Uang Muka (DP)',
             'non_cash' => 'Penerimaan Non Tunai (Transfer atau QRIS)',
             'refund' => 'Refund / Pengeluaran Kas',
+            'adj_in' => 'Penyesuaian · Setoran / Tambahan Kas',
+            'adj_bank' => 'Penyesuaian · Setoran ke Bank',
+            'adj_expense' => 'Penyesuaian · Pengeluaran Kas',
             'other_transaction' => 'Transaksi Lain-lain',
         ];
 

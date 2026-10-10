@@ -30,6 +30,9 @@
         color: var(--rc-ink);
     }
 
+    /* Judul di dalam kotak berlatar gelap tetap mengikuti warna kotaknya (putih). */
+    html body.font-sans :is(.bg-slate-900, .bg-slate-800, .bg-gray-900, .bg-gray-800, .bg-indigo-600, .bg-blue-600) :is(h1, h2, h3, h4) { color: inherit !important; }
+
     /* ---------- Menu atas ---------- */
     html body.font-sans .industry-nav {
         background: var(--rc-sheet) !important;
