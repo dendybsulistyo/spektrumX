@@ -54,7 +54,7 @@
             </div>
         </div>
         <section class="bg-white p-4 shadow-sm">
-            <div class="mb-3 text-center"><h1 class="text-base font-bold">LAPORAN ORDER {{ strtoupper($selectedType) }}{{ $selectedStatus !== 'semua' ? ' · '.strtoupper($statusOptions[$selectedStatus]) : '' }}</h1>
+            <div class="mb-3 text-center"><h1 class="text-base font-bold">LAPORAN ORDER {{ strtoupper($selectedType) }}{{ ' · '.strtoupper($statusOptions[$selectedStatus]) }}</h1>
                 <p class="text-sm">Dari Tanggal: {{ \Carbon\Carbon::parse($from)->translatedFormat('d F Y') }} s/d {{ \Carbon\Carbon::parse($to)->translatedFormat('d F Y') }}</p></div>
             @foreach($groups as $group)
             <div class="{{ $loop->first ? '' : 'mt-6' }}">
@@ -77,7 +77,7 @@
                     @if (! $printAll && $group->paginator->lastPage() > 1)
                         <tr><td colspan="10" class="number">TOTAL HALAMAN {{ $group->paginator->currentPage() }} DARI {{ $group->paginator->lastPage() }}</td><td class="number">{{ number_format($group->grandTotal,0,',','.') }}</td><td class="number">{{ number_format($group->totalAdvance,0,',','.') }}</td><td></td></tr>
                     @endif
-                    <tr style="background:#f1ece0"><td colspan="10" class="number">TOTAL PERIODE {{ strtoupper($group->label) }}{{ $selectedStatus !== 'semua' ? ' · '.strtoupper($statusOptions[$selectedStatus]) : '' }} ({{ number_format($group->periodCount,0,',','.') }} order)</td><td class="number">{{ number_format($group->periodTotal,0,',','.') }}</td><td class="number">{{ number_format($group->periodPaid,0,',','.') }}</td><td></td></tr>
+                    <tr style="background:#f1ece0"><td colspan="10" class="number">TOTAL PERIODE {{ strtoupper($group->label) }}{{ ' · '.strtoupper($statusOptions[$selectedStatus]) }} ({{ number_format($group->periodCount,0,',','.') }} order)</td><td class="number">{{ number_format($group->periodTotal,0,',','.') }}</td><td class="number">{{ number_format($group->periodPaid,0,',','.') }}</td><td></td></tr>
                 </tbody>
             </table></div>
                 @if ($group->rows->contains('status', 'Batal (sisa)'))

@@ -284,14 +284,15 @@ class ReportController extends Controller
         $selectedType = in_array($request->query('jenis'), ['indoor', 'outdoor'], true)
             ? $request->query('jenis')
             : 'indoor';
-        // Status dokumen, tidak tumpang tindih (Pre Order + Order + Invoice = Semua):
+        // Status dokumen, tidak tumpang tindih (Pre Order + Order + Invoice = seluruh order):
         // - preorder: belum dibayar di kasir dan belum ada nomor Invoice
         // - order   : sudah diproses kasir (lunas/DP/hutang), belum ada nomor Invoice
         // - invoice : sudah punya nomor Invoice
-        $statusOptions = ['semua' => 'Semua', 'preorder' => 'Pre Order', 'order' => 'Order', 'invoice' => 'Invoice'];
+        // Pilihan "Semua" sengaja tidak disediakan; bawaan Pre Order.
+        $statusOptions = ['preorder' => 'Pre Order', 'order' => 'Order', 'invoice' => 'Invoice'];
         $selectedStatus = array_key_exists((string) $request->query('status'), $statusOptions)
             ? (string) $request->query('status')
-            : 'semua';
+            : 'preorder';
         $printAll = $request->boolean('semua_halaman');
 
         $groups = collect();
