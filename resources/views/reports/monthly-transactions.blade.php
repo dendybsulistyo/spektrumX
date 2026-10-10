@@ -14,7 +14,8 @@
         .monthly-report .mt-table td.number, .monthly-report .mt-table td.center, .monthly-report .mt-table td.doc { overflow-wrap: normal; }
         .monthly-report th, .monthly-report td { border: 1px solid #64748b; padding: 2px 4px !important; vertical-align: top; font-size: 11px !important; line-height: 1.2 !important; }
         .monthly-report th { background: #e2e8f0; text-align: center; white-space: nowrap; font-weight: 700; }
-        .monthly-report .number { text-align: right; white-space: nowrap; }
+        .monthly-report .number { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+        .monthly-report tbody.grand-total td { border-top: 2px solid #334155; background: #f1ece0; }
         .monthly-report .center { text-align: center; white-space: nowrap; }
         .monthly-report tbody.note td { border-top-width: 1px; }
         .monthly-report tbody.note tr + tr td.line { border-top-style: dotted; border-top-color: #cbd5e1; }
@@ -32,7 +33,9 @@
             .monthly-report .mt-table { min-width: 0; }
             .monthly-report th, .monthly-report td { font-size: 7.5pt !important; line-height: 1.15 !important; }
             .monthly-report thead { display: table-header-group; }
-            .monthly-report tbody.note { break-inside: avoid; }
+            .monthly-report tbody.note, .monthly-report tbody.grand-total { break-inside: avoid; }
+            [x-data^="chatWidget"], [x-data^="statusWa"], [x-data^="cariCepat"] { display: none !important; }
+            html, body, .monthly-report, .monthly-report section { background: #fff !important; }
         }
     </style>
 
@@ -63,9 +66,9 @@
                 <div class="mt-scroll" style="overflow-x:auto">
                     <table class="mt-table">
                         <colgroup>
-                            <col style="width:5.5%"><col style="width:9%"><col style="width:11%"><col style="width:15%"><col style="width:12%">
-                            <col style="width:4%"><col style="width:4%"><col style="width:3%"><col style="width:5.5%"><col style="width:6.5%">
-                            <col style="width:4.5%"><col style="width:6.5%"><col style="width:6.5%"><col style="width:6.5%">
+                            <col style="width:5.6%"><col style="width:9.8%"><col style="width:9.6%"><col style="width:12.6%"><col style="width:9.2%">
+                            <col style="width:4.4%"><col style="width:4.4%"><col style="width:3%"><col style="width:5.5%"><col style="width:7.1%">
+                            <col style="width:6.6%"><col style="width:7.3%"><col style="width:7.3%"><col style="width:7.2%">
                         </colgroup>
                         <thead><tr>
                             <th>Tanggal</th><th>No. Nota</th><th>Customer</th><th>Produk</th><th>Keterangan</th>
@@ -101,14 +104,14 @@
                         @empty
                             <tbody><tr><td colspan="14" class="center" style="padding:28px">Belum ada nota lunas atau tagihan customer VIP pada bulan ini.</td></tr></tbody>
                         @endforelse
-                        <tfoot class="font-bold"><tr>
+                        <tbody class="grand-total font-bold"><tr>
                             <td colspan="9" class="number">Grand Total :</td>
                             <td class="number">{{ $fmt($totals->subtotal) }}</td>
                             <td class="number">{{ $fmt($totals->discount) }}</td>
                             <td class="number">{{ $fmt($totals->total) }}</td>
                             <td class="number">{{ $fmt($totals->cash) }}</td>
                             <td class="number">{{ $fmt($totals->credit) }}</td>
-                        </tr></tfoot>
+                        </tr></tbody>
                     </table>
                 </div>
             </section>
