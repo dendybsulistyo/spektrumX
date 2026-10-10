@@ -296,6 +296,16 @@ class ReportController extends Controller
 
         $groups = collect();
 
+        // Order batal hanya ditampilkan bila masih ada uang yang TIDAK
+        // dikembalikan (sisa pembatalan = pendapatan di jurnal). Nilainya
+        // = jumlah_dibayar yang tersisa. Nota yang dihanguskan untuk nota
+        // pengganti tidak ikut karena uangnya pindah ke nota pengganti.
+        $isRetainedCancel = fn ($order) => $order->status === 'batal';
+        $orderTotal = fn ($order) => $isRetainedCancel($order)
+            ? max(0, (float) $order->jumlah_dibayar)
+            : ($order->diskonStatus() === 'approved' ? $order->totalSetelahDiskon() : (float) $order->total);
+        $orderPaid = fn ($order) => min($orderTotal($order), max(0, (float) $order->jumlah_dibayar));
+
         foreach ([$selectedType => $selectedType === 'indoor' ? OrderIndoor::class : OrderOutdoor::class] as $type => $model) {
             $relations = $type === 'indoor'
                 ? ['customer', 'createdBy', 'items']
@@ -306,7 +316,10 @@ class ReportController extends Controller
                 ->whereColumn('order_id', $table.'.id');
             $baseQuery = $model::query()
                 ->whereBetween('TglOrder', [$from, $to])
-                ->where('status', '!=', 'batal')
+                ->where(fn ($query) => $query->where('status', '!=', 'batal')
+                    ->orWhere(fn ($cancelled) => $cancelled->where('status', 'batal')
+                        ->whereNull('invoice_voided_at')
+                        ->where('jumlah_dibayar', '>', 0)))
                 ->when($selectedStatus === 'invoice', fn ($query) => $query->whereExists($hasInvoice))
                 ->when($selectedStatus === 'order', fn ($query) => $query->whereNotExists($hasInvoice)->where('status_bayar', '!=', 'belum_bayar'))
                 ->when($selectedStatus === 'preorder', fn ($query) => $query->whereNotExists($hasInvoice)->where('status_bayar', 'belum_bayar'));
@@ -325,9 +338,9 @@ class ReportController extends Controller
                     $items = collect([(object) ['name' => '-', 'bahan' => '-', 'printer' => '-',
                         'panjang' => 0, 'lebar' => 0, 'qty' => 0]]);
                 }
-                $total = $order->diskonStatus() === 'approved' ? $order->totalSetelahDiskon() : (float) $order->total;
-                $advance = max(0, min($total, (float) $order->jumlah_dibayar));
-                $status = match ($order->status_bayar) {
+                $total = $orderTotal($order);
+                $advance = $orderPaid($order);
+                $status = $isRetainedCancel($order) ? 'Batal (sisa)' : match ($order->status_bayar) {
                     'lunas' => 'Lunas', 'dp' => 'DP', 'hutang' => 'Hutang', default => 'Pre Order',
                 };
 
@@ -349,13 +362,12 @@ class ReportController extends Controller
             $periodPaid = 0.0;
             $periodCount = 0;
             (clone $baseQuery)
-                ->select(['id', 'total', 'jumlah_dibayar', 'diskon_tipe', 'diskon_persen', 'diskon_nominal_tetap', 'diskon_akhir_nominal',
+                ->select(['id', 'status', 'total', 'jumlah_dibayar', 'diskon_tipe', 'diskon_persen', 'diskon_nominal_tetap', 'diskon_akhir_nominal',
                     'diskon_approved_at', 'diskon_rejected_at', 'diskon_requested_at'])
                 ->lazyById(1000)
-                ->each(function ($order) use (&$periodTotal, &$periodPaid, &$periodCount) {
-                    $total = $order->diskonStatus() === 'approved' ? $order->totalSetelahDiskon() : (float) $order->total;
-                    $periodTotal += $total;
-                    $periodPaid += min($total, max(0, (float) $order->jumlah_dibayar));
+                ->each(function ($order) use (&$periodTotal, &$periodPaid, &$periodCount, $orderTotal, $orderPaid) {
+                    $periodTotal += $orderTotal($order);
+                    $periodPaid += $orderPaid($order);
                     $periodCount++;
                 });
 
@@ -366,11 +378,8 @@ class ReportController extends Controller
                 'periodTotal' => $periodTotal,
                 'periodPaid' => $periodPaid,
                 'periodCount' => $periodCount,
-                'grandTotal' => (float) $orders->sum(fn ($order) => $order->diskonStatus() === 'approved' ? $order->totalSetelahDiskon() : $order->total),
-                'totalAdvance' => (float) $orders->sum(fn ($order) => min(
-                    $order->diskonStatus() === 'approved' ? $order->totalSetelahDiskon() : (float) $order->total,
-                    max(0, (float) $order->jumlah_dibayar),
-                )),
+                'grandTotal' => (float) $orders->sum($orderTotal),
+                'totalAdvance' => (float) $orders->sum($orderPaid),
             ]);
         }
 

@@ -80,6 +80,9 @@
                     <tr style="background:#f1ece0"><td colspan="10" class="number">TOTAL PERIODE {{ strtoupper($group->label) }}{{ $selectedStatus !== 'semua' ? ' · '.strtoupper($statusOptions[$selectedStatus]) : '' }} ({{ number_format($group->periodCount,0,',','.') }} order)</td><td class="number">{{ number_format($group->periodTotal,0,',','.') }}</td><td class="number">{{ number_format($group->periodPaid,0,',','.') }}</td><td></td></tr>
                 </tbody>
             </table></div>
+                @if ($group->rows->contains('status', 'Batal (sisa)'))
+                    <p class="mt-2 text-xs text-gray-600">* <b>Batal (sisa)</b>: order dibatalkan, tetapi sebagian uang tidak dikembalikan ke customer. Total = sisa uang yang tetap menjadi pendapatan.</p>
+                @endif
                 @if ($group->paginator)
                     <div class="no-print mt-4">{{ $group->paginator->links() }}</div>
                 @endif

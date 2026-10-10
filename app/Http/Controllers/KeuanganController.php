@@ -18,11 +18,14 @@ use App\Models\PengaturanKeuangan;
 use App\Models\User;
 use App\Services\OrderDocumentService;
 use App\Support\SimpleXlsx;
+use App\Services\ReceivableBatchPayment;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -1423,6 +1426,10 @@ class KeuanganController extends Controller
                 $invoiceNumbers = DB::table('order_documents')->where('kind', 'inv')->where('order_type', $type)
                     ->whereIn('order_id', $orders->pluck('id'))->orderByDesc('sequence')->get(['order_id', 'number'])
                     ->unique('order_id')->pluck('number', 'order_id');
+                // Cicilan yang benar-benar diterima (sumber sama dengan laporan kas & jurnal).
+                $receivedByOrder = OrderPayment::query()->where('order_type', $type)->where('jenis', 'pelunasan_hutang')
+                    ->whereIn('order_id', $orders->pluck('id'))
+                    ->selectRaw('order_id, SUM(jumlah) AS total')->groupBy('order_id')->pluck('total', 'order_id');
 
                 foreach ($orders as $order) {
                     $gross = (float) $order->total;
@@ -1435,6 +1442,9 @@ class KeuanganController extends Controller
                         'type' => $type,
                         'id' => $order->id,
                         'date' => $order->TglOrder,
+                        'order_number' => $order->NoOrder,
+                        'invoice_number' => $invoiceNumbers[$order->id] ?? null,
+                        'received' => (float) ($receivedByOrder[$order->id] ?? 0),
                         'invoice' => $invoiceNumbers[$order->id] ?? $order->NoOrder,
                         'receivable' => $gross, 'discount' => $discount,
                         'paid' => $paid, 'remaining' => $remaining,
@@ -1450,6 +1460,55 @@ class KeuanganController extends Controller
         return view('keuangan.customer-receivable-details', compact(
             'customers', 'selectedCustomer', 'customerCode', 'rows', 'totals'
         ));
+    }
+
+    /**
+     * Proses Pembayaran Piutang per Customer: beberapa nota sekaligus, satu
+     * cara bayar. Pencatatan per nota sama dengan tombol Lunasi kasir
+     * (lihat App\Services\ReceivableBatchPayment).
+     */
+    public function storeCustomerReceivablePayments(Request $request, ReceivableBatchPayment $payments): RedirectResponse
+    {
+        $data = $request->validate([
+            'customer' => ['required', 'string', 'exists:customers,KdCust'],
+            'cara_bayar' => ['required', Rule::in(array_keys(ReceivableBatchPayment::METHODS))],
+            'no_referensi' => ['nullable', 'string', 'max:50', Rule::requiredIf(fn () => $request->input('cara_bayar') !== 'tunai')],
+            'keterangan' => ['nullable', 'string', 'max:150'],
+            'bayar' => ['required', 'array'],
+            'bayar.*' => ['nullable', 'string', 'max:20'],
+        ], [
+            'no_referensi.required' => 'No. referensi wajib diisi untuk pembayaran QRIS/Transfer.',
+        ]);
+
+        $lines = collect($data['bayar'])
+            ->map(fn ($amount, $key) => [
+                'key' => (string) $key,
+                'amount' => (float) preg_replace('/\D/', '', (string) $amount),
+            ])
+            ->filter(fn ($line) => $line['amount'] > 0 && preg_match('/^(indoor|outdoor|artwork)-\d+$/', $line['key']))
+            ->map(function ($line) {
+                [$type, $id] = explode('-', $line['key']);
+
+                return ['type' => $type, 'id' => (int) $id, 'amount' => $line['amount']];
+            })
+            ->values()->all();
+
+        if ($lines === []) {
+            throw ValidationException::withMessages(['pembayaran' => 'Isi nominal pembayaran minimal pada satu nota.']);
+        }
+
+        $method = $data['cara_bayar'];
+        $reference = $method === 'tunai' ? null : trim((string) $data['no_referensi']);
+        $result = $payments->pay($data['customer'], $lines, $method, $reference, trim((string) ($data['keterangan'] ?? '')) ?: null);
+
+        return redirect()->route('keuangan.customer-receivable-details', ['customer' => $data['customer']])
+            ->with('receivable_payment', [
+                'count' => $result['count'],
+                'settled' => $result['settled'],
+                'total' => $result['total'],
+                'method' => ReceivableBatchPayment::METHODS[$method].($reference ? ' · Ref '.$reference : ''),
+                'date' => now()->format('Y-m-d'),
+            ]);
     }
 
     public function dailyReceivableCollections(Request $request): View

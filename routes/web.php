@@ -451,6 +451,7 @@ Route::middleware('auth')->group(function () {
         Route::delete('/customer-service/job-sheets/{jobSheet}', [CustomerServiceController::class, 'destroyJobSheet'])->name('customer-service.job-sheets.destroy');
     });
     Route::middleware('permission:kasir.manage')->group(function () {
+        Route::post('/keuangan/piutang-per-customer/bayar', [KeuanganController::class, 'storeCustomerReceivablePayments'])->name('keuangan.customer-receivable-payments');
         Route::post('/kasir/{type}/{id}/bayar', [KasirController::class, 'bayar'])->name('kasir.bayar');
         Route::post('/kasir/{type}/{id}/artwork-price/{detail}', [KasirController::class, 'updateArtworkPrice'])->name('kasir.artwork-price.update');
         Route::post('/kasir/{type}/{id}/diskon/request', [KasirController::class, 'requestDiskon'])->name('kasir.diskon.request');
