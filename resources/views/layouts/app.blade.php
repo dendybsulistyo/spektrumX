@@ -161,7 +161,7 @@
             $masterDataActive = request()->routeIs('customers.*', 'kategori-produk-indoor.*', 'detail-indoor.*', 'harga-artwork.*', 'printer-outdoor.*', 'bahan-cetak-outdoor.*', 'harga-cetak-outdoor.*', 'printers.*');
             $transaksiActive = request()->routeIs('order-indoor.*', 'order-outdoor.*', 'order-artwork.*', 'customer-service.index', 'customer-service.job-sheets.*');
             $operatorActive = request()->routeIs('file.*', 'kasir.*', 'customer-service.payment-queue', 'order-desain.*', 'order-cetak.*', 'order-finishing.*', 'order-qc.*', 'order-bungkus.*', 'pengambilan.*');
-            $analitikActive = request()->routeIs('data-warehouse.*', 'laporan-operator-indoor.*', 'rekap-penerimaan.*', 'monitoring-kinerja.*', 'monitoring-transaksi.*', 'papan-pantau.*', 'printer-performance.*');
+            $analitikActive = request()->routeIs('data-warehouse.*', 'laporan-operator-indoor.*', 'rekap-penerimaan.*', 'monitoring-kinerja.*', 'monitoring-transaksi.*', 'papan-pantau.*', 'printer-performance.*', 'rekap-bulanan.*');
             $keuanganActive = request()->routeIs('akuntansi.*', 'keuangan.*', 'pengeluaran.*', 'payroll.*', 'order-documents.*');
             $canApproveCancel = Auth::user()->hasPermission('order-indoor.approve-cancel') || Auth::user()->hasPermission('order-outdoor.approve-cancel') || Auth::user()->hasPermission('order-artwork.approve-cancel');
             $pendingApprovalCount = $canApproveCancel ? \App\Http\Controllers\PembatalanController::pendingCount() : 0;
@@ -182,7 +182,7 @@
             $showMasterData = Auth::user()->hasPermission('customers.view') || Auth::user()->hasPermission('produk.view') || Auth::user()->hasPermission('harga-artwork.view') || Auth::user()->hasPermission('printers.view') || Auth::user()->hasPermission('printer-outdoor.view') || Auth::user()->hasPermission('bahan-cetak-outdoor.view') || Auth::user()->hasPermission('harga-cetak-outdoor.view') || Auth::user()->hasPermission('kategori-produk-indoor.view');
             $showTransaksi = Auth::user()->hasPermission('order-indoor.view') || Auth::user()->hasPermission('order-outdoor.view') || Auth::user()->hasPermission('order-artwork.view') || Auth::user()->hasPermission('customer-service.view');
             $showOperator = Auth::user()->hasPermission('customer-service.view') || Auth::user()->hasPermission('kasir.view') || Auth::user()->hasPermission('order-desain.view') || Auth::user()->hasPermission('order-cetak.view') || Auth::user()->hasPermission('order-finishing.view') || Auth::user()->hasPermission('order-qc.view') || Auth::user()->hasPermission('order-bungkus.view') || Auth::user()->hasPermission('pengambilan.view') || Auth::user()->hasPermission('file-monitor.view');
-            $showAnalitik = Auth::user()->hasPermission('data-warehouse.view') || Auth::user()->hasPermission('monitoring-kinerja.view') || Auth::user()->hasPermission('monitoring-transaksi.view') || Auth::user()->hasPermission('papan-pantau.view') || Auth::user()->hasPermission('printer-performance.view');
+            $showAnalitik = Auth::user()->hasPermission('data-warehouse.view') || Auth::user()->hasPermission('monitoring-kinerja.view') || Auth::user()->hasPermission('monitoring-transaksi.view') || Auth::user()->hasPermission('papan-pantau.view') || Auth::user()->hasPermission('printer-performance.view') || Auth::user()->hasPermission('rekap-bulanan.view');
             $showPengaturan = Auth::user()->hasPermission('keuangan.pengaturan') || Auth::user()->hasPermission('roles.manage') || Auth::user()->hasPermission('jasa-potong.manage') || Auth::user()->hasPermission('jasa-potong-artwork.manage');
 
             $operatorPageTitle = match (true) {
@@ -502,6 +502,9 @@
                                                 <a href="{{ route('laporan-operator-indoor.index') }}" class="{{ $dropdownLink(request()->routeIs('laporan-operator-indoor.*')) }}">Laporan Operator Indoor</a>
                                                 <a href="{{ route('rekap-penerimaan.index') }}" class="{{ $dropdownLink(request()->routeIs('rekap-penerimaan.*')) }}">Rekap Penerimaan</a>
                                             @endcan
+                                            @can('rekap-bulanan.view')
+                                                <a href="{{ route('rekap-bulanan.index') }}" class="{{ $dropdownLink(request()->routeIs('rekap-bulanan.*')) }}">Rekap Transaksi Bulanan</a>
+                                            @endcan
                                             @can('monitoring-kinerja.view')
                                                 <a href="{{ route('monitoring-kinerja.index') }}" class="{{ $dropdownLink(request()->routeIs('monitoring-kinerja.*')) }}">Monitoring Kinerja</a>
                                             @endcan
@@ -791,6 +794,9 @@
                                 <a href="{{ route('data-warehouse.index') }}" class="{{ $mobileLink(request()->routeIs('data-warehouse.*')) }}">Data Warehouse</a>
                                 <a href="{{ route('laporan-operator-indoor.index') }}" class="{{ $mobileLink(request()->routeIs('laporan-operator-indoor.*')) }}">Laporan Operator Indoor</a>
                                 <a href="{{ route('rekap-penerimaan.index') }}" class="{{ $mobileLink(request()->routeIs('rekap-penerimaan.*')) }}">Rekap Penerimaan</a>
+                            @endcan
+                            @can('rekap-bulanan.view')
+                                <a href="{{ route('rekap-bulanan.index') }}" class="{{ $mobileLink(request()->routeIs('rekap-bulanan.*')) }}">Rekap Transaksi Bulanan</a>
                             @endcan
                             @can('monitoring-kinerja.view')
                                 <a href="{{ route('monitoring-kinerja.index') }}" class="{{ $mobileLink(request()->routeIs('monitoring-kinerja.*')) }}">Monitoring Kinerja</a>

@@ -57,6 +57,7 @@ use App\Http\Controllers\UserStatusController;
 use App\Http\Controllers\QuickSearchController;
 use App\Http\Controllers\DailySummaryController;
 use App\Http\Controllers\AvatarController;
+use App\Http\Controllers\MonthlyTransactionController;
 use App\Http\Controllers\PengambilanController;
 use App\Http\Controllers\PengaturanCetakController;
 use App\Http\Controllers\PengaturanKeuanganController;
@@ -142,6 +143,10 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware('permission:monitoring-transaksi.view')->group(function () {
         Route::get('/monitoring-transaksi', [MonitoringTransaksiController::class, 'index'])->name('monitoring-transaksi.index');
+    });
+
+    Route::middleware('permission:rekap-bulanan.view')->group(function () {
+        Route::get('/analitik/rekap-transaksi-bulanan', [MonthlyTransactionController::class, 'index'])->name('rekap-bulanan.index');
     });
 
     Route::middleware('permission:papan-pantau.view')->group(function () {

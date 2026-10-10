@@ -136,6 +136,9 @@ class Role extends Model
         'Monitoring Kinerja' => [
             'monitoring-kinerja.view' => 'Lihat monitoring kinerja staf',
         ],
+        'Rekap Transaksi Bulanan' => [
+            'rekap-bulanan.view' => 'Lihat Rekap Transaksi Bulanan (menu Analitik)',
+        ],
         'Kinerja Printer' => [
             'printer-performance.view' => 'Lihat omzet dan kinerja printer',
         ],
