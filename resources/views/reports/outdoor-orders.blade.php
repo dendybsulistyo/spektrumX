@@ -8,7 +8,9 @@
         .outdoor-report .number { text-align:right; white-space:nowrap; }
         .outdoor-report .code,.outdoor-report .date,.outdoor-report .status { white-space:nowrap; overflow-wrap:normal; }
         .outdoor-report .code { font-size:9px; letter-spacing:-.15px; }
+        .outdoor-report tbody.font-bold td { border-top:2px solid #334155; }
         @media print {
+            [x-data^="chatWidget"], [x-data^="statusWa"], [x-data^="cariCepat"] { display:none !important; }
             @page { size:A4 landscape; margin:7mm; }
             body { background:#fff !important; }
             header,nav,.no-print { display:none !important; }
@@ -30,14 +32,29 @@
                         <option value="outdoor" @selected($selectedType === 'outdoor')>Outdoor</option>
                     </select>
                 </label>
+                <label class="text-sm text-gray-700">Status
+                    <select name="status" class="mt-1 block rounded-md border-gray-300">
+                        @foreach ($statusOptions as $value => $text)
+                            <option value="{{ $value }}" @selected($selectedStatus === $value)>{{ $text }}</option>
+                        @endforeach
+                    </select>
+                </label>
                 <label class="text-sm text-gray-700">Dari tanggal<input type="date" name="dari" value="{{ $from }}" class="mt-1 block rounded-md border-gray-300"></label>
                 <label class="text-sm text-gray-700">Sampai tanggal<input type="date" name="sampai" value="{{ $to }}" class="mt-1 block rounded-md border-gray-300"></label>
                 <button class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white">Tampilkan</button>
             </form>
-            <button type="button" onclick="window.print()" class="rounded-md bg-slate-800 px-4 py-2 text-sm font-semibold text-white">Cetak Landscape</button>
+            <div class="flex flex-wrap gap-2">
+                @if ($printAll)
+                    <a href="{{ request()->fullUrlWithoutQuery(['semua_halaman']) }}" class="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700">&larr; Kembali per halaman</a>
+                    <button type="button" onclick="window.print()" class="rounded-md bg-slate-800 px-4 py-2 text-sm font-semibold text-white">Cetak Landscape</button>
+                @else
+                    <button type="button" onclick="window.print()" class="rounded-md border border-slate-800 bg-white px-4 py-2 text-sm font-semibold text-slate-800">Cetak Halaman Ini</button>
+                    <a href="{{ request()->fullUrlWithQuery(['semua_halaman' => 1, 'page' => null]) }}" class="rounded-md bg-slate-800 px-4 py-2 text-sm font-semibold text-white">Cetak Semua Halaman</a>
+                @endif
+            </div>
         </div>
         <section class="bg-white p-4 shadow-sm">
-            <div class="mb-3 text-center"><h1 class="text-base font-bold">LAPORAN ORDER {{ strtoupper($selectedType) }}</h1>
+            <div class="mb-3 text-center"><h1 class="text-base font-bold">LAPORAN ORDER {{ strtoupper($selectedType) }}{{ $selectedStatus !== 'semua' ? ' · '.strtoupper($statusOptions[$selectedStatus]) : '' }}</h1>
                 <p class="text-sm">Dari Tanggal: {{ \Carbon\Carbon::parse($from)->translatedFormat('d F Y') }} s/d {{ \Carbon\Carbon::parse($to)->translatedFormat('d F Y') }}</p></div>
             @foreach($groups as $group)
             <div class="{{ $loop->first ? '' : 'mt-6' }}">
@@ -55,9 +72,17 @@
                     <td class="number">{{ number_format((float)$row->length,2,',','.') }}</td><td class="number">{{ number_format((float)$row->width,2,',','.') }}</td><td class="number">{{ number_format((float)$row->qty,0,',','.') }}</td>
                     <td class="number">{{ $row->first ? number_format($row->total,0,',','.') : '' }}</td><td class="number">{{ $row->first ? number_format($row->advance,0,',','.') : '' }}</td><td class="status">{{ $row->first ? $row->status : '' }}</td>
                 </tr>@empty<tr><td colspan="13" style="padding:28px;text-align:center">Belum ada order {{ $group->label }} pada periode ini.</td></tr>@endforelse</tbody>
-                <tfoot class="font-bold"><tr><td colspan="10" class="number">TOTAL HALAMAN {{ strtoupper($group->label) }}</td><td class="number">{{ number_format($group->grandTotal,0,',','.') }}</td><td class="number">{{ number_format($group->totalAdvance,0,',','.') }}</td><td></td></tr></tfoot>
+                {{-- Total ditaruh di tbody (bukan tfoot) agar tidak tercetak berulang di setiap halaman kertas. --}}
+                <tbody class="font-bold">
+                    @if (! $printAll && $group->paginator->lastPage() > 1)
+                        <tr><td colspan="10" class="number">TOTAL HALAMAN {{ $group->paginator->currentPage() }} DARI {{ $group->paginator->lastPage() }}</td><td class="number">{{ number_format($group->grandTotal,0,',','.') }}</td><td class="number">{{ number_format($group->totalAdvance,0,',','.') }}</td><td></td></tr>
+                    @endif
+                    <tr style="background:#f1ece0"><td colspan="10" class="number">TOTAL PERIODE {{ strtoupper($group->label) }}{{ $selectedStatus !== 'semua' ? ' · '.strtoupper($statusOptions[$selectedStatus]) : '' }} ({{ number_format($group->periodCount,0,',','.') }} order)</td><td class="number">{{ number_format($group->periodTotal,0,',','.') }}</td><td class="number">{{ number_format($group->periodPaid,0,',','.') }}</td><td></td></tr>
+                </tbody>
             </table></div>
-                <div class="no-print mt-4">{{ $group->paginator->links() }}</div>
+                @if ($group->paginator)
+                    <div class="no-print mt-4">{{ $group->paginator->links() }}</div>
+                @endif
             </div>
             @endforeach
         </section>

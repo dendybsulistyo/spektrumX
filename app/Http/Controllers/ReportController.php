@@ -284,6 +284,15 @@ class ReportController extends Controller
         $selectedType = in_array($request->query('jenis'), ['indoor', 'outdoor'], true)
             ? $request->query('jenis')
             : 'indoor';
+        // Status dokumen, tidak tumpang tindih (Pre Order + Order + Invoice = Semua):
+        // - preorder: belum dibayar di kasir dan belum ada nomor Invoice
+        // - order   : sudah diproses kasir (lunas/DP/hutang), belum ada nomor Invoice
+        // - invoice : sudah punya nomor Invoice
+        $statusOptions = ['semua' => 'Semua', 'preorder' => 'Pre Order', 'order' => 'Order', 'invoice' => 'Invoice'];
+        $selectedStatus = array_key_exists((string) $request->query('status'), $statusOptions)
+            ? (string) $request->query('status')
+            : 'semua';
+        $printAll = $request->boolean('semua_halaman');
 
         $groups = collect();
 
@@ -291,12 +300,19 @@ class ReportController extends Controller
             $relations = $type === 'indoor'
                 ? ['customer', 'createdBy', 'items']
                 : ['customer', 'createdBy', 'items.hargaCetak'];
-            $paginator = $model::with($relations)
+            $table = (new $model)->getTable();
+            $hasInvoice = fn ($query) => $query->selectRaw('1')->from('order_documents')
+                ->where('kind', 'inv')->where('order_type', $type)
+                ->whereColumn('order_id', $table.'.id');
+            $baseQuery = $model::query()
                 ->whereBetween('TglOrder', [$from, $to])
                 ->where('status', '!=', 'batal')
-                ->orderBy('TglOrder')->orderBy('NoOrder')
-                ->paginate(100)->withQueryString();
-            $orders = collect($paginator->items());
+                ->when($selectedStatus === 'invoice', fn ($query) => $query->whereExists($hasInvoice))
+                ->when($selectedStatus === 'order', fn ($query) => $query->whereNotExists($hasInvoice)->where('status_bayar', '!=', 'belum_bayar'))
+                ->when($selectedStatus === 'preorder', fn ($query) => $query->whereNotExists($hasInvoice)->where('status_bayar', 'belum_bayar'));
+            $listQuery = (clone $baseQuery)->with($relations)->orderBy('TglOrder')->orderBy('NoOrder');
+            $paginator = $printAll ? null : $listQuery->paginate(100)->withQueryString();
+            $orders = $printAll ? $listQuery->get() : collect($paginator->items());
             $invoiceNumbers = DB::table('order_documents')->where('kind', 'inv')->where('order_type', $type)
                 ->whereIn('order_id', $orders->pluck('id'))->orderByDesc('sequence')
                 ->get(['order_id', 'number'])->unique('order_id')->pluck('number', 'order_id');
@@ -327,10 +343,29 @@ class ReportController extends Controller
                 }
             }
 
+            // Total seluruh periode (semua halaman) — rumus sama dengan baris
+            // per order, tetapi hanya memuat kolom yang diperlukan.
+            $periodTotal = 0.0;
+            $periodPaid = 0.0;
+            $periodCount = 0;
+            (clone $baseQuery)
+                ->select(['id', 'total', 'jumlah_dibayar', 'diskon_tipe', 'diskon_persen', 'diskon_nominal_tetap', 'diskon_akhir_nominal',
+                    'diskon_approved_at', 'diskon_rejected_at', 'diskon_requested_at'])
+                ->lazyById(1000)
+                ->each(function ($order) use (&$periodTotal, &$periodPaid, &$periodCount) {
+                    $total = $order->diskonStatus() === 'approved' ? $order->totalSetelahDiskon() : (float) $order->total;
+                    $periodTotal += $total;
+                    $periodPaid += min($total, max(0, (float) $order->jumlah_dibayar));
+                    $periodCount++;
+                });
+
             $groups->put($type, (object) [
                 'label' => ucfirst($type),
                 'rows' => $rows,
                 'paginator' => $paginator,
+                'periodTotal' => $periodTotal,
+                'periodPaid' => $periodPaid,
+                'periodCount' => $periodCount,
                 'grandTotal' => (float) $orders->sum(fn ($order) => $order->diskonStatus() === 'approved' ? $order->totalSetelahDiskon() : $order->total),
                 'totalAdvance' => (float) $orders->sum(fn ($order) => min(
                     $order->diskonStatus() === 'approved' ? $order->totalSetelahDiskon() : (float) $order->total,
@@ -339,7 +374,7 @@ class ReportController extends Controller
             ]);
         }
 
-        return view('reports.outdoor-orders', compact('from', 'to', 'selectedType', 'groups'));
+        return view('reports.outdoor-orders', compact('from', 'to', 'selectedType', 'groups', 'statusOptions', 'selectedStatus', 'printAll'));
     }
 
     public function allOrdersByCustomer(Request $request): View

@@ -29,6 +29,13 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class KeuanganController extends Controller
 {
+    /**
+     * Cara bayar yang uangnya masuk/keluar lewat rekening bank, bukan laci
+     * kas (jurnalnya ke Kas Bank 11101). Di laporan kas, transaksi dengan
+     * cara bayar ini selalu dinetralkan agar saldo kas tunai tetap benar.
+     */
+    private const NON_CASH_METHODS = ['transfer', 'qris', 'debit'];
+
     /** Pusat pengajuan dan pemantauan pembatalan pre-order/nota Indoor dan Outdoor. */
     public function pembatalanOrder(): View
     {
@@ -181,7 +188,15 @@ class KeuanganController extends Controller
                     'debet' => 0,
                     'kredit' => abs($jumlah),
                     'sort' => '2-'.$baseSort.'-0',
-                ]];
+                ], ...$this->nonCashRefundOffset($p, fn (string $method) => [
+                    'user_id' => $p->user_id,
+                    'kasir' => $p->user?->name ?? '-',
+                    'no_nota' => null,
+                    'keterangan' => 'Refund via '.$method.' (keluar dari bank, bukan kas) - '.$customer,
+                    'debet' => abs($jumlah),
+                    'kredit' => 0,
+                    'sort' => '2-'.$baseSort.'-1',
+                ])];
             }
 
             $rows = [[
@@ -197,7 +212,7 @@ class KeuanganController extends Controller
             // Pembayaran non-tunai mengurangi uang yang seharusnya berada
             // di laci kas. Karena itu transaksi ditampilkan berpasangan:
             // nilai nota di Debet dan pembayaran bank/QRIS di Kredit.
-            if (in_array($p->cara_bayar, ['transfer', 'qris'], true)) {
+            if (in_array($p->cara_bayar, self::NON_CASH_METHODS, true)) {
                 $method = OrderPayment::CARA_BAYAR_LABELS[$p->cara_bayar] ?? ucfirst($p->cara_bayar);
                 $rows[] = [
                     'user_id' => $p->user_id,
@@ -343,6 +358,21 @@ class KeuanganController extends Controller
     }
 
     /**
+     * Baris penetral untuk refund yang dibayar lewat bank/QRIS/debit: baris
+     * Refund tetap tampil (Kredit) sebagai catatan, lalu dinetralkan di
+     * Debet karena uangnya keluar dari rekening bank, bukan dari laci kas.
+     * Pola ini sama dengan pembayaran non-tunai ("Bayar via ...").
+     */
+    private function nonCashRefundOffset(OrderPayment $payment, callable $row): array
+    {
+        if (! in_array($payment->cara_bayar, self::NON_CASH_METHODS, true)) {
+            return [];
+        }
+
+        return [$row(OrderPayment::CARA_BAYAR_LABELS[$payment->cara_bayar] ?? ucfirst((string) $payment->cara_bayar))];
+    }
+
+    /**
      * Asal baris refund untuk label laporan kas: 'potongan' (Potongan
      * Penjualan), 'pembatalan' (order batal) atau null (refund lain).
      */
@@ -432,8 +462,10 @@ class KeuanganController extends Controller
             ->sum(function (OrderPayment $payment) {
                 $amount = (float) $payment->jumlah;
 
+                // Refund keluar dari kas hanya bila tunai; refund via
+                // bank/QRIS/debit tidak menyentuh laci kas.
                 if ($amount < 0) {
-                    return $amount;
+                    return in_array($payment->cara_bayar, self::NON_CASH_METHODS, true) ? 0.0 : $amount;
                 }
 
                 return $payment->cara_bayar === 'tunai' ? $amount : 0.0;
@@ -565,6 +597,16 @@ class KeuanganController extends Controller
                     'user_id' => $payment->user_id,
                     'sort' => $baseSort.'-0',
                 ]);
+                foreach ($this->nonCashRefundOffset($payment, fn (string $method) => [
+                    'category' => 'non_cash_refund',
+                    'description' => "Refund via {$method} - {$customer} (keluar dari bank, bukan kas)",
+                    'debit' => abs($amount),
+                    'credit' => 0.0,
+                    'user_id' => $payment->user_id,
+                    'sort' => $baseSort.'-1',
+                ]) as $offset) {
+                    $details->push($offset);
+                }
 
                 continue;
             }
@@ -589,7 +631,7 @@ class KeuanganController extends Controller
                 'sort' => $baseSort.'-0',
             ]);
 
-            if (in_array($payment->cara_bayar, ['transfer', 'qris'], true)) {
+            if (in_array($payment->cara_bayar, self::NON_CASH_METHODS, true)) {
                 $details->push([
                     'category' => 'non_cash',
                     'description' => "Bayar via {$method} - {$customer}",
@@ -622,8 +664,9 @@ class KeuanganController extends Controller
             'cash_note' => 'Penerimaan Nota Tunai (Cash)',
             'receivable' => 'Penerimaan Piutang',
             'advance' => 'Uang Muka (DP)',
-            'non_cash' => 'Penerimaan Non Tunai (Transfer atau QRIS)',
+            'non_cash' => 'Penerimaan Non Tunai (Transfer, QRIS atau Debit)',
             'refund' => 'Refund / Pengeluaran Kas',
+            'non_cash_refund' => 'Refund Non Tunai (keluar dari bank, bukan kas)',
             'adj_in' => 'Penyesuaian · Setoran / Tambahan Kas',
             'adj_bank' => 'Penyesuaian · Setoran ke Bank',
             'adj_expense' => 'Penyesuaian · Pengeluaran Kas',
@@ -816,7 +859,16 @@ class KeuanganController extends Controller
                     'kasir' => $payment->user?->name,
                     'user_id' => $payment->user_id,
                     'sort' => $baseSort.'-0',
-                ]];
+                ], ...$this->nonCashRefundOffset($payment, fn (string $method) => [
+                    'occurred_at' => $payment->created_at,
+                    'no_nota' => null,
+                    'keterangan' => "Refund via {$method} (keluar dari bank, bukan kas) - {$customer}",
+                    'debet' => abs($amount),
+                    'kredit' => 0.0,
+                    'kasir' => $payment->user?->name,
+                    'user_id' => $payment->user_id,
+                    'sort' => $baseSort.'-1',
+                ])];
             }
 
             $rows = [[
@@ -830,7 +882,7 @@ class KeuanganController extends Controller
                 'sort' => $baseSort.'-0',
             ]];
 
-            if (in_array($payment->cara_bayar, ['transfer', 'qris'], true)) {
+            if (in_array($payment->cara_bayar, self::NON_CASH_METHODS, true)) {
                 $rows[] = [
                     'occurred_at' => $payment->created_at,
                     'no_nota' => null,
