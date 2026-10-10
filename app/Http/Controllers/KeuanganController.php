@@ -158,7 +158,8 @@ class KeuanganController extends Controller
                 });
         }
 
-        $paymentRows = $payments->flatMap(function (OrderPayment $p) use ($ordersByKey) {
+        $discountRefunds = $this->discountRefundKeys($payments);
+        $paymentRows = $payments->flatMap(function (OrderPayment $p) use ($ordersByKey, $discountRefunds) {
             $order = $ordersByKey["{$p->order_type}-{$p->order_id}"] ?? null;
             $jumlah = (float) $p->jumlah;
             $customer = $order?->customer?->NmCust
@@ -172,7 +173,11 @@ class KeuanganController extends Controller
                     'user_id' => $p->user_id,
                     'kasir' => $p->user?->name ?? '-',
                     'no_nota' => $order?->NoOrder,
-                    'keterangan' => 'Refund - '.$customer,
+                    'keterangan' => match ($this->refundKind($p, $order, $discountRefunds)) {
+                        'potongan' => 'Refund potongan penjualan - ',
+                        'pembatalan' => 'Refund pembatalan - ',
+                        default => 'Refund - ',
+                    }.$customer,
                     'debet' => 0,
                     'kredit' => abs($jumlah),
                     'sort' => '2-'.$baseSort.'-0',
@@ -233,8 +238,7 @@ class KeuanganController extends Controller
                 'user_id' => $discount->user_id,
                 'kasir' => $discount->user?->name ?? '-',
                 'no_nota' => $discount->order_number,
-                'keterangan' => 'Potongan Penjualan Rp '.number_format($discount->discount_amount, 0, ',', '.')
-                    .' - '.($discount->customer?->NmCust ?? 'Customer tidak tersedia').' - '.$discount->reason,
+                'keterangan' => $this->salesDiscountDescription($discount),
                 'debet' => 0.0,
                 'kredit' => 0.0,
                 'sort' => '3-'.str_pad((string) $discount->id, 10, '0', STR_PAD_LEFT),
@@ -314,6 +318,67 @@ class KeuanganController extends Controller
         $rows[] = [null, null, ['value' => 'SALDO KAS', 'style' => 4], ['value' => $data['saldoKas'], 'style' => 5]];
 
         return SimpleXlsx::download('kas-harian-'.$data['tanggal'].'.xlsx', 'Kas Harian', $rows);
+    }
+
+    /**
+     * Keterangan baris Potongan Penjualan di laporan kas. Potongan sendiri
+     * bernilai 0 di kas; uang yang dikembalikan sudah tercatat di baris Refund.
+     */
+    private function salesDiscountDescription(FinalSalesDiscount $discount): string
+    {
+        $rupiah = fn ($value) => 'Rp '.number_format((float) $value, 0, ',', '.');
+        $effects = [];
+        if ((float) $discount->receivable_offset > 0) {
+            $effects[] = 'mengurangi piutang '.$rupiah($discount->receivable_offset);
+        }
+        if ((float) $discount->refund_amount > 0) {
+            $method = OrderPayment::CARA_BAYAR_LABELS[$discount->refund_method] ?? ucfirst((string) $discount->refund_method);
+            $effects[] = 'dikembalikan '.$rupiah($discount->refund_amount).' via '.$method.' (lihat baris Refund)';
+        }
+
+        return 'Potongan Penjualan '.$rupiah($discount->discount_amount)
+            .' · non-kas'.($effects ? ': '.implode(', ', $effects) : '')
+            .' · '.($discount->customer?->NmCust ?? 'Customer tidak tersedia')
+            .' · '.$discount->reason;
+    }
+
+    /**
+     * Asal baris refund untuk label laporan kas: 'potongan' (Potongan
+     * Penjualan), 'pembatalan' (order batal) atau null (refund lain).
+     */
+    private function refundKind(OrderPayment $payment, $order, array $discountRefunds): ?string
+    {
+        if (isset($discountRefunds[$payment->order_type.'-'.$payment->order_id.'-'.(int) round(abs((float) $payment->jumlah))])) {
+            return 'potongan';
+        }
+
+        return $order?->status === 'batal' ? 'pembatalan' : null;
+    }
+
+    /**
+     * Kunci "jenis-id-nominal" untuk refund yang berasal dari Potongan
+     * Penjualan, agar barisnya diberi keterangan pasangannya.
+     *
+     * @param  Collection<int, OrderPayment>  $payments
+     * @return array<string, true>
+     */
+    private function discountRefundKeys(Collection $payments): array
+    {
+        $refunds = $payments->filter(fn (OrderPayment $payment) => (float) $payment->jumlah < 0);
+        if ($refunds->isEmpty()) {
+            return [];
+        }
+
+        return FinalSalesDiscount::query()
+            ->where('refund_amount', '>', 0)
+            ->where(function ($query) use ($refunds) {
+                foreach ($refunds->groupBy('order_type') as $type => $rows) {
+                    $query->orWhere(fn ($scope) => $scope->where('order_type', $type)->whereIn('order_id', $rows->pluck('order_id')));
+                }
+            })
+            ->get(['order_type', 'order_id', 'refund_amount'])
+            ->mapWithKeys(fn ($discount) => [$discount->order_type.'-'.$discount->order_id.'-'.(int) round((float) $discount->refund_amount) => true])
+            ->all();
     }
 
     /**
@@ -479,6 +544,7 @@ class KeuanganController extends Controller
             ]);
         }
 
+        $discountRefunds = $this->discountRefundKeys($payments);
         foreach ($payments as $payment) {
             $order = $ordersByKey["{$payment->order_type}-{$payment->order_id}"] ?? null;
             $customer = $order?->customer?->NmCust ? mb_strtoupper($order->customer->NmCust) : '-';
@@ -489,7 +555,11 @@ class KeuanganController extends Controller
             if ($amount < 0) {
                 $details->push([
                     'category' => 'refund',
-                    'description' => "Refund via {$method} - {$customer}",
+                    'description' => match ($this->refundKind($payment, $order, $discountRefunds)) {
+                        'potongan' => 'Refund potongan penjualan · '.($order?->NoOrder ?? '-')." · via {$method} - {$customer}",
+                        'pembatalan' => 'Refund pembatalan · '.($order?->NoOrder ?? '-')." · via {$method} - {$customer}",
+                        default => "Refund via {$method} - {$customer}",
+                    },
                     'debit' => 0.0,
                     'credit' => abs($amount),
                     'user_id' => $payment->user_id,
@@ -535,11 +605,10 @@ class KeuanganController extends Controller
             ->whereBetween('transaction_date', [$dari, $sampai])
             ->when($kasirId, fn ($query) => $query->where('user_id', $kasirId))
             ->orderBy('transaction_date')->orderBy('id')->get()
-            ->each(function (FinalSalesDiscount $discount) use ($details) {
+            ->each(function (FinalSalesDiscount $discount) use ($details): void {
                 $details->push([
-                    'category' => 'other_transaction',
-                    'description' => $discount->order_number.' · '.($discount->customer?->NmCust ?? 'Customer tidak tersedia')
-                        .' · Potongan Penjualan Rp '.number_format($discount->discount_amount, 0, ',', '.').' - '.$discount->reason,
+                    'category' => 'sales_discount',
+                    'description' => $discount->order_number.' · '.$this->salesDiscountDescription($discount),
                     'debit' => 0.0,
                     'credit' => 0.0,
                     'user_id' => $discount->user_id,
@@ -558,6 +627,7 @@ class KeuanganController extends Controller
             'adj_in' => 'Penyesuaian · Setoran / Tambahan Kas',
             'adj_bank' => 'Penyesuaian · Setoran ke Bank',
             'adj_expense' => 'Penyesuaian · Pengeluaran Kas',
+            'sales_discount' => 'Potongan Penjualan (non-kas, informasi)',
             'other_transaction' => 'Transaksi Lain-lain',
         ];
 
@@ -723,7 +793,8 @@ class KeuanganController extends Controller
                 ->each(fn ($order) => $ordersByKey->put("{$type}-{$order->id}", $order));
         }
 
-        $paymentRows = $payments->flatMap(function (OrderPayment $payment) use ($ordersByKey) {
+        $discountRefunds = $this->discountRefundKeys($payments);
+        $paymentRows = $payments->flatMap(function (OrderPayment $payment) use ($ordersByKey, $discountRefunds) {
             $order = $ordersByKey["{$payment->order_type}-{$payment->order_id}"] ?? null;
             $customer = $order?->customer?->NmCust ? mb_strtoupper($order->customer->NmCust) : '-';
             $amount = (float) $payment->jumlah;
@@ -735,7 +806,11 @@ class KeuanganController extends Controller
                 return [[
                     'occurred_at' => $payment->created_at,
                     'no_nota' => $order?->NoOrder,
-                    'keterangan' => "Refund via {$method} - {$customer}",
+                    'keterangan' => match ($this->refundKind($payment, $order, $discountRefunds)) {
+                        'potongan' => 'Refund potongan penjualan via ',
+                        'pembatalan' => 'Refund pembatalan via ',
+                        default => 'Refund via ',
+                    }."{$method} - {$customer}",
                     'debet' => 0.0,
                     'kredit' => abs($amount),
                     'kasir' => $payment->user?->name,
@@ -783,8 +858,7 @@ class KeuanganController extends Controller
                 return [
                     'occurred_at' => $occurredAt,
                     'no_nota' => $discount->order_number,
-                    'keterangan' => 'Potongan Penjualan Rp '.number_format($discount->discount_amount, 0, ',', '.')
-                        .' - '.($discount->customer?->NmCust ?? 'Customer tidak tersedia').' - '.$discount->reason,
+                    'keterangan' => $this->salesDiscountDescription($discount),
                     'debet' => 0.0,
                     'kredit' => 0.0,
                     'kasir' => $discount->user?->name,

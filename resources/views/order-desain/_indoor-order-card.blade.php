@@ -27,12 +27,7 @@
                         <input type="hidden" name="resolution" value="nota_pengganti">
                         <button type="submit" class="in-btn">Setujui + Nota Pengganti</button>
                     </form>
-                    <form method="POST" action="{{ route('order-indoor.approve-cancel', $order->id) }}"
-                          onsubmit="return confirm('Setujui pembatalan TOTAL order {{ $order->NoOrder }}? Tidak akan ada nota pengganti.')">
-                        @csrf
-                        <input type="hidden" name="resolution" value="batal_total">
-                        <button type="submit" class="in-btn in-btn-danger">Setujui Batal Total</button>
-                    </form>
+                    <x-batal-total-form :order="$order" type="indoor" />
                     <form method="POST" action="{{ route('order-indoor.reject-cancel', $order->id) }}"
                           onsubmit="return confirm('Tolak pengajuan pembatalan order {{ $order->NoOrder }}?')">
                         @csrf

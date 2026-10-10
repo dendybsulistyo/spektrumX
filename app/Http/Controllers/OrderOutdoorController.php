@@ -12,6 +12,7 @@ use App\Models\OrderOutdoor;
 use App\Models\OrderOutdoorDetail;
 use App\Models\OrderStatusNote;
 use App\Models\PrinterOutdoor;
+use App\Services\OrderCancellationRefund;
 use App\Services\ApproverNotificationService;
 use App\Services\OrderPricingService;
 use App\Services\OrderNumberService;
@@ -242,7 +243,9 @@ class OrderOutdoorController extends Controller
             'Pre-order yang belum dibayar hanya dapat dibatalkan total.'
         );
 
-        DB::transaction(function () use ($orderOutdoor, $isReplacement) {
+        $cancelNote = '';
+
+        DB::transaction(function () use ($orderOutdoor, $isReplacement, $request, &$cancelNote) {
             $orderOutdoor = $orderOutdoor->newQuery()->lockForUpdate()->findOrFail($orderOutdoor->id);
             abort_if($orderOutdoor->status === 'batal' || ! $orderOutdoor->cancel_requested_at, 422, 'Pembatalan sudah diproses atau pengajuan sudah berubah.');
             $orderOutdoor->update([
@@ -252,6 +255,12 @@ class OrderOutdoorController extends Controller
                 'status' => 'batal',
             ]);
 
+            if (! $isReplacement) {
+                $cancelNote = app(OrderCancellationRefund::class)->process(
+                    $orderOutdoor, 'outdoor', OrderCancellationRefund::validated($request->all(), $orderOutdoor)
+                );
+            }
+
             OrderStatusNote::create([
                 'order_type' => 'outdoor',
                 'order_id' => $orderOutdoor->id,
@@ -259,7 +268,7 @@ class OrderOutdoorController extends Controller
                 'action' => 'disetujui',
                 'catatan' => $isReplacement
                     ? 'Nota dihanguskan; menunggu pembuatan nota pengganti oleh kasir.'
-                    : 'Disetujui batal total, tidak ada nota pengganti.',
+                    : trim('Disetujui batal total, tidak ada nota pengganti. '.$cancelNote),
                 'user_id' => auth()->id(),
                 'created_at' => now(),
             ]);
@@ -270,7 +279,7 @@ class OrderOutdoorController extends Controller
                 ->with('status', 'Pembatalan disetujui. Nota lama hangus, silakan buat nota pengganti.');
         }
 
-        return redirect()->route('order-desain.index', ['tab' => 'outdoor'])->with('status', 'Pembatalan disetujui, order dibatalkan total.');
+        return redirect()->route('order-desain.index', ['tab' => 'outdoor'])->with('status', trim('Pembatalan disetujui, order dibatalkan total. '.$cancelNote));
     }
 
     public function rejectCancel(OrderOutdoor $orderOutdoor): RedirectResponse

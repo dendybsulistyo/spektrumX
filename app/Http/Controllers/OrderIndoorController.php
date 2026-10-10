@@ -13,6 +13,7 @@ use App\Models\OrderIndoor;
 use App\Models\OrderIndoorDetail;
 use App\Models\OrderStatusNote;
 use App\Models\Produk;
+use App\Services\OrderCancellationRefund;
 use App\Services\ApproverNotificationService;
 use App\Services\OrderPricingService;
 use App\Services\OrderNumberService;
@@ -245,7 +246,9 @@ class OrderIndoorController extends Controller
             'Pre-order yang belum dibayar hanya dapat dibatalkan total.'
         );
 
-        DB::transaction(function () use ($orderIndoor, $isReplacement) {
+        $cancelNote = '';
+
+        DB::transaction(function () use ($orderIndoor, $isReplacement, $request, &$cancelNote) {
             $orderIndoor = $orderIndoor->newQuery()->lockForUpdate()->findOrFail($orderIndoor->id);
             abort_if($orderIndoor->status === 'batal' || ! $orderIndoor->cancel_requested_at, 422, 'Pembatalan sudah diproses atau pengajuan sudah berubah.');
             $orderIndoor->update([
@@ -255,6 +258,12 @@ class OrderIndoorController extends Controller
                 'status' => 'batal',
             ]);
 
+            if (! $isReplacement) {
+                $cancelNote = app(OrderCancellationRefund::class)->process(
+                    $orderIndoor, 'indoor', OrderCancellationRefund::validated($request->all(), $orderIndoor)
+                );
+            }
+
             OrderStatusNote::create([
                 'order_type' => 'indoor',
                 'order_id' => $orderIndoor->id,
@@ -262,7 +271,7 @@ class OrderIndoorController extends Controller
                 'action' => 'disetujui',
                 'catatan' => $isReplacement
                     ? 'Nota dihanguskan; menunggu pembuatan nota pengganti oleh kasir.'
-                    : 'Disetujui batal total, tidak ada nota pengganti.',
+                    : trim('Disetujui batal total, tidak ada nota pengganti. '.$cancelNote),
                 'user_id' => auth()->id(),
                 'created_at' => now(),
             ]);
@@ -273,7 +282,7 @@ class OrderIndoorController extends Controller
                 ->with('status', 'Pembatalan disetujui. Nota lama hangus, silakan buat nota pengganti.');
         }
 
-        return redirect()->route('order-desain.index', ['tab' => 'indoor'])->with('status', 'Pembatalan disetujui, order dibatalkan total.');
+        return redirect()->route('order-desain.index', ['tab' => 'indoor'])->with('status', trim('Pembatalan disetujui, order dibatalkan total. '.$cancelNote));
     }
 
     public function rejectCancel(OrderIndoor $orderIndoor): RedirectResponse

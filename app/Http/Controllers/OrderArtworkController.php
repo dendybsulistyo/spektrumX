@@ -9,6 +9,7 @@ use App\Models\KonfigurasiJasaPotongArtwork;
 use App\Models\OrderArtwork;
 use App\Models\OrderArtworkDetail;
 use App\Models\OrderStatusNote;
+use App\Services\OrderCancellationRefund;
 use App\Services\ApproverNotificationService;
 use App\Services\OrderPricingService;
 use App\Services\OrderNumberService;
@@ -205,7 +206,9 @@ class OrderArtworkController extends Controller
 
         $isReplacement = $data['resolution'] === 'nota_pengganti';
 
-        DB::transaction(function () use ($orderArtwork, $isReplacement) {
+        $cancelNote = '';
+
+        DB::transaction(function () use ($orderArtwork, $isReplacement, $request, &$cancelNote) {
             $orderArtwork = $orderArtwork->newQuery()->lockForUpdate()->findOrFail($orderArtwork->id);
             abort_if($orderArtwork->status === 'batal' || ! $orderArtwork->cancel_requested_at, 422, 'Pembatalan sudah diproses atau pengajuan sudah berubah.');
             $orderArtwork->update([
@@ -215,6 +218,12 @@ class OrderArtworkController extends Controller
                 'status' => 'batal',
             ]);
 
+            if (! $isReplacement) {
+                $cancelNote = app(OrderCancellationRefund::class)->process(
+                    $orderArtwork, 'artwork', OrderCancellationRefund::validated($request->all(), $orderArtwork)
+                );
+            }
+
             OrderStatusNote::create([
                 'order_type' => 'artwork',
                 'order_id' => $orderArtwork->id,
@@ -222,7 +231,7 @@ class OrderArtworkController extends Controller
                 'action' => 'disetujui',
                 'catatan' => $isReplacement
                     ? 'Nota dihanguskan; menunggu pembuatan nota pengganti oleh kasir.'
-                    : 'Disetujui batal total, tidak ada nota pengganti.',
+                    : trim('Disetujui batal total, tidak ada nota pengganti. '.$cancelNote),
                 'user_id' => auth()->id(),
                 'created_at' => now(),
             ]);
@@ -233,7 +242,7 @@ class OrderArtworkController extends Controller
                 ->with('status', 'Pembatalan disetujui. Nota lama hangus, silakan buat nota pengganti.');
         }
 
-        return redirect()->route('order-desain.index', ['tab' => 'artwork'])->with('status', 'Pembatalan disetujui, order dibatalkan total.');
+        return redirect()->route('order-desain.index', ['tab' => 'artwork'])->with('status', trim('Pembatalan disetujui, order dibatalkan total. '.$cancelNote));
     }
 
     public function rejectCancel(OrderArtwork $orderArtwork): RedirectResponse

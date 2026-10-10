@@ -89,12 +89,7 @@
                                                             <button type="submit" class="in-btn">Setujui + Nota Pengganti</button>
                                                         </form>
                                                     @endif
-                                                    <form method="POST" action="{{ route('order-' . $row->order_type . '.approve-cancel', $row->id) }}"
-                                                          onsubmit="return confirm('Setujui pembatalan TOTAL order {{ $row->NoOrder }}? Tidak akan ada nota pengganti.')">
-                                                        @csrf
-                                                        <input type="hidden" name="resolution" value="batal_total">
-                                                        <button type="submit" class="in-btn in-btn-danger">Setujui Batal Total</button>
-                                                    </form>
+                                                    <x-batal-total-form :order="$row" :type="$row->order_type" />
                                                     <form method="POST" action="{{ route('order-' . $row->order_type . '.reject-cancel', $row->id) }}"
                                                           onsubmit="return confirm('Tolak pengajuan pembatalan order {{ $row->NoOrder }}?')">
                                                         @csrf

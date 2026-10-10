@@ -78,7 +78,7 @@
                                         @if ($order->status_bayar !== 'belum_bayar')
                                             <form method="POST" action="{{ route('order-'.$order->order_type.'.approve-cancel', $order->id) }}">@csrf<input type="hidden" name="resolution" value="nota_pengganti"><button class="rounded bg-indigo-600 px-2 py-1.5 font-semibold text-white">Nota Pengganti</button></form>
                                         @endif
-                                        <form method="POST" action="{{ route('order-'.$order->order_type.'.approve-cancel', $order->id) }}" onsubmit="return confirm('Setujui pembatalan total {{ $order->NoOrder }}?')">@csrf<input type="hidden" name="resolution" value="batal_total"><button class="rounded bg-red-700 px-2 py-1.5 font-semibold text-white">Batal Total</button></form>
+                                        <x-batal-total-form :order="$order" :type="$order->order_type" label="Batal Total" button-class="rounded bg-red-700 px-2 py-1.5 font-semibold text-white" />
                                         <form method="POST" action="{{ route('order-'.$order->order_type.'.reject-cancel', $order->id) }}">@csrf<button class="rounded border px-2 py-1.5 font-semibold">Tolak</button></form>
                                     </div>
                                 @else
