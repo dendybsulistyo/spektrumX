@@ -101,6 +101,13 @@
                         @endif
                         @if (blank($item->gabungan) && blank($item->NmFile)) - @endif
                     </span>
+                    @if ($stage === 'cetak' && (float) $item->Panjang > 0 && (float) $item->Lebar > 0)
+                        {{-- Ukuran di antrean Operator Cetak supaya file senama beda ukuran mudah dibedakan. --}}
+                        <span class="item-meta-divider" aria-hidden="true"></span>
+                        <span style="font-size: 14px; font-weight: 600; color: var(--color-text); white-space: nowrap;">
+                            {{ rtrim(rtrim(number_format((float) $item->Panjang, 2), '0'), '.') }} x {{ rtrim(rtrim(number_format((float) $item->Lebar, 2), '0'), '.') }} cm
+                        </span>
+                    @endif
                     @if ($layoutRevisionCompletion)
                         <span class="tag"
                               style="margin-left:8px; border:1px solid #86efac; background:#ecfdf5; color:#047857; white-space:nowrap;"
