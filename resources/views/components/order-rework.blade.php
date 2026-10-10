@@ -15,11 +15,15 @@
             ? ($item->gabungan ?: ($item->NmFile ?: 'File #'.$item->id))
             : ($item->Judul ?: 'File #'.$item->id),
         'qty' => $item->qtyAt($currentStage),
+        // Ukuran ditampilkan agar operator tahu persis ukuran mana yang rusak.
+        'size' => (float) ($item->Panjang ?? 0) > 0 && (float) ($item->Lebar ?? 0) > 0
+            ? rtrim(rtrim(number_format((float) $item->Panjang, 2), '0'), '.').' x '.rtrim(rtrim(number_format((float) $item->Lebar, 2), '0'), '.').' cm'
+            : null,
     ])->filter(fn ($item) => $item['qty'] > 0)->values();
     $selectFiles = in_array($currentStage, ['cetak', 'finishing', 'qc', 'bungkus', 'siap_diambil'], true)
         && $reworkItems->isNotEmpty();
     $pendingFileNames = $pending && filled($pending->order_detail_ids)
-        ? $reworkItems->whereIn('id', $pending->order_detail_ids)->pluck('label')
+        ? $reworkItems->whereIn('id', $pending->order_detail_ids)->map(fn ($file) => $file['label'].($file['size'] ? ' ('.$file['size'].')' : ''))
         : collect();
 @endphp
 
@@ -123,7 +127,12 @@
                                     <label class="flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-gray-50">
                                         <input type="checkbox" name="detail_ids[]" value="{{ $file['id'] }}" x-model="selectedFiles"
                                                class="rounded-sm border-gray-300 text-blue-600 focus:ring-blue-500">
-                                        <span class="min-w-0 flex-1 text-sm font-medium text-gray-800 truncate">{{ $file['label'] }}</span>
+                                        <span class="min-w-0 flex-1">
+                                            <span class="block text-sm font-medium text-gray-800 truncate">{{ $file['label'] }}</span>
+                                            @if ($file['size'])
+                                                <span class="block text-xs text-gray-500">Ukuran {{ $file['size'] }}</span>
+                                            @endif
+                                        </span>
                                         <span class="text-xs text-gray-500">{{ $file['qty'] }} unit</span>
                                     </label>
                                 @endforeach
