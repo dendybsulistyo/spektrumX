@@ -63,7 +63,7 @@
                 <div class="job-history-search">
                     <label for="history-q" class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Cari riwayat</label>
                     <input id="history-q" type="search" name="q" value="{{ $keyword }}"
-                           placeholder="Customer, no. order, file, PC, OPF, keterangan, atau operator"
+                           placeholder="Customer, file, PC, OPF, keterangan, atau operator"
                            class="w-full rounded-sm border-slate-300 text-sm focus:border-blue-500 focus:ring-blue-500">
                 </div>
                 <div>
@@ -96,7 +96,7 @@
         </div>
     @endif
 
-    {{-- Customer, No. Order & detail riwayat hanya untuk CS (customer-service.manage). --}}
+    {{-- Customer & detail riwayat hanya untuk CS (customer-service.manage). --}}
     @php($csHistory = $tab === 'claimed' && auth()->user()->hasPermission('customer-service.manage'))
     <div class="overflow-hidden rounded border border-slate-200 bg-white shadow-sm">
         <div class="overflow-x-auto">
@@ -106,7 +106,7 @@
                         <th class="px-4 py-3">Tujuan</th>
                         @if ($csHistory)
                             <th class="px-4 py-3">Customer</th>
-                            <th class="px-4 py-3">No. Order</th>
+                            <th class="px-4 py-3">Tgl. Lembar Kerja</th>
                         @endif
                         {{-- <th class="px-4 py-3">Tujuan</th> --}}
                         {{-- <th class="px-4 py-3">Deadline</th> --}}
@@ -140,7 +140,7 @@
                             </td>
                             @if ($csHistory)
                                 <td class="px-4 py-3 font-medium text-slate-800">{{ $sheet->customer_name ?: '-' }}</td>
-                                <td class="whitespace-nowrap px-4 py-3 font-semibold text-slate-800">{!! $sheet->order_number ? e($sheet->order_number) : '<span class="font-normal text-slate-400" title="Lembar kerja lama, nomor order belum tercatat">-</span>' !!}</td>
+                                <td class="whitespace-nowrap px-4 py-3 text-slate-600">{{ $sheet->received_at?->format('d/m/Y') ?? '-' }}</td>
                             @endif
                             <td class="px-4 py-3 text-slate-600">{{ $sheet->creator?->name ? ucwords(mb_strtolower($sheet->creator->name)) : '-' }}</td>
                             <td class="px-4 py-3 text-slate-600">
@@ -197,8 +197,7 @@
                 </div>
             </div>
             <div class="grid gap-3 border-b border-slate-200 bg-slate-50 p-5 text-sm sm:grid-cols-2 lg:grid-cols-4">
-                <div><p class="text-xs text-slate-400">Customer</p><p class="mt-1 font-medium">{{ $sheet->customer_name ?: '-' }}{{ $sheet->customer_code ? ' ('.$sheet->customer_code.')' : '' }}</p></div>
-                <div><p class="text-xs text-slate-400">No. Order</p><p class="mt-1 font-semibold">{{ $sheet->order_number ?: '-' }}</p>@unless ($sheet->order_number)<p class="text-xs text-slate-400">Lembar kerja lama, belum tercatat</p>@endunless</div>
+                <div class="sm:col-span-2"><p class="text-xs text-slate-400">Customer</p><p class="mt-1 font-medium">{{ $sheet->customer_name ?: '-' }}{{ $sheet->customer_code ? ' ('.$sheet->customer_code.')' : '' }}</p></div>
                 <div><p class="text-xs text-slate-400">Dibuat Oleh</p><p class="mt-1 font-medium">{{ $sheet->creator?->name ? ucwords(mb_strtolower($sheet->creator->name)) : '-' }}</p><p class="text-xs text-slate-400">{{ $sheet->created_at?->format('d/m/Y H:i') }}</p></div>
                 <div><p class="text-xs text-slate-400">Diambil Oleh</p><p class="mt-1 font-medium">{{ $sheet->claimant?->name ? ucwords(mb_strtolower($sheet->claimant->name)) : '-' }}</p><p class="text-xs text-slate-400">{{ $sheet->claimed_at?->format('d/m/Y H:i') }}</p></div>
                 <div><p class="text-xs text-slate-400">Tanggal Masuk</p><p class="mt-1 font-medium">{{ $sheet->received_at->format('d/m/Y') }}</p></div>
