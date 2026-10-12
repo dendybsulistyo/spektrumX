@@ -121,6 +121,12 @@
                                         class="rounded bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700">
                                     Kirim Kasir
                                 </button>
+                                {{-- Customer datang & bayar langsung: teruskan ke Kasir tanpa nominal transfer. --}}
+                                <button type="submit" form="cs-payment-{{ $order->order_type }}-{{ $order->id }}" name="direct_kasir" value="1"
+                                        onclick="return confirm('Teruskan {{ $order->NoOrder }} ke Kasir untuk dibayar langsung di Kasir (tanpa nominal transfer)?')"
+                                        class="ml-2 rounded bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-700">
+                                    Proses di Kasir
+                                </button>
                             </td>
                         </tr>
                     @endforeach

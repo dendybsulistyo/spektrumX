@@ -44,10 +44,14 @@
                     <p class="font-semibold">Informasi pembayaran dari Customer Service</p>
                     <div class="mt-1 flex flex-wrap gap-x-6 gap-y-1">
                         <span>Total versi CS: <strong>Rp {{ number_format($order->cs_order_total ?? $order->total, 0, ',', '.') }}</strong></span>
-                        @if ($order->cs_payment_type !== 'hutang')
+                        @if ($order->cs_payment_type === 'bayar_kasir')
+                            <span>Rencana pembayaran: <strong>Bayar langsung di Kasir</strong> (CS tidak mencatat transfer)</span>
+                        @elseif ($order->cs_payment_type !== 'hutang')
                             <span>Rencana pembayaran CS: <strong>Rp {{ number_format($order->cs_transfer_amount, 0, ',', '.') }}</strong></span>
                         @endif
-                        <span>Status: <strong>{{ strtoupper($order->cs_payment_type) }}</strong></span>
+                        @unless ($order->cs_payment_type === 'bayar_kasir')
+                            <span>Status: <strong>{{ strtoupper($order->cs_payment_type) }}</strong></span>
+                        @endunless
                         <span>Dicatat oleh: {{ $order->customerService?->name ?? '-' }}</span>
                     </div>
                 </div>

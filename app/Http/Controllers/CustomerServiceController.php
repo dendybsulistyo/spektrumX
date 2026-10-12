@@ -12,6 +12,7 @@ use App\Services\OrderPricingService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
@@ -248,9 +249,15 @@ class CustomerServiceController extends Controller
     public function forward(Request $request, string $type, int $id): RedirectResponse
     {
         $artworkPrices = $type === 'indoor' ? $this->validatedArtworkPrices($request, required: false) : [];
+        // Tombol "Proses di Kasir": customer bayar langsung di toko, CS tidak
+        // mengisi nominal transfer. Kasir memproses seperti order biasa.
+        $directToCashier = $request->boolean('direct_kasir');
+        if ($directToCashier) {
+            $request->merge(['cs_payment_type' => null, 'cs_transfer_amount' => null]);
+        }
         $data = $request->validate([
             'cs_payment_type' => ['nullable', 'in:hutang'],
-            'cs_transfer_amount' => ['required_unless:cs_payment_type,hutang', 'nullable', 'numeric', 'min:100', 'multiple_of:100'],
+            'cs_transfer_amount' => [Rule::requiredIf(fn () => ! $directToCashier && $request->input('cs_payment_type') !== 'hutang'), 'nullable', 'numeric', 'min:100', 'multiple_of:100'],
         ], [
             'cs_transfer_amount.required' => 'Nominal transfer wajib diisi.',
             'cs_transfer_amount.required_unless' => 'Nominal transfer wajib diisi untuk pembayaran DP atau Pelunasan.',
@@ -263,7 +270,7 @@ class CustomerServiceController extends Controller
             default => abort(404),
         };
 
-        DB::transaction(function () use ($model, $id, $type, $data, $artworkPrices): void {
+        DB::transaction(function () use ($model, $id, $type, $data, $artworkPrices, $directToCashier): void {
             $order = $model::lockForUpdate()->findOrFail($id);
             abort_unless($order->payment_queue === 'cs' && $order->status_bayar === 'belum_bayar', 422, 'Order ini sudah tidak berada di antrean CS.');
             $order->loadMissing('customer.limit');
@@ -277,7 +284,10 @@ class CustomerServiceController extends Controller
             $isCustomArtwork = $type === 'indoor'
                 && $this->customArtworkItems($order)->isNotEmpty();
 
-            if (($data['cs_payment_type'] ?? null) === 'hutang') {
+            if ($directToCashier) {
+                $paymentType = 'bayar_kasir';
+                $transferAmount = null;
+            } elseif (($data['cs_payment_type'] ?? null) === 'hutang') {
                 if (! $order->customer?->isVip) {
                     throw ValidationException::withMessages([
                         'cs_payment_type' => 'Hutang hanya dapat dipilih untuk customer VIP.',
@@ -321,15 +331,19 @@ class CustomerServiceController extends Controller
                 'order_id' => $order->id,
                 'stage' => 'customer_service',
                 'action' => 'diteruskan_ke_kasir',
-                'catatan' => $paymentType === 'hutang'
-                    ? 'HUTANG — diajukan oleh Customer Service'
-                    : strtoupper($paymentType).' — Transfer Rp '.number_format($transferAmount, 0, ',', '.'),
+                'catatan' => match ($paymentType) {
+                    'hutang' => 'HUTANG — diajukan oleh Customer Service',
+                    'bayar_kasir' => 'BAYAR DI KASIR — customer membayar langsung di Kasir (tanpa transfer)',
+                    default => strtoupper($paymentType).' — Transfer Rp '.number_format($transferAmount, 0, ',', '.'),
+                },
                 'user_id' => auth()->id(),
                 'created_at' => now(),
             ]);
         });
 
-        return to_route('customer-service.payment-queue', ['tab' => $type])->with('status', 'Informasi transfer tersimpan dan order diteruskan ke Kasir.');
+        return to_route('customer-service.payment-queue', ['tab' => $type])->with('status', $directToCashier
+            ? 'Order diteruskan ke Kasir untuk dibayar langsung di Kasir.'
+            : 'Informasi transfer tersimpan dan order diteruskan ke Kasir.');
     }
 
     /** @return array<int, float> */
