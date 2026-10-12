@@ -15,7 +15,27 @@
         <p class="mt-0.5 text-xs text-slate-500">Order yang perlu dilengkapi informasinya dan diteruskan ke Kasir.</p>
     </div> --}}
 
-    <div class="overflow-hidden rounded border border-slate-200 bg-white shadow-sm">
+    <div class="overflow-hidden rounded border border-slate-200 bg-white shadow-sm"
+         x-data="{
+            tab: @js($initialTab),
+            setTab(key) {
+                this.tab = key;
+                const url = new URL(window.location.href);
+                url.searchParams.set('tab', key);
+                window.history.replaceState({}, '', url);
+            },
+         }">
+        {{-- Tab Indoor / Outdoor, sama seperti halaman Kasir. --}}
+        <div class="flex flex-wrap gap-1 border-b border-gray-200 p-1.5 text-sm">
+            <button type="button" @click="setTab('indoor')" :class="tab === 'indoor' ? 'bg-amber-100 text-amber-800' : 'text-gray-500 hover:bg-amber-50 hover:text-amber-700'"
+                    class="rounded-md px-4 py-2 font-medium transition">
+                Indoor ({{ $counts['indoor'] }})
+            </button>
+            <button type="button" @click="setTab('outdoor')" :class="tab === 'outdoor' ? 'bg-teal-100 text-teal-800' : 'text-gray-500 hover:bg-teal-50 hover:text-teal-700'"
+                    class="rounded-md px-4 py-2 font-medium transition">
+                Outdoor ({{ $counts['outdoor'] }})
+            </button>
+        </div>
         <div class="overflow-x-auto">
             <table class="w-full min-w-[980px] text-sm">
                 <thead class="border-b border-slate-200 bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -31,9 +51,9 @@
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100">
-                    @forelse ($orders as $order)
+                    @foreach ($orders as $order)
                         @php $minimumTransfer = ceil(((float) $order->total * 0.5) / 100) * 100; @endphp
-                        <tr class="align-middle hover:bg-slate-50/70"
+                        <tr x-show="tab === @js($order->order_type)" @if ($order->order_type !== $initialTab) x-cloak @endif class="align-middle hover:bg-slate-50/70"
                             x-data="{ mode: 'payment', raw: '', display: '', total: {{ (float) $order->total }}, minimum: {{ (float) $minimumTransfer }}, customArtwork: @js((bool) $order->is_custom_artwork), format(event) { this.raw = event.target.value.replace(/\D/g, ''); this.display = this.raw ? 'Rp ' + Number(this.raw).toLocaleString('id-ID') : ''; } }">
                             <td class="whitespace-nowrap px-4 py-4 text-slate-600">{{ $order->TglOrder?->format('d/m/Y') ?? $order->TglOrder }}</td>
                             <td class="px-4 py-4 font-semibold text-slate-900">{{ $order->NoOrder }}</td>
@@ -103,9 +123,14 @@
                                 </button>
                             </td>
                         </tr>
-                    @empty
-                        <tr><td colspan="8" class="px-6 py-14 text-center text-slate-400">Belum ada order yang dikirim ke Customer Service.</td></tr>
-                    @endforelse
+                    @endforeach
+                    @foreach (['indoor' => 'Indoor', 'outdoor' => 'Outdoor'] as $type => $label)
+                        @if ($counts[$type] === 0)
+                            <tr x-show="tab === @js($type)" @if ($type !== $initialTab) x-cloak @endif>
+                                <td colspan="8" class="px-6 py-14 text-center text-slate-400">Belum ada order {{ $label }} yang dikirim ke Customer Service.</td>
+                            </tr>
+                        @endif
+                    @endforeach
                 </tbody>
             </table>
         </div>

@@ -170,8 +170,11 @@ class CustomerServiceController extends Controller
             ->with('status', 'Lembar kerja yang belum diambil berhasil dihapus.');
     }
 
-    public function paymentQueue(): View
+    public function paymentQueue(Request $request): View
     {
+        // Dipisah tab Indoor / Outdoor seperti halaman Kasir.
+        $initialTab = in_array($request->query('tab'), ['indoor', 'outdoor'], true) ? $request->query('tab') : 'indoor';
+
         $indoor = OrderIndoor::with(['customer.limit', 'items.produkArtwork'])
             ->where('payment_queue', 'cs')
             ->where('status_bayar', 'belum_bayar')
@@ -192,7 +195,9 @@ class CustomerServiceController extends Controller
             ->sortByDesc(fn ($order) => ($order->TglOrder?->format('Y-m-d') ?? (string) $order->TglOrder).'-'.$order->id)
             ->values();
 
-        return view('customer-service.payment-queue', compact('orders'));
+        $counts = ['indoor' => $indoor->count(), 'outdoor' => $outdoor->count()];
+
+        return view('customer-service.payment-queue', compact('orders', 'initialTab', 'counts'));
     }
 
     public function storeJobSheet(Request $request): RedirectResponse
@@ -322,7 +327,7 @@ class CustomerServiceController extends Controller
             ]);
         });
 
-        return to_route('customer-service.payment-queue')->with('status', 'Informasi transfer tersimpan dan order diteruskan ke Kasir.');
+        return to_route('customer-service.payment-queue', ['tab' => $type])->with('status', 'Informasi transfer tersimpan dan order diteruskan ke Kasir.');
     }
 
     /** @return array<int, float> */

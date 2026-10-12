@@ -26,7 +26,7 @@ class OrderPricingService
 
     private array $produkCache = [];
 
-    /** Produk Indoor custom (DTV UV) yang harganya diisi manual oleh CS/Kasir. */
+    /** Produk Indoor custom (DTF UV Sticker) yang harganya diisi manual oleh CS/Kasir. */
     public const INDOOR_CUSTOM_PRICE_CODES = ['1005', '1006'];
 
     private array $artworkCache = [];
