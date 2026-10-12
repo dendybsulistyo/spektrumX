@@ -82,16 +82,20 @@ class OrderIndoorDetail extends Model
     /**
      * Nama divisi untuk tampilan antrean "By Divisi". Item artwork diambil
      * dari master Artwork; data lama yang tercatat 'indoor' tapi kodenya
-     * hanya ada di master Artwork ikut jatuh ke master Artwork.
+     * hanya ada di master Artwork ikut jatuh ke master Artwork. Bila kodenya
+     * ada di master Indoor tetapi divisinya kosong (mis. Print Only 1801/2701
+     * di server), divisi diambil dari master Artwork.
      */
     public function divisionName(): ?string
     {
-        $produk = $this->isArtwork()
-            ? $this->produkArtwork
-            : ($this->produk ?? $this->produkArtwork);
+        $candidates = $this->isArtwork()
+            ? [$this->produkArtwork]
+            : [$this->produk, $this->produkArtwork];
 
-        if ($produk?->kategori?->NmDivs) {
-            return $produk->kategori->NmDivs;
+        foreach ($candidates as $produk) {
+            if ($produk?->kategori?->NmDivs) {
+                return $produk->kategori->NmDivs;
+            }
         }
 
         // Item tanpa divisi terbaca dikumpulkan di grup "Artwork"
