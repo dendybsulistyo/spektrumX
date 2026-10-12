@@ -45,16 +45,7 @@
                     <p x-show="type === 'setor_bank'" class="mt-1 text-xs text-slate-500">Setor ke Bank wajib Kredit.</p>
                     <x-input-error :messages="$errors->get('entry_side')" class="mt-1" />
                 </div>
-                {{-- Akun lawan jurnal. --}}
-                <div x-show="type === 'setor_tunai'">
-                    <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-600" x-text="position === 'debet' ? 'Sumber Dana' : 'Tujuan Dana'">Sumber Dana</label>
-                    <select name="cash_source" :required="type === 'setor_tunai'" :disabled="type !== 'setor_tunai'" class="w-full rounded border-slate-300 text-sm">
-                        @foreach ($cashSources as $key => $source)
-                            <option value="{{ $key }}" @selected(old('cash_source', 'tarik_bank') === $key) x-text="position === 'debet' ? @js($source['label']) : @js($source['out_label'])">{{ $source['label'] }}</option>
-                        @endforeach
-                    </select>
-                    <x-input-error :messages="$errors->get('cash_source')" class="mt-1" />
-                </div>
+                {{-- Akun lawan jurnal (Setor Tunai otomatis Bank 11101). --}}
                 <div x-show="type === 'pengeluaran'">
                     <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-600">Akun Beban</label>
                     <select name="expense_account" :required="type === 'pengeluaran'" :disabled="type !== 'pengeluaran'" class="w-full rounded border-slate-300 text-sm">

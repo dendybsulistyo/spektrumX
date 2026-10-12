@@ -257,8 +257,9 @@ class KeuanganController extends Controller
                 'kasir' => $discount->user?->name ?? '-',
                 'no_nota' => $discount->order_number,
                 'keterangan' => $this->salesDiscountDescription($discount),
-                'debet' => 0.0,
-                'kredit' => 0.0,
+                // Potongan tampil di Debet & Kredit dengan nilai sama (saldo kas tidak berubah).
+                'debet' => (float) $discount->discount_amount,
+                'kredit' => (float) $discount->discount_amount,
                 'sort' => '3-'.str_pad((string) $discount->id, 10, '0', STR_PAD_LEFT),
             ]);
 
@@ -658,8 +659,9 @@ class KeuanganController extends Controller
                 $details->push([
                     'category' => 'sales_discount',
                     'description' => $discount->order_number.' · '.$this->salesDiscountDescription($discount),
-                    'debit' => 0.0,
-                    'credit' => 0.0,
+                    // Debet = Kredit: nominal terlihat, saldo kas tidak berubah.
+                    'debit' => (float) $discount->discount_amount,
+                    'credit' => (float) $discount->discount_amount,
                     'user_id' => $discount->user_id,
                     'sort' => '3-'.$discount->transaction_date->format('Ymd').'-'.str_pad((string) $discount->id, 10, '0', STR_PAD_LEFT),
                 ]);
@@ -678,7 +680,7 @@ class KeuanganController extends Controller
             'adj_bank' => 'Penyesuaian · Setoran ke Bank',
             'adj_owner' => 'Penyesuaian · Pengambilan Pemilik (Prive)',
             'adj_expense' => 'Penyesuaian · Pengeluaran Kas',
-            'sales_discount' => 'Potongan Penjualan (non-kas, informasi)',
+            'sales_discount' => 'Potongan Penjualan (non-kas, Debet = Kredit)',
             'other_transaction' => 'Transaksi Lain-lain',
         ];
 
@@ -919,8 +921,9 @@ class KeuanganController extends Controller
                     'occurred_at' => $occurredAt,
                     'no_nota' => $discount->order_number,
                     'keterangan' => $this->salesDiscountDescription($discount),
-                    'debet' => 0.0,
-                    'kredit' => 0.0,
+                    // Debet = Kredit: nominal terlihat, saldo kas tidak berubah.
+                    'debet' => (float) $discount->discount_amount,
+                    'kredit' => (float) $discount->discount_amount,
                     'kasir' => $discount->user?->name,
                     'user_id' => $discount->user_id,
                     'sort' => $occurredAt->format('YmdHis').'-2-'.str_pad((string) $discount->id, 10, '0', STR_PAD_LEFT),
