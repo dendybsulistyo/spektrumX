@@ -63,7 +63,7 @@
                 <div class="job-history-search">
                     <label for="history-q" class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Cari riwayat</label>
                     <input id="history-q" type="search" name="q" value="{{ $keyword }}"
-                           placeholder="Customer, file, PC, OPF, atau operator"
+                           placeholder="Customer, file, PC, OPF, keterangan, atau operator"
                            class="w-full rounded-sm border-slate-300 text-sm focus:border-blue-500 focus:ring-blue-500">
                 </div>
                 <div>
@@ -143,7 +143,10 @@
                             </td>
                             <td class="px-4 py-3 text-right">
                                 <div class="flex justify-end gap-2">
-                                    {{-- <button type="button" onclick="document.getElementById('sheet-detail-{{ $sheet->id }}').showModal()" class="rounded border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100">Lihat</button> --}}
+                                    {{-- Detail riwayat hanya untuk CS (customer-service.manage), dan hanya yang sudah diambil. --}}
+                                    @if ($sheet->claimed_at && auth()->user()->hasPermission('customer-service.manage'))
+                                        <button type="button" onclick="document.getElementById('sheet-detail-{{ $sheet->id }}').showModal()" class="rounded border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100">Lihat</button>
+                                    @endif
                                     @if (! $sheet->claimed_at)
                                         @can('file-monitor.view')
                                             @if (in_array($sheet->order_type, ['indoor', 'outdoor'], true))
@@ -175,22 +178,25 @@
 
     <div class="mt-4">{{ $jobSheets->links() }}</div>
 
-    @foreach ($jobSheets as $sheet)
+    @foreach (auth()->user()->hasPermission('customer-service.manage') ? $jobSheets->filter(fn ($sheet) => $sheet->claimed_at) : [] as $sheet)
         <dialog id="sheet-detail-{{ $sheet->id }}" class="w-[min(1100px,calc(100%-2rem))] rounded border-0 p-0 shadow-2xl backdrop:bg-slate-950/60">
             <div class="border-b border-slate-700 px-5 py-4 text-white" style="background:#17233c">
                 <div class="flex items-start justify-between gap-4">
-                    <div><p class="text-xs uppercase tracking-widest text-blue-300">Lembar Kerja CS</p><h3 class="mt-1 text-lg font-semibold">@if ($sheet->is_urgent)<span class="text-amber-400" title="Urgent">&#9733;</span> @endif{{ $sheet->customer_name }}</h3></div>
+                    <div><p class="text-xs uppercase tracking-widest text-blue-300">Lembar Kerja CS</p><h3 class="mt-1 text-lg font-semibold" style="color:#fff">@if ($sheet->is_urgent)<span class="text-amber-400" title="Urgent">&#9733;</span> @endif{{ $sheet->customer_name }}</h3></div>
                     <button type="button" onclick="this.closest('dialog').close()" class="text-xl text-slate-300 hover:text-white">&times;</button>
                 </div>
             </div>
             <div class="grid gap-3 border-b border-slate-200 bg-slate-50 p-5 text-sm sm:grid-cols-2 lg:grid-cols-4">
+                <div class="sm:col-span-2"><p class="text-xs text-slate-400">Customer</p><p class="mt-1 font-medium">{{ $sheet->customer_name ?: '-' }}{{ $sheet->customer_code ? ' ('.$sheet->customer_code.')' : '' }}</p></div>
+                <div><p class="text-xs text-slate-400">Dibuat Oleh</p><p class="mt-1 font-medium">{{ $sheet->creator?->name ? ucwords(mb_strtolower($sheet->creator->name)) : '-' }}</p><p class="text-xs text-slate-400">{{ $sheet->created_at?->format('d/m/Y H:i') }}</p></div>
+                <div><p class="text-xs text-slate-400">Diambil Oleh</p><p class="mt-1 font-medium">{{ $sheet->claimant?->name ? ucwords(mb_strtolower($sheet->claimant->name)) : '-' }}</p><p class="text-xs text-slate-400">{{ $sheet->claimed_at?->format('d/m/Y H:i') }}</p></div>
                 <div><p class="text-xs text-slate-400">Tanggal Masuk</p><p class="mt-1 font-medium">{{ $sheet->received_at->format('d/m/Y') }}</p></div>
                 <div><p class="text-xs text-slate-400">Tujuan Order</p><p class="mt-1 font-medium">{{ $sheet->order_type ? 'Order '.ucfirst($sheet->order_type) : '-' }}</p></div>
                 <div><p class="text-xs text-slate-400">Deadline</p><p class="mt-1 font-medium">{{ $sheet->deadline?->format('d/m/Y') ?? '-' }}</p></div>
                 <div><p class="text-xs text-slate-400">PC</p><p class="mt-1 font-medium">{{ $sheet->pc ?: '-' }}</p></div>
                 <div><p class="text-xs text-slate-400">OPF</p><p class="mt-1 font-medium">{{ $sheet->opf ?: '-' }}</p></div>
                 <div class="sm:col-span-2"><p class="text-xs text-slate-400">Folder / File</p><p class="mt-1 font-medium">{{ $sheet->folder_file ?: '-' }}</p></div>
-                <div class="sm:col-span-2"><p class="text-xs text-slate-400">Keterangan</p><p class="mt-1 font-medium">{{ $sheet->notes ?: '-' }}</p></div>
+                <div style="grid-column:1 / -1"><p class="text-xs text-slate-400">Keterangan</p><p class="mt-1 whitespace-pre-line rounded border border-amber-200 bg-amber-50 px-3 py-2 font-medium">{{ $sheet->notes ?: '-' }}</p></div>
             </div>
             <div class="flex justify-end border-t border-slate-200 px-5 py-3"><button type="button" onclick="this.closest('dialog').close()" class="rounded bg-slate-800 px-4 py-2 text-sm font-semibold text-white">Tutup</button></div>
         </dialog>
