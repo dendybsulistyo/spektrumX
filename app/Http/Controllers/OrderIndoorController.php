@@ -139,6 +139,13 @@ class OrderIndoorController extends Controller
 
             $order->update(['total' => $this->pricingService->totalIndoor($order)]);
             $this->pricingService->snapshotLinePrices('indoor', $order);
+
+            // Catat nomor order ke Lembar Kerja CS asalnya (untuk riwayat CS).
+            if (! empty($data['job_sheet_id'])) {
+                CustomerServiceJobSheet::whereKey($data['job_sheet_id'])
+                    ->whereNotNull('claimed_at')->where('claimed_order_type', 'indoor')->whereNull('order_id')
+                    ->update(['order_id' => $order->id, 'order_number' => $order->NoOrder]);
+            }
         }, attempts: 3);
 
         return redirect()->route($replacement ? 'kasir.index' : 'order-indoor.index')

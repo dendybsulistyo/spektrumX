@@ -30,6 +30,8 @@ class CustomerServiceJobSheet extends Model
         'claimed_by',
         'claimed_at',
         'claimed_order_type',
+        'order_id',
+        'order_number',
     ];
 
     protected function casts(): array
