@@ -26,6 +26,13 @@ class DailySummaryController extends Controller
         'pengambilan.manage' => 'siap_diambil',
     ];
 
+    /** Tabel order → tabel item (untuk ringkasan Operator File). */
+    private const ORDER_TABLES = [
+        'indoor' => ['order_indoor', 'order_indoor_detail', 'order_indoor_id'],
+        'outdoor' => ['order_outdoor', 'order_outdoor_detail', 'order_outdoor_id'],
+        'artwork' => ['order_artwork', 'order_artwork_detail', 'order_artwork_id'],
+    ];
+
     /** Aksi yang berarti pekerjaan diteruskan / diselesaikan. */
     private const DONE_ACTIONS = ['selesai', 'progress', 'lanjut', 'revisi_selesai'];
 
@@ -56,14 +63,40 @@ class DailySummaryController extends Controller
             return false;
         }
 
-        return collect([...array_keys(self::OPERATOR_STAGES), 'customer-service.manage', 'kasir.manage'])
-            ->contains(fn (string $permission) => $user->hasPermission($permission));
+        return self::isFileOperator($user)
+            || collect([...array_keys(self::OPERATOR_STAGES), 'customer-service.manage', 'kasir.manage'])
+                ->contains(fn (string $permission) => $user->hasPermission($permission));
+    }
+
+    /** Operator File: memantau file & membuat order. */
+    private static function isFileOperator(User $user): bool
+    {
+        return $user->hasPermission('file-monitor.view')
+            && ($user->hasPermission('order-indoor.manage') || $user->hasPermission('order-outdoor.manage'));
     }
 
     private function build(User $user, CarbonImmutable $today): array
     {
         $sections = [];
         $yesterday = $today->subDay();
+
+        if (self::isFileOperator($user)) {
+            $todayStats = $this->fileStats($user->id, $today);
+            $yesterdayOrders = $this->fileStats($user->id, $yesterday)['orders'];
+            $byType = collect($todayStats['by_type'])->filter()
+                ->map(fn ($count, $type) => ucfirst($type).' '.$count)->implode(' · ');
+            $sections[] = [
+                'kind' => 'file',
+                'title' => 'Operator File',
+                'stats' => [
+                    ['label' => 'order dibuat', 'value' => $todayStats['orders']],
+                    ['label' => 'item', 'value' => $todayStats['items']],
+                    ['label' => 'lembar kerja diambil', 'value' => $todayStats['sheets']],
+                ],
+                'note' => $byType !== '' ? $byType : null,
+                'trend' => $this->trend($todayStats['orders'], $yesterdayOrders, 'order'),
+            ];
+        }
 
         $stages = collect(self::OPERATOR_STAGES)->filter(fn ($stage, $permission) => $user->hasPermission($permission))->values()->all();
         if ($stages) {
@@ -122,6 +155,27 @@ class DailySummaryController extends Controller
         }
 
         return $sections;
+    }
+
+    /** @return array{orders:int, items:int, sheets:int, by_type: array<string,int>} */
+    private function fileStats(int $userId, CarbonImmutable $day): array
+    {
+        $byType = [];
+        $items = 0;
+        foreach (self::ORDER_TABLES as $type => [$orderTable, $detailTable, $foreignKey]) {
+            $ids = DB::table($orderTable)->where('created_by', $userId)
+                ->whereBetween('created_at', $this->range($day))->pluck('id');
+            $byType[$type] = $ids->count();
+            $items += $ids->isEmpty() ? 0 : DB::table($detailTable)->whereIn($foreignKey, $ids)->count();
+        }
+
+        return [
+            'orders' => array_sum($byType),
+            'items' => $items,
+            'sheets' => DB::table('customer_service_job_sheets')->where('claimed_by', $userId)
+                ->whereBetween('claimed_at', $this->range($day))->count(),
+            'by_type' => $byType,
+        ];
     }
 
     /** @return array{qty:int, items:int, orders:int, reworks:int} */
