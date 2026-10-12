@@ -31,6 +31,7 @@ class CashAdjustmentController extends Controller
             'expenseAccounts' => CashAdjustmentJournal::expenseAccounts(),
             'defaultExpense' => CashAdjustmentJournal::DEFAULT_EXPENSE_ACCOUNT,
             'cashSources' => CashAdjustmentJournal::CASH_SOURCES,
+            'defaultSides' => CashAdjustmentJournal::DEFAULT_SIDES,
         ]);
     }
 
@@ -45,6 +46,8 @@ class CashAdjustmentController extends Controller
         $validated = $request->validate([
             'occurred_at' => ['required', 'date'],
             'adjustment_type' => ['required', 'in:setor_tunai,setor_bank,pengeluaran'],
+            // Posisi dipilih user (permintaan akuntansi); Setor ke Bank selalu Kredit.
+            'entry_side' => ['required', 'in:debet,kredit', Rule::when($request->input('adjustment_type') === 'setor_bank', ['in:kredit'])],
             'amount' => ['required', 'integer', 'min:1', 'max:9999999999999'],
             'reference' => ['nullable', 'string', 'max:80'],
             'reason' => ['nullable', 'required_unless:adjustment_type,setor_bank', 'string', 'max:255'],
@@ -55,10 +58,12 @@ class CashAdjustmentController extends Controller
             'cash_source.required_if' => 'Pilih sumber dana Setor Tunai.',
             'expense_account.in' => 'Akun beban tidak valid (pilih akun rinci, bukan akun kepala).',
             'cash_source.in' => 'Sumber dana tidak valid.',
+            'entry_side.required' => 'Pilih posisi Debet atau Kredit.',
+            'entry_side.in' => 'Setor ke Bank wajib Kredit.',
         ]);
 
-        // Posisi otomatis: Setor Tunai = kas masuk (Debet); Setor ke Bank & Pengeluaran = kas keluar (Kredit).
-        $entrySide = $validated['adjustment_type'] === 'setor_tunai' ? 'debet' : 'kredit';
+        // Debet = kas masuk, Kredit = kas keluar; jurnal mengikuti posisi ini.
+        $entrySide = $validated['entry_side'];
         $counterAccount = match ($validated['adjustment_type']) {
             'setor_tunai' => CashAdjustmentJournal::CASH_SOURCES[$validated['cash_source']]['account'],
             'setor_bank' => AccountingService::AKUN_KAS_BANK,
@@ -72,7 +77,10 @@ class CashAdjustmentController extends Controller
         $type = $validated['adjustment_type'];
         $typeLabel = CashAdjustmentJournal::TYPE_LABELS[$type];
         if ($type === 'setor_tunai') {
-            $typeLabel .= ' ('.CashAdjustmentJournal::CASH_SOURCES[$validated['cash_source']]['label'].')';
+            $source = CashAdjustmentJournal::CASH_SOURCES[$validated['cash_source']];
+            $typeLabel .= ' ('.($entrySide === 'debet' ? $source['label'] : $source['out_label']).')';
+        } elseif ($type === 'pengeluaran' && $entrySide === 'debet') {
+            $typeLabel .= ' (pengembalian)';
         }
         $amount = (float) $validated['amount'];
 

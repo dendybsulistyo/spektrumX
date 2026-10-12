@@ -543,7 +543,11 @@ class KeuanganController extends Controller
                     str_starts_with($entry->source_key, 'cash-adjustment:') => match (CashAdjustmentJournal::inferType($entry)) {
                         'setor_bank' => 'adj_bank',
                         'pengeluaran' => 'adj_expense',
-                        'setor_tunai' => (float) $entry->debet > 0 ? 'adj_in' : 'adj_bank',
+                        'setor_tunai' => match (true) {
+                            (float) $entry->debet > 0 => 'adj_in',
+                            $entry->counter_account === '31000' => 'adj_owner',
+                            default => 'adj_bank',
+                        },
                         default => 'other_transaction',
                     },
                     (float) $entry->kredit > 0 && str_starts_with(mb_strtolower($description), 'bayar via') => 'non_cash',
@@ -672,6 +676,7 @@ class KeuanganController extends Controller
             'non_cash_refund' => 'Refund Non Tunai (keluar dari bank, bukan kas)',
             'adj_in' => 'Penyesuaian · Setoran / Tambahan Kas',
             'adj_bank' => 'Penyesuaian · Setoran ke Bank',
+            'adj_owner' => 'Penyesuaian · Pengambilan Pemilik (Prive)',
             'adj_expense' => 'Penyesuaian · Pengeluaran Kas',
             'sales_discount' => 'Potongan Penjualan (non-kas, informasi)',
             'other_transaction' => 'Transaksi Lain-lain',

@@ -18,7 +18,7 @@
             </div>
 
             <form method="POST" action="{{ route('keuangan.cash-adjustments.store') }}"
-                  x-data="{ type: @js(old('adjustment_type', 'setor_tunai')) }"
+                  x-data="{ type: @js(old('adjustment_type', 'setor_tunai')), position: @js(old('entry_side', $defaultSides[old('adjustment_type', 'setor_tunai')] ?? 'debet')), defaults: @js($defaultSides) }"
                   class="grid gap-4 p-6 md:grid-cols-2 xl:grid-cols-6">
                 @csrf
                 <div>
@@ -28,22 +28,31 @@
                 </div>
                 <div>
                     <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-600">Jenis Penyesuaian</label>
-                    <select name="adjustment_type" x-model="type" required class="w-full rounded border-slate-300 text-sm">
+                    <select name="adjustment_type" x-model="type" @change="position = defaults[type]" required class="w-full rounded border-slate-300 text-sm">
                         <option value="setor_tunai" @selected(old('adjustment_type') === 'setor_tunai')>Setor Tunai</option>
                         <option value="setor_bank" @selected(old('adjustment_type') === 'setor_bank')>Setor ke Bank</option>
                         <option value="pengeluaran" @selected(old('adjustment_type') === 'pengeluaran')>Pengeluaran</option>
                     </select>
                     <x-input-error :messages="$errors->get('adjustment_type')" class="mt-1" />
                 </div>
-                {{-- Posisi Debet/Kredit kini otomatis sesuai jenis; akun lawan dipilih di sini. --}}
+                {{-- Posisi dipilih user; bawaannya mengikuti jenis. Jurnal mengikuti posisi ini. --}}
+                <div>
+                    <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-600">Posisi</label>
+                    <select name="entry_side" x-model="position" required class="w-full rounded border-slate-300 text-sm">
+                        <option value="debet" :disabled="type === 'setor_bank'">Debet (kas masuk)</option>
+                        <option value="kredit">Kredit (kas keluar)</option>
+                    </select>
+                    <p x-show="type === 'setor_bank'" class="mt-1 text-xs text-slate-500">Setor ke Bank wajib Kredit.</p>
+                    <x-input-error :messages="$errors->get('entry_side')" class="mt-1" />
+                </div>
+                {{-- Akun lawan jurnal. --}}
                 <div x-show="type === 'setor_tunai'">
-                    <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-600">Sumber Dana</label>
+                    <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-600" x-text="position === 'debet' ? 'Sumber Dana' : 'Tujuan Dana'">Sumber Dana</label>
                     <select name="cash_source" :required="type === 'setor_tunai'" :disabled="type !== 'setor_tunai'" class="w-full rounded border-slate-300 text-sm">
                         @foreach ($cashSources as $key => $source)
-                            <option value="{{ $key }}" @selected(old('cash_source', 'tarik_bank') === $key)>{{ $source['label'] }}</option>
+                            <option value="{{ $key }}" @selected(old('cash_source', 'tarik_bank') === $key) x-text="position === 'debet' ? @js($source['label']) : @js($source['out_label'])">{{ $source['label'] }}</option>
                         @endforeach
                     </select>
-                    <p class="mt-1 text-xs text-slate-500">Kas masuk (Debet).</p>
                     <x-input-error :messages="$errors->get('cash_source')" class="mt-1" />
                 </div>
                 <div x-show="type === 'pengeluaran'">
@@ -53,13 +62,12 @@
                             <option value="{{ $account->NoAkun }}" @selected(old('expense_account', $defaultExpense) === $account->NoAkun)>{{ $account->NoAkun }} · {{ $account->NmAkun }}</option>
                         @endforeach
                     </select>
-                    <p class="mt-1 text-xs text-slate-500">Kas keluar (Kredit).</p>
+                    <p x-show="position === 'debet'" class="mt-1 text-xs text-slate-500">Debet = pengembalian biaya (kas masuk).</p>
                     <x-input-error :messages="$errors->get('expense_account')" class="mt-1" />
                 </div>
                 <div x-show="type === 'setor_bank'">
                     <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-600">Tujuan</label>
                     <div class="flex h-[38px] items-center rounded border border-slate-200 bg-slate-50 px-3 text-sm text-slate-600">11101 · Bank</div>
-                    <p class="mt-1 text-xs text-slate-500">Kas keluar (Kredit).</p>
                 </div>
                 <div>
                     <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-600">Nominal</label>

@@ -14,10 +14,20 @@ class CashAdjustmentJournal
 {
     public const DEFAULT_EXPENSE_ACCOUNT = '63014';
 
-    /** Sumber dana Setor Tunai → akun lawan. */
+    /**
+     * Akun lawan Setor Tunai. 'label' dipakai saat Debet (kas masuk),
+     * 'out_label' saat Kredit (kas keluar ke akun yang sama).
+     */
     public const CASH_SOURCES = [
-        'tarik_bank' => ['label' => 'Tarik dari Bank', 'account' => AccountingService::AKUN_KAS_BANK],
-        'modal' => ['label' => 'Setoran Modal Pemilik', 'account' => '31000'],
+        'tarik_bank' => ['label' => 'Tarik dari Bank', 'out_label' => 'Ke Bank', 'account' => AccountingService::AKUN_KAS_BANK],
+        'modal' => ['label' => 'Setoran Modal Pemilik', 'out_label' => 'Prive / Pengambilan Pemilik', 'account' => '31000'],
+    ];
+
+    /** Posisi bawaan per jenis (tetap bisa diubah, kecuali Setor ke Bank). */
+    public const DEFAULT_SIDES = [
+        'setor_tunai' => 'debet',
+        'setor_bank' => 'kredit',
+        'pengeluaran' => 'kredit',
     ];
 
     public const TYPE_LABELS = [
