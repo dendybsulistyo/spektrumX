@@ -252,16 +252,16 @@ class KeuanganController extends Controller
             ->when($kasirId, fn ($query) => $query->where('user_id', $kasirId))
             ->orderBy('id')
             ->get()
-            ->map(fn (FinalSalesDiscount $discount) => [
+            // Dua baris seperti jurnal: Potongan (Debet) & lawannya (Kredit); saldo kas tidak berubah.
+            ->flatMap(fn (FinalSalesDiscount $discount) => collect([0, 1])->map(fn (int $side) => [
                 'user_id' => $discount->user_id,
                 'kasir' => $discount->user?->name ?? '-',
-                'no_nota' => $discount->order_number,
-                'keterangan' => $this->salesDiscountDescription($discount),
-                // Potongan tampil di Debet & Kredit dengan nilai sama (saldo kas tidak berubah).
-                'debet' => (float) $discount->discount_amount,
-                'kredit' => (float) $discount->discount_amount,
-                'sort' => '3-'.str_pad((string) $discount->id, 10, '0', STR_PAD_LEFT),
-            ]);
+                'no_nota' => $side === 0 ? $discount->order_number : null,
+                'keterangan' => $side === 0 ? $this->salesDiscountDescription($discount) : $this->salesDiscountCounterDescription($discount),
+                'debet' => $side === 0 ? (float) $discount->discount_amount : 0.0,
+                'kredit' => $side === 1 ? (float) $discount->discount_amount : 0.0,
+                'sort' => '3-'.str_pad((string) $discount->id, 10, '0', STR_PAD_LEFT).'-'.$side,
+            ]));
 
         if (! $seededRows->contains(fn (array $row) => $row['user_id'] === null)) {
             $openingBalance = $this->openingCashBalance($tanggal);
@@ -340,25 +340,34 @@ class KeuanganController extends Controller
     }
 
     /**
-     * Keterangan baris Potongan Penjualan di laporan kas. Potongan sendiri
-     * bernilai 0 di kas; uang yang dikembalikan sudah tercatat di baris Refund.
+     * Keterangan baris Potongan Penjualan (sisi Debet) di laporan kas. Baris
+     * lawannya (Kredit) dari salesDiscountCounterDescription(); keduanya sama
+     * nilai sehingga saldo kas tidak berubah.
      */
     private function salesDiscountDescription(FinalSalesDiscount $discount): string
     {
+        return 'Potongan Penjualan + PPN Rp '.number_format((float) $discount->discount_amount, 0, ',', '.')
+            .' · '.($discount->customer?->NmCust ?? 'Customer tidak tersedia')
+            .' · '.$discount->reason;
+    }
+
+    /**
+     * Baris lawan Potongan Penjualan (Kredit), mengikuti jurnalnya: piutang
+     * berkurang dan/atau uang dikembalikan (uang keluarnya ada di baris Refund).
+     */
+    private function salesDiscountCounterDescription(FinalSalesDiscount $discount): string
+    {
         $rupiah = fn ($value) => 'Rp '.number_format((float) $value, 0, ',', '.');
-        $effects = [];
+        $parts = [];
         if ((float) $discount->receivable_offset > 0) {
-            $effects[] = 'mengurangi piutang '.$rupiah($discount->receivable_offset);
+            $parts[] = 'Piutang Dagang berkurang '.$rupiah($discount->receivable_offset).' (non-kas)';
         }
         if ((float) $discount->refund_amount > 0) {
             $method = OrderPayment::CARA_BAYAR_LABELS[$discount->refund_method] ?? ucfirst((string) $discount->refund_method);
-            $effects[] = 'dikembalikan '.$rupiah($discount->refund_amount).' via '.$method.' (lihat baris Refund)';
+            $parts[] = 'Dikembalikan ke customer '.$rupiah($discount->refund_amount).' via '.$method.' (uang keluar dicatat di baris Refund)';
         }
 
-        return 'Potongan Penjualan '.$rupiah($discount->discount_amount)
-            .' · non-kas'.($effects ? ': '.implode(', ', $effects) : '')
-            .' · '.($discount->customer?->NmCust ?? 'Customer tidak tersedia')
-            .' · '.$discount->reason;
+        return $parts ? implode('; ', $parts) : 'Lawan potongan penjualan (non-kas)';
     }
 
     /**
@@ -656,14 +665,23 @@ class KeuanganController extends Controller
             ->when($kasirId, fn ($query) => $query->where('user_id', $kasirId))
             ->orderBy('transaction_date')->orderBy('id')->get()
             ->each(function (FinalSalesDiscount $discount) use ($details): void {
+                // Dua baris seperti jurnal: Potongan (Debet) & lawannya (Kredit); saldo kas tidak berubah.
+                $sort = '3-'.$discount->transaction_date->format('Ymd').'-'.str_pad((string) $discount->id, 10, '0', STR_PAD_LEFT);
                 $details->push([
                     'category' => 'sales_discount',
                     'description' => $discount->order_number.' · '.$this->salesDiscountDescription($discount),
-                    // Debet = Kredit: nominal terlihat, saldo kas tidak berubah.
                     'debit' => (float) $discount->discount_amount,
+                    'credit' => 0.0,
+                    'user_id' => $discount->user_id,
+                    'sort' => $sort.'-0',
+                ]);
+                $details->push([
+                    'category' => 'sales_discount',
+                    'description' => $this->salesDiscountCounterDescription($discount),
+                    'debit' => 0.0,
                     'credit' => (float) $discount->discount_amount,
                     'user_id' => $discount->user_id,
-                    'sort' => '3-'.$discount->transaction_date->format('Ymd').'-'.str_pad((string) $discount->id, 10, '0', STR_PAD_LEFT),
+                    'sort' => $sort.'-1',
                 ]);
             });
 
@@ -680,7 +698,7 @@ class KeuanganController extends Controller
             'adj_bank' => 'Penyesuaian · Setoran ke Bank',
             'adj_owner' => 'Penyesuaian · Pengambilan Pemilik (Prive)',
             'adj_expense' => 'Penyesuaian · Pengeluaran Kas',
-            'sales_discount' => 'Potongan Penjualan (non-kas, Debet = Kredit)',
+            'sales_discount' => 'Potongan Penjualan (non-kas, tidak mengubah saldo)',
             'other_transaction' => 'Transaksi Lain-lain',
         ];
 
@@ -912,22 +930,22 @@ class KeuanganController extends Controller
             ->whereDate('transaction_date', $tanggal)
             ->when($kasirId, fn ($query) => $query->where('user_id', $kasirId))
             ->orderBy('id')->get()
-            ->map(function (FinalSalesDiscount $discount) {
+            ->flatMap(function (FinalSalesDiscount $discount) {
                 $occurredAt = $discount->created_at
                     ? Carbon::parse($discount->transaction_date->format('Y-m-d').' '.$discount->created_at->format('H:i:s'))
                     : $discount->transaction_date->copy()->setTime(12, 0);
 
-                return [
+                // Dua baris seperti jurnal: Potongan (Debet) & lawannya (Kredit); saldo kas tidak berubah.
+                return collect([0, 1])->map(fn (int $side) => [
                     'occurred_at' => $occurredAt,
-                    'no_nota' => $discount->order_number,
-                    'keterangan' => $this->salesDiscountDescription($discount),
-                    // Debet = Kredit: nominal terlihat, saldo kas tidak berubah.
-                    'debet' => (float) $discount->discount_amount,
-                    'kredit' => (float) $discount->discount_amount,
+                    'no_nota' => $side === 0 ? $discount->order_number : null,
+                    'keterangan' => $side === 0 ? $this->salesDiscountDescription($discount) : $this->salesDiscountCounterDescription($discount),
+                    'debet' => $side === 0 ? (float) $discount->discount_amount : 0.0,
+                    'kredit' => $side === 1 ? (float) $discount->discount_amount : 0.0,
                     'kasir' => $discount->user?->name,
                     'user_id' => $discount->user_id,
-                    'sort' => $occurredAt->format('YmdHis').'-2-'.str_pad((string) $discount->id, 10, '0', STR_PAD_LEFT),
-                ];
+                    'sort' => $occurredAt->format('YmdHis').'-2-'.str_pad((string) $discount->id, 10, '0', STR_PAD_LEFT).'-'.$side,
+                ]);
             });
 
         $rows = $manualRows->concat($paymentRows)->concat($discountRows)->sortBy('sort')->values();
