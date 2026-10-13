@@ -36,7 +36,9 @@
                 Outdoor ({{ $counts['outdoor'] }})
             </button>
         </div>
-        <div class="overflow-x-auto">
+        {{-- Area scroll sendiri agar judul kolom & judul tanggal tetap menempel di atas saat di-scroll. --}}
+        <div class="cs-scroll overflow-auto"
+             x-init="const fit = () => $el.style.setProperty('--cs-head-h', $el.querySelector('thead').offsetHeight + 'px'); fit(); window.addEventListener('resize', fit)">
             <table class="w-full min-w-[980px] text-sm">
                 <thead class="border-b border-slate-200 bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
                     <tr>
@@ -61,10 +63,10 @@
                         @php $minimumTransfer = ceil(((float) $order->total * 0.5) / 100) * 100; @endphp
                         @if (($lastDate[$order->order_type] ?? null) !== $dateKey($order))
                             @php $lastDate[$order->order_type] = $dateKey($order); @endphp
-                            <tr x-show="tab === @js($order->order_type)" @if ($order->order_type !== $initialTab) x-cloak @endif class="bg-slate-100/80">
-                                <td colspan="8" class="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-slate-600">
-                                    {{ $order->TglOrder ? \Illuminate\Support\Carbon::parse($order->TglOrder)->locale('id')->translatedFormat('l, d F Y') : 'Tanpa tanggal' }}
-                                    <span class="ml-2 font-normal normal-case text-slate-400">· {{ $perDate[$order->order_type.'|'.$dateKey($order)] }} order</span>
+                            <tr x-show="tab === @js($order->order_type)" @if ($order->order_type !== $initialTab) x-cloak @endif class="cs-date-row">
+                                <td colspan="8" class="cs-date cs-date-{{ $order->order_type }}">
+                                    <span class="cs-date-label">{{ $order->TglOrder ? \Illuminate\Support\Carbon::parse($order->TglOrder)->locale('id')->translatedFormat('l, d F Y') : 'Tanpa tanggal' }}</span>
+                                    <span class="cs-date-count">{{ $perDate[$order->order_type.'|'.$dateKey($order)] }} order</span>
                                 </td>
                             </tr>
                         @endif
@@ -156,4 +158,13 @@
             </table>
         </div>
     </div>
+    <style>
+        .cs-scroll { max-height: calc(100vh - 230px); }
+        .cs-scroll thead th { position: sticky; top: 0; z-index: 20; background: #f1ece0; box-shadow: inset 0 -1px 0 #cfc7b5; }
+        .cs-scroll td.cs-date { position: sticky; top: var(--cs-head-h, 46px); z-index: 10; padding: 9px 16px 9px 20px; box-shadow: inset 5px 0 0 var(--cs-accent), 0 1px 0 rgba(27, 34, 54, .12), 0 3px 6px -4px rgba(27, 34, 54, .35); }
+        .cs-scroll td.cs-date-indoor { --cs-accent: #d97706; background: #fde9b8; color: #78350f; }
+        .cs-scroll td.cs-date-outdoor { --cs-accent: #0d9488; background: #c9efe8; color: #134e4a; }
+        .cs-scroll .cs-date-label { font-size: 14px; font-weight: 700; letter-spacing: .02em; }
+        .cs-scroll .cs-date-count { margin-left: 10px; padding: 2px 8px; font-size: 11.5px; font-weight: 600; background: rgba(255, 255, 255, .7); border-radius: 999px; }
+    </style>
 </x-app-layout>
