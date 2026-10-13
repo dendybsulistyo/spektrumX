@@ -176,7 +176,7 @@
             $menuPajak = Auth::user()->hasPermission('keuangan.view') && Auth::user()->hasPermission('menu.perpajakan');
             $menuAkun = Auth::user()->hasPermission('keuangan.view') && Auth::user()->hasPermission('menu.akuntansi');
             $menuCols = ($menuPajak ? 1 : 0) + ($menuAkun ? 2 : 0);
-            $showKeuangan = $menuPajak || $menuAkun || Auth::user()->hasPermission('pengeluaran.view') || Auth::user()->hasPermission('payroll.view') || Auth::user()->hasPermission('keuangan.pengaturan');
+            $showKeuangan = $menuPajak || $menuAkun || Auth::user()->hasPermission('pengeluaran.view') || Auth::user()->hasPermission('payroll.view') || Auth::user()->hasPermission('keuangan.pengaturan') || Auth::user()->hasPermission('keuangan.penyesuaian-kas') || Auth::user()->hasPermission('keuangan.penyesuaian-penjualan') || Auth::user()->hasPermission('akuntansi.master') || Auth::user()->hasPermission('akuntansi.pembelian') || Auth::user()->hasPermission('keuangan.pajak');
             $pengaturanActive = request()->routeIs('pengaturan.cetak-sales-order.*', 'roles.*', 'users.*', 'jasa-potong.*', 'jasa-potong-artwork.*', 'server-monitor.*');
 
             $showMasterData = Auth::user()->hasPermission('customers.view') || Auth::user()->hasPermission('produk.view') || Auth::user()->hasPermission('harga-artwork.view') || Auth::user()->hasPermission('printers.view') || Auth::user()->hasPermission('printer-outdoor.view') || Auth::user()->hasPermission('bahan-cetak-outdoor.view') || Auth::user()->hasPermission('harga-cetak-outdoor.view') || Auth::user()->hasPermission('kategori-produk-indoor.view');
@@ -316,7 +316,7 @@
                                             @endcan
                                             </div>
                                             <div class="space-y-1 border-l border-gray-100 pl-2">
-                                            @canany(['keuangan.view', 'keuangan.pengaturan', 'payroll.view', 'pengeluaran.view'])
+                                            @canany(['keuangan.view', 'keuangan.pengaturan', 'akuntansi.master', 'akuntansi.pembelian', 'keuangan.pajak', 'payroll.view', 'pengeluaran.view'])
                                                 <p class="mx-2 rounded-md border border-slate-200 bg-slate-100 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-600">Master</p>
                                             @endcanany
                                             @can('keuangan.view')
@@ -324,9 +324,13 @@
                                                 <a href="{{ route('report.paid-orders-by-customer') }}" class="{{ $dropdownLink(request()->routeIs('report.paid-orders-by-customer')) }}">Rekap Order Customer (Lunas)</a>
                                                 <a href="{{ route('akuntansi.kas-bank') }}" class="{{ $dropdownLink(request()->routeIs('akuntansi.kas-bank')) }}">Buku Kas & Bank</a>
                                             @endcan
-                                            @can('keuangan.pengaturan')
+                                            @can('akuntansi.master')
                                                 <a href="{{ route('akuntansi.akun.index') }}" class="{{ $dropdownLink(request()->routeIs('akuntansi.akun.*')) }}">Kode Akun</a>
+                                            @endcan
+                                            @can('akuntansi.pembelian')
                                                 <a href="{{ route('akuntansi.suppliers.index') }}" class="{{ $dropdownLink(request()->routeIs('akuntansi.suppliers.*')) }}">Supplier</a>
+                                            @endcan
+                                            @can('keuangan.pajak')
                                                 <a href="{{ route('keuangan.pengaturan.edit') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.pengaturan.edit')) }}">Pengaturan Data GL</a>
                                             @endcan
                                             @can('payroll.view')

@@ -24,7 +24,7 @@
             </thead>
             <tbody class="divide-y">
                 @forelse ($users as $user)
-                    <tr @class(['bg-gray-50 text-gray-400' => ! $user->is_active])>
+                    <tr @class(['bg-gray-50 text-gray-400' => ! $user->isActive()])>
                         <td class="px-3 py-2 text-gray-400">{{ $users->firstItem() + $loop->index }}</td>
                         <td class="px-3 py-2 font-semibold text-gray-900">{{ $user->name }}</td>
                         <td class="px-3 py-2 text-gray-600">{{ $user->email }}</td>
@@ -36,7 +36,7 @@
                             @endif
                         </td>
                         <td class="px-3 py-2">
-                            @if ($user->is_active)
+                            @if ($user->isActive())
                                 <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">Aktif</span>
                             @else
                                 <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-700" title="Dinonaktifkan {{ $user->deactivated_at?->format('d/m/Y H:i') }}">Nonaktif</span>
@@ -46,11 +46,11 @@
                         <td class="px-3 py-2 text-right whitespace-nowrap">
                             @if ($user->id !== auth()->id())
                                 <form method="POST" action="{{ route('users.toggle-active', $user) }}" class="inline mr-2"
-                                      onsubmit="return confirm(@js($user->is_active ? 'Nonaktifkan akun '.$user->name.'? Akun ini tidak bisa login lagi dan sesi yang sedang aktif langsung diputus. Riwayat transaksinya tetap utuh.' : 'Aktifkan kembali akun '.$user->name.'?'))">
+                                      onsubmit="return confirm(@js($user->isActive() ? 'Nonaktifkan akun '.$user->name.'? Akun ini tidak bisa login lagi dan sesi yang sedang aktif langsung diputus. Riwayat transaksinya tetap utuh.' : 'Aktifkan kembali akun '.$user->name.'?'))">
                                     @csrf
                                     @method('PATCH')
-                                    <button type="submit" @class(['rounded px-2 py-1 text-xs font-semibold', 'border border-red-300 text-red-700 hover:bg-red-50' => $user->is_active, 'border border-emerald-300 text-emerald-700 hover:bg-emerald-50' => ! $user->is_active])>
-                                        {{ $user->is_active ? 'Nonaktifkan' : 'Aktifkan' }}
+                                    <button type="submit" @class(['rounded px-2 py-1 text-xs font-semibold', 'border border-red-300 text-red-700 hover:bg-red-50' => $user->isActive(), 'border border-emerald-300 text-emerald-700 hover:bg-emerald-50' => ! $user->isActive()])>
+                                        {{ $user->isActive() ? 'Nonaktifkan' : 'Aktifkan' }}
                                     </button>
                                 </form>
                             @endif

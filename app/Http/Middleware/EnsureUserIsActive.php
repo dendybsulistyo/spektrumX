@@ -27,7 +27,7 @@ class EnsureUserIsActive
             $request->session()->flash('status', 'Akun Anda baru saja login di komputer lain, jadi sesi di komputer ini diakhiri. Satu akun hanya bisa dipakai di satu komputer.');
         }
 
-        if ($user && ! $user->is_active) {
+        if ($user && ! $user->isActive()) {
             Auth::guard('web')->logout();
             $request->session()->invalidate();
             $request->session()->regenerateToken();

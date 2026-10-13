@@ -60,7 +60,7 @@
             </section>
 
             <!-- Form Tambah Aset (Hanya Pengaturan) -->
-            @can('keuangan.pengaturan')
+            @can('akuntansi.master')
                 <details class="rounded-xl border bg-white shadow-sm overflow-hidden" {{ $errors->any() ? 'open' : '' }}>
                     <summary class="cursor-pointer px-5 py-4 text-sm font-semibold text-indigo-700 bg-white hover:bg-gray-50 select-none">
                         + Tambah Catatan Aset Tetap Baru
@@ -164,7 +164,7 @@
                                 <th class="px-5 py-3 text-right whitespace-nowrap">Penyusutan Tahun Ini</th>
                                 <th class="px-5 py-3 text-right whitespace-nowrap">Akumulasi Penyusutan</th>
                                 <th class="px-5 py-3 text-right">Nilai Sisa Buku</th>
-                                @can('keuangan.pengaturan')
+                                @can('akuntansi.master')
                                     <th class="px-5 py-3 text-center">Aksi</th>
                                 @endcan
                             </tr>
@@ -212,7 +212,7 @@
                                             <span class="block text-[10px] font-bold text-red-600 uppercase">Habis Masa Manfaat</span>
                                         @endif
                                     </td>
-                                    @can('keuangan.pengaturan')
+                                    @can('akuntansi.master')
                                         <td class="px-5 py-3 text-center">
                                             <form method="POST" action="{{ route('akuntansi.fixed-assets.destroy', $asset) }}" 
                                                   onsubmit="return confirm('Hapus aset {{ $asset->nama }} dari daftar?')">
@@ -242,7 +242,7 @@
                                     <td class="px-5 py-3 text-right text-indigo-700 whitespace-nowrap">Rp&nbsp;{{ $fmt($totalDepreciationYear) }}</td>
                                     <td class="px-5 py-3 text-right text-gray-900 whitespace-nowrap">Rp&nbsp;{{ $fmt($totalAccumulated) }}</td>
                                     <td class="px-5 py-3 text-right text-indigo-900 whitespace-nowrap">Rp&nbsp;{{ $fmt($totalBookValue) }}</td>
-                                    @can('keuangan.pengaturan')
+                                    @can('akuntansi.master')
                                         <td></td>
                                     @endcan
                                 </tr>

@@ -223,15 +223,21 @@ Route::middleware('auth')->group(function () {
         Route::post('/keuangan/jurnal-manual/{jurnalManual}/batalkan', [JurnalManualController::class, 'batalkan'])->name('keuangan.jurnal-manual.batalkan');
     });
 
-    Route::middleware('permission:keuangan.pengaturan')->group(function () {
+    // Izin keuangan dipecah per fungsi (dulu semua ikut "keuangan.pengaturan").
+    Route::middleware('permission:keuangan.penyesuaian-kas')->group(function () {
         Route::post('/keuangan/penyesuaian-kas', [CashAdjustmentController::class, 'store'])->name('keuangan.cash-adjustments.store');
+    });
+    Route::middleware('permission:keuangan.penyesuaian-penjualan')->group(function () {
         Route::post('/keuangan/potongan-penjualan-akhir', [FinalSalesDiscountController::class, 'store'])->name('keuangan.final-sales-discounts.store');
         Route::post('/keuangan/penyesuaian-nota-dp', [OrderFinancialAdjustmentController::class, 'store'])->name('keuangan.order-adjustments.store');
+    });
+    Route::middleware('permission:keuangan.pajak')->group(function () {
         Route::post('/keuangan/laporan-ppn/draft', [KeuanganController::class, 'simpanDraftPpn'])->name('keuangan.laporan-ppn.draft');
         Route::post('/keuangan/laporan-ppn/{laporanPpnFinal}/finalkan', [KeuanganController::class, 'finalkanPpn'])->name('keuangan.laporan-ppn.finalkan');
+        Route::get('/keuangan/pengaturan', [PengaturanKeuanganController::class, 'edit'])->name('keuangan.pengaturan.edit');
+        Route::put('/keuangan/pengaturan', [PengaturanKeuanganController::class, 'update'])->name('keuangan.pengaturan.update');
     });
-
-    Route::middleware('permission:keuangan.pengaturan')->group(function () {
+    Route::middleware('permission:akuntansi.pembelian')->group(function () {
         Route::get('/akuntansi/pembelian/{purchase}/edit', [AccountingPurchaseController::class, 'edit'])->name('akuntansi.purchases.edit');
         Route::post('/akuntansi/pembelian', [AccountingPurchaseController::class, 'store'])->name('akuntansi.purchases.store');
         Route::put('/akuntansi/pembelian/{purchase}', [AccountingPurchaseController::class, 'update'])->name('akuntansi.purchases.update');
@@ -242,17 +248,20 @@ Route::middleware('auth')->group(function () {
         Route::post('/akuntansi/suppliers', [AccountingSupplierController::class, 'store'])->name('akuntansi.suppliers.store');
         Route::put('/akuntansi/suppliers/{supplier}', [AccountingSupplierController::class, 'update'])->name('akuntansi.suppliers.update');
         Route::delete('/akuntansi/suppliers/{supplier}', [AccountingSupplierController::class, 'destroy'])->name('akuntansi.suppliers.destroy');
+    });
+    Route::middleware('permission:akuntansi.master')->group(function () {
         Route::post('/akuntansi/import-gunggungan', [GunggunganHistoricalJournalController::class, 'store'])->name('akuntansi.import-gunggungan.store');
         Route::post('/akuntansi/akun', [AkunController::class, 'store'])->name('akuntansi.akun.store');
         Route::put('/akuntansi/akun/{akun}', [AkunController::class, 'update'])->name('akuntansi.akun.update');
         Route::delete('/akuntansi/akun/{akun}', [AkunController::class, 'destroy'])->name('akuntansi.akun.destroy');
         Route::post('/akuntansi/aset-tetap', [AccountingFixedAssetController::class, 'store'])->name('akuntansi.fixed-assets.store');
         Route::delete('/akuntansi/aset-tetap/{fixedAsset}', [AccountingFixedAssetController::class, 'destroy'])->name('akuntansi.fixed-assets.destroy');
+    });
+    Route::middleware('permission:keuangan.pengaturan')->group(function () {
         Route::get('/pengaturan/cetak-sales-order', [PengaturanCetakController::class, 'edit'])->name('pengaturan.cetak-sales-order.edit');
         Route::put('/pengaturan/cetak-sales-order', [PengaturanCetakController::class, 'update'])->name('pengaturan.cetak-sales-order.update');
-        Route::get('/keuangan/pengaturan', [PengaturanKeuanganController::class, 'edit'])->name('keuangan.pengaturan.edit');
-        Route::put('/keuangan/pengaturan', [PengaturanKeuanganController::class, 'update'])->name('keuangan.pengaturan.update');
     });
+
 
     Route::middleware('permission:pengeluaran.view')->group(function () {
         Route::get('/pengeluaran', [PengeluaranController::class, 'index'])->name('pengeluaran.index');

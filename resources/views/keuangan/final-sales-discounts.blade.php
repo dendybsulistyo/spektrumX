@@ -54,14 +54,14 @@
                                 <td class="px-4 py-3 text-right font-semibold tabular-nums">Rp {{ number_format($order->final_amount, 0, ',', '.') }}</td>
                                 <td class="px-4 py-3 text-right tabular-nums">Rp {{ number_format($order->receivable_amount, 0, ',', '.') }}</td>
                                 <td class="px-4 py-3 text-center">
-                                    @can('keuangan.pengaturan')
+                                    @can('keuangan.penyesuaian-penjualan')
                                         <button type="button" onclick="document.getElementById('discount-form-{{ str_replace(':', '-', $order->key) }}').classList.toggle('hidden')" class="rounded-md border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-semibold text-indigo-700">Input Potongan</button>
                                     @else
                                         <span class="text-xs text-slate-400">Lihat saja</span>
                                     @endcan
                                 </td>
                             </tr>
-                            @can('keuangan.pengaturan')
+                            @can('keuangan.penyesuaian-penjualan')
                                 <tr id="discount-form-{{ str_replace(':', '-', $order->key) }}" class="hidden bg-slate-50">
                                     <td colspan="7" class="px-4 py-4">
                                         <form method="POST" action="{{ route('keuangan.final-sales-discounts.store') }}"

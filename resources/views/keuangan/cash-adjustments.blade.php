@@ -78,7 +78,11 @@
                     </label>
                     <div class="flex flex-col gap-3 sm:flex-row">
                         <input type="text" name="reason" value="{{ old('reason') }}" maxlength="255" :required="type !== 'setor_bank'" class="min-w-0 flex-1 rounded border-slate-300 text-sm" :placeholder="type === 'setor_bank' ? 'Opsional' : 'Contoh: koreksi metode pembayaran SO ...'">
-                        <button type="submit" @disabled(!$cashier) class="rounded bg-blue-600 px-5 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300">Simpan Penyesuaian</button>
+                        @can('keuangan.penyesuaian-kas')
+                            <button type="submit" @disabled(!$cashier) class="rounded bg-blue-600 px-5 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300">Simpan Penyesuaian</button>
+                        @else
+                            <span class="self-center rounded border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-500">Anda hanya bisa melihat. Input penyesuaian kas memerlukan izin "Input Penyesuaian Kas".</span>
+                        @endcan
                     </div>
                     <x-input-error :messages="$errors->get('reason')" class="mt-1" />
                 </div>

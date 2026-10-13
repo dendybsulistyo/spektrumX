@@ -12,7 +12,7 @@
             </div>
         </section>
 
-        @can('keuangan.pengaturan')
+        @can('akuntansi.master')
             <details class="rounded-xl border border-gray-200 bg-white shadow-sm"><summary class="cursor-pointer px-5 py-4 text-sm font-semibold text-indigo-700">+ Tambah Kode Akun</summary>
                 <form method="POST" action="{{ route('akuntansi.akun.store') }}" class="grid gap-3 border-t border-gray-100 p-5 md:grid-cols-4">@csrf
                     <input name="NoAkun" value="{{ old('NoAkun') }}" maxlength="6" class="rounded-lg border-gray-300 text-sm" placeholder="Kode, contoh 63016" required>
@@ -24,7 +24,7 @@
             </details>
         @endcan
 
-        <section class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm"><div class="overflow-x-auto"><table class="min-w-full text-sm"><thead class="bg-indigo-50 text-xs uppercase tracking-wide text-indigo-700"><tr><th class="px-5 py-3 text-left">Kode</th><th class="px-5 py-3 text-left">Nama Akun</th><th class="px-5 py-3 text-left">Saldo Normal</th><th class="px-5 py-3 text-left">Laporan</th>@can('keuangan.pengaturan')<th class="px-5 py-3 text-right">Aksi</th>@endcan</tr></thead><tbody class="divide-y divide-gray-100">
+        <section class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm"><div class="overflow-x-auto"><table class="min-w-full text-sm"><thead class="bg-indigo-50 text-xs uppercase tracking-wide text-indigo-700"><tr><th class="px-5 py-3 text-left">Kode</th><th class="px-5 py-3 text-left">Nama Akun</th><th class="px-5 py-3 text-left">Saldo Normal</th><th class="px-5 py-3 text-left">Laporan</th>@can('akuntansi.master')<th class="px-5 py-3 text-right">Aksi</th>@endcan</tr></thead><tbody class="divide-y divide-gray-100">
             @forelse ($accounts as $akun)
                 @php
                     $isHeader = $akun->TipeDK === '-';
@@ -44,7 +44,7 @@
                     <td class="px-5 py-3">
                         {{ $akun->TipeNL === 'N' ? 'Neraca' : ($akun->TipeNL === 'L' ? 'Laba Rugi' : '-') }}
                     </td>
-                    @can('keuangan.pengaturan')
+                    @can('akuntansi.master')
                         <td class="px-5 py-3 text-right">
                             <details class="inline-block text-left">
                                 <summary class="cursor-pointer text-indigo-600">Ubah</summary>

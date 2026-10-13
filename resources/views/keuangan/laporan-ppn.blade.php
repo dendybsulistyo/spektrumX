@@ -87,7 +87,7 @@
                 <input type="hidden" name="sampai" value="{{ $sampai }}">
                 <input type="hidden" name="rate" value="{{ $rate }}">
                 <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
-                @can('keuangan.pengaturan')
+                @can('keuangan.pajak')
                     @unless ($laporanFinal?->status === 'final')
                         <div style="display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-4); flex-wrap: wrap;">
                             <label class="text-sm" style="display: inline-flex; align-items: center; gap: 8px; cursor: pointer;">
@@ -143,7 +143,7 @@
                 </div>
             </form>
 
-            @can('keuangan.pengaturan')
+            @can('keuangan.pajak')
                 @if ($laporanFinal?->status === 'draft')
                     <form method="POST" action="{{ route('keuangan.laporan-ppn.finalkan', $laporanFinal) }}" onsubmit="return confirm('Kunci laporan PPN ini? Setelah final, daftar transaksi dan nilai laporan tidak dapat diubah.')">
                         @csrf

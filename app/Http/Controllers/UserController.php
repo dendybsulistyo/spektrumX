@@ -92,7 +92,7 @@ class UserController extends Controller
             return back()->with('error', 'Tidak bisa menonaktifkan akun sendiri.');
         }
 
-        if ($user->is_active) {
+        if ($user->isActive()) {
             $otherAdmins = User::query()->where('is_active', true)->whereKeyNot($user->id)->with('role')->get()
                 ->filter(fn (User $other) => $other->hasPermission('roles.manage'))->count();
             if ($user->hasPermission('roles.manage') && $otherAdmins === 0) {

@@ -26,7 +26,7 @@ class AuthController extends Controller
 
         /** @var User $user */
         $user = Auth::user();
-        if (! $user->is_active) {
+        if (! $user->isActive()) {
             Auth::guard('web')->logout();
             throw ValidationException::withMessages([
                 'email' => ['Akun ini sudah dinonaktifkan. Hubungi admin bila ini keliru.'],

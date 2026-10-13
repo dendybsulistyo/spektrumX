@@ -51,7 +51,7 @@ class LoginRequest extends FormRequest
         }
 
         // Akun nonaktif: password benar pun tetap tidak boleh masuk.
-        if (! Auth::user()->is_active) {
+        if (! Auth::user()->isActive()) {
             Auth::guard('web')->logout();
 
             throw ValidationException::withMessages([

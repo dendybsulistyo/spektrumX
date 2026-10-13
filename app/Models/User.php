@@ -55,6 +55,15 @@ class User extends Authenticatable
         ];
     }
 
+    /**
+     * Nonaktif hanya bila status benar-benar diset false. Nilai kosong (mis.
+     * kolom belum dimigrasi) dianggap aktif agar tidak mengunci semua user.
+     */
+    public function isActive(): bool
+    {
+        return $this->is_active !== false;
+    }
+
     public function role(): BelongsTo
     {
         return $this->belongsTo(Role::class);

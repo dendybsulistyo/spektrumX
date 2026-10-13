@@ -160,7 +160,12 @@ class Role extends Model
             'payroll.manage' => 'Atur gaji pegawai & proses pembayaran gajian',
             'keuangan.tutup-buku' => 'Tutup/buka kembali buku periode (kunci transaksi keuangan bulan tersebut)',
             'keuangan.jurnal-manual' => 'Posting & batalkan jurnal penyesuaian manual',
-            'keuangan.pengaturan' => 'Atur data perusahaan untuk keperluan pajak (NPWP, status PKP, tarif PPN default)',
+            'keuangan.penyesuaian-kas' => 'Input Penyesuaian Kas',
+            'keuangan.penyesuaian-penjualan' => 'Input Penyesuaian Nota Order/DP & Potongan Penjualan Akhir',
+            'akuntansi.master' => 'Kelola Kode Akun, Aset Tetap & Impor Jurnal Historis (Gunggungan)',
+            'akuntansi.pembelian' => 'Kelola Pembelian (input, pelunasan, retur), Supplier & Persediaan/stok opname',
+            'keuangan.pajak' => 'Laporan PPN (simpan draft & finalkan) & Pengaturan Data GL (NPWP, status PKP, tarif PPN)',
+            'keuangan.pengaturan' => 'Pengaturan cetak Nota Pesanan / Sales Order',
         ],
         'Jasa Potong' => [
             'jasa-potong.manage' => 'Kelola nilai X (biaya tetap) Jasa Potong Indoor',
