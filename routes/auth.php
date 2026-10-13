@@ -54,3 +54,9 @@ Route::middleware('auth')->group(function () {
     Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])
         ->name('logout');
 });
+
+// Membuka /logout langsung (tombol Kembali / muat ulang setelah sesi habis)
+// tidak lagi memunculkan error 405. Tidak ada logout lewat GET.
+Route::get('logout', fn () => auth()->check()
+    ? redirect()->route('dashboard')
+    : redirect()->route('login')->with('status', 'Sesi Anda sudah berakhir. Silakan login kembali.'));
