@@ -51,8 +51,23 @@
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100">
+                    @php
+                        // Dikelompokkan per tanggal order, terpisah untuk tab Indoor & Outdoor.
+                        $dateKey = fn ($order) => $order->TglOrder?->format('Y-m-d') ?? (string) $order->TglOrder;
+                        $perDate = $orders->countBy(fn ($order) => $order->order_type.'|'.$dateKey($order));
+                        $lastDate = [];
+                    @endphp
                     @foreach ($orders as $order)
                         @php $minimumTransfer = ceil(((float) $order->total * 0.5) / 100) * 100; @endphp
+                        @if (($lastDate[$order->order_type] ?? null) !== $dateKey($order))
+                            @php $lastDate[$order->order_type] = $dateKey($order); @endphp
+                            <tr x-show="tab === @js($order->order_type)" @if ($order->order_type !== $initialTab) x-cloak @endif class="bg-slate-100/80">
+                                <td colspan="8" class="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-slate-600">
+                                    {{ $order->TglOrder ? \Illuminate\Support\Carbon::parse($order->TglOrder)->locale('id')->translatedFormat('l, d F Y') : 'Tanpa tanggal' }}
+                                    <span class="ml-2 font-normal normal-case text-slate-400">· {{ $perDate[$order->order_type.'|'.$dateKey($order)] }} order</span>
+                                </td>
+                            </tr>
+                        @endif
                         <tr x-show="tab === @js($order->order_type)" @if ($order->order_type !== $initialTab) x-cloak @endif class="align-middle hover:bg-slate-50/70"
                             x-data="{ mode: 'payment', raw: '', display: '', total: {{ (float) $order->total }}, minimum: {{ (float) $minimumTransfer }}, customArtwork: @js((bool) $order->is_custom_artwork), format(event) { this.raw = event.target.value.replace(/\D/g, ''); this.display = this.raw ? 'Rp ' + Number(this.raw).toLocaleString('id-ID') : ''; } }">
                             <td class="whitespace-nowrap px-4 py-4 text-slate-600">{{ $order->TglOrder?->format('d/m/Y') ?? $order->TglOrder }}</td>
