@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Process;
 use Throwable;
 
@@ -29,6 +30,7 @@ class ServerMonitoringService
                 'percent' => $diskTotal > 0 ? (($diskTotal - $diskFree) / $diskTotal) * 100 : null,
             ],
             'memory' => $memory,
+            'database' => $this->databaseSize(),
             'logs_size' => $this->directorySize(storage_path('logs')),
             'services' => [
                 'Nginx' => $this->serviceStatus('nginx'),
@@ -36,6 +38,47 @@ class ServerMonitoringService
                 'MySQL' => $this->mysqlStatus(),
             ],
         ];
+    }
+
+    /** @return array{name: string, driver: string, size: ?int} */
+    private function databaseSize(): array
+    {
+        $connection = DB::connection();
+        $driver = $connection->getDriverName();
+        $database = (string) $connection->getDatabaseName();
+
+        try {
+            $size = match ($driver) {
+                'mysql', 'mariadb' => (int) ($connection->selectOne(
+                    'SELECT COALESCE(SUM(data_length + index_length), 0) AS size FROM information_schema.tables WHERE table_schema = ?',
+                    [$database]
+                )->size ?? 0),
+                'pgsql' => (int) ($connection->selectOne('SELECT pg_database_size(?) AS size', [$database])->size ?? 0),
+                'sqlite' => $this->sqliteDatabaseSize($database),
+                default => null,
+            };
+        } catch (Throwable) {
+            $size = null;
+        }
+
+        return [
+            'name' => $database !== '' ? basename($database) : 'Tidak tersedia',
+            'driver' => $driver,
+            'size' => $size,
+        ];
+    }
+
+    private function sqliteDatabaseSize(string $database): ?int
+    {
+        if ($database === ':memory:') {
+            return null;
+        }
+
+        $path = str_starts_with($database, DIRECTORY_SEPARATOR)
+            ? $database
+            : database_path($database);
+
+        return is_file($path) ? (int) filesize($path) : null;
     }
 
     /** @return array{total: ?int, available: ?int, used: ?int, percent: ?float} */
