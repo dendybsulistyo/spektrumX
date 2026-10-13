@@ -18,8 +18,6 @@ use Illuminate\View\View;
 
 class CashAdjustmentController extends Controller
 {
-    private const CASHIER_EMAIL = 'yovita@spektrum.com';
-
     public function __construct(private readonly AccountingService $accounting) {}
 
     public function index(): View
@@ -27,7 +25,7 @@ class CashAdjustmentController extends Controller
         // Riwayat penyesuaian tidak lagi ditampilkan di halaman ini (permintaan akuntansi);
         // hasilnya terlihat di Rekap Kas Harian, Rekap Kasir per User, & Laporan Kasir Harian.
         return view('keuangan.cash-adjustments', [
-            'cashier' => $this->cashier(),
+            'cashier' => auth()->user(),
             'expenseAccounts' => CashAdjustmentJournal::expenseAccounts(),
             'defaultExpense' => CashAdjustmentJournal::DEFAULT_EXPENSE_ACCOUNT,
             'defaultSides' => CashAdjustmentJournal::DEFAULT_SIDES,
@@ -67,8 +65,9 @@ class CashAdjustmentController extends Controller
             'pengeluaran' => $validated['expense_account'],
         };
 
-        $cashier = $this->cashier();
-        abort_unless($cashier, 422, 'Akun Yovita belum tersedia.');
+        // Dicatat atas nama akun yang sedang login (dulu selalu atas nama Yovita,
+        // sehingga aktivitas akun lain tercampur di laporan per user).
+        $cashier = $request->user();
 
         $occurredAt = Carbon::parse($validated['occurred_at']);
         $type = $validated['adjustment_type'];
@@ -80,8 +79,8 @@ class CashAdjustmentController extends Controller
 
         try {
             DB::transaction(function () use ($amount, $cashier, $entrySide, $occurredAt, $typeLabel, $validated, $type, $counterAccount): void {
-            // Semua penyesuaian memakai user Yovita. Mengunci baris user ini
-            // membuat perhitungan MAX(urutan)+1 aman dari request bersamaan.
+            // Mengunci baris user ini membuat perhitungan MAX(urutan)+1 aman
+            // dari request bersamaan.
             User::query()->lockForUpdate()->findOrFail($cashier->id);
             $sequence = (int) CashDailyEntry::query()
                 ->whereDate('tanggal', $occurredAt->toDateString())
@@ -110,14 +109,6 @@ class CashAdjustmentController extends Controller
         }
 
         return redirect()->route('keuangan.cash-adjustments.index')
-            ->with('success', 'Penyesuaian kas berhasil dicatat atas nama Yovita dan sudah dijurnal.');
-    }
-
-    private function cashier(): ?User
-    {
-        return User::query()
-            ->select(['id', 'name'])
-            ->whereRaw('LOWER(email) = ?', [self::CASHIER_EMAIL])
-            ->first();
+            ->with('success', 'Penyesuaian kas berhasil dicatat atas nama '.$cashier->name.' dan sudah dijurnal.');
     }
 }

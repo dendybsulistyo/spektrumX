@@ -50,6 +50,8 @@ class User extends Authenticatable
             'password' => 'hashed',
             'avatar_options' => 'array',
             'avatar_updated_at' => 'datetime',
+            'is_active' => 'boolean',
+            'deactivated_at' => 'datetime',
         ];
     }
 

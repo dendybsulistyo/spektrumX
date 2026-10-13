@@ -26,6 +26,12 @@ class AuthController extends Controller
 
         /** @var User $user */
         $user = Auth::user();
+        if (! $user->is_active) {
+            Auth::guard('web')->logout();
+            throw ValidationException::withMessages([
+                'email' => ['Akun ini sudah dinonaktifkan. Hubungi admin bila ini keliru.'],
+            ]);
+        }
         $token = $user->createToken('spektrumApp')->plainTextToken;
 
         return response()->json([

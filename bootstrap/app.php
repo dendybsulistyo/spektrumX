@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\EnsurePermission;
 use App\Http\Middleware\EnsureAnyPermission;
+use App\Http\Middleware\EnsureUserIsActive;
 use App\Http\Middleware\PreventClickjacking;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -19,6 +20,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->append(PreventClickjacking::class);
+        $middleware->web(append: [EnsureUserIsActive::class]);
         $middleware->alias([
             'permission' => EnsurePermission::class,
             'permission.any' => EnsureAnyPermission::class,

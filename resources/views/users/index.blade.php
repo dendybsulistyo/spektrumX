@@ -18,12 +18,13 @@
                     <th class="px-3 py-2">Nama</th>
                     <th class="px-3 py-2">Email</th>
                     <th class="px-3 py-2">Role</th>
+                    <th class="px-3 py-2">Status</th>
                     <th class="px-3 py-2 text-right">Aksi</th>
                 </tr>
             </thead>
             <tbody class="divide-y">
                 @forelse ($users as $user)
-                    <tr>
+                    <tr @class(['bg-gray-50 text-gray-400' => ! $user->is_active])>
                         <td class="px-3 py-2 text-gray-400">{{ $users->firstItem() + $loop->index }}</td>
                         <td class="px-3 py-2 font-semibold text-gray-900">{{ $user->name }}</td>
                         <td class="px-3 py-2 text-gray-600">{{ $user->email }}</td>
@@ -34,7 +35,25 @@
                                 <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">Belum ada role</span>
                             @endif
                         </td>
-                        <td class="px-3 py-2 text-right">
+                        <td class="px-3 py-2">
+                            @if ($user->is_active)
+                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">Aktif</span>
+                            @else
+                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-700" title="Dinonaktifkan {{ $user->deactivated_at?->format('d/m/Y H:i') }}">Nonaktif</span>
+                                <span class="block text-[11px] text-gray-400">sejak {{ $user->deactivated_at?->format('d/m/Y') }}</span>
+                            @endif
+                        </td>
+                        <td class="px-3 py-2 text-right whitespace-nowrap">
+                            @if ($user->id !== auth()->id())
+                                <form method="POST" action="{{ route('users.toggle-active', $user) }}" class="inline mr-2"
+                                      onsubmit="return confirm(@js($user->is_active ? 'Nonaktifkan akun '.$user->name.'? Akun ini tidak bisa login lagi dan sesi yang sedang aktif langsung diputus. Riwayat transaksinya tetap utuh.' : 'Aktifkan kembali akun '.$user->name.'?'))">
+                                    @csrf
+                                    @method('PATCH')
+                                    <button type="submit" @class(['rounded px-2 py-1 text-xs font-semibold', 'border border-red-300 text-red-700 hover:bg-red-50' => $user->is_active, 'border border-emerald-300 text-emerald-700 hover:bg-emerald-50' => ! $user->is_active])>
+                                        {{ $user->is_active ? 'Nonaktifkan' : 'Aktifkan' }}
+                                    </button>
+                                </form>
+                            @endif
                             <a href="{{ route('users.edit', $user) }}" class="inline-flex items-center text-blue-600 hover:text-blue-800" title="Edit"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125" /></svg></a>
                             @if ($user->id !== auth()->id())
                                 <form method="POST" action="{{ route('users.destroy', $user) }}" class="inline"
@@ -48,7 +67,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="5" class="px-4 py-6 text-center text-gray-400">Belum ada user.</td>
+                        <td colspan="6" class="px-4 py-6 text-center text-gray-400">Belum ada user.</td>
                     </tr>
                 @endforelse
             </tbody>

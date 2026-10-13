@@ -555,6 +555,7 @@ Route::middleware('auth')->group(function () {
     Route::middleware('permission:roles.manage')->group(function () {
         Route::resource('roles', RoleController::class)->except('show');
         Route::resource('users', UserController::class)->except('show');
+        Route::patch('users/{user}/status', [UserController::class, 'toggleActive'])->name('users.toggle-active');
     });
 
     Route::middleware('permission:jasa-potong.manage')->group(function () {

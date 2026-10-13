@@ -13,7 +13,7 @@
                 <p class="text-xs font-semibold uppercase tracking-[.18em] text-blue-300">Akuntansi · Kas</p>
                 <div class="mt-1 flex flex-wrap items-end justify-between gap-3">
                     <h3 class="text-lg font-semibold">Input Penyesuaian</h3>
-                    <p class="text-sm text-slate-300">Dicatat atas user: <strong class="text-white">{{ $cashier?->name ?? 'Yovita belum ditemukan' }}</strong></p>
+                    <p class="text-sm text-slate-300">Dicatat atas user: <strong class="text-white">{{ $cashier?->name ?? '-' }}</strong></p>
                 </div>
             </div>
 
