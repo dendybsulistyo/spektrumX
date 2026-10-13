@@ -163,7 +163,7 @@
                     @elseif ($diskonStatus === 'pending')
                         <div class="rounded-md bg-amber-50 border border-amber-200 p-3 text-xs text-amber-800">
                             <p class="font-semibold">Menunggu persetujuan diskon {{ $order->diskonRequestedLabel() }}</p>
-                            <p class="mt-0.5">Alasan: {{ $order->diskon_alasan }}</p>
+                            <p class="mt-0.5">Alasan: {{ $order->diskon_alasan ?: '-' }}</p>
                             <p class="mt-0.5 text-amber-600">Diajukan oleh {{ $order->diskonRequestedBy?->name ?? '-' }}</p>
                             @can('kasir.approve-diskon')
                                 <div class="mt-2 flex gap-2">
@@ -545,9 +545,9 @@
                 </div>
 
                 <div>
-                    <x-input-label for="diskon_alasan" value="Alasan" />
-                    <textarea id="diskon_alasan" name="diskon_alasan" rows="2" required maxlength="255"
-                              placeholder="misal: customer langganan, komplain kualitas, dll"
+                    <x-input-label for="diskon_alasan" value="Alasan (opsional)" />
+                    <textarea id="diskon_alasan" name="diskon_alasan" rows="2" maxlength="255"
+                              placeholder="misal: customer langganan, komplain kualitas, dll (boleh dikosongkan)"
                               class="mt-1 block w-full rounded-md border-gray-300 text-sm"></textarea>
                     <x-input-error :messages="$errors->get('diskon_alasan')" class="mt-1" />
                 </div>

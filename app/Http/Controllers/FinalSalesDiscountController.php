@@ -107,7 +107,7 @@ class FinalSalesDiscountController extends Controller
             'refund_method' => ['nullable', 'in:tunai,qris,transfer'],
             'reference_number' => ['nullable', 'string', 'max:50'],
         ]);
-        $data['reason'] = trim((string) ($data['reason'] ?? '')) ?: 'Potongan penjualan akhir';
+        $data['reason'] = trim((string) ($data['reason'] ?? '')) ?: FinalSalesDiscount::DEFAULT_REASON;
 
         if (PeriodeTutupBuku::isClosed($data['transaction_date'])) {
             return back()->withInput()->with('error', 'Periode potongan penjualan ini sudah ditutup.');
@@ -245,7 +245,8 @@ class FinalSalesDiscountController extends Controller
                 'order_id' => $order->id,
                 'stage' => 'akuntansi',
                 'action' => 'potongan_akhir',
-                'catatan' => 'Potongan akhir Rp '.number_format($discountAmount, 0, ',', '.').' — '.$data['reason'],
+                'catatan' => 'Potongan akhir Rp '.number_format($discountAmount, 0, ',', '.')
+                    .($data['reason'] !== FinalSalesDiscount::DEFAULT_REASON ? ' — '.$data['reason'] : ''),
                 'user_id' => auth()->id(),
                 'created_at' => now(),
             ]);

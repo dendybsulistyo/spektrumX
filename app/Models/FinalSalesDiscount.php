@@ -7,6 +7,17 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class FinalSalesDiscount extends Model
 {
+    /** Isi otomatis kolom reason bila user tidak menulis keterangan (tidak ditampilkan). */
+    public const DEFAULT_REASON = 'Potongan penjualan akhir';
+
+    /** Keterangan yang ditulis user, atau null bila memakai isi otomatis. */
+    public function userReason(): ?string
+    {
+        $reason = trim((string) $this->reason);
+
+        return $reason === '' || $reason === self::DEFAULT_REASON ? null : $reason;
+    }
+
     protected $fillable = [
         'order_type',
         'order_id',

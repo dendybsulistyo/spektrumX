@@ -345,7 +345,7 @@ class KeuanganController extends Controller
     /** Keterangan baris Potongan Penjualan (Kredit) di laporan kas. */
     private function salesDiscountDescription(FinalSalesDiscount $discount, string $customer): string
     {
-        return 'Potongan Penjualan - '.$customer.' · '.$discount->reason;
+        return 'Potongan Penjualan - '.$customer.($discount->userReason() ? ' · '.$discount->userReason() : '');
     }
 
     /**

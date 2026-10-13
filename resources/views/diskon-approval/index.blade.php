@@ -53,7 +53,7 @@
                                     <td>{{ $row->customer?->NmCust ? ucwords(mb_strtolower($row->customer->NmCust)) : '-' }}</td>
                                     <td class="text-muted">Rp {{ number_format((float) $row->total, 0, ',', '.') }}</td>
                                     <td style="font-family: var(--font-heading); font-weight: 600;">{{ $row->diskonRequestedLabel() }}</td>
-                                    <td class="text-muted" style="max-width: 220px;">{{ $row->diskon_alasan }}</td>
+                                    <td class="text-muted" style="max-width: 220px;">{{ $row->diskon_alasan ?: '-' }}</td>
                                     <td class="text-muted">{{ $row->diskonRequestedBy?->name ?? '-' }}</td>
                                     <td class="text-muted" style="white-space: nowrap;">{{ $row->diskon_requested_at?->format('d M Y H:i') }}</td>
                                     <td style="text-align: right;">

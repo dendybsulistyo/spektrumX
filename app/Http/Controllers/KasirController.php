@@ -885,8 +885,10 @@ class KasirController extends Controller
             'diskon_tipe' => ['required', 'in:persen,nominal'],
             'diskon_persen' => ['required_if:diskon_tipe,persen', 'nullable', 'numeric', 'min:0.01', 'max:100'],
             'diskon_nominal' => ['required_if:diskon_tipe,nominal', 'nullable', 'numeric', 'min:100', 'multiple_of:100'],
-            'diskon_alasan' => ['required', 'string', 'max:255'],
+            'diskon_alasan' => ['nullable', 'string', 'max:255'],
         ]);
+        // Alasan diskon opsional (permintaan user); kosong = tanpa keterangan.
+        $data['diskon_alasan'] = trim((string) ($data['diskon_alasan'] ?? '')) ?: null;
 
         $label = $data['diskon_tipe'] === 'persen'
             ? "{$data['diskon_persen']}%"
@@ -958,7 +960,7 @@ class KasirController extends Controller
      * there's no broadcast/group channel, so this just fires one direct
      * message per approver, from the kasir who made the request.
      */
-    private function notifyDiskonApprovers(Model $order, string $label, string $alasan): void
+    private function notifyDiskonApprovers(Model $order, string $label, ?string $alasan): void
     {
         $approverRoleIds = Role::query()
             ->whereJsonContains('permissions', 'kasir.approve-diskon')
@@ -971,7 +973,7 @@ class KasirController extends Controller
 
         $body = "Pengajuan diskon {$label} untuk order {$order->NoOrder}"
             .($order->customer?->NmCust ? ' ('.ucwords(mb_strtolower($order->customer->NmCust)).')' : '')
-            ." — alasan: {$alasan}. Menunggu persetujuan.";
+            .($alasan ? " — alasan: {$alasan}" : '').'. Menunggu persetujuan.';
 
         foreach ($approvers as $approver) {
             ChatMessage::create([
