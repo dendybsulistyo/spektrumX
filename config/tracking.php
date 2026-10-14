@@ -21,8 +21,9 @@ return [
     'qr' => [
         'aktif' => (bool) env('TRACKING_QR_AKTIF', false),
         'ukuran_cm' => (float) env('TRACKING_QR_UKURAN_CM', 2.5),
-        'kiri_cm' => (float) env('TRACKING_QR_KIRI_CM', 18.6),
-        'atas_cm' => (float) env('TRACKING_QR_ATAS_CM', 10.6),
+        // Area kosong kiri blok customer (dipilih dari contoh SO 14 Okt 2026).
+        'kiri_cm' => (float) env('TRACKING_QR_KIRI_CM', 11.65),
+        'atas_cm' => (float) env('TRACKING_QR_ATAS_CM', 0.95),
     ],
 
     /*

@@ -118,10 +118,10 @@
                                             </form>
                                             <p class="mt-1 text-[10px] text-orange-600">Harga khusus diisi Kasir</p>
                                         @else
-                                            {{ $item->harga_satuan !== null ? 'Rp '.\App\Support\Rupiah::harga($item->harga_satuan) : 'Belum diisi' }}
+                                            {{ $item->harga_satuan !== null ? 'Rp '.($item->harga_satuan_master ?? false ? \App\Support\Rupiah::harga($item->harga_satuan) : number_format($item->harga_satuan, 0, ',', '.')) : 'Belum diisi' }}
                                         @endcan
                                     @else
-                                        {{ $item->harga_satuan !== null ? 'Rp '.\App\Support\Rupiah::harga($item->harga_satuan) : '-' }}
+                                        {{ $item->harga_satuan !== null ? 'Rp '.($item->harga_satuan_master ?? false ? \App\Support\Rupiah::harga($item->harga_satuan) : number_format($item->harga_satuan, 0, ',', '.')) : '-' }}
                                     @endif
                                 </td>
                                 <td class="px-3 py-2 text-right text-gray-900">Rp {{ number_format($item->subtotal, 0, ',', '.') }}</td>

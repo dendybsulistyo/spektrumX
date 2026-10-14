@@ -374,6 +374,9 @@ class OrderPricingService
                 'lebar' => $displayLebar,
                 'qty' => $item->Qty,
                 'harga_satuan' => $hargaSatuan,
+                // true = pengali dari data master (boleh tampil desimal di layar internal);
+                // Outdoor per m² dihitung balik dari subtotal, jadi bukan pengali master.
+                'harga_satuan_master' => $type !== 'outdoor',
                 'subtotal' => $subtotal,
                 'breakdown' => $breakdown,
                 'detail_id' => $item->id,
@@ -434,6 +437,7 @@ class OrderPricingService
             $allocated += $line->subtotal;
             if ($line->harga_satuan !== null && $original > 0) {
                 $line->harga_satuan = round((float) $line->harga_satuan * $line->subtotal / $original, 2);
+                $line->harga_satuan_master = false; // hasil penyesuaian, bukan pengali master
             }
             $line->breakdown = null;
 
