@@ -170,7 +170,8 @@ class KeuanganController extends Controller
 
         $discountRefunds = $this->discountRefundKeys($payments);
         $paymentDiscounts = $this->discountsAttachedToPayments($payments);
-        $paymentRows = $payments->flatMap(function (OrderPayment $p) use ($ordersByKey, $discountRefunds, $paymentDiscounts) {
+        $discountReductions = $this->nonCashDiscountReductions($payments);
+        $paymentRows = $payments->flatMap(function (OrderPayment $p) use ($ordersByKey, $discountRefunds, $paymentDiscounts, $discountReductions) {
             $order = $ordersByKey["{$p->order_type}-{$p->order_id}"] ?? null;
             $jumlah = (float) $p->jumlah;
             $customer = $order?->customer?->NmCust
@@ -192,16 +193,15 @@ class KeuanganController extends Controller
                     'debet' => 0,
                     'kredit' => abs($jumlah),
                     'sort' => '2-'.$baseSort.'-0',
-                ], ...$this->nonCashRefundOffset($p, fn (string $method) => [
+                ], ...($this->refundKind($p, $order, $discountRefunds) === 'potongan' ? [] : $this->nonCashRefundOffset($p, fn (string $method) => [
                     'user_id' => $p->user_id,
                     'kasir' => $p->user?->name ?? '-',
                     'no_nota' => null,
                     'keterangan' => $this->nonCashOffsetLabel($this->refundKind($p, $order, $discountRefunds), $method).' - '.$customer,
-                    // Potongan: bukan uang masuk → koreksi penerimaan di Kredit (minus), Debet tetap kosong.
-                    'debet' => $this->refundKind($p, $order, $discountRefunds) === 'potongan' ? 0 : abs($jumlah),
-                    'kredit' => $this->refundKind($p, $order, $discountRefunds) === 'potongan' ? -abs($jumlah) : 0,
+                    'debet' => abs($jumlah),
+                    'kredit' => 0,
                     'sort' => '2-'.$baseSort.'-1',
-                ])];
+                ]))];
             }
 
             // Potongan penjualan tampil saat tagihannya dibayar: Debet = tagihan
@@ -231,7 +231,8 @@ class KeuanganController extends Controller
             // Pembayaran non-tunai mengurangi uang yang seharusnya berada
             // di laci kas. Karena itu transaksi ditampilkan berpasangan:
             // nilai nota di Debet dan pembayaran bank/QRIS di Kredit.
-            if (in_array($p->cara_bayar, self::NON_CASH_METHODS, true)) {
+            $diterima = $jumlah - ($discountReductions[$p->id] ?? 0.0);
+            if (in_array($p->cara_bayar, self::NON_CASH_METHODS, true) && $diterima > 0) {
                 $method = OrderPayment::CARA_BAYAR_LABELS[$p->cara_bayar] ?? ucfirst($p->cara_bayar);
                 $rows[] = [
                     'user_id' => $p->user_id,
@@ -239,7 +240,7 @@ class KeuanganController extends Controller
                     'no_nota' => null,
                     'keterangan' => 'Bayar via '.$method.' - '.$customer,
                     'debet' => 0,
-                    'kredit' => $jumlah,
+                    'kredit' => $diterima,
                     'sort' => '2-'.$baseSort.'-1',
                 ];
             }
@@ -396,16 +397,65 @@ class KeuanganController extends Controller
      * Pola ini sama dengan pembayaran non-tunai ("Bayar via ...").
      */
     /**
-     * Keterangan baris penyeimbang non-tunai. Potongan Penjualan Akhir bukan
-     * uang keluar (dicatat "By system") — hanya mengurangi penerimaan
-     * QRIS/transfer yang tercatat; ditampilkan sebagai Kredit minus di user &
-     * tanggal yang menginput potongan, sehingga saldo per user tetap 0.
+     * Potongan Penjualan Akhir non-tunai ("By system") tampil satu baris Kredit
+     * di user & tanggal yang menginputnya. Sebagai pasangannya, baris "Bayar via
+     * ..." pembayaran nota itu dikurangi sebesar potongan (= yang benar-benar
+     * diterima), dibagi mundur dari penerimaan non-tunai terakhir sebelum
+     * potongan dicatat. Total laporan tetap seimbang; per user/hari bisa
+     * bergeser bila potongan diinput orang atau hari lain (disetujui keuangan).
+     *
+     * @return array<int, float> id pembayaran → pengurang baris "Bayar via ..."
+     */
+    private function nonCashDiscountReductions(Collection $payments): array
+    {
+        $incoming = $payments->filter(fn (OrderPayment $payment) => (float) $payment->jumlah > 0
+            && in_array($payment->cara_bayar, self::NON_CASH_METHODS, true));
+        if ($incoming->isEmpty()) {
+            return [];
+        }
+
+        $discounts = FinalSalesDiscount::query()
+            ->where('refund_amount', '>', 0)
+            ->whereIn('refund_method', self::NON_CASH_METHODS)
+            ->where(function ($query) use ($incoming) {
+                foreach ($incoming->groupBy('order_type') as $type => $rows) {
+                    $query->orWhere(fn ($scope) => $scope->where('order_type', $type)->whereIn('order_id', $rows->pluck('order_id')->unique()));
+                }
+            })
+            ->orderBy('id')->get();
+
+        $reductions = [];
+        foreach ($discounts as $discount) {
+            $remaining = (float) $discount->refund_amount;
+            $receipts = OrderPayment::query()
+                ->where('order_type', $discount->order_type)->where('order_id', $discount->order_id)
+                ->where('jumlah', '>', 0)->whereIn('cara_bayar', self::NON_CASH_METHODS)
+                ->where('created_at', '<=', $discount->created_at)
+                ->orderByDesc('created_at')->orderByDesc('id')->get(['id', 'jumlah']);
+
+            foreach ($receipts as $receipt) {
+                if ($remaining <= 0) {
+                    break;
+                }
+                $already = $reductions[$receipt->id] ?? 0.0;
+                $portion = min($remaining, max(0.0, (float) $receipt->jumlah - $already));
+                if ($portion > 0) {
+                    $reductions[$receipt->id] = $already + $portion;
+                    $remaining -= $portion;
+                }
+            }
+        }
+
+        return array_intersect_key($reductions, $incoming->pluck('id')->flip()->all());
+    }
+
+    /**
+     * Keterangan baris penyeimbang refund non-tunai (bukan untuk potongan:
+     * potongan non-tunai dinetralkan lewat nonCashDiscountReductions).
      */
     private function nonCashOffsetLabel(?string $kind, string $method): string
     {
-        return $kind === 'potongan'
-            ? "Koreksi penerimaan {$method} (potongan, bukan uang masuk)"
-            : "Refund via {$method} (keluar dari bank, bukan kas)";
+        return "Refund via {$method} (keluar dari bank, bukan kas)";
     }
 
     private function nonCashRefundOffset(OrderPayment $payment, callable $row): array
@@ -627,6 +677,7 @@ class KeuanganController extends Controller
 
         $discountRefunds = $this->discountRefundKeys($payments);
         $paymentDiscounts = $this->discountsAttachedToPayments($payments);
+        $discountReductions = $this->nonCashDiscountReductions($payments);
         foreach ($payments as $payment) {
             $order = $ordersByKey["{$payment->order_type}-{$payment->order_id}"] ?? null;
             $customer = $order?->customer?->NmCust ? mb_strtoupper($order->customer->NmCust) : '-';
@@ -648,14 +699,14 @@ class KeuanganController extends Controller
                     'user_id' => $payment->user_id,
                     'sort' => $baseSort.'-0',
                 ]);
-                foreach ($this->nonCashRefundOffset($payment, fn (string $method) => [
-                    'category' => $isPotongan ? 'sales_discount' : 'non_cash_refund',
+                foreach (($isPotongan ? [] : $this->nonCashRefundOffset($payment, fn (string $method) => [
+                    'category' => 'non_cash_refund',
                     'description' => $this->nonCashOffsetLabel($this->refundKind($payment, $order, $discountRefunds), $method)." - {$customer}",
-                    'debit' => $isPotongan ? 0.0 : abs($amount),
-                    'credit' => $isPotongan ? -abs($amount) : 0.0,
+                    'debit' => abs($amount),
+                    'credit' => 0.0,
                     'user_id' => $payment->user_id,
                     'sort' => $baseSort.'-1',
-                ]) as $offset) {
+                ])) as $offset) {
                     $details->push($offset);
                 }
 
@@ -693,12 +744,13 @@ class KeuanganController extends Controller
                 ]);
             }
 
-            if (in_array($payment->cara_bayar, self::NON_CASH_METHODS, true)) {
+            $diterima = $amount - ($discountReductions[$payment->id] ?? 0.0);
+            if (in_array($payment->cara_bayar, self::NON_CASH_METHODS, true) && $diterima > 0) {
                 $details->push([
                     'category' => 'non_cash',
                     'description' => "Bayar via {$method} - {$customer}",
                     'debit' => 0.0,
-                    'credit' => $amount,
+                    'credit' => $diterima,
                     'user_id' => $payment->user_id,
                     'sort' => $baseSort.'-1',
                 ]);
@@ -887,7 +939,8 @@ class KeuanganController extends Controller
 
         $discountRefunds = $this->discountRefundKeys($payments);
         $paymentDiscounts = $this->discountsAttachedToPayments($payments);
-        $paymentRows = $payments->flatMap(function (OrderPayment $payment) use ($ordersByKey, $discountRefunds, $paymentDiscounts) {
+        $discountReductions = $this->nonCashDiscountReductions($payments);
+        $paymentRows = $payments->flatMap(function (OrderPayment $payment) use ($ordersByKey, $discountRefunds, $paymentDiscounts, $discountReductions) {
             $order = $ordersByKey["{$payment->order_type}-{$payment->order_id}"] ?? null;
             $customer = $order?->customer?->NmCust ? mb_strtoupper($order->customer->NmCust) : '-';
             $amount = (float) $payment->jumlah;
@@ -909,16 +962,16 @@ class KeuanganController extends Controller
                     'kasir' => $payment->user?->name,
                     'user_id' => $payment->user_id,
                     'sort' => $baseSort.'-0',
-                ], ...$this->nonCashRefundOffset($payment, fn (string $method) => [
+                ], ...($this->refundKind($payment, $order, $discountRefunds) === 'potongan' ? [] : $this->nonCashRefundOffset($payment, fn (string $method) => [
                     'occurred_at' => $payment->created_at,
                     'no_nota' => null,
                     'keterangan' => $this->nonCashOffsetLabel($this->refundKind($payment, $order, $discountRefunds), $method)." - {$customer}",
-                    'debet' => $this->refundKind($payment, $order, $discountRefunds) === 'potongan' ? 0.0 : abs($amount),
-                    'kredit' => $this->refundKind($payment, $order, $discountRefunds) === 'potongan' ? -abs($amount) : 0.0,
+                    'debet' => abs($amount),
+                    'kredit' => 0.0,
                     'kasir' => $payment->user?->name,
                     'user_id' => $payment->user_id,
                     'sort' => $baseSort.'-1',
-                ])];
+                ]))];
             }
 
             // Potongan penjualan tampil saat tagihannya dibayar: Debet = tagihan
@@ -947,13 +1000,14 @@ class KeuanganController extends Controller
                 ];
             }
 
-            if (in_array($payment->cara_bayar, self::NON_CASH_METHODS, true)) {
+            $diterima = $amount - ($discountReductions[$payment->id] ?? 0.0);
+            if (in_array($payment->cara_bayar, self::NON_CASH_METHODS, true) && $diterima > 0) {
                 $rows[] = [
                     'occurred_at' => $payment->created_at,
                     'no_nota' => null,
                     'keterangan' => "Bayar via {$method} - {$customer}",
                     'debet' => 0.0,
-                    'kredit' => $amount,
+                    'kredit' => $diterima,
                     'kasir' => $payment->user?->name,
                     'user_id' => $payment->user_id,
                     'sort' => $baseSort.'-1',
