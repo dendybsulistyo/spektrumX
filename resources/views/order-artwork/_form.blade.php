@@ -568,7 +568,7 @@
         <button type="submit" class="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-md hover:bg-gray-700">
             {{ $submitLabel }}
         </button>
-        <a href="{{ route('order-artwork.index') }}" class="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-md hover:bg-red-700">
+        <a href="{{ \App\Http\Middleware\KembaliKeHalamanIndex::url('order-artwork.index') }}" class="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-md hover:bg-red-700">
             Batal
         </a>
         <button type="button" @click="addItem()"

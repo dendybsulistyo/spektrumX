@@ -132,7 +132,7 @@
                     </label>
 
                     <div class="flex flex-wrap justify-end gap-3 border-t border-slate-200 pt-4 md:col-span-2">
-                        <a href="{{ route('akuntansi.purchases.index') }}" class="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">Batal</a>
+                        <a href="{{ \App\Http\Middleware\KembaliKeHalamanIndex::url('akuntansi.purchases.index') }}" class="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">Batal</a>
                         <button type="submit" onclick="return confirm('Simpan perubahan dan buat jurnal koreksi?')" class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">Simpan Perubahan</button>
                     </div>
                 </form>

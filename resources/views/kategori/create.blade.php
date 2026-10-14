@@ -128,7 +128,7 @@
                 <button type="submit" class="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-md hover:bg-gray-700">
                     Simpan
                 </button>
-                <a href="{{ route('kategori.index') }}" class="px-4 py-2 text-sm text-gray-600 hover:underline">Batal</a>
+                <a href="{{ \App\Http\Middleware\KembaliKeHalamanIndex::url('kategori.index') }}" class="px-4 py-2 text-sm text-gray-600 hover:underline">Batal</a>
             </div>
         </form>
     </div>
