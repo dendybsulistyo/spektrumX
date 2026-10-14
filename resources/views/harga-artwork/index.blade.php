@@ -52,8 +52,8 @@
                         <td class="px-3 py-2 font-semibold text-gray-900">{{ $item->NmProd }}</td>
                         <td class="px-3 py-2 text-gray-600">{{ $item->kategori?->NmDivs ?? '-' }}</td>
                         <td class="px-3 py-2 text-gray-600">{{ $item->Satuan }}</td>
-                        <td class="px-3 py-2 text-right text-gray-600">Rp {{ number_format($item->HargaStd, 0, ',', '.') }}</td>
-                        <td class="px-3 py-2 text-right text-gray-600">Rp {{ number_format($item->HargaMin, 0, ',', '.') }}</td>
+                        <td class="px-3 py-2 text-right text-gray-600">Rp {{ \App\Support\Rupiah::harga($item->HargaStd) }}</td>
+                        <td class="px-3 py-2 text-right text-gray-600">Rp {{ \App\Support\Rupiah::harga($item->HargaMin) }}</td>
                         <td class="px-3 py-2">
                             @if ($item->isAreaPriced())
                                 <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-blue-50 text-blue-700 mr-1">Pakai P×L</span>

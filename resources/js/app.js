@@ -49,6 +49,11 @@ const initializeRupiahDecimalInputs = () => {
         input.dataset.rupiahDecimalReady = 'true';
         input.type = 'text';
         input.inputMode = 'decimal';
+        // Nilai awal dari server/old() berformat mesin ("0.7", "150000.00"):
+        // titiknya pemisah desimal, bukan ribuan — ubah dulu ke koma.
+        if (/^\d+\.\d+$/.test(input.value.trim())) {
+            input.value = input.value.trim().replace('.', ',');
+        }
         formatRupiahDecimal(input);
         input.addEventListener('input', () => formatRupiahDecimal(input));
         input.form?.addEventListener('submit', () => {

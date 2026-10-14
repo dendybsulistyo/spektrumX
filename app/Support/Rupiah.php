@@ -18,4 +18,15 @@ final class Rupiah
         return ceil($nominal / self::UNIT_PEMBULATAN) * self::UNIT_PEMBULATAN;
     }
 
+    /**
+     * Harga satuan untuk tampilan: desimal hanya muncul bila memang ada
+     * (0,7 / 3,55 per cm² tetap terbaca; 20000 → "20.000"). Tanpa prefix "Rp".
+     */
+    public static function harga(float|int|string|null $nominal): string
+    {
+        $nilai = (float) $nominal;
+        $teks = number_format($nilai, 2, ',', '.');
+
+        return str_contains($teks, ',') ? rtrim(rtrim($teks, '0'), ',') : $teks;
+    }
 }

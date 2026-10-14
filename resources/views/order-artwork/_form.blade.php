@@ -498,7 +498,7 @@
                 <template x-if="!isJasaPotong(item.KdProd)">
                     <div class="sm:col-span-2">
                         <label class="block text-xs text-gray-500 mb-1">Panjang <span x-text="dimensionUnit(item.KdProd)"></span></label>
-                        <input type="number" step="0.01" :name="`items[${index}][Panjang]`" x-model="item.Panjang"
+                        <input type="number" step="any" inputmode="decimal" :name="`items[${index}][Panjang]`" x-model="item.Panjang"
                                :readonly="!needsDimension(item.KdProd)" :required="needsDimension(item.KdProd)"
                                :class="!needsDimension(item.KdProd) && 'bg-gray-100 text-gray-400'"
                                class="w-full rounded-md border-gray-300 text-sm">
@@ -507,7 +507,7 @@
                 <template x-if="!isJasaPotong(item.KdProd)">
                     <div class="sm:col-span-2">
                         <label class="block text-xs text-gray-500 mb-1">Lebar <span x-text="dimensionUnit(item.KdProd)"></span></label>
-                        <input type="number" step="0.01" :name="`items[${index}][Lebar]`" x-model="item.Lebar"
+                        <input type="number" step="any" inputmode="decimal" :name="`items[${index}][Lebar]`" x-model="item.Lebar"
                                :readonly="!needsDimension(item.KdProd)" :required="needsDimension(item.KdProd)"
                                :class="!needsDimension(item.KdProd) && 'bg-gray-100 text-gray-400'"
                                class="w-full rounded-md border-gray-300 text-sm">

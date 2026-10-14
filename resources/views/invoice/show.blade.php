@@ -155,7 +155,7 @@
                             <td class="item-name">{{ $item->name }} @if ($item->breakdown)<p class="item-breakdown">{{ $item->breakdown }}</p>@endif</td>
                             <td>{{ $item->bahan ?? '-' }}</td><td>{{ $item->printer ?? '-' }}</td>
                             <td class="text-right">{{ $item->panjang }}</td><td class="text-right">{{ $item->lebar }}</td><td class="text-right">{{ $item->qty }}</td>
-                            <td class="text-right">{{ $item->harga_satuan !== null ? 'Rp '.number_format($item->harga_satuan, 0, ',', '.') : '-' }}</td>
+                            <td class="text-right">{{ $item->harga_satuan !== null ? 'Rp '.\App\Support\Rupiah::harga($item->harga_satuan) : '-' }}</td>
                             <td class="text-right">Rp {{ number_format($item->subtotal, 0, ',', '.') }}</td>
                         </tr>
                     @endforeach
