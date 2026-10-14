@@ -6,6 +6,7 @@ use App\Traits\HasCancelAndNotaPengganti;
 use App\Traits\HasDiskonNota;
 use App\Traits\HasHutangApproval;
 use App\Traits\HasStageProgress;
+use App\Traits\HasTrackingToken;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -13,7 +14,7 @@ use Illuminate\Support\Collection;
 
 class OrderIndoor extends Model
 {
-    use HasCancelAndNotaPengganti, HasDiskonNota, HasHutangApproval, HasStageProgress;
+    use HasCancelAndNotaPengganti, HasDiskonNota, HasHutangApproval, HasStageProgress, HasTrackingToken;
 
     protected $table = 'order_indoor';
 
@@ -96,6 +97,7 @@ class OrderIndoor extends Model
     {
         return [
             'TglOrder' => 'date',
+            'tracking_pushed_at' => 'datetime',
             'total' => 'float',
             'jumlah_dibayar' => 'float',
             'jumlah_piutang' => 'float',

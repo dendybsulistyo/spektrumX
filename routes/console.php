@@ -19,3 +19,9 @@ Schedule::call(fn () => \App\Models\UserStatus::where('expires_at', '<=', now())
     ->hourly()
     ->name('status:prune')
     ->withoutOverlapping();
+
+// Tracking order customer: kirim status yang berubah ke Worker (gagal → diulang menit berikutnya).
+Schedule::command('tracking:kirim')
+    ->everyMinute()
+    ->withoutOverlapping()
+    ->runInBackground();

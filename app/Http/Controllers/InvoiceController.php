@@ -16,7 +16,10 @@ class InvoiceController extends Controller
 {
     use ResolvesOrderType;
 
-    public function __construct(private readonly OrderPricingService $pricingService) {}
+    public function __construct(
+        private readonly OrderPricingService $pricingService,
+        private readonly \App\Services\OrderTrackingService $tracking,
+    ) {}
 
     public function show(string $type, int $id): View
     {
@@ -70,6 +73,10 @@ class InvoiceController extends Controller
             'printRecord' => $printRecord,
             'canPrintSalesOrder' => ! $printRecord || $canReprint,
             'canReprintSalesOrder' => $canReprint,
+            // QR tracking customer hanya di Sales Order (bukan pratinjau invoice pembayaran).
+            'trackingQr' => config('tracking.qr.aktif') && ! request()->boolean('payment_preview') && ($url = $this->tracking->url($order))
+                ? $this->tracking->qrSvg($url)
+                : null,
         ]);
     }
 
