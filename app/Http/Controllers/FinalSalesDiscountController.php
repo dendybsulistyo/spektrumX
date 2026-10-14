@@ -84,6 +84,17 @@ class FinalSalesDiscountController extends Controller
 
         $orders = $orders->sortByDesc(fn ($order) => $order->paid_at?->timestamp)->take(200)->values();
 
+        // Cara bayar penerimaan terakhir per nota: potongan pada nota yang
+        // sudah dibayar mengurangi penerimaan di cara bayar ini.
+        $receiptMethods = $orders->groupBy('type')->flatMap(fn ($rows, $type) => OrderPayment::query()
+            ->where('order_type', $type)
+            ->whereIn('order_id', $rows->map(fn ($order) => (int) explode(':', $order->key)[1]))
+            ->where('jumlah', '>', 0)
+            ->orderBy('id')
+            ->get(['order_type', 'order_id', 'cara_bayar'])
+            ->mapWithKeys(fn ($payment) => [$payment->order_type.':'.$payment->order_id => $payment->cara_bayar]));
+        $orders->each(fn ($order) => $order->receipt_method = $receiptMethods[$order->key] ?? 'tunai');
+
         $history = FinalSalesDiscount::with(['user', 'customer'])
             ->whereBetween('transaction_date', [$from, $to])
             ->when($search !== '', fn ($query) => $query->where(function ($query) use ($search) {
@@ -97,6 +108,16 @@ class FinalSalesDiscountController extends Controller
         return view('keuangan.final-sales-discounts', compact('orders', 'history', 'from', 'to', 'search'));
     }
 
+    private function caraBayarPenerimaan(string $type, int $orderId): string
+    {
+        return OrderPayment::query()
+            ->where('order_type', $type)
+            ->where('order_id', $orderId)
+            ->where('jumlah', '>', 0)
+            ->orderByDesc('id')
+            ->value('cara_bayar') ?? 'tunai';
+    }
+
     public function store(Request $request): RedirectResponse
     {
         $data = $request->validate([
@@ -104,8 +125,6 @@ class FinalSalesDiscountController extends Controller
             'transaction_date' => ['required', 'date', 'before_or_equal:today'],
             'discount_amount' => ['required', 'numeric', 'min:100', 'multiple_of:100'],
             'reason' => ['nullable', 'string', 'max:255'],
-            'refund_method' => ['nullable', 'in:tunai,qris,transfer'],
-            'reference_number' => ['nullable', 'string', 'max:50'],
         ]);
         $data['reason'] = trim((string) ($data['reason'] ?? '')) ?: FinalSalesDiscount::DEFAULT_REASON;
 
@@ -143,16 +162,12 @@ class FinalSalesDiscountController extends Controller
             $refundAmount = $discountAmount - $receivableOffset;
             $newReceivable = max(0, $receivableBefore - $receivableOffset);
 
-            if ($refundAmount > 0 && empty($data['refund_method'])) {
-                throw ValidationException::withMessages([
-                    'refund_method' => 'Pilih cara refund untuk potongan yang mengembalikan uang kepada customer.',
-                ]);
-            }
-            if ($refundAmount > 0 && $data['refund_method'] !== 'tunai' && empty($data['reference_number'])) {
-                throw ValidationException::withMessages([
-                    'reference_number' => 'Nomor referensi wajib diisi untuk refund QRIS atau transfer.',
-                ]);
-            }
+            // Potongan tidak pernah berupa uang keluar: customer menawar setelah
+            // SO tercetak sebagai lunas, lalu membayar lebih sedikit. Bagian yang
+            // melebihi piutang mengurangi penerimaan yang sudah tercatat, di cara
+            // bayar penerimaan terakhir nota itu (tunai → Kas, QRIS/transfer → Bank).
+            $data['refund_method'] = $refundAmount > 0 ? $this->caraBayarPenerimaan($type, $order->id) : null;
+            $data['reference_number'] = null;
 
             $rate = (float) PengaturanKeuangan::current()->tarif_ppn_default;
             $dpp = $rate > 0 ? round($discountAmount / (1 + $rate / 100)) : $discountAmount;

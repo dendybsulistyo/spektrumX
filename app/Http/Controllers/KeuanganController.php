@@ -185,7 +185,7 @@ class KeuanganController extends Controller
                     'kasir' => $p->user?->name ?? '-',
                     'no_nota' => $order?->NoOrder,
                     'keterangan' => match ($this->refundKind($p, $order, $discountRefunds)) {
-                        'potongan' => 'Refund potongan penjualan - ',
+                        'potongan' => 'Potongan Penjualan Akhir · By system - ',
                         'pembatalan' => 'Refund pembatalan - ',
                         default => 'Refund - ',
                     }.$customer,
@@ -196,7 +196,7 @@ class KeuanganController extends Controller
                     'user_id' => $p->user_id,
                     'kasir' => $p->user?->name ?? '-',
                     'no_nota' => null,
-                    'keterangan' => 'Refund via '.$method.' (keluar dari bank, bukan kas) - '.$customer,
+                    'keterangan' => $this->nonCashOffsetLabel($this->refundKind($p, $order, $discountRefunds), $method).' - '.$customer,
                     'debet' => abs($jumlah),
                     'kredit' => 0,
                     'sort' => '2-'.$baseSort.'-1',
@@ -394,6 +394,18 @@ class KeuanganController extends Controller
      * Debet karena uangnya keluar dari rekening bank, bukan dari laci kas.
      * Pola ini sama dengan pembayaran non-tunai ("Bayar via ...").
      */
+    /**
+     * Keterangan baris penyeimbang non-tunai. Potongan Penjualan Akhir bukan
+     * uang keluar (dicatat "By system") — hanya mengurangi penerimaan
+     * QRIS/transfer yang tercatat; akunnya tetap mengikuti cara bayar nota.
+     */
+    private function nonCashOffsetLabel(?string $kind, string $method): string
+    {
+        return $kind === 'potongan'
+            ? "Potongan Penjualan Akhir · By system (mengurangi penerimaan {$method}, bukan kas)"
+            : "Refund via {$method} (keluar dari bank, bukan kas)";
+    }
+
     private function nonCashRefundOffset(OrderPayment $payment, callable $row): array
     {
         if (! in_array($payment->cara_bayar, self::NON_CASH_METHODS, true)) {
@@ -624,7 +636,7 @@ class KeuanganController extends Controller
                 $details->push([
                     'category' => 'refund',
                     'description' => match ($this->refundKind($payment, $order, $discountRefunds)) {
-                        'potongan' => 'Refund potongan penjualan · '.($order?->NoOrder ?? '-')." · via {$method} - {$customer}",
+                        'potongan' => 'Potongan Penjualan Akhir · '.($order?->NoOrder ?? '-')." · By system - {$customer}",
                         'pembatalan' => 'Refund pembatalan · '.($order?->NoOrder ?? '-')." · via {$method} - {$customer}",
                         default => "Refund via {$method} - {$customer}",
                     },
@@ -635,7 +647,7 @@ class KeuanganController extends Controller
                 ]);
                 foreach ($this->nonCashRefundOffset($payment, fn (string $method) => [
                     'category' => 'non_cash_refund',
-                    'description' => "Refund via {$method} - {$customer} (keluar dari bank, bukan kas)",
+                    'description' => $this->nonCashOffsetLabel($this->refundKind($payment, $order, $discountRefunds), $method)." - {$customer}",
                     'debit' => abs($amount),
                     'credit' => 0.0,
                     'user_id' => $payment->user_id,
@@ -885,10 +897,10 @@ class KeuanganController extends Controller
                     'occurred_at' => $payment->created_at,
                     'no_nota' => $order?->NoOrder,
                     'keterangan' => match ($this->refundKind($payment, $order, $discountRefunds)) {
-                        'potongan' => 'Refund potongan penjualan via ',
-                        'pembatalan' => 'Refund pembatalan via ',
-                        default => 'Refund via ',
-                    }."{$method} - {$customer}",
+                        'potongan' => 'Potongan Penjualan Akhir · By system',
+                        'pembatalan' => "Refund pembatalan via {$method}",
+                        default => "Refund via {$method}",
+                    }." - {$customer}",
                     'debet' => 0.0,
                     'kredit' => abs($amount),
                     'kasir' => $payment->user?->name,
@@ -897,7 +909,7 @@ class KeuanganController extends Controller
                 ], ...$this->nonCashRefundOffset($payment, fn (string $method) => [
                     'occurred_at' => $payment->created_at,
                     'no_nota' => null,
-                    'keterangan' => "Refund via {$method} (keluar dari bank, bukan kas) - {$customer}",
+                    'keterangan' => $this->nonCashOffsetLabel($this->refundKind($payment, $order, $discountRefunds), $method)." - {$customer}",
                     'debet' => abs($amount),
                     'kredit' => 0.0,
                     'kasir' => $payment->user?->name,

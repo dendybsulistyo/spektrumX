@@ -78,7 +78,7 @@
                                                   },
                                                   get refund(){ return Math.max(0, this.amount - this.receivable) }
                                               }"
-                                              class="grid items-end gap-3 lg:grid-cols-[150px_170px_minmax(220px,1fr)_150px_180px_auto]">
+                                              class="grid items-end gap-3 lg:grid-cols-[150px_170px_minmax(220px,1fr)_auto]">
                                             @csrf
                                             <input type="hidden" name="order_key" value="{{ $order->key }}">
                                             <label class="text-xs font-semibold text-slate-600">Tanggal koreksi<input type="date" name="transaction_date" value="{{ now()->format('Y-m-d') }}" max="{{ now()->format('Y-m-d') }}" required class="mt-1 block w-full rounded-md border-slate-300 text-sm"></label>
@@ -87,12 +87,10 @@
                                                 <input type="hidden" name="discount_amount" :value="amount">
                                             </label>
                                             <label class="text-xs font-semibold text-slate-600">Alasan <span class="font-normal text-slate-400">(opsional)</span><input type="text" name="reason" maxlength="255" class="mt-1 block w-full rounded-md border-slate-300 text-sm" placeholder="Alasan potongan akhir (opsional)"></label>
-                                            <label class="text-xs font-semibold text-slate-600">Cara refund<select name="refund_method" class="mt-1 block w-full rounded-md border-slate-300 text-sm"><option value="">Tidak ada</option><option value="tunai">Tunai</option><option value="transfer">Transfer</option><option value="qris">QRIS</option></select></label>
-                                            <label class="text-xs font-semibold text-slate-600">No. referensi<input type="text" name="reference_number" maxlength="50" class="mt-1 block w-full rounded-md border-slate-300 text-sm" placeholder="Untuk QRIS/transfer"></label>
                                             <button class="h-[38px] rounded-md bg-indigo-600 px-4 text-sm font-semibold text-white hover:bg-indigo-700" onclick="return confirm('Catat potongan akhir dan buat jurnal koreksi?')">Simpan</button>
-                                            <div class="lg:col-span-6 flex flex-wrap gap-x-5 gap-y-1 rounded border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
+                                            <div class="lg:col-span-4 flex flex-wrap gap-x-5 gap-y-1 rounded border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
                                                 <span>Pengurang piutang: <strong x-text="`Rp ${Math.min(Number(amount || 0), receivable).toLocaleString('id-ID')}`"></strong></span>
-                                                <span>Refund: <strong x-text="`Rp ${refund.toLocaleString('id-ID')}`"></strong></span>
+                                                <span x-show="refund > 0" x-cloak>Potongan Penjualan Akhir: <strong x-text="`Rp ${refund.toLocaleString('id-ID')}`"></strong></span>
                                                 <span>Nilai akhir: <strong x-text="`Rp ${Math.max(0, current - Number(amount || 0)).toLocaleString('id-ID')}`"></strong></span>
                                             </div>
                                         </form>
@@ -114,7 +112,7 @@
                         <thead class="bg-slate-50 text-xs uppercase tracking-wide text-slate-600"><tr><th class="px-4 py-3 text-left">Tanggal</th><th class="px-4 py-3 text-left">SO / Customer</th><th class="px-4 py-3 text-right">Nilai Sebelum</th><th class="px-4 py-3 text-right">Potongan</th><th class="px-4 py-3 text-right">Nilai Akhir</th><th class="px-4 py-3 text-left">Penyelesaian</th><th class="px-4 py-3 text-left">Jurnal</th></tr></thead>
                         <tbody class="divide-y divide-slate-100">
                         @forelse ($history as $row)
-                            <tr><td class="whitespace-nowrap px-4 py-3">{{ $row->transaction_date->format('d-m-Y') }}</td><td class="px-4 py-3"><p class="font-semibold">{{ $row->order_number }}</p><p class="text-xs text-slate-500">{{ $row->customer?->NmCust ?? '-' }}{{ $row->userReason() ? ' · '.$row->userReason() : '' }} · {{ $row->user?->name ?? '-' }}</p></td><td class="px-4 py-3 text-right tabular-nums">Rp {{ number_format($row->initial_amount - $row->discount_before, 0, ',', '.') }}</td><td class="px-4 py-3 text-right font-semibold tabular-nums text-red-700">Rp {{ number_format($row->discount_amount, 0, ',', '.') }}</td><td class="px-4 py-3 text-right font-semibold tabular-nums">Rp {{ number_format($row->final_amount, 0, ',', '.') }}</td><td class="px-4 py-3 text-xs"><p>Piutang: Rp {{ number_format($row->receivable_offset, 0, ',', '.') }}</p><p>Refund: Rp {{ number_format($row->refund_amount, 0, ',', '.') }}{{ $row->refund_method ? ' · '.strtoupper($row->refund_method) : '' }}</p></td><td class="px-4 py-3 font-mono text-xs">{{ $row->journal_transaction_number ?: 'Saat pelunasan DP' }}</td></tr>
+                            <tr><td class="whitespace-nowrap px-4 py-3">{{ $row->transaction_date->format('d-m-Y') }}</td><td class="px-4 py-3"><p class="font-semibold">{{ $row->order_number }}</p><p class="text-xs text-slate-500">{{ $row->customer?->NmCust ?? '-' }}{{ $row->userReason() ? ' · '.$row->userReason() : '' }} · {{ $row->user?->name ?? '-' }}</p></td><td class="px-4 py-3 text-right tabular-nums">Rp {{ number_format($row->initial_amount - $row->discount_before, 0, ',', '.') }}</td><td class="px-4 py-3 text-right font-semibold tabular-nums text-red-700">Rp {{ number_format($row->discount_amount, 0, ',', '.') }}</td><td class="px-4 py-3 text-right font-semibold tabular-nums">Rp {{ number_format($row->final_amount, 0, ',', '.') }}</td><td class="px-4 py-3 text-xs"><p>Piutang: Rp {{ number_format($row->receivable_offset, 0, ',', '.') }}</p><p>Potongan Penjualan Akhir: Rp {{ number_format($row->refund_amount, 0, ',', '.') }}{{ $row->refund_amount > 0 ? ' · By system' : '' }}</p></td><td class="px-4 py-3 font-mono text-xs">{{ $row->journal_transaction_number ?: 'Saat pelunasan DP' }}</td></tr>
                         @empty
                             <tr><td colspan="7" class="px-5 py-10 text-center text-slate-500">Belum ada potongan penjualan akhir pada periode ini.</td></tr>
                         @endforelse
