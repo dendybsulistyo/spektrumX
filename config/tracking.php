@@ -23,7 +23,7 @@ return [
         // Di bawah tulisan "INVOICE" pada CForm, di atas kepala tabel (ruang ±2,8 cm).
         // Hasil cetak LQ ±0,5 cm lebih tinggi dari layar; dikalibrasi dari cetakan 15 Okt 2026.
         'ukuran_cm' => (float) env('TRACKING_QR_UKURAN_CM', 2.1),
-        'kiri_cm' => (float) env('TRACKING_QR_KIRI_CM', 9.25),
+        'kiri_cm' => (float) env('TRACKING_QR_KIRI_CM', 8.6),
         'atas_cm' => (float) env('TRACKING_QR_ATAS_CM', 2.0),
     ],
 
