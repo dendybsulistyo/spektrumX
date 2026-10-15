@@ -48,9 +48,10 @@
         .dp-breakdown .balance { border-top:1px solid var(--line); margin-top:.05cm; padding-top:.1cm; }
         /* QR tracking customer. Posisi & ukuran dari config/tracking.php (kalibrasi CForm). */
         .sheet { position:relative; }
-        .tracking-qr { position:absolute; left:{{ config('tracking.qr.kiri_cm') }}cm; top:{{ config('tracking.qr.atas_cm') }}cm; width:{{ config('tracking.qr.ukuran_cm') }}cm; text-align:center; }
-        .tracking-qr svg { display:block; width:{{ config('tracking.qr.ukuran_cm') }}cm; height:{{ config('tracking.qr.ukuran_cm') }}cm; }
-        .tracking-qr span { display:block; margin-top:.06cm; font-size:6.5pt; font-weight:700; white-space:nowrap; }
+        .tracking-qr { position:absolute; left:{{ config('tracking.qr.kiri_cm') }}cm; top:{{ config('tracking.qr.atas_cm') }}cm; display:flex; align-items:center; gap:.15cm; }
+        .tracking-qr svg { display:block; flex:none; width:{{ config('tracking.qr.ukuran_cm') }}cm; height:{{ config('tracking.qr.ukuran_cm') }}cm; }
+        /* Keterangan di samping QR (bukan di bawah) agar tidak memakan tinggi sebelum kepala tabel. */
+        .tracking-qr span { display:block; font-size:6.5pt; font-weight:700; line-height:1.25; }
         .actions { width:21.6cm; margin:14px auto 0; display:flex; justify-content:space-between; align-items:center; }
         .btn { padding:10px 18px; border:0; border-radius:7px; background:var(--ink); color:#fff; cursor:pointer; font-weight:700; text-decoration:none; }
         .link-back { color:#506363; font-size:14px; text-decoration:none; }
@@ -202,7 +203,7 @@
             @endif
         </section>
         @if ($trackingQr && $pageIndex === 0)
-            <div class="tracking-qr">{!! $trackingQr !!}<span>Scan cek status</span></div>
+            <div class="tracking-qr">{!! $trackingQr !!}<span>Scan<br>cek<br>status</span></div>
         @endif
     </main>
     @endforeach
