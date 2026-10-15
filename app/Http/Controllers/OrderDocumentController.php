@@ -4,12 +4,16 @@ namespace App\Http\Controllers;
 
 use App\Models\OrderArtwork;
 use App\Models\OrderDocument;
+use App\Models\OrderDocumentPrint;
 use App\Models\OrderIndoor;
 use App\Models\OrderOutdoor;
 use App\Models\OrderPickupSignature;
 use App\Models\PengaturanKeuangan;
 use App\Services\OrderDocumentService;
+use App\Support\CetakUlang;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 class OrderDocumentController extends Controller
@@ -87,6 +91,8 @@ class OrderDocumentController extends Controller
 
         return view('order-documents.show', [
             'document' => $document,
+            'printRecord' => OrderDocumentPrint::query()->where('order_document_id', $document->id)->first(),
+            'canReprint' => CetakUlang::boleh(auth()->user()),
             'void' => $void,
             'signature' => $signature,
             'pengaturan' => PengaturanKeuangan::current(),
@@ -106,6 +112,65 @@ class OrderDocumentController extends Controller
             'document' => $document,
             'snapshot' => $snapshot,
             'receiptNumber' => $receiptNumber,
+        ]);
+    }
+
+    /**
+     * Catat cetak DO / Invoice. Cetak pertama: siapa pun yang boleh membuka
+     * dokumen (termasuk Invoice setelah pembayaran di Pengambilan); cetak
+     * ulang hanya App\Support\CetakUlang::ROLES.
+     */
+    public function registerPrint(OrderDocument $document): JsonResponse
+    {
+        abort_unless(
+            auth()->user()->hasPermission('kasir.view')
+                || auth()->user()->hasPermission('pengambilan.view')
+                || auth()->user()->hasPermission('customer-service.view')
+                || auth()->user()->hasPermission('keuangan.view'),
+            403
+        );
+
+        $result = DB::transaction(function () use ($document): array {
+            // Kunci dokumen induk: baris catatan yang belum ada tidak bisa dikunci,
+            // jadi ini mencegah dua tab mencatat "cetak pertama" bersamaan.
+            OrderDocument::query()->lockForUpdate()->findOrFail($document->id);
+            $record = OrderDocumentPrint::query()->where('order_document_id', $document->id)->lockForUpdate()->first();
+
+            if ($record && ! CetakUlang::boleh(auth()->user())) {
+                return ['allowed' => false, 'record' => $record];
+            }
+
+            if (! $record) {
+                $record = OrderDocumentPrint::create([
+                    'order_document_id' => $document->id,
+                    'print_count' => 1,
+                    'first_printed_by' => auth()->id(),
+                    'first_printed_at' => now(),
+                    'last_printed_by' => auth()->id(),
+                    'last_printed_at' => now(),
+                ]);
+            } else {
+                $record->update([
+                    'print_count' => $record->print_count + 1,
+                    'last_printed_by' => auth()->id(),
+                    'last_printed_at' => now(),
+                ]);
+            }
+
+            return ['allowed' => true, 'record' => $record];
+        });
+
+        $jenis = $document->kind === 'inv' ? 'Invoice' : 'Delivery Order';
+
+        if (! $result['allowed']) {
+            return response()->json([
+                'message' => "{$jenis} sudah pernah dicetak. Cetak ulang hanya dapat dilakukan oleh ".CetakUlang::LABEL.'.',
+            ], 409);
+        }
+
+        return response()->json([
+            'message' => $result['record']->print_count > 1 ? 'Cetak ulang diizinkan.' : 'Cetak pertama dicatat.',
+            'print_count' => $result['record']->print_count,
         ]);
     }
 }

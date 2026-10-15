@@ -66,6 +66,15 @@ class OrderTrackingService
         return ($waktu ?? now())->toIso8601String();
     }
 
+    /** Tandai semua order bertoken agar dikirim ulang pada pengiriman berikutnya. */
+    public function tandaiBelumTerkirim(): int
+    {
+        return collect(self::MODELS)->sum(fn (string $model) => $model::query()
+            ->whereNotNull('tracking_token')
+            ->toBase()
+            ->update(['tracking_pushed_status' => null]));
+    }
+
     /**
      * Kirim order yang statusnya berubah sejak pengiriman terakhir.
      *

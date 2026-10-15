@@ -441,6 +441,8 @@ Route::middleware('auth')->group(function () {
     // workflow, without gaining access to the accounting document archive.
     Route::get('/invoice/{type}/{id}', [InvoiceController::class, 'show'])->name('invoice.show');
     Route::post('/invoice/{type}/{id}/register-print', [InvoiceController::class, 'registerPrint'])->name('invoice.register-print');
+    // Catat cetak DO/Invoice; dipakai juga oleh cetak Invoice setelah pembayaran di Pengambilan.
+    Route::post('/order-documents/{document}/register-print', [OrderDocumentController::class, 'registerPrint'])->name('order-documents.register-print');
 
     Route::middleware('permission:kasir.view')->group(function () {
         Route::get('/kasir', [KasirController::class, 'index'])->name('kasir.index');

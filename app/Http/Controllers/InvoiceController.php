@@ -43,6 +43,12 @@ class InvoiceController extends Controller
 
         $items = $this->pricingService->detailedLineItems($type, $order, $rawItems);
         $printRecord = SalesOrderPrint::query()->where('order_type', $type)->where('order_id', $id)->first();
+        // Invoice yang dicetak setelah pembayaran (Pengambilan) dicatat sebagai dokumen INV.
+        $invoiceDocument = request()->boolean('payment_preview')
+            ? \App\Models\OrderDocument::query()->where('kind', 'inv')->where('order_type', $type)->where('order_id', $id)->latest('id')->first()
+            : null;
+        $invoicePrinted = $invoiceDocument
+            && \App\Models\OrderDocumentPrint::query()->where('order_document_id', $invoiceDocument->id)->exists();
         $canReprint = $this->canReprint();
 
         // DP and hutang orders are paid in more than one visit. The nota
@@ -73,6 +79,8 @@ class InvoiceController extends Controller
             'printRecord' => $printRecord,
             'canPrintSalesOrder' => ! $printRecord || $canReprint,
             'canReprintSalesOrder' => $canReprint,
+            'invoiceDocument' => $invoiceDocument,
+            'invoicePrintBlocked' => $invoicePrinted && ! $canReprint,
             // QR tracking customer hanya di Sales Order (bukan pratinjau invoice pembayaran).
             'trackingQr' => config('tracking.qr.aktif') && ! request()->boolean('payment_preview') && ($url = $this->tracking->url($order))
                 ? $this->tracking->qrSvg($url)
@@ -124,7 +132,7 @@ class InvoiceController extends Controller
 
         if (! $result['allowed']) {
             return response()->json([
-                'message' => 'Sales Order sudah pernah dicetak. Cetak ulang hanya dapat dilakukan oleh Admin Kasir.',
+                'message' => 'Sales Order sudah pernah dicetak. Cetak ulang hanya dapat dilakukan oleh '.\App\Support\CetakUlang::LABEL.'.',
             ], 409);
         }
 
@@ -147,6 +155,6 @@ class InvoiceController extends Controller
 
     private function canReprint(): bool
     {
-        return auth()->user()->role?->name === 'admin-kasir';
+        return \App\Support\CetakUlang::boleh(auth()->user());
     }
 }

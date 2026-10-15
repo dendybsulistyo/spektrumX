@@ -211,7 +211,11 @@
         @if (request()->boolean('payment_preview') && request('source') === 'pengambilan')
             <a href="{{ route('pengambilan.index', ['tab' => 'transaksi']) }}" class="link-back">← Kembali ke Pengambilan</a>
             <div style="display:flex;align-items:center;gap:10px;">
-                <button class="btn" type="button" id="paymentPrintButton" onclick="printPaymentInvoice()">Cetak Invoice</button>
+                @if ($invoicePrintBlocked)
+                    <span class="print-warning" style="flex:none;margin:0">Invoice sudah dicetak. Cetak ulang hanya melalui {{ \App\Support\CetakUlang::LABEL }}.</span>
+                @else
+                    <button class="btn" type="button" id="paymentPrintButton" onclick="printPaymentInvoice()">Cetak Invoice</button>
+                @endif
                 <form method="POST" action="{{ route('pengambilan.transaksi.archive', ['type' => $type, 'id' => $order->id]) }}" style="margin:0;">
                     @csrf
                     <button class="btn" type="submit" id="paymentSaveButton" disabled
@@ -223,7 +227,7 @@
             <a href="#" id="backLink" class="link-back">← Kembali</a>
         @endif
         @if (! request()->boolean('payment_preview') && request('source') !== 'pengambilan' && ! request()->boolean('draft') && $printRecord && ! $canReprintSalesOrder)
-            <p class="print-warning">SO sudah dicetak {{ $printRecord->first_printed_at->format('d-m-Y H:i') }}. Cetak ulang hanya melalui Admin Kasir.</p>
+            <p class="print-warning">SO sudah dicetak {{ $printRecord->first_printed_at->format('d-m-Y H:i') }}. Cetak ulang hanya melalui {{ \App\Support\CetakUlang::LABEL }}.</p>
         @endif
         @if (! request()->boolean('payment_preview') && request('source') !== 'pengambilan')
             @if (request()->boolean('draft') || $canPrintSalesOrder)
@@ -234,7 +238,32 @@
     <script>
         let salesOrderPrintPending = false;
 
-        function printPaymentInvoice() {
+        let paymentPrintPending = false;
+
+        // Cetak Invoice setelah pembayaran: dicatat sebagai cetak dokumen INV
+        // (cetak ulang hanya untuk Admin Kasir / Akuntansi).
+        async function printPaymentInvoice() {
+            @if ($invoiceDocument)
+                if (paymentPrintPending) return;
+                paymentPrintPending = true;
+                try {
+                    const response = await fetch(@json(route('order-documents.register-print', $invoiceDocument)), {
+                        method: 'POST',
+                        headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': @json(csrf_token()) },
+                    });
+                    const payload = await response.json();
+                    if (! response.ok) {
+                        alert(payload.message || 'Invoice tidak dapat dicetak.');
+                        enablePaymentSave();
+                        return;
+                    }
+                } catch (error) {
+                    alert('Gagal meminta izin cetak. Silakan coba kembali.');
+                    return;
+                } finally {
+                    paymentPrintPending = false;
+                }
+            @endif
             document.body.classList.add('print-authorized');
             window.focus();
             window.print();
@@ -288,9 +317,13 @@
 
         window.requestSalesOrderPrint = requestSalesOrderPrint;
         window.printPaymentInvoice = printPaymentInvoice;
-        @if (request()->boolean('payment_preview') && session('status'))
+        @if (request()->boolean('payment_preview') && session('status') && ! $invoicePrintBlocked)
             // Just paid from Pengambilan: open the print dialog right away.
             window.addEventListener('load', () => { if (window.self === window.top) printPaymentInvoice(); });
+        @endif
+        @if ($invoicePrintBlocked)
+            // Invoice sudah tercetak sebelumnya: jangan kunci tombol Simpan.
+            window.addEventListener('load', enablePaymentSave);
         @endif
         window.addEventListener('afterprint', () => {
             document.body.classList.remove('print-authorized');

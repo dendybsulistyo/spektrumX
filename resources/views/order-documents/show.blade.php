@@ -72,7 +72,11 @@
             .party { margin-top:3mm; }
             .items { margin-top:3mm; }
             .items th,.items td { padding:3px 4px; }
+            /* Cetak hanya lewat tombol (tercatat); Ctrl+P biasa tidak mencetak dokumen. */
+            body:not(.print-authorized) .sheet { display:none !important; }
+            body:not(.print-authorized)::after { content:'Pencetakan dokumen harus dilakukan melalui tombol Cetak.'; display:block; padding:24px; font:700 14pt Arial,sans-serif; }
         }
+        .print-warning { color:#9a3412; font-size:13px; font-weight:700; }
     </style>
 </head>
 <body>
@@ -108,7 +112,11 @@
             @if ($document->kind === 'inv')
                 <a class="button" href="{{ route('order-documents.receipt', $document) }}">Kwitansi</a>
             @endif
-            <button type="button" onclick="window.print()">Cetak / Simpan PDF</button>
+            @if ($printRecord && ! $canReprint)
+                <span class="print-warning">Sudah dicetak {{ $printRecord->first_printed_at->format('d-m-Y H:i') }}. Cetak ulang hanya melalui {{ \App\Support\CetakUlang::LABEL }}.</span>
+            @else
+                <button type="button" onclick="requestDocumentPrint()">{{ $printRecord ? 'Cetak Ulang' : 'Cetak / Simpan PDF' }}</button>
+            @endif
         </div>
     </div>
 
@@ -225,5 +233,34 @@
         </footer>
     </main>
     @endforeach
+
+    <script>
+        let documentPrintPending = false;
+
+        async function requestDocumentPrint() {
+            if (documentPrintPending) return;
+            documentPrintPending = true;
+            try {
+                const response = await fetch(@json(route('order-documents.register-print', $document)), {
+                    method: 'POST',
+                    headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': @json(csrf_token()) },
+                });
+                const payload = await response.json();
+                if (! response.ok) {
+                    alert(payload.message || 'Dokumen tidak dapat dicetak.');
+                    return;
+                }
+                document.body.classList.add('print-authorized');
+                window.focus();
+                window.print();
+            } catch (error) {
+                alert('Gagal meminta izin cetak. Silakan coba kembali.');
+            } finally {
+                documentPrintPending = false;
+            }
+        }
+
+        window.addEventListener('afterprint', () => document.body.classList.remove('print-authorized'));
+    </script>
 </body>
 </html>
