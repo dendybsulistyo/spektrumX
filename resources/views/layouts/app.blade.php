@@ -288,6 +288,7 @@
                                                 <a href="{{ route('report.uninvoiced-orders') }}" class="{{ $dropdownLink(request()->routeIs('report.uninvoiced-orders')) }}">Rekap Order Belum Di-Invoice</a>
                                                 <a href="{{ route('report.sales-discounts') }}" class="{{ $dropdownLink(request()->routeIs('report.sales-discounts')) }}">Rekap Potongan Penjualan</a>
                                                 <a href="{{ route('report.all-orders-by-customer') }}" class="{{ $dropdownLink(request()->routeIs('report.all-orders-by-customer')) }}">Nota/Invoice per Customer</a>
+                                                <a href="{{ route('report.paid-orders-by-customer') }}" class="{{ $dropdownLink(request()->routeIs('report.paid-orders-by-customer')) }}">Rekap Order Customer (Lunas)</a>
                                                 <a href="{{ route('keuangan.daily-receivable-collections') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.daily-receivable-collections')) }}">Penerimaan Piutang Harian</a>
                                                 <a href="{{ route('keuangan.credit-limits') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.credit-limits')) }}">Rekap Limit Piutang</a>
                                                 {{-- DISEMBUNYIKAN SEMENTARA (7 Okt 2026): <a href="{{ route('keuangan.total-tagihan-piutang') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.total-tagihan-piutang')) }}">Total Tagihan</a> --}}
@@ -670,6 +671,7 @@
                                 <a href="{{ route('report.uninvoiced-orders') }}" class="{{ $mobileLink(request()->routeIs('report.uninvoiced-orders')) }}">Rekap Order Belum Di-Invoice</a>
                                 <a href="{{ route('report.sales-discounts') }}" class="{{ $mobileLink(request()->routeIs('report.sales-discounts')) }}">Rekap Potongan Penjualan</a>
                                 <a href="{{ route('report.all-orders-by-customer') }}" class="{{ $mobileLink(request()->routeIs('report.all-orders-by-customer')) }}">Nota/Invoice per Customer</a>
+                                <a href="{{ route('report.paid-orders-by-customer') }}" class="{{ $mobileLink(request()->routeIs('report.paid-orders-by-customer')) }}">Rekap Order Customer (Lunas)</a>
                                 <a href="{{ route('keuangan.daily-receivable-collections') }}" class="{{ $mobileLink(request()->routeIs('keuangan.daily-receivable-collections')) }}">Penerimaan Piutang Harian</a>
                                 <a href="{{ route('keuangan.credit-limits') }}" class="{{ $mobileLink(request()->routeIs('keuangan.credit-limits')) }}">Rekap Limit Piutang</a>
                                 {{-- DISEMBUNYIKAN SEMENTARA (7 Okt 2026): <a href="{{ route('keuangan.total-tagihan-piutang') }}" class="{{ $mobileLink(request()->routeIs('keuangan.total-tagihan-piutang')) }}">Total Tagihan</a> --}}
