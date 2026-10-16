@@ -114,8 +114,17 @@
             'lunas' => 'LUNAS · '.$caraBayarNote, 'hutang' => 'CUSTOMER VIP · BELUM LUNAS',
             'dp' => 'DP · BELUM LUNAS', default => 'BELUM DIBAYAR',
         };
-        $diskonStatus = $order->diskonStatus();
-        $totalTagihan = $diskonStatus === 'approved' ? $order->totalSetelahDiskon() : (float) ($order->total ?? 0);
+        // SO hanya menampilkan Diskon Nota yang disetujui di kasir. Potongan
+        // Penjualan Akhir (diskon_akhir_nominal) adalah koreksi INTERNAL keuangan
+        // dan tidak boleh terlihat customer, termasuk saat SO dicetak ulang.
+        $diskonNotaAwal = $order->diskon_approved_at ? $order->diskonAwalNominal() : 0.0;
+        $adaDiskonNota = $diskonNotaAwal > 0;
+        $labelDiskonNota = $order->diskon_tipe === 'nominal'
+            ? 'Rp '.number_format((float) $order->diskon_nominal_tetap, 0, ',', '.')
+            : rtrim(rtrim(number_format((float) $order->diskon_persen, 2), '0'), '.').'%';
+        $totalTagihan = $adaDiskonNota
+            ? \App\Support\Rupiah::bulatkan((float) ($order->total ?? 0) - $diskonNotaAwal)
+            : (float) ($order->total ?? 0);
         // Same rounded figure the journal books as sales/receivable.
         $totalTagihanBulat = \App\Support\Rupiah::bulatkan($totalTagihan);
         $sudahDibayar = (float) $paymentHistory->sum('jumlah');
@@ -165,9 +174,9 @@
                             <td class="text-right">Rp {{ number_format($item->subtotal, 0, ',', '.') }}</td>
                         </tr>
                     @endforeach
-                    @if ($isLastPage && $diskonStatus === 'approved')
+                    @if ($isLastPage && $adaDiskonNota)
                         <tr><td colspan="7" class="text-right total-label">Subtotal</td><td class="text-right">Rp {{ number_format($order->total ?? 0, 0, ',', '.') }}</td></tr>
-                        <tr><td colspan="7" class="text-right total-label">Diskon {{ $order->diskonApprovedLabel() }}</td><td class="text-right">- Rp {{ number_format($order->diskonNominal(), 0, ',', '.') }}</td></tr>
+                        <tr><td colspan="7" class="text-right total-label">Diskon {{ $labelDiskonNota }}</td><td class="text-right">- Rp {{ number_format($diskonNotaAwal, 0, ',', '.') }}</td></tr>
                     @endif
                     <tr class="total-row"><td colspan="7" class="text-right total-label">Total Tagihan</td><td class="text-right total-amount">Rp {{ number_format($totalTagihan, 0, ',', '.') }}</td></tr>
                 </tbody>

@@ -49,7 +49,8 @@ class FinalSalesDiscountController extends Controller
         foreach (self::ORDER_MODELS as $type => $model) {
             $rows = $model::query()
                 ->with('customer')
-                ->whereIn('status_bayar', ['lunas', 'dp', 'hutang'])
+                // Potongan Penjualan Akhir hanya untuk nota LUNAS (customer reguler maupun VIP).
+                ->where('status_bayar', 'lunas')
                 ->whereNotNull('dibayar_at')
                 ->whereBetween('dibayar_at', [$from.' 00:00:00', $to.' 23:59:59'])
                 ->where('status', '!=', 'batal')
@@ -139,7 +140,15 @@ class FinalSalesDiscountController extends Controller
             /** @var Model $order */
             $order = $model::query()->with('customer.limit')->lockForUpdate()->findOrFail((int) $id);
 
-            abort_unless(in_array($order->status_bayar, ['lunas', 'dp', 'hutang'], true) && $order->dibayar_at, 422, 'SO belum memiliki transaksi keuangan yang dapat dikoreksi.');
+            abort_unless($order->dibayar_at, 422, 'SO belum memiliki transaksi keuangan yang dapat dikoreksi.');
+            if ($order->status_bayar !== 'lunas' || (float) $order->jumlah_piutang > 0) {
+                $sisa = max(0, (float) $order->jumlah_piutang);
+                throw ValidationException::withMessages([
+                    'discount_amount' => "Nota {$order->NoOrder} belum lunas"
+                        .($sisa > 0 ? ' (sisa tagihan Rp '.number_format($sisa, 0, ',', '.').')' : '')
+                        .'. Lunasi dulu sebelum memberi Potongan Penjualan Akhir.',
+                ]);
+            }
             abort_if($order->status === 'batal' || $order->invoice_voided_at, 422, 'SO batal atau hangus tidak dapat diberi potongan akhir.');
 
             $initialAmount = Rupiah::bulatkan((float) $order->total);
@@ -147,9 +156,10 @@ class FinalSalesDiscountController extends Controller
             $discountAmount = Rupiah::bulatkan((float) $data['discount_amount']);
             $currentAmount = Rupiah::bulatkan($initialAmount - $discountBefore);
 
-            if ($discountAmount >= $currentAmount) {
+            // Potongan boleh sampai 100% (keputusan manajemen), tapi tidak melebihi nilai nota.
+            if ($discountAmount > $currentAmount) {
                 throw ValidationException::withMessages([
-                    'discount_amount' => 'Potongan harus lebih kecil dari nilai transaksi berjalan Rp '.number_format($currentAmount, 0, ',', '.').'.',
+                    'discount_amount' => 'Potongan tidak boleh melebihi nilai transaksi berjalan Rp '.number_format($currentAmount, 0, ',', '.').'.',
                 ]);
             }
 

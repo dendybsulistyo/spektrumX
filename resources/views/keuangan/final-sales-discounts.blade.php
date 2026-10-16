@@ -36,7 +36,7 @@
 
             <section class="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
                 <div class="flex items-center justify-between border-b border-slate-200 px-5 py-4">
-                    <div><h3 class="text-base font-semibold text-slate-900">Daftar transaksi</h3><p class="mt-1 text-xs text-slate-500">{{ $orders->count() }} SO ditemukan pada periode ini.</p></div>
+                    <div><h3 class="text-base font-semibold text-slate-900">Daftar transaksi</h3><p class="mt-1 text-xs text-slate-500">{{ $orders->count() }} SO lunas ditemukan pada periode ini. Nota DP / tagihan harus dilunasi dulu.</p></div>
                     <a href="{{ route('report.sales-discounts') }}" class="rounded-md border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-700">Lihat Rekap Potongan Penjualan</a>
                 </div>
                 <div class="overflow-x-auto">
@@ -98,7 +98,7 @@
                                 </tr>
                             @endcan
                         @empty
-                            <tr><td colspan="7" class="px-5 py-12 text-center text-slate-500">Tidak ada SO yang sudah masuk keuangan pada filter ini.</td></tr>
+                            <tr><td colspan="7" class="px-5 py-12 text-center text-slate-500">Tidak ada SO berstatus lunas pada filter ini. Potongan Penjualan Akhir hanya untuk nota yang sudah lunas.</td></tr>
                         @endforelse
                         </tbody>
                     </table>
