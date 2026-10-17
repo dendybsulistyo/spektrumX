@@ -31,7 +31,8 @@ class UserStatusController extends Controller
 
         $groups = $statuses->groupBy('user_id')->map(function ($items) use ($me, $mentionNames) {
             $user = $items->first()->user;
-            $mentionsMe = fn (UserStatus $status) => in_array($me, $status->mentions ?? [], true);
+            $mentionsMe = fn (UserStatus $status) => ($status->mention_all && $status->user_id !== $me)
+                || in_array($me, $status->mentions ?? [], true);
 
             return [
                 'user_id' => $user->id,
@@ -50,7 +51,8 @@ class UserStatusController extends Controller
                     'background' => $status->background,
                     'time' => $status->created_at->locale('id')->diffForHumans(),
                     'seen' => (bool) $status->seen,
-                    'mentions' => collect($status->mentions ?? [])->map(fn ($id) => $mentionNames[$id] ?? null)->filter()->values(),
+                    'mentions' => collect($status->mentions ?? [])->map(fn ($id) => $mentionNames[$id] ?? null)->filter()
+                        ->when($status->mention_all, fn ($names) => $names->push(UserStatus::MENTION_ALL))->values(),
                     'mentions_me' => $mentionsMe($status),
                     'views_count' => $user->id === $me ? $status->views_count : null,
                     // Reaksi saya sendiri (untuk status orang lain).
@@ -85,6 +87,7 @@ class UserStatusController extends Controller
             'background' => ['required', Rule::in(UserStatus::BACKGROUNDS)],
             'mentions' => ['nullable', 'array', 'max:20'],
             'mentions.*' => ['integer', 'exists:users,id'],
+            'mention_all' => ['nullable', 'boolean'],
         ], [
             'body.required' => 'Tulis status dulu.',
             'body.max' => 'Status maksimal 500 karakter.',
@@ -100,6 +103,8 @@ class UserStatusController extends Controller
             'user_id' => $request->user()->id,
             'body' => $body,
             'mentions' => $mentions ?: null,
+            // "@semua" hanya berlaku bila memang masih tertulis di teks.
+            'mention_all' => ($data['mention_all'] ?? false) && str_contains($body, '@'.UserStatus::MENTION_ALL),
             'background' => $data['background'],
             'expires_at' => now()->addHours(UserStatus::LIFETIME_HOURS),
         ]);

@@ -95,12 +95,12 @@
                           @input="detectMention()" @click="detectMention()"
                           @keydown.arrow-down="mentionMove($event, 1)" @keydown.arrow-up="mentionMove($event, -1)"
                           @keydown.enter="mentionPick($event)" @keydown.tab="mentionPick($event)"
-                          placeholder="Ketik status… (ketik @ untuk menyebut rekan)" @keydown.ctrl.enter="submit()" @keydown.meta.enter="submit()"></textarea>
+                          placeholder="Ketik status… (ketik @ untuk menyebut rekan, @semua untuk semua)" @keydown.ctrl.enter="submit()" @keydown.meta.enter="submit()"></textarea>
                 <div class="sw-suggest" x-show="mention.open && mentionResults().length" x-cloak>
                     <template x-for="(user, i) in mentionResults()" :key="user.id">
                         <button type="button" class="sw-row" :class="i === mention.index && 'is-active'" @mousedown.prevent="insertMention(user)">
                             <span class="sw-avatar ring-none" style="width:30px;height:30px;"><span><template x-if="user.avatar"><img :src="user.avatar" alt=""></template><template x-if="!user.avatar"><b x-text="user.initials"></b></template></span></span>
-                            <span class="sw-row-text"><strong x-text="user.name"></strong></span>
+                            <span class="sw-row-text"><strong x-text="user.label || user.name"></strong><small x-show="user.id === 'all'" style="display:block; font-size:11px; opacity:.7;">@semua · beri tahu semua rekan</small></span>
                         </button>
                     </template>
                 </div>
@@ -324,7 +324,7 @@
                     composerOpen: false,
                     sending: false,
                     error: '',
-                    draft: { body: '', background: config.backgrounds[0], mentions: [] },
+                    draft: { body: '', background: config.backgrounds[0], mentions: [], mention_all: false },
                     viewer: { open: false, group: null, index: 0, progress: 0, paused: false, timer: null },
                     viewers: { open: false, loading: false, list: [], replies: [], tab: 'dilihat' },
                     duration: 6000,
@@ -357,6 +357,7 @@
                         this.error = '';
                         this.draft.body = '';
                         this.draft.mentions = [];
+                        this.draft.mention_all = false;
                         this.mention.open = false;
                         this.composerOpen = true;
                         if (this.users === null) {
@@ -386,10 +387,13 @@
                     },
                     mentionResults() {
                         const q = this.mention.query.trim();
-                        return (this.users || [])
+                        const people = (this.users || [])
                             .filter(u => q === '' || u.name.toLowerCase().includes(q))
-                            .sort((a, b) => a.name.toLowerCase().startsWith(q) === b.name.toLowerCase().startsWith(q) ? 0 : (a.name.toLowerCase().startsWith(q) ? -1 : 1))
-                            .slice(0, 6);
+                            .sort((a, b) => a.name.toLowerCase().startsWith(q) === b.name.toLowerCase().startsWith(q) ? 0 : (a.name.toLowerCase().startsWith(q) ? -1 : 1));
+                        // "@semua" selalu di urutan teratas bila cocok dengan ketikan.
+                        const all = 'semua'.startsWith(q) || 'semua orang'.includes(q)
+                            ? [{ id: 'all', name: 'semua', label: 'Semua orang', initials: '@' }] : [];
+                        return [...all, ...people].slice(0, 6);
                     },
                     mentionMove(event, step) {
                         if (!this.mention.open || !this.mentionResults().length) return;
@@ -409,7 +413,8 @@
                         const end = el.selectionStart;
                         const text = `@${user.name} `;
                         this.draft.body = (this.draft.body.slice(0, this.mention.start) + text + this.draft.body.slice(end)).slice(0, 500);
-                        if (!this.draft.mentions.includes(user.id)) this.draft.mentions.push(user.id);
+                        if (user.id === 'all') { this.draft.mention_all = true; }
+                        else if (!this.draft.mentions.includes(user.id)) { this.draft.mentions.push(user.id); }
                         this.mention.open = false;
                         this.$nextTick(() => { const pos = this.mention.start + text.length; el.focus(); el.setSelectionRange(pos, pos); });
                     },

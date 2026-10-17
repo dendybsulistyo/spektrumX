@@ -12,14 +12,17 @@ class UserStatus extends Model
 {
     public const LIFETIME_HOURS = 24;
 
+    /** Kata kunci mention ke semua user: "@semua". */
+    public const MENTION_ALL = 'semua';
+
     /** Pilihan warna latar (selaras tema Ruang Cetak). */
     public const BACKGROUNDS = ['#1b2236', '#0f8fb3', '#c8246c', '#2e8b57', '#b07d00', '#5b4bb7'];
 
-    protected $fillable = ['user_id', 'body', 'background', 'mentions', 'expires_at'];
+    protected $fillable = ['user_id', 'body', 'background', 'mentions', 'mention_all', 'expires_at'];
 
     protected function casts(): array
     {
-        return ['expires_at' => 'datetime', 'mentions' => 'array'];
+        return ['expires_at' => 'datetime', 'mentions' => 'array', 'mention_all' => 'boolean'];
     }
 
     public function user(): BelongsTo
