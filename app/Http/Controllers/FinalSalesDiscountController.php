@@ -51,14 +51,17 @@ class FinalSalesDiscountController extends Controller
             $table = (new $model)->getTable();
             $rows = $model::query()
                 ->with('customer')
-                // Potongan Penjualan Akhir hanya untuk nota yang SUDAH TERBIT INVOICE:
-                // lunas (reguler & VIP), atau tagihan VIP yang invoice-nya terbit bersamaan DO.
-                ->where(fn ($q) => $q->where('status_bayar', 'lunas')
-                    ->orWhere(fn ($vip) => $vip->where('status_bayar', 'hutang')->where('jumlah_piutang', '>', 0)))
-                ->whereExists(fn ($q) => $q->selectRaw('1')->from('order_documents')
-                    ->where('order_documents.kind', 'inv')
-                    ->where('order_documents.order_type', $type)
-                    ->whereColumn('order_documents.order_id', $table.'.id'))
+                // Potongan Penjualan Akhir hanya untuk nota ber-INVOICE:
+                // - lunas (reguler & VIP) yang sudah terbit invoice, atau
+                // - tagihan VIP yang sudah ber-DO/INV (barang sudah diambil). Bila belum
+                //   ber-invoice, invoice terbit otomatis saat potongan disimpan.
+                ->where(fn ($q) => $q
+                    ->where(fn ($lunas) => $lunas->where('status_bayar', 'lunas')
+                        ->whereExists($this->adaDokumen($type, $table, 'inv')))
+                    ->orWhere(fn ($vip) => $vip->where('status_bayar', 'hutang')->where('jumlah_piutang', '>', 0)
+                        ->whereHas('customer.limit')
+                        ->where(fn ($dok) => $dok->whereExists($this->adaDokumen($type, $table, 'inv'))
+                            ->orWhereExists($this->adaDokumen($type, $table, 'do')))))
                 ->whereNotNull('dibayar_at')
                 ->whereBetween('dibayar_at', [$from.' 00:00:00', $to.' 23:59:59'])
                 ->where('status', '!=', 'batal')
@@ -80,6 +83,8 @@ class FinalSalesDiscountController extends Controller
                 $orders->push((object) [
                     'key' => $type.':'.$order->id,
                     'invoice_number' => $invoiceNumbers[$order->id] ?? null,
+                    // Tagihan VIP ber-DO yang invoice-nya terbit otomatis saat potongan disimpan.
+                    'invoice_otomatis' => ! isset($invoiceNumbers[$order->id]) && $order->status_bayar === 'hutang',
                     'type' => $type,
                     'type_label' => ucfirst($type),
                     'number' => $order->NoOrder,
@@ -121,6 +126,14 @@ class FinalSalesDiscountController extends Controller
         return view('keuangan.final-sales-discounts', compact('orders', 'history', 'from', 'to', 'search'));
     }
 
+    private function adaDokumen(string $type, string $table, string $kind): \Closure
+    {
+        return fn ($q) => $q->selectRaw('1')->from('order_documents')
+            ->where('order_documents.kind', $kind)
+            ->where('order_documents.order_type', $type)
+            ->whereColumn('order_documents.order_id', $table.'.id');
+    }
+
     private function caraBayarPenerimaan(string $type, int $orderId): string
     {
         return OrderPayment::query()
@@ -153,6 +166,19 @@ class FinalSalesDiscountController extends Controller
             $order = $model::query()->with('customer.limit')->lockForUpdate()->findOrFail((int) $id);
 
             abort_unless($order->dibayar_at, 422, 'SO belum memiliki transaksi keuangan yang dapat dikoreksi.');
+
+            // Tagihan VIP yang barangnya sudah diambil (ber-DO) tapi belum ber-invoice
+            // (mis. DO sebelum aturan invoice VIP berlaku): terbitkan invoice dulu,
+            // bertanggal DO pertama, sebelum potongan dicatat.
+            if ($order->status_bayar === 'hutang'
+                && ! OrderDocument::query()->where('kind', 'inv')->where('order_type', $type)->where('order_id', $order->id)->exists()) {
+                $doPertama = OrderDocument::query()->where('kind', 'do')->where('order_type', $type)
+                    ->where('order_id', $order->id)->orderBy('issued_at')->value('issued_at');
+                if ($doPertama) {
+                    app(\App\Services\OrderDocumentService::class)->issueCreditInvoice($order, $doPertama);
+                }
+            }
+
             if (! OrderDocument::query()->where('kind', 'inv')->where('order_type', $type)->where('order_id', $order->id)->exists()) {
                 throw ValidationException::withMessages([
                     'discount_amount' => "Nota {$order->NoOrder} belum terbit INVOICE. Potongan Penjualan Akhir hanya untuk nota yang sudah ber-invoice.",
