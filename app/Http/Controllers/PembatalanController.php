@@ -88,6 +88,11 @@ class PembatalanController extends Controller
                 $row->cancel_reason = $req->reason;
                 $row->cancelRequestedBy = $req->requestedBy;
                 $row->cancel_requested_at = $req->requested_at;
+                // Untuk info "uang dikembalikan" — refund otomatis sebesar yang sudah dibayar.
+                $row->jumlah_dibayar = $order->jumlah_dibayar;
+                $row->jumlah_piutang = $order->jumlah_piutang;
+                $row->cara_bayar = $order->cara_bayar;
+                $row->metode_bayar = $order->metode_bayar;
 
                 $rows->push($row);
             });

@@ -12,6 +12,14 @@
             #industry-pembatalan .in-btn-danger { background: #991b1b; border-color: #991b1b; }
             #industry-pembatalan .in-btn-danger:hover { background: #7f1d1d; }
             #industry-pembatalan .in-btn-ghost { background: transparent; color: var(--color-text); border-color: var(--color-divider); }
+            #industry-pembatalan .bt-table td { vertical-align: top; padding-top: 14px; padding-bottom: 14px; }
+            #industry-pembatalan .bt-no { font-family: var(--font-heading); font-weight: 600; white-space: nowrap; }
+            #industry-pembatalan .bt-sub { font-size: 12px; color: var(--color-text-muted, #6b7280); margin-top: 3px; line-height: 1.4; }
+            #industry-pembatalan .bt-reason { max-width: 260px; color: var(--color-text-muted, #6b7280); line-height: 1.45; }
+            #industry-pembatalan .bt-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; min-width: 230px; }
+            #industry-pembatalan .bt-buttons { display: flex; gap: 6px; justify-content: flex-end; flex-wrap: wrap; }
+            #industry-pembatalan .bt-money { font-size: 12px; text-align: right; line-height: 1.45; padding: 6px 10px; border: 1px dashed var(--color-divider); background: #fffbeb; }
+            #industry-pembatalan .bt-money b { font-family: var(--font-heading); }
         </style>
     @endpush
 
@@ -41,46 +49,66 @@
             <div class="blueprint" style="padding: var(--space-6);">
                 <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
                 <div style="overflow-x: auto;">
-                    <table class="table" style="min-width: 860px;">
+                    <table class="table bt-table" style="min-width: 860px;">
                         <thead>
                             <tr>
-                                <th>No order</th><th>Tipe</th><th>Customer</th><th>Alasan</th><th>Diajukan oleh</th><th>Diajukan pada</th><th style="text-align: right;">Aksi</th>
+                                <th>No order</th><th>Customer</th><th>Alasan</th><th>Diajukan</th><th style="text-align: right;">Aksi</th>
                             </tr>
                         </thead>
                         <tbody>
                             @forelse ($rows as $row)
                                 <tr>
-                                    <td style="font-family: var(--font-heading); font-weight: 600;">{{ $row->NoOrder }}</td>
                                     <td>
-                                        <span class="tag tag-neutral">{{ ucfirst($row->order_type) }}</span>
-                                        <div class="text-muted" style="font-size: 11px; margin-top: 2px;">{{ $row->kind === 'rework_batal' ? 'Batal antrian' : 'Pembatalan nota' }}</div>
+                                        <div class="bt-no">{{ $row->NoOrder }}</div>
+                                        <div class="bt-sub">
+                                            <span class="tag tag-neutral">{{ ucfirst($row->order_type) }}</span>
+                                            {{ $row->kind === 'rework_batal' ? 'Batal dari antrian' : 'Pembatalan nota' }}
+                                        </div>
                                     </td>
                                     <td>{{ $row->customer?->NmCust ? ucwords(mb_strtolower($row->customer->NmCust)) : '-' }}</td>
-                                    <td class="text-muted" style="max-width: 220px;">{{ $row->cancel_reason }}</td>
-                                    <td class="text-muted">{{ $row->cancelRequestedBy?->name ?? '-' }}</td>
-                                    <td class="text-muted" style="white-space: nowrap;">{{ $row->cancel_requested_at?->format('d M Y H:i') }}</td>
+                                    <td><div class="bt-reason">{{ $row->cancel_reason }}</div></td>
+                                    <td style="white-space: nowrap;">
+                                        {{ $row->cancelRequestedBy?->name ?? '-' }}
+                                        <div class="bt-sub">{{ $row->cancel_requested_at?->format('d M Y · H:i') }}</div>
+                                    </td>
                                     <td style="text-align: right;">
                                         @if ($row->kind === 'rework_batal')
                                             @can('order-rework.approve')
-                                                <div style="display: inline-flex; flex-direction: column; gap: 4px; align-items: flex-end;">
-                                                    <span class="text-muted" style="font-size: 11px;">Batal dari antrian — uang dikembalikan ke customer</span>
-                                                    <form method="POST" action="{{ route('order-rework.approve', $row->id) }}"
-                                                          onsubmit="return confirm('Setujui pembatalan order {{ $row->NoOrder }}? Uang yang sudah dibayar akan dikembalikan/dicatat sebagai refund.')">
-                                                        @csrf
-                                                        <button type="submit" class="in-btn">Setujui + Refund</button>
-                                                    </form>
-                                                    <form method="POST" action="{{ route('order-rework.reject', $row->id) }}"
-                                                          onsubmit="return confirm('Tolak pengajuan pembatalan order {{ $row->NoOrder }}?')">
-                                                        @csrf
-                                                        <button type="submit" class="in-btn in-btn-ghost">Tolak</button>
-                                                    </form>
+                                                @php
+                                                    $dibayar = (float) ($row->jumlah_dibayar ?? 0);
+                                                    $piutang = (float) ($row->jumlah_piutang ?? 0);
+                                                    $caraLabel = \App\Models\OrderPayment::CARA_BAYAR_LABELS[$row->cara_bayar] ?? ucfirst((string) $row->cara_bayar);
+                                                    $rpBatal = fn ($n) => 'Rp '.number_format($n, 0, ',', '.');
+                                                @endphp
+                                                <div class="bt-actions">
+                                                    <div class="bt-money">
+                                                        @if ($row->metode_bayar === 'hutang' && $piutang > 0)
+                                                            Piutang <b>{{ $rpBatal($piutang) }}</b> dihapus<br><span class="text-muted">tidak ada uang keluar</span>
+                                                        @elseif ($dibayar > 0)
+                                                            Uang dikembalikan <b>{{ $rpBatal($dibayar) }}</b><br><span class="text-muted">via {{ $caraLabel }} (seluruh yang sudah dibayar)</span>
+                                                        @else
+                                                            Belum ada pembayaran<br><span class="text-muted">tidak ada uang dikembalikan</span>
+                                                        @endif
+                                                    </div>
+                                                    <div class="bt-buttons">
+                                                        <form method="POST" action="{{ route('order-rework.reject', $row->id) }}"
+                                                              onsubmit="return confirm('Tolak pengajuan pembatalan order {{ $row->NoOrder }}?')">
+                                                            @csrf
+                                                            <button type="submit" class="in-btn in-btn-ghost">Tolak</button>
+                                                        </form>
+                                                        <form method="POST" action="{{ route('order-rework.approve', $row->id) }}"
+                                                              onsubmit="return confirm('Setujui pembatalan order {{ $row->NoOrder }}?{{ $dibayar > 0 && $row->metode_bayar !== 'hutang' ? ' Uang '.$rpBatal($dibayar).' dikembalikan via '.$caraLabel.'.' : '' }}')">
+                                                            @csrf
+                                                            <button type="submit" class="in-btn">{{ $dibayar > 0 && $row->metode_bayar !== 'hutang' ? 'Setujui + Refund' : 'Setujui Batal' }}</button>
+                                                        </form>
+                                                    </div>
                                                 </div>
                                             @else
                                                 <span class="text-muted" style="font-size: 13px;">Tidak berwenang</span>
                                             @endcan
                                         @else
                                             @can('order-' . $row->order_type . '.approve-cancel')
-                                                <div style="display: inline-flex; flex-direction: column; gap: 4px; align-items: flex-end;">
+                                                <div class="bt-actions">
                                                     @if ($row->status_bayar !== 'belum_bayar')
                                                         <form method="POST" action="{{ route('order-' . $row->order_type . '.approve-cancel', $row->id) }}"
                                                               onsubmit="return confirm('Setujui pembatalan order {{ $row->NoOrder }} dengan nota pengganti? Nota lama akan dihanguskan.')">
@@ -103,7 +131,7 @@
                                     </td>
                                 </tr>
                             @empty
-                                <tr><td colspan="7" class="text-muted" style="text-align: center; padding: var(--space-6);">Tidak ada pengajuan pembatalan yang menunggu.</td></tr>
+                                <tr><td colspan="5" class="text-muted" style="text-align: center; padding: var(--space-6);">Tidak ada pengajuan pembatalan yang menunggu.</td></tr>
                             @endforelse
                         </tbody>
                     </table>
