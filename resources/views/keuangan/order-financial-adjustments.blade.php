@@ -1,5 +1,5 @@
 <x-app-layout>
-    <x-slot name="header"><h2 class="font-semibold text-xl text-gray-800">Penyesuaian Nota Order / DP</h2></x-slot>
+    <x-slot name="header"><h2 class="font-semibold text-xl text-gray-800">Penyesuaian Nota Order / Invoice</h2></x-slot>
 
     <div class="mx-auto max-w-7xl space-y-5">
         @if (session('status'))<div class="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">{{ session('status') }}</div>@endif
@@ -93,7 +93,7 @@
                             @can('keuangan.penyesuaian-penjualan')
                                 <button class="rounded-md bg-indigo-600 px-6 py-2 font-semibold text-white hover:bg-indigo-700">Update</button>
                             @else
-                                <span class="rounded border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-500">Anda hanya bisa melihat. Perubahan memerlukan izin "Input Penyesuaian Nota Order/DP &amp; Potongan Penjualan Akhir".</span>
+                                <span class="rounded border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-500">Anda hanya bisa melihat. Perubahan memerlukan izin "Input Penyesuaian Nota Order/Invoice &amp; Potongan Penjualan Akhir".</span>
                             @endcan
                         </div>
                     @endif

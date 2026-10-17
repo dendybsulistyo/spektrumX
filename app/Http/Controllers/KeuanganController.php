@@ -171,7 +171,8 @@ class KeuanganController extends Controller
         $discountRefunds = $this->discountRefundKeys($payments);
         $paymentDiscounts = $this->discountsAttachedToPayments($payments);
         $discountReductions = $this->nonCashDiscountReductions($payments);
-        $paymentRows = $payments->flatMap(function (OrderPayment $p) use ($ordersByKey, $discountRefunds, $paymentDiscounts, $discountReductions) {
+        $cashDiscounts = $this->cashDiscountAllocations();
+        $paymentRows = $payments->flatMap(function (OrderPayment $p) use ($ordersByKey, $discountRefunds, $paymentDiscounts, $discountReductions, $cashDiscounts) {
             $order = $ordersByKey["{$p->order_type}-{$p->order_id}"] ?? null;
             $jumlah = (float) $p->jumlah;
             $customer = $order?->customer?->NmCust
@@ -181,6 +182,12 @@ class KeuanganController extends Controller
             $baseSort = $p->created_at?->format('His').'-'.str_pad((string) $p->id, 10, '0', STR_PAD_LEFT);
 
             if ($jumlah < 0) {
+                // Potongan nota tunai sudah tampil di bawah pembayaran notanya.
+                $jumlah += $cashDiscounts['refund'][$p->id] ?? 0.0;
+                if ($jumlah >= 0) {
+                    return [];
+                }
+
                 return [[
                     'user_id' => $p->user_id,
                     'kasir' => $p->user?->name ?? '-',
@@ -225,6 +232,17 @@ class KeuanganController extends Controller
                     'debet' => 0,
                     'kredit' => (float) $discount->receivable_offset,
                     'sort' => '2-'.$baseSort.'-0p'.$i,
+                ];
+            }
+            if ($tunaiTidakDiterima = $cashDiscounts['receipt'][$p->id] ?? 0.0) {
+                $rows[] = [
+                    'user_id' => $p->user_id,
+                    'kasir' => $p->user?->name ?? '-',
+                    'no_nota' => null,
+                    'keterangan' => 'Potongan Penjualan Akhir · uang tidak diterima - '.$customer,
+                    'debet' => 0,
+                    'kredit' => $tunaiTidakDiterima,
+                    'sort' => '2-'.$baseSort.'-0t',
                 ];
             }
 
@@ -520,6 +538,71 @@ class KeuanganController extends Controller
         ];
     }
 
+    /** @var array{refund: array<int, float>, receipt: array<int, float>, receipt_at: array<int, string>}|null */
+    private ?array $cashDiscountAllocations = null;
+
+    /**
+     * Potongan Penjualan Akhir pada nota yang dibayar TUNAI tidak mengeluarkan
+     * uang dari laci: potongan disepakati sebelum customer membayar, jadi uang
+     * yang diterima kasir memang sudah setelah potongan. Di laporan kas,
+     * potongan ini dihitung pada pembayaran tunai nota tersebut (hari & kasir
+     * yang menerima uang), bukan sebagai uang keluar di hari keuangan
+     * menginputnya. Sisa yang tidak tertampung pembayaran tunai (jarang)
+     * tetap tampil seperti refund biasa.
+     *
+     * @return array{refund: array<int, float>, receipt: array<int, float>, receipt_at: array<int, string>}
+     *   refund: id pembayaran negatif → nominal yang dipindahkan;
+     *   receipt: id pembayaran tunai → pengurang; receipt_at: id → created_at
+     */
+    private function cashDiscountAllocations(): array
+    {
+        if ($this->cashDiscountAllocations !== null) {
+            return $this->cashDiscountAllocations;
+        }
+
+        $result = ['refund' => [], 'receipt' => [], 'receipt_at' => []];
+        $discounts = FinalSalesDiscount::query()
+            ->where('refund_amount', '>', 0)->where('refund_method', 'tunai')
+            ->orderBy('id')->get(['order_type', 'order_id', 'refund_amount']);
+
+        foreach ($discounts as $discount) {
+            $refund = OrderPayment::query()
+                ->where('order_type', $discount->order_type)->where('order_id', $discount->order_id)
+                ->where('cara_bayar', 'tunai')->where('jumlah', -(float) $discount->refund_amount)
+                ->whereNotIn('id', array_keys($result['refund']))
+                ->orderBy('id')->first(['id']);
+            if (! $refund) {
+                continue;
+            }
+
+            $remaining = (float) $discount->refund_amount;
+            $receipts = OrderPayment::query()
+                ->where('order_type', $discount->order_type)->where('order_id', $discount->order_id)
+                ->where('cara_bayar', 'tunai')->where('jumlah', '>', 0)->where('id', '<', $refund->id)
+                ->orderByDesc('id')->get(['id', 'jumlah', 'created_at']);
+
+            foreach ($receipts as $receipt) {
+                if ($remaining <= 0) {
+                    break;
+                }
+                $already = $result['receipt'][$receipt->id] ?? 0.0;
+                $portion = min($remaining, max(0.0, (float) $receipt->jumlah - $already));
+                if ($portion > 0) {
+                    $result['receipt'][$receipt->id] = $already + $portion;
+                    $result['receipt_at'][$receipt->id] = $receipt->created_at->format('Y-m-d H:i:s');
+                    $remaining -= $portion;
+                }
+            }
+
+            $moved = (float) $discount->refund_amount - $remaining;
+            if ($moved > 0) {
+                $result['refund'][$refund->id] = $moved;
+            }
+        }
+
+        return $this->cashDiscountAllocations = $result;
+    }
+
     /**
      * Membawa saldo penutupan terakhir sebagai saldo awal tanggal berikutnya.
      * Baris Saldo Awal manual menjadi checkpoint; setelah itu hanya mutasi
@@ -550,12 +633,14 @@ class KeuanganController extends Controller
                 ->orWhereRaw('LOWER(keterangan) <> ?', ['saldo awal']))
             ->sum(DB::raw('debet - kredit'));
 
+        $cashDiscounts = $this->cashDiscountAllocations();
         $paymentMovement = (float) OrderPayment::query()
             ->where('created_at', '>=', $checkpointDate.' 00:00:00')
             ->where('created_at', '<', $date.' 00:00:00')
-            ->get(['jumlah', 'cara_bayar'])
-            ->sum(function (OrderPayment $payment) {
-                $amount = (float) $payment->jumlah;
+            ->get(['id', 'jumlah', 'cara_bayar'])
+            ->sum(function (OrderPayment $payment) use ($cashDiscounts) {
+                // Potongan nota tunai dihitung di pembayaran notanya (lihat bawah).
+                $amount = (float) $payment->jumlah + ($cashDiscounts['refund'][$payment->id] ?? 0.0);
 
                 // Refund keluar dari kas hanya bila tunai; refund via
                 // bank/QRIS/debit tidak menyentuh laci kas.
@@ -566,7 +651,15 @@ class KeuanganController extends Controller
                 return $payment->cara_bayar === 'tunai' ? $amount : 0.0;
             });
 
-        return $checkpoint + $manualMovement + $paymentMovement;
+        $cashDiscountMovement = 0.0;
+        foreach ($cashDiscounts['receipt'] as $id => $portion) {
+            $at = $cashDiscounts['receipt_at'][$id];
+            if ($at >= $checkpointDate.' 00:00:00' && $at < $date.' 00:00:00') {
+                $cashDiscountMovement -= $portion;
+            }
+        }
+
+        return $checkpoint + $manualMovement + $paymentMovement + $cashDiscountMovement;
     }
 
     /**
@@ -675,9 +768,10 @@ class KeuanganController extends Controller
             ]);
         }
 
+        // Potongan Penjualan Akhir tidak ditampilkan di Rekap Kasir: baris
+        // penerimaan langsung berisi uang yang benar-benar diterima.
         $discountRefunds = $this->discountRefundKeys($payments);
-        $paymentDiscounts = $this->discountsAttachedToPayments($payments);
-        $discountReductions = $this->nonCashDiscountReductions($payments);
+        $cashDiscounts = $this->cashDiscountAllocations();
         foreach ($payments as $payment) {
             $order = $ordersByKey["{$payment->order_type}-{$payment->order_id}"] ?? null;
             $customer = $order?->customer?->NmCust ? mb_strtoupper($order->customer->NmCust) : '-';
@@ -687,6 +781,14 @@ class KeuanganController extends Controller
 
             if ($amount < 0) {
                 $isPotongan = $this->refundKind($payment, $order, $discountRefunds) === 'potongan';
+                if ($isPotongan) {
+                    // Non-tunai: "Bayar via ..." tetap penuh, tidak ada uang laci bergerak.
+                    // Tunai: sudah dikurangkan dari pembayaran tunai notanya.
+                    $amount += $cashDiscounts['refund'][$payment->id] ?? 0.0;
+                    if ($payment->cara_bayar !== 'tunai' || $amount >= 0) {
+                        continue;
+                    }
+                }
                 $details->push([
                     'category' => $isPotongan ? 'sales_discount' : 'refund',
                     'description' => match ($this->refundKind($payment, $order, $discountRefunds)) {
@@ -724,27 +826,18 @@ class KeuanganController extends Controller
                 default => 'Nota '.($order?->NoOrder ?? '-').' ('.$customer.')',
             };
 
-            $discounts = $paymentDiscounts[$payment->id] ?? [];
-            $details->push([
-                'category' => $category,
-                'description' => $description,
-                'debit' => $amount + array_sum(array_map(fn ($d) => (float) $d->receivable_offset, $discounts)),
-                'credit' => 0.0,
-                'user_id' => $payment->user_id,
-                'sort' => $baseSort.'-0',
-            ]);
-            foreach ($discounts as $i => $discount) {
+            $diterima = $amount - ($cashDiscounts['receipt'][$payment->id] ?? 0.0);
+            if ($diterima > 0) {
                 $details->push([
-                    'category' => 'sales_discount',
-                    'description' => ($order?->NoOrder ?? '-').' · '.$this->salesDiscountDescription($discount, $customer),
-                    'debit' => 0.0,
-                    'credit' => (float) $discount->receivable_offset,
+                    'category' => $category,
+                    'description' => $description,
+                    'debit' => $diterima,
+                    'credit' => 0.0,
                     'user_id' => $payment->user_id,
-                    'sort' => $baseSort.'-0p'.$i,
+                    'sort' => $baseSort.'-0',
                 ]);
             }
 
-            $diterima = $amount - ($discountReductions[$payment->id] ?? 0.0);
             if (in_array($payment->cara_bayar, self::NON_CASH_METHODS, true) && $diterima > 0) {
                 $details->push([
                     'category' => 'non_cash',
@@ -771,7 +864,7 @@ class KeuanganController extends Controller
             'adj_bank' => 'Penyesuaian · Setoran ke Bank',
             'adj_owner' => 'Penyesuaian · Pengambilan Pemilik (Prive)',
             'adj_expense' => 'Penyesuaian · Pengeluaran Kas',
-            'sales_discount' => 'Potongan Penjualan (mengurangi tagihan yang dibayar)',
+            'sales_discount' => 'Potongan Penjualan (melebihi uang tunai yang diterima)',
             'other_transaction' => 'Transaksi Lain-lain',
         ];
 
@@ -940,7 +1033,8 @@ class KeuanganController extends Controller
         $discountRefunds = $this->discountRefundKeys($payments);
         $paymentDiscounts = $this->discountsAttachedToPayments($payments);
         $discountReductions = $this->nonCashDiscountReductions($payments);
-        $paymentRows = $payments->flatMap(function (OrderPayment $payment) use ($ordersByKey, $discountRefunds, $paymentDiscounts, $discountReductions) {
+        $cashDiscounts = $this->cashDiscountAllocations();
+        $paymentRows = $payments->flatMap(function (OrderPayment $payment) use ($ordersByKey, $discountRefunds, $paymentDiscounts, $discountReductions, $cashDiscounts) {
             $order = $ordersByKey["{$payment->order_type}-{$payment->order_id}"] ?? null;
             $customer = $order?->customer?->NmCust ? mb_strtoupper($order->customer->NmCust) : '-';
             $amount = (float) $payment->jumlah;
@@ -949,6 +1043,12 @@ class KeuanganController extends Controller
             $baseSort = $payment->created_at->format('YmdHis').'-1-'.str_pad((string) $payment->id, 10, '0', STR_PAD_LEFT);
 
             if ($amount < 0) {
+                // Potongan nota tunai sudah tampil di bawah pembayaran notanya.
+                $amount += $cashDiscounts['refund'][$payment->id] ?? 0.0;
+                if ($amount >= 0) {
+                    return [];
+                }
+
                 return [[
                     'occurred_at' => $payment->created_at,
                     'no_nota' => $order?->NoOrder,
@@ -997,6 +1097,18 @@ class KeuanganController extends Controller
                     'kasir' => $payment->user?->name,
                     'user_id' => $payment->user_id,
                     'sort' => $baseSort.'-0p'.$i,
+                ];
+            }
+            if ($tunaiTidakDiterima = $cashDiscounts['receipt'][$payment->id] ?? 0.0) {
+                $rows[] = [
+                    'occurred_at' => $payment->created_at,
+                    'no_nota' => null,
+                    'keterangan' => "Potongan Penjualan Akhir · uang tidak diterima - {$customer}",
+                    'debet' => 0.0,
+                    'kredit' => $tunaiTidakDiterima,
+                    'kasir' => $payment->user?->name,
+                    'user_id' => $payment->user_id,
+                    'sort' => $baseSort.'-0t',
                 ];
             }
 
@@ -1139,6 +1251,8 @@ class KeuanganController extends Controller
                 });
         }
 
+        // Potongan nota tunai mengurangi pembayaran tunai notanya, bukan baris refund terpisah.
+        $cashDiscounts = $this->cashDiscountAllocations();
         foreach ($payments as $payment) {
             if (! in_array($payment->cara_bayar, ['tunai', 'qris', 'transfer'], true)) {
                 continue;
@@ -1161,7 +1275,9 @@ class KeuanganController extends Controller
             }
 
             $entry = $customers->get($key);
-            $entry[$payment->cara_bayar] += (float) $payment->jumlah;
+            $entry[$payment->cara_bayar] += (float) $payment->jumlah
+                + ($cashDiscounts['refund'][$payment->id] ?? 0.0)
+                - ($cashDiscounts['receipt'][$payment->id] ?? 0.0);
             $customers->put($key, $entry);
         }
 

@@ -277,7 +277,7 @@
                                                 <a href="{{ route('keuangan.laporan-kasir-harian') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.laporan-kasir-harian')) }}">Laporan Kasir Harian</a>
                                                 <a href="{{ route('keuangan.cash-adjustments.index') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.cash-adjustments.*')) }}">Penyesuaian Kas</a>
                                                 <a href="{{ route('keuangan.final-sales-discounts.index') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.final-sales-discounts.*')) }}">Potongan Penjualan Akhir</a>
-                                                <a href="{{ route('keuangan.order-adjustments.index') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.order-adjustments.*')) }}">Penyesuaian Nota Order / DP</a>
+                                                <a href="{{ route('keuangan.order-adjustments.index') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.order-adjustments.*')) }}">Penyesuaian Nota Order / Invoice</a>
                                                 <a href="{{ route('report.daily-transactions') }}" class="{{ $dropdownLink(request()->routeIs('report.daily-transactions')) }}">Rekap Transaksi Harian</a>
                                                 <a href="{{ route('report.pod-turnover') }}" class="{{ $dropdownLink(request()->routeIs('report.pod-turnover')) }}">Laporan Omzet Kertas POD</a>
                                                 <a href="{{ route('report.ctp-turnover') }}" class="{{ $dropdownLink(request()->routeIs('report.ctp-turnover')) }}">Laporan Omzet CTP</a>
@@ -661,7 +661,7 @@
                                 <a href="{{ route('keuangan.laporan-kasir-harian') }}" class="{{ $mobileLink(request()->routeIs('keuangan.laporan-kasir-harian')) }}">Laporan Kasir Harian</a>
                                 <a href="{{ route('keuangan.cash-adjustments.index') }}" class="{{ $mobileLink(request()->routeIs('keuangan.cash-adjustments.*')) }}">Penyesuaian Kas</a>
                                 <a href="{{ route('keuangan.final-sales-discounts.index') }}" class="{{ $mobileLink(request()->routeIs('keuangan.final-sales-discounts.*')) }}">Potongan Penjualan Akhir</a>
-                                <a href="{{ route('keuangan.order-adjustments.index') }}" class="{{ $mobileLink(request()->routeIs('keuangan.order-adjustments.*')) }}">Penyesuaian Nota Order / DP</a>
+                                <a href="{{ route('keuangan.order-adjustments.index') }}" class="{{ $mobileLink(request()->routeIs('keuangan.order-adjustments.*')) }}">Penyesuaian Nota Order / Invoice</a>
                                 <a href="{{ route('report.daily-transactions') }}" class="{{ $mobileLink(request()->routeIs('report.daily-transactions')) }}">Rekap Transaksi Harian</a>
                                 <a href="{{ route('report.pod-turnover') }}" class="{{ $mobileLink(request()->routeIs('report.pod-turnover')) }}">Laporan Omzet Kertas POD</a>
                                 <a href="{{ route('report.ctp-turnover') }}" class="{{ $mobileLink(request()->routeIs('report.ctp-turnover')) }}">Laporan Omzet CTP</a>
