@@ -10,7 +10,7 @@
          x-init="init()">
     <header>
         <h2 class="text-lg font-medium text-gray-900">Avatar</h2>
-        <p class="mt-1 text-sm text-gray-600">Avatar tampil di menu atas dan fitur Status. Pilih jenis, lalu acak atau atur sesuai selera.</p>
+        <p class="mt-1 text-sm text-gray-600">Avatar tampil di menu atas dan fitur Status bila belum ada Foto Pribadi. Pilih jenis, lalu acak atau atur sesuai selera.</p>
     </header>
 
     <div class="av-editor">
@@ -185,10 +185,12 @@
                 if (!confirm('Hapus avatar dan kembali memakai inisial?')) return;
                 this.saving = true;
                 axios.delete(this.destroyUrl)
-                    .then(() => {
+                    .then(r => {
                         this.hasSaved = false;
-                        this.message = 'Avatar dihapus, kembali ke inisial.';
-                        document.querySelectorAll('[data-my-avatar]').forEach(el => { el.textContent = el.dataset.initials || ''; });
+                        this.message = r.data.url ? 'Avatar dihapus, foto pribadi tetap dipakai.' : 'Avatar dihapus, kembali ke inisial.';
+                        document.querySelectorAll('[data-my-avatar]').forEach(el => {
+                            if (r.data.url) { el.innerHTML = `<img src="${r.data.url}" alt="">`; } else { el.textContent = el.dataset.initials || ''; }
+                        });
                     })
                     .catch(() => { this.error = true; this.message = 'Gagal menghapus avatar.'; })
                     .finally(() => { this.saving = false; });

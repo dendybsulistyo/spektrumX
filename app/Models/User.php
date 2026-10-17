@@ -36,6 +36,7 @@ class User extends Authenticatable
         'password',
         'remember_token',
         'avatar_svg',
+        'avatar_photo',
     ];
 
     /**
@@ -77,6 +78,12 @@ class User extends Authenticatable
     /** URL gambar avatar (versi ikut waktu ubah agar cache browser diperbarui), atau null. */
     public function avatarUrl(): ?string
     {
+        // Foto pribadi diutamakan; bila tidak ada, avatar mini; bila tidak ada juga, inisial (null).
+        if ($this->avatar_photo) {
+            // Nama file acak per unggahan → URL berubah, cache browser ikut diperbarui.
+            return route('avatar.photo', ['user' => $this->id, 'v' => substr(md5($this->avatar_photo), 0, 10)]);
+        }
+
         return $this->avatar_updated_at
             ? route('avatar.show', ['user' => $this->id, 'v' => $this->avatar_updated_at->timestamp])
             : null;

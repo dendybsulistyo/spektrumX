@@ -20,7 +20,7 @@ class UserStatusController extends Controller
     {
         $me = $request->user()->id;
         $statuses = UserStatus::active()
-            ->with('user:id,name,avatar_updated_at')
+            ->with('user:id,name,avatar_updated_at,avatar_photo')
             ->withCount('views')
             ->withExists(['views as seen' => fn ($query) => $query->where('user_id', $me)])
             ->with(['responses' => fn ($query) => $query->select('id', 'user_status_id', 'user_id', 'type', 'emoji', 'read_at')])
@@ -111,7 +111,7 @@ class UserStatusController extends Controller
     public function users(Request $request): JsonResponse
     {
         return response()->json(User::where('id', '!=', $request->user()->id)
-            ->orderBy('name')->get(['id', 'name', 'avatar_updated_at'])
+            ->orderBy('name')->get(['id', 'name', 'avatar_updated_at', 'avatar_photo'])
             ->map(fn (User $user) => ['id' => $user->id, 'name' => $user->name, 'initials' => self::initials($user->name), 'avatar' => $user->avatarUrl()]));
     }
 
@@ -144,10 +144,10 @@ class UserStatusController extends Controller
     {
         abort_unless($status->user_id === $request->user()->id, 403);
 
-        $responses = $status->responses()->with('user:id,name,avatar_updated_at')->latest()->get();
+        $responses = $status->responses()->with('user:id,name,avatar_updated_at,avatar_photo')->latest()->get();
         $reactions = $responses->where('type', UserStatusResponse::TYPE_REACTION)->keyBy('user_id');
 
-        $viewers = $status->views()->with('user:id,name,avatar_updated_at')->latest('viewed_at')->get()
+        $viewers = $status->views()->with('user:id,name,avatar_updated_at,avatar_photo')->latest('viewed_at')->get()
             ->map(fn (UserStatusView $view) => [
                 'name' => $view->user?->name ?? '-',
                 'initials' => self::initials($view->user?->name ?? '-'),

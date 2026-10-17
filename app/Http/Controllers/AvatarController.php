@@ -7,9 +7,12 @@ use App\Support\AvatarSvgSanitizer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
-/** Avatar mini: hanya pemilik akun yang bisa mengubah avatarnya sendiri. */
+/** Avatar mini & foto pribadi: hanya pemilik akun yang bisa mengubah miliknya sendiri. */
 class AvatarController extends Controller
 {
     public function store(Request $request): JsonResponse
@@ -48,9 +51,76 @@ class AvatarController extends Controller
 
     public function destroy(Request $request): JsonResponse
     {
-        $request->user()->forceFill(['avatar_options' => null, 'avatar_svg' => null, 'avatar_updated_at' => null])->save();
+        $user = $request->user();
+        $user->forceFill([
+            'avatar_options' => null,
+            'avatar_svg' => null,
+            // Waktu ubah tetap dipakai sebagai versi URL foto pribadi bila masih ada.
+            'avatar_updated_at' => $user->avatar_photo ? now() : null,
+        ])->save();
 
-        return response()->json(['ok' => true]);
+        return response()->json(['ok' => true, 'url' => $user->fresh()->avatarUrl()]);
+    }
+
+    /** Batas ukuran foto pribadi (KB). */
+    public const PHOTO_MAX_KB = 1024;
+
+    /**
+     * Foto pribadi: browser sudah memotongnya persegi & mengecilkannya, tapi
+     * server tetap memeriksa jenis, ukuran file (maks. 1 MB) dan isi gambar.
+     */
+    public function storePhoto(Request $request): JsonResponse
+    {
+        $request->validate([
+            'photo' => ['required', 'file', 'mimes:jpg,jpeg,png,webp', 'max:'.self::PHOTO_MAX_KB],
+        ], [
+            'photo.max' => 'Ukuran foto maksimal 1 MB.',
+            'photo.mimes' => 'Foto harus berupa JPG, PNG atau WEBP.',
+        ]);
+
+        $file = $request->file('photo');
+        $info = @getimagesize($file->getRealPath());
+        abort_unless($info && in_array($info[2], [IMAGETYPE_JPEG, IMAGETYPE_PNG, IMAGETYPE_WEBP], true)
+            && $info[0] >= 32 && $info[1] >= 32 && $info[0] <= 4000 && $info[1] <= 4000, 422, 'File bukan foto yang valid.');
+
+        $user = $request->user();
+        $extension = image_type_to_extension($info[2], false) === 'jpeg' ? 'jpg' : image_type_to_extension($info[2], false);
+        $path = 'avatars/'.$user->id.'-'.Str::random(12).'.'.$extension;
+        Storage::disk('local')->put($path, file_get_contents($file->getRealPath()));
+
+        $old = $user->avatar_photo;
+        $user->forceFill(['avatar_photo' => $path, 'avatar_updated_at' => now()])->save();
+        if ($old && $old !== $path) {
+            Storage::disk('local')->delete($old);
+        }
+
+        return response()->json(['url' => $user->fresh()->avatarUrl()]);
+    }
+
+    public function destroyPhoto(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        if ($user->avatar_photo) {
+            Storage::disk('local')->delete($user->avatar_photo);
+        }
+        $user->forceFill([
+            'avatar_photo' => null,
+            'avatar_updated_at' => $user->avatar_svg ? now() : null,
+        ])->save();
+
+        return response()->json(['ok' => true, 'url' => $user->fresh()->avatarUrl()]);
+    }
+
+    /** Foto pribadi disajikan hanya untuk user yang login, sebagai gambar (bukan unduhan). */
+    public function photo(User $user): StreamedResponse
+    {
+        abort_unless($user->avatar_photo && Storage::disk('local')->exists($user->avatar_photo), 404);
+
+        return Storage::disk('local')->response($user->avatar_photo, null, [
+            'X-Content-Type-Options' => 'nosniff',
+            'Content-Security-Policy' => "default-src 'none'",
+            'Cache-Control' => 'private, max-age=604800',
+        ]);
     }
 
     /** Disajikan sebagai gambar; CSP melarang skrip apa pun di dalam SVG. */

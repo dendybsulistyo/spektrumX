@@ -90,6 +90,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/profile/avatar', [AvatarController::class, 'store'])->name('avatar.store');
     Route::delete('/profile/avatar', [AvatarController::class, 'destroy'])->name('avatar.destroy');
     Route::get('/avatar/{user}.svg', [AvatarController::class, 'show'])->whereNumber('user')->name('avatar.show');
+    Route::post('/profile/avatar/foto', [AvatarController::class, 'storePhoto'])->name('avatar.photo.store');
+    Route::delete('/profile/avatar/foto', [AvatarController::class, 'destroyPhoto'])->name('avatar.photo.destroy');
+    Route::get('/avatar/{user}/foto', [AvatarController::class, 'photo'])->whereNumber('user')->name('avatar.photo');
     // Ringkasan hari ini di menu user (operator, CS, kasir).
     Route::get('/ringkasan-hari-ini', DailySummaryController::class)->name('daily-summary');
 
