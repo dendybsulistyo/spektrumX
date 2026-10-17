@@ -178,20 +178,18 @@ class OrderDocumentService
             return $invoice;
         }
 
-        $snapshot['paid'] = (float) $order->jumlah_dibayar;
+        // Tampil seperti SO: total & rincian TETAP seperti saat invoice terbit, hanya
+        // status jadi lunas. Potongan Penjualan Akhir adalah koreksi INTERNAL dan
+        // tidak boleh terlihat di invoice customer (mis. "Diskon" / total Rp 0).
+        $snapshot['paid'] = (float) $invoice->total;
         $snapshot['balance'] = 0;
         $snapshot['payment_method'] = $order->cara_bayar;
         $snapshot['payment_reference'] = $order->no_referensi;
         $snapshot['lunas_at'] = \Illuminate\Support\Carbon::parse($lunasAt ?? $order->dibayar_at ?? now())->toDateTimeString();
         // issued_at ditulis ulang apa adanya: di MySQL lama kolom TIMESTAMP pertama bisa
         // "ON UPDATE CURRENT_TIMESTAMP" dan tanggal invoice ikut berubah tanpa ini.
-        $invoice->forceFill([
-            'total' => $order->jumlah_dibayar,
-            'snapshot' => $snapshot,
-            'issued_at' => $invoice->getRawOriginal('issued_at'),
-        ]);
+        $invoice->forceFill(['snapshot' => $snapshot, 'issued_at' => $invoice->getRawOriginal('issued_at')]);
         $invoice->newQuery()->whereKey($invoice->getKey())->update([
-            'total' => $invoice->total,
             'snapshot' => json_encode($snapshot),
             'issued_at' => $invoice->getRawOriginal('issued_at'),
             'updated_at' => now(),
