@@ -12,7 +12,11 @@
             #industry-pembatalan .in-btn-danger { background: #991b1b; border-color: #991b1b; }
             #industry-pembatalan .in-btn-danger:hover { background: #7f1d1d; }
             #industry-pembatalan .in-btn-ghost { background: transparent; color: var(--color-text); border-color: var(--color-divider); }
-            #industry-pembatalan .bt-table td { vertical-align: top; padding-top: 14px; padding-bottom: 14px; }
+            #industry-pembatalan .bt-table { border-collapse: collapse; border: 1px solid #d6cfbd; }
+            #industry-pembatalan .bt-table th { padding: 10px 14px; background: #ebe5d6; border-bottom: 1px solid #c9bfa6; font-size: 12px; letter-spacing: .05em; text-transform: uppercase; text-align: left; white-space: nowrap; }
+            #industry-pembatalan .bt-table td { padding: 14px; vertical-align: top; border-top: 1px solid #e4dece; }
+            #industry-pembatalan .bt-table tbody tr:first-child td { border-top: 0; }
+            #industry-pembatalan .bt-table th + th, #industry-pembatalan .bt-table td + td { border-left: 1px solid #ece6d8; }
             #industry-pembatalan .bt-no { font-family: var(--font-heading); font-weight: 600; white-space: nowrap; }
             #industry-pembatalan .bt-sub { font-size: 12px; color: var(--color-text-muted, #6b7280); margin-top: 3px; line-height: 1.4; }
             #industry-pembatalan .bt-reason { max-width: 260px; color: var(--color-text-muted, #6b7280); line-height: 1.45; }
@@ -46,7 +50,7 @@
                 </p>
             </div>
 
-            <div class="blueprint" style="padding: var(--space-6);">
+            <div class="blueprint" style="padding: var(--space-4);">
                 <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
                 <div style="overflow-x: auto;">
                     <table class="table bt-table" style="min-width: 860px;">
