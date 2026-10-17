@@ -18,6 +18,9 @@ export const AVATAR_OPTIONS = {
     nose: Array.from({ length: 6 }, (_, i) => 'variant' + pad(i + 1)),
     hijabColors: ['#1b2236', '#0f8fb3', '#c8246c', '#2e8b57', '#b07d00', '#8a6fb8', '#9a948a', '#5b3a29'],
     backgrounds: ['dfe4f0', 'd6eef6', 'f6dbe6', 'd9efe1', 'faedc0', 'e5ddf6'],
+    hats: ['none', 'pet', 'kupluk', 'peci'],
+    hatLabels: { none: 'Tidak', pet: 'Pet', kupluk: 'Kupluk', peci: 'Peci' },
+    hatColors: ['#1b2236', '#c8246c', '#0f8fb3', '#2e8b57', '#b07d00', '#d9480f', '#9a948a', '#f4f1ea'],
 };
 
 const pick = (list) => list[Math.floor(Math.random() * list.length)];
@@ -38,6 +41,52 @@ const hijabLayer = (color) => {
         + `</g>`;
 };
 
+/**
+ * Penyesuai posisi topi: gambar dasar dibuat agak ke kanan & terlalu rendah,
+ * jadi semua titik digeser ke tengah tengkorak (±x 492), dikecilkan sedikit
+ * dan dimiringkan mengikuti kepala yang menoleh ke kanan (sisi kanan lebih tinggi).
+ */
+const HAT_FIT = { cx: 527, tx: 488, sx: 0.93, sy: 0.92, dy: -38, tilt: -0.07 };
+const fitHat = (markup) => markup.replace(/(-?\d+(?:\.\d+)?) (-?\d+(?:\.\d+)?)/g, (_, x, y) => {
+    const f = HAT_FIT;
+    const nx = f.tx + (Number(x) - f.cx) * f.sx;
+    const ny = Number(y) * f.sy + f.dy + (Number(x) - f.cx) * f.tilt;
+    return `${Math.round(nx)} ${Math.round(ny)}`;
+});
+
+/** Topi buatan sendiri (Lorelei tidak punya topi); digambar di atas rambut. */
+const hatLayer = (type, color) => fitHat(hatShape(type, color));
+
+const hatShape = (type, color) => {
+    const g = (inner) => `<g stroke="#000" stroke-linejoin="round" stroke-linecap="round">${inner}</g>`;
+    if (type === 'pet') {
+        return g(
+            `<path d="M268 372 C255 250 330 140 470 118 C610 98 735 165 778 292 C786 318 788 340 786 360 C700 330 560 318 420 330 C360 336 310 350 268 372 Z" fill="${color}" stroke-width="10"/>`
+            + `<path d="M560 322 C650 300 760 300 850 318 C900 328 925 352 905 372 C860 388 780 372 700 362 C640 354 590 350 560 346 Z" fill="${color}" stroke-width="10"/>`
+            + `<path d="M520 112 C505 180 498 255 500 326" fill="none" stroke-width="7" opacity=".55"/>`
+            + `<path d="M395 140 C360 205 340 270 336 342" fill="none" stroke-width="6" opacity=".35"/>`
+            + `<path d="M650 140 C690 200 712 262 720 330" fill="none" stroke-width="6" opacity=".35"/>`
+            + `<path d="M500 122 C496 104 540 100 538 120 Z" fill="${color}" stroke-width="8"/>`
+        );
+    }
+    if (type === 'kupluk') {
+        return g(
+            `<path d="M272 335 C262 220 330 128 470 104 C610 84 742 150 780 270 C788 295 790 318 788 335 Z" fill="${color}" stroke-width="10"/>`
+            + `<path d="M258 318 C420 290 620 285 800 312 L806 392 C620 362 420 368 262 400 Z" fill="${color}" stroke-width="10"/>`
+            + `<path d="M330 312 L328 384 M400 302 L398 374 M470 298 L470 368 M540 296 L541 366 M610 298 L612 368 M680 302 L683 374 M745 308 L749 382" fill="none" stroke-width="6" opacity=".35"/>`
+            + `<path d="M520 104 C488 92 482 52 518 44 C556 38 562 88 520 104 Z" fill="${color}" stroke-width="9"/>`
+        );
+    }
+    if (type === 'peci') {
+        return g(
+            `<path d="M262 395 L292 128 C430 104 640 104 768 126 L792 380 C630 350 420 356 262 395 Z" fill="${color}" stroke-width="10"/>`
+            + `<path d="M292 128 C430 150 640 150 768 126" fill="none" stroke-width="7" opacity=".45"/>`
+            + `<path d="M272 318 C430 288 630 284 786 306" fill="none" stroke-width="5" opacity=".25"/>`
+        );
+    }
+    return '';
+};
+
 /** Pilihan acak sesuai jenis (Pria / Wanita / Wanita berhijab). */
 export function randomAvatar(gender = 'pria', hijab = false, keep = {}) {
     const o = AVATAR_OPTIONS;
@@ -52,6 +101,8 @@ export function randomAvatar(gender = 'pria', hijab = false, keep = {}) {
         glasses: Math.random() < 0.2,
         beard: gender === 'pria' && Math.random() < 0.2,
         hijabColor: keep.hijabColor ?? pick(o.hijabColors),
+        hat: keep.hat ?? 'none',
+        hatColor: keep.hatColor ?? pick(o.hatColors),
         background: keep.background ?? pick(o.backgrounds),
     };
 }
@@ -76,7 +127,9 @@ export function renderAvatar(a) {
         backgroundColor: [a.background],
     }).toString().replace(/<metadata[\s\S]*?<\/metadata>/, '');
 
-    return hijab ? svg.replace(/<\/svg>$/, hijabLayer(a.hijabColor) + '</svg>') : svg;
+    if (hijab) return svg.replace(/<\/svg>$/, hijabLayer(a.hijabColor) + '</svg>');
+    const hat = a.hat && a.hat !== 'none' ? hatLayer(a.hat, a.hatColor || '#1b2236') : '';
+    return hat ? svg.replace(/<\/svg>$/, hat + '</svg>') : svg;
 }
 
 window.SpektrumAvatar = { AVATAR_OPTIONS, randomAvatar, renderAvatar };

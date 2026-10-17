@@ -34,6 +34,8 @@ class AvatarController extends Controller
             'options.beard' => ['required', 'boolean'],
             'options.hijabColor' => ['required', 'regex:/^#[0-9a-fA-F]{6}$/'],
             'options.background' => ['required', 'regex:/^[0-9a-fA-F]{6}$/'],
+            'options.hat' => ['nullable', Rule::in(['none', 'pet', 'kupluk', 'peci'])],
+            'options.hatColor' => ['nullable', 'regex:/^#[0-9a-fA-F]{6}$/'],
             'svg' => ['required', 'string', 'max:'.AvatarSvgSanitizer::MAX_BYTES],
         ]);
 

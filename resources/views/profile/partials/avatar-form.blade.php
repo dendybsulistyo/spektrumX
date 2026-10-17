@@ -71,6 +71,24 @@
                 </div>
             </div>
 
+            <div class="av-row" x-show="!(o.gender === 'wanita' && o.hijab)">
+                <span class="av-label">Topi</span>
+                <div class="av-seg">
+                    <template x-for="h in opts.hats" :key="h">
+                        <button type="button" :class="(o.hat || 'none') === h && 'is-active'" @click="o.hat = h; render()" x-text="opts.hatLabels[h]"></button>
+                    </template>
+                </div>
+            </div>
+
+            <div class="av-row" x-show="!(o.gender === 'wanita' && o.hijab) && o.hat && o.hat !== 'none'">
+                <span class="av-label">Warna topi</span>
+                <div class="av-swatches">
+                    <template x-for="c in opts.hatColors" :key="c">
+                        <button type="button" class="av-swatch" :style="`background:${c}`" :class="o.hatColor === c && 'is-active'" @click="o.hatColor = c; render()"></button>
+                    </template>
+                </div>
+            </div>
+
             <div class="av-row">
                 <span class="av-label">Warna latar</span>
                 <div class="av-swatches">
@@ -101,8 +119,8 @@
     .av-label { width: 96px; font-size: 12px; font-weight: 600; color: #77736a; text-transform: uppercase; letter-spacing: .06em; }
     .av-seg { display: inline-flex; }
     .av-seg button { height: 34px; padding: 0 16px; font-size: 13px; font-weight: 600; color: #5d5a52; background: #fff; border: 1px solid #cfc7b5; border-right: 0; cursor: pointer; }
-    .av-seg button:first-child { border-radius: 8px 0 0 8px; }
-    .av-seg button:last-child { border-right: 1px solid #cfc7b5; border-radius: 0 8px 8px 0; }
+    .av-seg button:first-of-type { border-radius: 8px 0 0 8px; }
+    .av-seg button:last-of-type { border-right: 1px solid #cfc7b5; border-radius: 0 8px 8px 0; }
     .av-seg button.is-active { color: #fff; background: #1b2236; border-color: #1b2236; }
     .av-stepper-group { display: flex; flex-wrap: wrap; gap: 8px; }
     .av-stepper { display: inline-flex; align-items: center; height: 34px; background: #fff; border: 1px solid #cfc7b5; border-radius: 8px; overflow: hidden; }
@@ -140,6 +158,9 @@
                     if (!window.SpektrumAvatar) return setTimeout(ready, 30);
                     this.opts = window.SpektrumAvatar.AVATAR_OPTIONS;
                     this.o = this.saved ? { ...this.saved } : window.SpektrumAvatar.randomAvatar('pria');
+                    // Avatar lama (sebelum ada topi) belum punya pilihan topi.
+                    this.o.hat = this.o.hat || 'none';
+                    this.o.hatColor = this.o.hatColor || this.opts.hatColors[0];
                     this.render();
                 };
                 ready();
@@ -160,7 +181,7 @@
                 this.render();
             },
             shuffle() {
-                this.o = window.SpektrumAvatar.randomAvatar(this.o.gender, this.o.hijab, { hijabColor: this.o.hijab ? undefined : this.o.hijabColor, background: this.o.background });
+                this.o = window.SpektrumAvatar.randomAvatar(this.o.gender, this.o.hijab, { hijabColor: this.o.hijab ? undefined : this.o.hijabColor, background: this.o.background, hat: this.o.hat, hatColor: this.o.hatColor });
                 this.render();
             },
             step(key, dir) {
