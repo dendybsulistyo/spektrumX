@@ -95,8 +95,11 @@
         $singleItemFallback = count($snapshot['items'] ?? []) === 1;
         $payment = match ($snapshot['payment_method'] ?? null) {
             'qris' => 'QRIS', 'transfer' => 'Transfer', 'campuran' => 'Campuran',
-            'tunai' => 'Tunai', default => $isInvoice ? 'Lunas' : '-',
+            'tunai' => 'Tunai', 'hutang' => 'Tagihan VIP',
+            default => $isInvoice ? 'Lunas' : '-',
         };
+        // Invoice VIP yang terbit sebelum lunas (bersamaan DO) masih punya sisa tagihan.
+        $invoiceBelumLunas = $isInvoice && $balance > 0;
         $documentItems = collect($snapshot['items'] ?? []);
         $itemsPerPage = $isInvoice ? 5 : 6;
         $itemPages = $documentItems->chunk($itemsPerPage);
@@ -109,7 +112,7 @@
     <div class="toolbar">
         <a href="{{ route('order-documents.index') }}">← Daftar dokumen</a>
         <div class="toolbar-actions">
-            @if ($document->kind === 'inv')
+            @if ($document->kind === 'inv' && ! $invoiceBelumLunas)
                 <a class="button" href="{{ route('order-documents.receipt', $document) }}">Kwitansi</a>
             @endif
             @if ($printRecord && ! $canReprint)
@@ -165,7 +168,7 @@
             </div>
             <div>
                 <p class="label">Status</p>
-                <span class="status">{{ $isInvoice ? 'LUNAS' : 'BARANG DISERAHKAN' }}</span>
+                <span class="status">{{ $isInvoice ? ($invoiceBelumLunas ? 'BELUM LUNAS · TAGIHAN VIP' : 'LUNAS') : 'BARANG DISERAHKAN' }}</span>
                 @if (! $isInvoice)
                     <p>Penerima: <strong>{{ $snapshot['recipient'] ?? '-' }}</strong></p>
                     <p>Kontak: {{ $snapshot['contact'] ?? '-' }}</p>

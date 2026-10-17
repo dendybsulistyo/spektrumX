@@ -5,9 +5,6 @@
 
     <div class="py-6">
         <div class="mx-auto max-w-7xl space-y-4 px-4 sm:px-6 lg:px-8">
-            @if (session('status'))
-                <div class="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">{{ session('status') }}</div>
-            @endif
             @if (session('error'))
                 <div class="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{{ session('error') }}</div>
             @endif
@@ -36,7 +33,7 @@
 
             <section class="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
                 <div class="flex items-center justify-between border-b border-slate-200 px-5 py-4">
-                    <div><h3 class="text-base font-semibold text-slate-900">Daftar transaksi</h3><p class="mt-1 text-xs text-slate-500">{{ $orders->count() }} SO lunas ditemukan pada periode ini. Nota DP / tagihan harus dilunasi dulu.</p></div>
+                    <div><h3 class="text-base font-semibold text-slate-900">Daftar transaksi</h3><p class="mt-1 text-xs text-slate-500">{{ $orders->count() }} SO ber-invoice ditemukan pada periode ini (lunas, atau tagihan VIP yang invoice-nya sudah terbit). Nota DP dan order yang belum ber-invoice tidak ditampilkan.</p></div>
                     <a href="{{ route('report.sales-discounts') }}" class="rounded-md border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-700">Lihat Rekap Potongan Penjualan</a>
                 </div>
                 <div class="overflow-x-auto">
@@ -47,8 +44,8 @@
                         <tbody class="divide-y divide-slate-100">
                         @forelse ($orders as $order)
                             <tr class="align-top hover:bg-slate-50/70">
-                                <td class="px-4 py-3"><p class="font-semibold text-slate-900">{{ $order->number }}</p><p class="mt-0.5 text-xs text-slate-500">{{ $order->customer }} · {{ $order->type_label }} · {{ $order->paid_at?->format('d-m-Y H:i') }}</p></td>
-                                <td class="px-4 py-3"><span class="inline-flex rounded border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-semibold text-slate-700">{{ strtoupper($order->payment_status) }}</span></td>
+                                <td class="px-4 py-3"><p class="font-semibold text-slate-900">{{ $order->number }}</p><p class="mt-0.5 text-xs text-slate-500">{{ $order->customer }} · {{ $order->type_label }} · {{ $order->paid_at?->format('d-m-Y H:i') }}</p>@if ($order->invoice_number)<p class="mt-0.5 font-mono text-xs text-slate-600">{{ $order->invoice_number }}</p>@endif</td>
+                                <td class="px-4 py-3">@if ($order->payment_status === 'hutang')<span class="inline-flex rounded border border-amber-200 bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-800">TAGIHAN VIP</span><p class="mt-1 text-xs text-amber-800">Sisa piutang Rp {{ number_format($order->receivable_amount, 0, ',', '.') }}</p>@else<span class="inline-flex rounded border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-semibold text-slate-700">{{ strtoupper($order->payment_status) }}</span>@endif</td>
                                 <td class="px-4 py-3 text-right tabular-nums">Rp {{ number_format($order->initial_amount, 0, ',', '.') }}</td>
                                 <td class="px-4 py-3 text-right tabular-nums text-red-700">Rp {{ number_format($order->discount_amount, 0, ',', '.') }}</td>
                                 <td class="px-4 py-3 text-right font-semibold tabular-nums">Rp {{ number_format($order->final_amount, 0, ',', '.') }}</td>
@@ -98,7 +95,7 @@
                                 </tr>
                             @endcan
                         @empty
-                            <tr><td colspan="7" class="px-5 py-12 text-center text-slate-500">Tidak ada SO berstatus lunas pada filter ini. Potongan Penjualan Akhir hanya untuk nota yang sudah lunas.</td></tr>
+                            <tr><td colspan="7" class="px-5 py-12 text-center text-slate-500">Tidak ada SO yang sudah terbit INVOICE pada filter ini. Potongan Penjualan Akhir hanya untuk nota yang sudah ber-invoice.</td></tr>
                         @endforelse
                         </tbody>
                     </table>

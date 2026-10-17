@@ -7,6 +7,7 @@ use App\Models\OrderDocument;
 use App\Models\OrderIndoor;
 use App\Models\OrderOutdoor;
 use App\Models\PengaturanKeuangan;
+use App\Support\Rupiah;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -94,7 +95,7 @@ class OrderDocumentService
             }
             $key = ['kind' => 'inv', 'order_type' => $type, 'order_id' => $order->id, 'sequence' => 1];
             if ($existing = OrderDocument::where($key)->first()) {
-                return $existing;
+                return $this->tandaiInvoiceVipLunas($existing, $order, $issuedAt);
             }
             $at = $issuedAt ?? $order->dibayar_at;
             if (! $at) {
@@ -119,6 +120,86 @@ class OrderDocumentService
         });
     }
 
+    /**
+     * Invoice VIP: terbit saat barang diambil (bersamaan DO) walau belum lunas,
+     * selama order berstatus hutang VIP (dalam plafon). Nomor & tanggal invoice =
+     * saat itu; saat tagihan lunas, invoice yang SAMA ditandai lunas
+     * (lihat tandaiInvoiceVipLunas). Order lunas tetap lewat issueInvoice().
+     */
+    public function issueCreditInvoice(Model $order, mixed $issuedAt = null, string $origin = 'vip_credit'): ?OrderDocument
+    {
+        if (! $type = $this->type($order)) {
+            return null;
+        }
+
+        return DB::transaction(function () use ($order, $type, $issuedAt, $origin) {
+            $order = $order->newQuery()->with('customer.limit')->lockForUpdate()->findOrFail($order->id);
+            if ($order->status_bayar !== 'hutang' || (float) $order->jumlah_piutang <= 0 || ! $order->customer?->isVip
+                || $order->status === 'batal' || $order->invoice_voided_at) {
+                return null;
+            }
+            $key = ['kind' => 'inv', 'order_type' => $type, 'order_id' => $order->id, 'sequence' => 1];
+            if ($existing = OrderDocument::where($key)->first()) {
+                return $existing;
+            }
+
+            $company = Schema::hasTable('pengaturan_keuangan') ? PengaturanKeuangan::current() : null;
+
+            return OrderDocument::create($key + [
+                'number' => $this->number($order, 'inv'), 'issued_at' => $issuedAt ?? now(),
+                'issued_by' => auth()->id(),
+                // Nilai tagihan (bukan uang diterima, karena belum lunas).
+                'total' => Rupiah::bulatkan((float) $order->jumlah_dibayar + (float) $order->jumlah_piutang),
+                // array_merge: nilai di bawah MENIMPA snapshot (mis. payment_method dari order).
+                'snapshot' => array_merge($this->snapshot($order, true), [
+                    'paid' => (float) $order->jumlah_dibayar,
+                    'balance' => (float) $order->jumlah_piutang,
+                    'payment_method' => 'hutang',
+                    'origin' => $origin,
+                    'issued_by_name' => auth()->user()?->name,
+                    'company_name' => $company?->nama_perusahaan,
+                    'company_address' => $company?->alamat_perusahaan,
+                    'company_npwp' => $company?->npwp_perusahaan,
+                ]),
+            ]);
+        });
+    }
+
+    /**
+     * Invoice VIP (terbit sebelum lunas) yang tagihannya kini lunas: nomor &
+     * tanggal tetap, status jadi lunas. `lunas_at` dipakai invoiceQuery agar
+     * PPN / Gunggungan / Rekap Omset tetap mencatat di tanggal pelunasan,
+     * sama seperti sebelum ada invoice VIP.
+     */
+    private function tandaiInvoiceVipLunas(OrderDocument $invoice, Model $order, mixed $lunasAt = null): OrderDocument
+    {
+        $snapshot = $invoice->snapshot;
+        if ((float) ($snapshot['balance'] ?? 0) <= 0) {
+            return $invoice;
+        }
+
+        $snapshot['paid'] = (float) $order->jumlah_dibayar;
+        $snapshot['balance'] = 0;
+        $snapshot['payment_method'] = $order->cara_bayar;
+        $snapshot['payment_reference'] = $order->no_referensi;
+        $snapshot['lunas_at'] = \Illuminate\Support\Carbon::parse($lunasAt ?? $order->dibayar_at ?? now())->toDateTimeString();
+        // issued_at ditulis ulang apa adanya: di MySQL lama kolom TIMESTAMP pertama bisa
+        // "ON UPDATE CURRENT_TIMESTAMP" dan tanggal invoice ikut berubah tanpa ini.
+        $invoice->forceFill([
+            'total' => $order->jumlah_dibayar,
+            'snapshot' => $snapshot,
+            'issued_at' => $invoice->getRawOriginal('issued_at'),
+        ]);
+        $invoice->newQuery()->whereKey($invoice->getKey())->update([
+            'total' => $invoice->total,
+            'snapshot' => json_encode($snapshot),
+            'issued_at' => $invoice->getRawOriginal('issued_at'),
+            'updated_at' => now(),
+        ]);
+
+        return $invoice;
+    }
+
     public function invoiceQuery()
     {
         $queries = [];
@@ -128,7 +209,11 @@ class OrderDocumentService
                 ->where('d.kind', 'inv')->where('d.order_type', $type)
                 ->where('o.status_bayar', 'lunas')->where('o.jumlah_piutang', '<=', 0)
                 ->where('o.status', '!=', 'batal')->whereNull('o.invoice_voided_at')
-                ->select('d.*');
+                // Invoice VIP yang terbit sebelum lunas dihitung di tanggal pelunasan
+                // (lunas_at), sama seperti perilaku laporan pajak sebelumnya.
+                ->select('d.id', 'd.kind', 'd.order_type', 'd.order_id', 'd.sequence', 'd.number', 'd.request_key',
+                    'd.issued_by', 'd.total', 'd.snapshot', 'd.created_at', 'd.updated_at')
+                ->selectRaw("COALESCE(JSON_UNQUOTE(JSON_EXTRACT(d.snapshot, '$.lunas_at')), d.issued_at) as issued_at");
         }
         $query = array_shift($queries);
         foreach ($queries as $other) {

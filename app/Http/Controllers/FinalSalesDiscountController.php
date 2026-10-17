@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\FinalSalesDiscount;
+use App\Models\OrderDocument;
 use App\Models\OrderArtwork;
 use App\Models\OrderIndoor;
 use App\Models\OrderOutdoor;
@@ -47,10 +48,17 @@ class FinalSalesDiscountController extends Controller
 
         $orders = collect();
         foreach (self::ORDER_MODELS as $type => $model) {
+            $table = (new $model)->getTable();
             $rows = $model::query()
                 ->with('customer')
-                // Potongan Penjualan Akhir hanya untuk nota LUNAS (customer reguler maupun VIP).
-                ->where('status_bayar', 'lunas')
+                // Potongan Penjualan Akhir hanya untuk nota yang SUDAH TERBIT INVOICE:
+                // lunas (reguler & VIP), atau tagihan VIP yang invoice-nya terbit bersamaan DO.
+                ->where(fn ($q) => $q->where('status_bayar', 'lunas')
+                    ->orWhere(fn ($vip) => $vip->where('status_bayar', 'hutang')->where('jumlah_piutang', '>', 0)))
+                ->whereExists(fn ($q) => $q->selectRaw('1')->from('order_documents')
+                    ->where('order_documents.kind', 'inv')
+                    ->where('order_documents.order_type', $type)
+                    ->whereColumn('order_documents.order_id', $table.'.id'))
                 ->whereNotNull('dibayar_at')
                 ->whereBetween('dibayar_at', [$from.' 00:00:00', $to.' 23:59:59'])
                 ->where('status', '!=', 'batal')
@@ -65,9 +73,13 @@ class FinalSalesDiscountController extends Controller
                 ->limit(150)
                 ->get();
 
+            $invoiceNumbers = OrderDocument::query()->where('kind', 'inv')->where('order_type', $type)
+                ->whereIn('order_id', $rows->pluck('id'))->orderBy('sequence')->pluck('number', 'order_id');
+
             foreach ($rows as $order) {
                 $orders->push((object) [
                     'key' => $type.':'.$order->id,
+                    'invoice_number' => $invoiceNumbers[$order->id] ?? null,
                     'type' => $type,
                     'type_label' => ucfirst($type),
                     'number' => $order->NoOrder,
@@ -141,7 +153,20 @@ class FinalSalesDiscountController extends Controller
             $order = $model::query()->with('customer.limit')->lockForUpdate()->findOrFail((int) $id);
 
             abort_unless($order->dibayar_at, 422, 'SO belum memiliki transaksi keuangan yang dapat dikoreksi.');
-            if ($order->status_bayar !== 'lunas' || (float) $order->jumlah_piutang > 0) {
+            if (! OrderDocument::query()->where('kind', 'inv')->where('order_type', $type)->where('order_id', $order->id)->exists()) {
+                throw ValidationException::withMessages([
+                    'discount_amount' => "Nota {$order->NoOrder} belum terbit INVOICE. Potongan Penjualan Akhir hanya untuk nota yang sudah ber-invoice.",
+                ]);
+            }
+            $isLunas = $order->status_bayar === 'lunas' && (float) $order->jumlah_piutang <= 0;
+            $isTagihanVip = $order->status_bayar === 'hutang' && (float) $order->jumlah_piutang > 0;
+            if ($isTagihanVip && Rupiah::bulatkan((float) $data['discount_amount']) > Rupiah::bulatkan((float) $order->jumlah_piutang)) {
+                throw ValidationException::withMessages([
+                    'discount_amount' => "Potongan untuk tagihan VIP {$order->NoOrder} maksimal sebesar sisa piutang Rp "
+                        .number_format((float) $order->jumlah_piutang, 0, ',', '.').'.',
+                ]);
+            }
+            if (! $isLunas && ! $isTagihanVip) {
                 $sisa = max(0, (float) $order->jumlah_piutang);
                 throw ValidationException::withMessages([
                     'discount_amount' => "Nota {$order->NoOrder} belum lunas"
@@ -263,6 +288,12 @@ class FinalSalesDiscountController extends Controller
 
             if ($receivableOffset > 0 && $order->customer?->limit && $wasHutang) {
                 $order->customer->limit->decrement('Total', $receivableOffset);
+            }
+
+            // Tagihan VIP yang lunas karena potongan: invoice-nya (terbit bersamaan DO)
+            // ditandai lunas di tanggal koreksi ini.
+            if ($wasHutang && $newReceivable <= 0) {
+                app(\App\Services\OrderDocumentService::class)->issueInvoice($order->fresh(), $data['transaction_date']);
             }
 
             OrderStatusNote::create([

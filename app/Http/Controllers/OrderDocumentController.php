@@ -103,6 +103,8 @@ class OrderDocumentController extends Controller
     {
         $this->authorizeAccess();
         abort_unless($document->kind === 'inv', 404);
+        // Kwitansi = bukti terima uang: hanya untuk invoice yang sudah lunas.
+        abort_if((float) ($document->snapshot['balance'] ?? 0) > 0, 422, 'Invoice ini belum lunas (tagihan VIP). Kwitansi tersedia setelah pelunasan.');
 
         $document->load('issuedBy');
         $snapshot = $document->snapshot;

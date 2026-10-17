@@ -59,6 +59,12 @@ class DeliveryOrderService
                 'number' => $documents->number($order, 'do').'-'.$sequence,
                 'request_key' => $data['request_key'], 'issued_at' => now(), 'issued_by' => $userId, 'snapshot' => $snapshot,
             ]);
+            // VIP boleh ambil barang sebelum lunas (dalam plafon): invoice terbit
+            // bersamaan DO pertama. Order lunas tidak tersentuh (invoice-nya sudah
+            // terbit saat pelunasan).
+            if ($credit) {
+                $documents->issueCreditInvoice($order, $document->issued_at);
+            }
             if ($result['order']->status === 'selesai' && ! $result['order']->diambil_at) {
                 $result['order']->update(['diambil_at' => now(), 'pengambilan_by' => $userId]);
             }
