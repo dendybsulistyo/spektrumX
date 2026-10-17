@@ -777,6 +777,10 @@ class KeuanganController extends Controller
             // Semua uang masuk/keluar milik order yang DIBATALKAN dikumpulkan di
             // Transaksi Lain-lain, terpisah dari nota normal.
             $batal = $order?->status === 'batal' ? 'Pembatalan '.$order->NoOrder.' · ' : null;
+            if ($batal) {
+                // Baris satu order batal berurutan (uang masuk lalu refund), sesudah penyesuaian kas.
+                $baseSort = '3-'.$order->NoOrder.'-'.substr($baseSort, 2);
+            }
 
             if ($amount < 0) {
                 $isPotongan = $this->refundKind($payment, $order, $discountRefunds) === 'potongan';

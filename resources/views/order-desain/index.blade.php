@@ -111,6 +111,9 @@
                         }, 60);
                     },
                     pollVersion() {
+                        // Jangan reload saat operator sedang memilih / mengirim massal:
+                        // kiriman pertama mengubah versi halaman dan memotong sisa kiriman.
+                        if (this.sending || this.selectedCount > 0) return;
                         const active = document.activeElement;
                         if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) return;
 
