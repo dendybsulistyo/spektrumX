@@ -187,7 +187,7 @@ class OrderArtworkController extends Controller
                 ." — alasan: {$data['cancel_reason']}. Menunggu persetujuan."
         );
 
-        return redirect()->route('order-desain.index', ['tab' => 'artwork'])->with('status', 'Pengajuan pembatalan order dikirim, menunggu persetujuan Admin/Admin Kasir.');
+        return back()->with('status', 'Pengajuan pembatalan order dikirim, menunggu persetujuan Admin/Admin Kasir.');
     }
 
     /**
@@ -242,7 +242,7 @@ class OrderArtworkController extends Controller
                 ->with('status', 'Pembatalan disetujui. Nota lama hangus, silakan buat nota pengganti.');
         }
 
-        return redirect()->route('order-desain.index', ['tab' => 'artwork'])->with('status', trim('Pembatalan disetujui, order dibatalkan total. '.$cancelNote));
+        return back()->with('status', trim('Pembatalan disetujui, order dibatalkan total. '.$cancelNote));
     }
 
     public function rejectCancel(OrderArtwork $orderArtwork): RedirectResponse
@@ -258,7 +258,7 @@ class OrderArtworkController extends Controller
             ]);
         }, attempts: 3);
 
-        return redirect()->route('order-desain.index', ['tab' => 'artwork'])->with('status', 'Pengajuan pembatalan ditolak, order lanjut diproses normal.');
+        return back()->with('status', 'Pengajuan pembatalan ditolak, order lanjut diproses normal.');
     }
 
     /**

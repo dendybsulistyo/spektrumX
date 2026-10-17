@@ -289,7 +289,7 @@ class OrderIndoorController extends Controller
                 ->with('status', 'Pembatalan disetujui. Nota lama hangus, silakan buat nota pengganti.');
         }
 
-        return redirect()->route('order-desain.index', ['tab' => 'indoor'])->with('status', trim('Pembatalan disetujui, order dibatalkan total. '.$cancelNote));
+        return back()->with('status', trim('Pembatalan disetujui, order dibatalkan total. '.$cancelNote));
     }
 
     public function rejectCancel(OrderIndoor $orderIndoor): RedirectResponse
@@ -305,7 +305,7 @@ class OrderIndoorController extends Controller
             ]);
         }, attempts: 3);
 
-        return redirect()->route('order-desain.index', ['tab' => 'indoor'])->with('status', 'Pengajuan pembatalan ditolak, order lanjut diproses normal.');
+        return back()->with('status', 'Pengajuan pembatalan ditolak, order lanjut diproses normal.');
     }
 
     /**

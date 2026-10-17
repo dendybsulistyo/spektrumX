@@ -286,7 +286,7 @@ class OrderOutdoorController extends Controller
                 ->with('status', 'Pembatalan disetujui. Nota lama hangus, silakan buat nota pengganti.');
         }
 
-        return redirect()->route('order-desain.index', ['tab' => 'outdoor'])->with('status', trim('Pembatalan disetujui, order dibatalkan total. '.$cancelNote));
+        return back()->with('status', trim('Pembatalan disetujui, order dibatalkan total. '.$cancelNote));
     }
 
     public function rejectCancel(OrderOutdoor $orderOutdoor): RedirectResponse
@@ -302,7 +302,7 @@ class OrderOutdoorController extends Controller
             ]);
         }, attempts: 3);
 
-        return redirect()->route('order-desain.index', ['tab' => 'outdoor'])->with('status', 'Pengajuan pembatalan ditolak, order lanjut diproses normal.');
+        return back()->with('status', 'Pengajuan pembatalan ditolak, order lanjut diproses normal.');
     }
 
     /**

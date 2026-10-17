@@ -774,6 +774,9 @@ class KeuanganController extends Controller
             $amount = (float) $payment->jumlah;
             $method = OrderPayment::CARA_BAYAR_LABELS[$payment->cara_bayar] ?? ucfirst($payment->cara_bayar);
             $baseSort = '2-'.$payment->created_at?->format('YmdHis').'-'.str_pad((string) $payment->id, 10, '0', STR_PAD_LEFT);
+            // Semua uang masuk/keluar milik order yang DIBATALKAN dikumpulkan di
+            // Transaksi Lain-lain, terpisah dari nota normal.
+            $batal = $order?->status === 'batal' ? 'Pembatalan '.$order->NoOrder.' · ' : null;
 
             if ($amount < 0) {
                 $isPotongan = $this->refundKind($payment, $order, $discountRefunds) === 'potongan';
@@ -786,8 +789,8 @@ class KeuanganController extends Controller
                     }
                 }
                 $details->push([
-                    'category' => $isPotongan ? 'sales_discount' : 'refund',
-                    'description' => match ($this->refundKind($payment, $order, $discountRefunds)) {
+                    'category' => $isPotongan ? 'sales_discount' : ($batal ? 'other_transaction' : 'refund'),
+                    'description' => $batal && ! $isPotongan ? "{$batal}refund via {$method} - {$customer}" : match ($this->refundKind($payment, $order, $discountRefunds)) {
                         'potongan' => 'Potongan Penjualan Akhir · '.($order?->NoOrder ?? '-')." · By system - {$customer}",
                         'pembatalan' => 'Refund pembatalan · '.($order?->NoOrder ?? '-')." · via {$method} - {$customer}",
                         default => "Refund via {$method} - {$customer}",
@@ -798,8 +801,10 @@ class KeuanganController extends Controller
                     'sort' => $baseSort.'-0',
                 ]);
                 foreach (($isPotongan ? [] : $this->nonCashRefundOffset($payment, fn (string $method) => [
-                    'category' => 'non_cash_refund',
-                    'description' => $this->nonCashOffsetLabel($this->refundKind($payment, $order, $discountRefunds), $method)." - {$customer}",
+                    'category' => $batal ? 'other_transaction' : 'non_cash_refund',
+                    'description' => $batal
+                        ? "{$batal}refund via {$method} (keluar dari bank, bukan kas) - {$customer}"
+                        : $this->nonCashOffsetLabel($this->refundKind($payment, $order, $discountRefunds), $method)." - {$customer}",
                     'debit' => abs($amount),
                     'credit' => 0.0,
                     'user_id' => $payment->user_id,
@@ -825,8 +830,10 @@ class KeuanganController extends Controller
             $diterima = $amount - ($cashDiscounts['receipt'][$payment->id] ?? 0.0);
             if ($diterima > 0) {
                 $details->push([
-                    'category' => $category,
-                    'description' => $description,
+                    'category' => $batal ? 'other_transaction' : $category,
+                    'description' => $batal
+                        ? $batal.'uang masuk ('.(OrderPayment::JENIS_LABELS[$payment->jenis] ?? ucfirst($payment->jenis)).") - {$customer}"
+                        : $description,
                     'debit' => $diterima,
                     'credit' => 0.0,
                     'user_id' => $payment->user_id,
@@ -837,12 +844,14 @@ class KeuanganController extends Controller
             if (in_array($payment->cara_bayar, self::NON_CASH_METHODS, true) && $diterima > 0) {
                 $koreksi = $corrections[$payment->id] ?? null;
                 $details->push([
-                    'category' => $koreksi ? 'other_transaction' : 'non_cash',
-                    'description' => $koreksi
+                    'category' => $koreksi || $batal ? 'other_transaction' : 'non_cash',
+                    'description' => $batal
+                        ? "{$batal}dibayar via {$method} (masuk bank, bukan kas) - {$customer}"
+                        : ($koreksi
                         ? 'Koreksi cara bayar '.($order?->NoOrder ?? '-').' · '
                             .(OrderPayment::CARA_BAYAR_LABELS[$koreksi->first()->old_method] ?? ucfirst($koreksi->first()->old_method))
                             ." → {$method} (dikoreksi ".$koreksi->last()->correction_date->format('d/m/Y').") - {$customer}"
-                        : "Bayar via {$method} - {$customer}",
+                        : "Bayar via {$method} - {$customer}"),
                     'debit' => 0.0,
                     'credit' => $diterima,
                     'user_id' => $payment->user_id,
