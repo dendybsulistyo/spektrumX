@@ -70,7 +70,7 @@
                                     @endif
                                 @endif
                             </td>
-                            <td class="px-3 py-2 text-gray-600">{{ $order->TglOrder }}</td>
+                            <td class="px-3 py-2 text-gray-600 whitespace-nowrap">{{ $order->TglOrder?->format('Y-m-d') }} <span class="text-gray-400">{{ $order->created_at?->format('H:i') }}</span></td>
                             <td class="px-3 py-2 text-gray-600">{{ $order->customer?->NmCust ? ucwords(mb_strtolower($order->customer->NmCust)) : '-' }}</td>
                             <td class="px-3 py-2 text-right text-gray-900">Rp {{ number_format($order->total ?? 0, 0, ',', '.') }}</td>
                             <td class="px-3 py-2 text-right">
@@ -124,7 +124,7 @@
                                     @endif
                                 @endif
                             </td>
-                            <td class="px-3 py-2 text-gray-600">{{ $order->TglOrder?->format('Y-m-d') }}</td>
+                            <td class="px-3 py-2 text-gray-600 whitespace-nowrap">{{ $order->TglOrder?->format('Y-m-d') }} <span class="text-gray-400">{{ $order->created_at?->format('H:i') }}</span></td>
                             <td class="px-3 py-2 text-gray-600">{{ $order->customer?->NmCust ? ucwords(mb_strtolower($order->customer->NmCust)) : '-' }}</td>
                             <td class="px-3 py-2 text-right text-gray-900">Rp {{ number_format($order->total ?? 0, 0, ',', '.') }}</td>
                             <td class="px-3 py-2 text-right">
