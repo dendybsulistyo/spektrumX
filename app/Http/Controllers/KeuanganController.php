@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\Akun;
 use App\Models\CashDailyEntry;
-use App\Support\CashAdjustmentJournal;
 use App\Models\Customer;
 use App\Models\FinalSalesDiscount;
 use App\Models\JurnalEntry;
@@ -14,6 +13,7 @@ use App\Models\OrderIndoor;
 use App\Models\OrderOutdoor;
 use App\Models\OrderPayment;
 use App\Models\OrderReworkRequest;
+use App\Models\PaymentMethodCorrection;
 use App\Models\PengaturanKeuangan;
 use App\Models\User;
 use App\Services\OrderDocumentService;
@@ -724,17 +724,8 @@ class KeuanganController extends Controller
                 $description = $entry->keterangan;
                 $category = match (true) {
                     $entry->user_id === null || strcasecmp($description, 'Saldo Awal') === 0 => 'opening',
-                    // Penyesuaian kas dipisah per jenis (bukan lagi digabung di Transaksi Lain-lain).
-                    str_starts_with($entry->source_key, 'cash-adjustment:') => match (CashAdjustmentJournal::inferType($entry)) {
-                        'setor_bank' => 'adj_bank',
-                        'pengeluaran' => 'adj_expense',
-                        'setor_tunai' => match (true) {
-                            (float) $entry->debet > 0 => 'adj_in',
-                            $entry->counter_account === '31000' => 'adj_owner',
-                            default => 'adj_bank',
-                        },
-                        default => 'other_transaction',
-                    },
+                    // Semua penyesuaian kas digabung di Transaksi Lain-lain (paling bawah).
+                    str_starts_with($entry->source_key, 'cash-adjustment:') => 'other_transaction',
                     (float) $entry->kredit > 0 && str_starts_with(mb_strtolower($description), 'bayar via') => 'non_cash',
                     str_starts_with(mb_strtolower($description), 'piutang ') => 'receivable',
                     str_starts_with(mb_strtolower($description), 'dp -') || str_starts_with((string) $entry->no_nota, 'UM-') => 'advance',
@@ -772,6 +763,11 @@ class KeuanganController extends Controller
         // penerimaan langsung berisi uang yang benar-benar diterima.
         $discountRefunds = $this->discountRefundKeys($payments);
         $cashDiscounts = $this->cashDiscountAllocations();
+        // Hasil Penyesuaian Nota Order / Invoice (koreksi cara bayar) tampil di
+        // Transaksi Lain-lain pada hari nota dibayar.
+        $corrections = PaymentMethodCorrection::query()
+            ->whereIn('order_payment_id', $payments->pluck('id'))
+            ->orderBy('id')->get()->groupBy('order_payment_id');
         foreach ($payments as $payment) {
             $order = $ordersByKey["{$payment->order_type}-{$payment->order_id}"] ?? null;
             $customer = $order?->customer?->NmCust ? mb_strtoupper($order->customer->NmCust) : '-';
@@ -839,9 +835,14 @@ class KeuanganController extends Controller
             }
 
             if (in_array($payment->cara_bayar, self::NON_CASH_METHODS, true) && $diterima > 0) {
+                $koreksi = $corrections[$payment->id] ?? null;
                 $details->push([
-                    'category' => 'non_cash',
-                    'description' => "Bayar via {$method} - {$customer}",
+                    'category' => $koreksi ? 'other_transaction' : 'non_cash',
+                    'description' => $koreksi
+                        ? 'Koreksi cara bayar '.($order?->NoOrder ?? '-').' · '
+                            .(OrderPayment::CARA_BAYAR_LABELS[$koreksi->first()->old_method] ?? ucfirst($koreksi->first()->old_method))
+                            ." → {$method} (dikoreksi ".$koreksi->last()->correction_date->format('d/m/Y').") - {$customer}"
+                        : "Bayar via {$method} - {$customer}",
                     'debit' => 0.0,
                     'credit' => $diterima,
                     'user_id' => $payment->user_id,
@@ -860,10 +861,6 @@ class KeuanganController extends Controller
             'non_cash' => 'Penerimaan Non Tunai (Transfer, QRIS atau Debit)',
             'refund' => 'Refund / Pengeluaran Kas',
             'non_cash_refund' => 'Refund Non Tunai (keluar dari bank, bukan kas)',
-            'adj_in' => 'Penyesuaian · Setoran / Tambahan Kas',
-            'adj_bank' => 'Penyesuaian · Setoran ke Bank',
-            'adj_owner' => 'Penyesuaian · Pengambilan Pemilik (Prive)',
-            'adj_expense' => 'Penyesuaian · Pengeluaran Kas',
             'sales_discount' => 'Potongan Penjualan (melebihi uang tunai yang diterima)',
             'other_transaction' => 'Transaksi Lain-lain',
         ];
