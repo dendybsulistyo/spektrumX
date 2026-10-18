@@ -67,11 +67,12 @@
                     selected: {},
                     sending: false,
                     pageVersion: '{{ $pageVersion }}',
+                    versionTimer: null,
                     positionKey: 'spektrumX:order-desain:return-position',
                     get selectedCount() { return Object.keys(this.selected).length; },
                     init() {
                         this.restorePosition();
-                        setInterval(() => this.pollVersion(), 7000);
+                        this.versionTimer = setInterval(() => this.pollVersion(), 7000);
                     },
                     rememberPosition(anchorId = null) {
                         const anchor = anchorId ? document.getElementById(anchorId) : null;
@@ -113,18 +114,23 @@
                     pollVersion() {
                         // Jangan reload saat operator sedang memilih / mengirim massal:
                         // kiriman pertama mengubah versi halaman dan memotong sisa kiriman.
-                        if (this.sending || this.selectedCount > 0) return;
+                        if (this.sending || this.selectedCount > 0 || document.hidden) return;
                         const active = document.activeElement;
                         if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) return;
 
-                        fetch('{{ route('order-desain.version') }}')
-                            .then(r => r.json())
+                        fetch('{{ route('order-desain.version') }}', { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
+                            .then(r => {
+                                // Sesi habis: berhenti ping (sebelumnya terus diarahkan ke halaman login).
+                                if (r.status === 401 || r.status === 419) { clearInterval(this.versionTimer); return Promise.reject('logout'); }
+                                return r.ok ? r.json() : Promise.reject(r.status);
+                            })
                             .then(data => {
                                 if (data.version !== this.pageVersion) {
                                     this.rememberPosition();
                                     window.location.reload();
                                 }
-                            });
+                            })
+                            .catch(() => {});
                     },
                     switchTab(key) {
                         this.tab = key;

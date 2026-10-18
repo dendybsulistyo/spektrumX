@@ -6,8 +6,7 @@
              saved: @js(auth()->user()->avatar_options),
              storeUrl: @js(route('avatar.store')),
              destroyUrl: @js(route('avatar.destroy')),
-         })"
-         x-init="init()">
+         })">
     <header>
         <h2 class="text-lg font-medium text-gray-900">Avatar</h2>
         <p class="mt-1 text-sm text-gray-600">Avatar tampil di menu atas dan fitur Status bila belum ada Foto Pribadi. Pilih jenis, lalu acak atau atur sesuai selera.</p>

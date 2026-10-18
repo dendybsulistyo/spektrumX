@@ -12,7 +12,6 @@
         baseUrl: @js(url('/status')),
         backgrounds: @js($backgrounds),
      })"
-     x-init="init()"
      @keydown.escape.window="closeAll()"
      class="relative">
 
@@ -328,11 +327,13 @@
                     viewer: { open: false, group: null, index: 0, progress: 0, paused: false, timer: null },
                     viewers: { open: false, loading: false, list: [], replies: [], tab: 'dilihat' },
                     duration: 6000,
+                    pollTimer: null,
                     get mine() { return this.groups.find(g => g.mine) || null; },
                     get others() { return this.groups.filter(g => !g.mine); },
                     init() {
                         this.load();
-                        setInterval(() => { if (!document.hidden && !this.viewer.open) this.load(); }, 60000);
+                        // Alpine memanggil init() sekali secara otomatis (tanpa x-init, agar tidak ganda).
+                        this.pollTimer = setInterval(() => { if (!document.hidden && !this.viewer.open) this.load(); }, 60000);
                     },
                     load() {
                         return axios.get(this.indexUrl).then(r => {
@@ -340,7 +341,10 @@
                             this.unseenCount = r.data.unseen_count;
                             this.mentionCount = r.data.mention_count;
                             this.responseCount = r.data.response_count;
-                        }).catch(() => {});
+                        }).catch(e => {
+                            // Sesi habis: berhenti mengecek status.
+                            if ([401, 419].includes(e.response?.status)) clearInterval(this.pollTimer);
+                        });
                     },
                     togglePanel() {
                         this.panelOpen = !this.panelOpen;

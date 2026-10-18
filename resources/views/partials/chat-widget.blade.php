@@ -1,4 +1,4 @@
-<div x-data="chatWidget()" x-init="init()">
+<div x-data="chatWidget()">
     <!-- Floating button (draggable) -->
     <button @pointerdown="startDrag($event)"
             :style="`right:${pos.x}px; bottom:${pos.y}px;`"
@@ -99,6 +99,7 @@
             pollUnread: null,
             pollList: null,
             pollConvo: null,
+            stopped: false,
 
             pos: { x: 24, y: 24 },
             dragging: false,
@@ -112,6 +113,30 @@
                 }
                 this.fetchUnread();
                 this.pollUnread = setInterval(() => this.fetchUnread(), 5000);
+                // Tab di belakang / layar terkunci: tidak ping. Saat dilihat lagi langsung segarkan.
+                document.addEventListener('visibilitychange', () => {
+                    if (document.hidden) return;
+                    this.fetchUnread();
+                    if (this.panelOpen && this.view === 'chat') this.fetchMessages();
+                });
+            },
+
+            /** GET JSON; sesi habis (401/419) → semua ping berhenti, tidak lagi memuat halaman login. */
+            getJson(url) {
+                if (this.stopped || document.hidden) return Promise.reject('skip');
+                return fetch(url, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
+                    .then(r => {
+                        if (r.status === 401 || r.status === 419) { this.stopPolling(); return Promise.reject('logout'); }
+                        if (!r.ok) return Promise.reject(r.status);
+                        return r.json();
+                    });
+            },
+
+            stopPolling() {
+                this.stopped = true;
+                clearInterval(this.pollUnread);
+                clearInterval(this.pollList);
+                clearInterval(this.pollConvo);
             },
 
             startDrag(e) {
@@ -158,15 +183,15 @@
             },
 
             fetchUnread() {
-                fetch('{{ route('chat.unread-count') }}')
-                    .then(r => r.json())
-                    .then(data => { this.unreadTotal = data.count; });
+                this.getJson('{{ route('chat.unread-count') }}')
+                    .then(data => { this.unreadTotal = data.count; })
+                    .catch(() => {});
             },
 
             fetchUsers() {
-                fetch('{{ route('chat.index') }}')
-                    .then(r => r.json())
-                    .then(data => { this.users = data; });
+                this.getJson('{{ route('chat.index') }}')
+                    .then(data => { this.users = data; })
+                    .catch(() => {});
             },
 
             startListPolling() {
@@ -194,12 +219,12 @@
 
             fetchMessages() {
                 if (!this.activeUser) return;
-                fetch(`/chat/${this.activeUser.id}`)
-                    .then(r => r.json())
+                this.getJson(`/chat/${this.activeUser.id}`)
                     .then(data => {
                         this.messages = data.messages;
                         this.$nextTick(() => this.scrollToBottom());
-                    });
+                    })
+                    .catch(() => {});
             },
 
             send() {
