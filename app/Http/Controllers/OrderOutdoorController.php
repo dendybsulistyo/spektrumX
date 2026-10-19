@@ -31,13 +31,18 @@ class OrderOutdoorController extends Controller
 
     public function index(Request $request): View
     {
+        $cancelledCount = OrderOutdoor::query()->where('status', 'batal')->count();
+
         $orders = OrderOutdoor::query()
             ->with('customer')
             ->when($request->filled('search'), function ($q) use ($request) {
                 $search = $request->string('search');
-                $q->where('NoOrder', 'like', "%{$search}%")
-                    ->orWhere('KdCust', 'like', "%{$search}%");
+                $q->where(function ($searchQuery) use ($search) {
+                    $searchQuery->where('NoOrder', 'like', "%{$search}%")
+                        ->orWhere('KdCust', 'like', "%{$search}%");
+                });
             })
+            ->when($request->string('status')->toString() === 'batal', fn ($q) => $q->where('status', 'batal'))
             ->orderByDesc('TglOrder')
             ->orderByDesc('NoOrder')
             ->paginate(15)
@@ -49,7 +54,7 @@ class OrderOutdoorController extends Controller
 
         $unread = OrderComment::unreadCountsFor('outdoor', $orders->pluck('id'));
 
-        return view('order-outdoor.index', compact('orders', 'comments', 'unread'));
+        return view('order-outdoor.index', compact('orders', 'comments', 'unread', 'cancelledCount'));
     }
 
     public function create(Request $request): View

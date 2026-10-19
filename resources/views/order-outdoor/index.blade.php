@@ -27,7 +27,21 @@
     <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
 
         <div class="p-4 border-b">
+            <div class="flex flex-wrap gap-2 mb-3">
+                <a href="{{ route('order-outdoor.index', array_filter(['search' => request('search')])) }}"
+                   class="inline-flex items-center px-3 py-1.5 rounded-md border text-sm font-medium {{ request('status') !== 'batal' ? 'bg-gray-900 border-gray-900 text-white' : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50' }}">
+                    Semua Order
+                </a>
+                <a href="{{ route('order-outdoor.index', array_filter(['search' => request('search'), 'status' => 'batal'])) }}"
+                   class="inline-flex items-center gap-2 px-3 py-1.5 rounded-md border text-sm font-semibold {{ request('status') === 'batal' ? 'bg-red-700 border-red-700 text-white' : 'bg-red-50 border-red-300 text-red-700 hover:bg-red-100' }}">
+                    <span aria-hidden="true">&#9888;</span> Order Batal
+                    <span class="rounded-full px-1.5 py-0.5 text-xs {{ request('status') === 'batal' ? 'bg-white/20 text-white' : 'bg-red-700 text-white' }}">{{ $cancelledCount }}</span>
+                </a>
+            </div>
             <form method="GET" class="flex gap-2">
+                @if (request('status') === 'batal')
+                    <input type="hidden" name="status" value="batal">
+                @endif
                 <input type="text" name="search" value="{{ request('search') }}"
                        placeholder="Cari no. order atau kode customer..."
                        class="w-full max-w-sm rounded-md border-gray-300 text-sm">
@@ -52,13 +66,13 @@
             </thead>
             <tbody class="divide-y">
                 @forelse ($orders as $order)
-                    <tr>
+                    <tr @class(['bg-red-50' => $order->status === 'batal'])>
                         <td class="px-3 py-2"><x-order-number :number="$order->NoOrder" /></td>
                         <td class="px-3 py-2 text-gray-600">{{ $order->TglOrder->format('d M Y') }}</td>
                         <td class="px-3 py-2 text-gray-900 font-semibold">{{ $order->customer?->NmCust ?? $order->KdCust }}</td>
                         <td class="px-3 py-2 text-right text-gray-900">Rp {{ number_format($order->total ?? 0, 0, ',', '.') }}</td>
                         <td class="px-3 py-2">
-                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium" style="{{ $statusBadgeStyle($order->status) }}">{{ ucfirst(str_replace('_', ' ', $order->status ?? '-')) }}</span>
+                            <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium" style="{{ $statusBadgeStyle($order->status) }}">@if ($order->status === 'batal')<span aria-hidden="true">&#9888;</span>@endif{{ ucfirst(str_replace('_', ' ', $order->status ?? '-')) }}</span>
                         </td>
                         <td class="px-3 py-2 text-right">
                             <x-order-discussion type="outdoor" :order-id="$order->id" :no-order="$order->NoOrder"

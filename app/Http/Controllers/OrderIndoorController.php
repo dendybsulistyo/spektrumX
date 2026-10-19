@@ -32,19 +32,24 @@ class OrderIndoorController extends Controller
 
     public function index(Request $request): View
     {
+        $cancelledCount = OrderIndoor::query()->where('status', 'batal')->count();
+
         $orders = OrderIndoor::query()
             ->with('customer')
             ->when($request->filled('search'), function ($q) use ($request) {
                 $search = $request->string('search');
-                $q->where('NoOrder', 'like', "%{$search}%")
-                    ->orWhere('KdCust', 'like', "%{$search}%");
+                $q->where(function ($searchQuery) use ($search) {
+                    $searchQuery->where('NoOrder', 'like', "%{$search}%")
+                        ->orWhere('KdCust', 'like', "%{$search}%");
+                });
             })
+            ->when($request->string('status')->toString() === 'batal', fn ($q) => $q->where('status', 'batal'))
             ->orderByDesc('TglOrder')
             ->orderByDesc('NoOrder')
             ->paginate(15)
             ->withQueryString();
 
-        return view('order-indoor.index', compact('orders'));
+        return view('order-indoor.index', compact('orders', 'cancelledCount'));
     }
 
     public function create(Request $request): View
