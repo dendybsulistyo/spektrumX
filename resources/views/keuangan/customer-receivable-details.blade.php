@@ -106,7 +106,7 @@
                         </div>
                         @if ($rows->isNotEmpty())
                             <div class="flex gap-2">
-                                <button type="button" class="pay-fill" @click="fillAll()">Isi semua lunas</button>
+                                <button type="button" class="pay-fill" @click="fillAll()">Auto semua</button>
                                 <button type="button" class="pay-fill" @click="clearAll()">Kosongkan</button>
                             </div>
                         @endif
@@ -131,7 +131,7 @@
                                                        :class="amount('{{ $key }}') > {{ (float) $row->remaining }} && 'is-over'"
                                                        :value="display('{{ $key }}')" @input="setAmount('{{ $key }}', $event.target.value)"
                                                        @keydown.enter.prevent title="Tekan Tab untuk lanjut ke nota berikutnya">
-                                                <button type="button" class="pay-fill" @click="fill('{{ $key }}')" title="Isi sebesar sisa piutang">Lunas</button>
+                                                <button type="button" class="pay-fill" @click="fill('{{ $key }}')" title="Isi otomatis sebesar sisa piutang">Auto</button>
                                             </div>
                                             <span x-show="amount('{{ $key }}') > 0" x-cloak class="pay-entered">
                                                 Sudah diisi: Rp <span class="ml-1" x-text="rupiah(amount('{{ $key }}'))"></span>
