@@ -14,7 +14,8 @@
         .customer-receivable-detail th { background:#e2e8f0; text-align:center; }
         .customer-receivable-detail .number { text-align:right; white-space:nowrap; }
         .customer-receivable-detail .pay-table td { padding:5px 7px; vertical-align:middle; }
-        .customer-receivable-detail .pay-table tr.is-paying td { background:#eef6ff; }
+        .customer-receivable-detail .pay-table tr.is-paying td { background:#dcfce7; }
+        .customer-receivable-detail .pay-entered { display:inline-flex; align-items:center; margin-top:4px; padding:2px 6px; border-radius:999px; font-size:10px; font-weight:700; color:#166534; background:#bbf7d0; }
         .customer-receivable-detail .pay-input { width:100%; min-width:120px; height:32px; padding:0 8px; text-align:right; font-weight:600; font-variant-numeric:tabular-nums; border:1px solid #cbd5e1; border-radius:6px; }
         .customer-receivable-detail .pay-input:focus { outline:2px solid #1b2236; outline-offset:0; border-color:#1b2236; }
         .customer-receivable-detail .pay-input.is-over { border-color:#c8246c; color:#c8246c; background:#fff1f6; }
@@ -92,7 +93,7 @@
             @if ($payMode)
                 {{-- Pembayaran Piutang: isi nominal per nota, satu cara bayar, lalu Proses. --}}
                 <form method="POST" action="{{ route('keuangan.customer-receivable-payments') }}"
-                      x-data="receivablePayment(@js($rows->map(fn ($row) => ['key' => $row->type.'-'.$row->id, 'remaining' => (float) $row->remaining])->values()), @js(old('bayar', [])), @js(old('cara_bayar', 'tunai')))"
+                      x-data="receivablePayment(@js($rows->map(fn ($row) => ['key' => $row->type.'-'.$row->id, 'label' => $row->invoice_number ?? $row->order_number, 'remaining' => (float) $row->remaining])->values()), @js(old('bayar', [])), @js(old('cara_bayar', 'tunai')))"
                       @submit="confirmSubmit($event)"
                       class="print-sheet bg-white p-5 shadow-sm">
                     @csrf
@@ -128,9 +129,13 @@
                                             <div style="display:flex; gap:6px;">
                                                 <input type="text" inputmode="numeric" name="bayar[{{ $key }}]" class="pay-input" placeholder="0"
                                                        :class="amount('{{ $key }}') > {{ (float) $row->remaining }} && 'is-over'"
-                                                       :value="display('{{ $key }}')" @input="setAmount('{{ $key }}', $event.target.value)">
+                                                       :value="display('{{ $key }}')" @input="setAmount('{{ $key }}', $event.target.value)"
+                                                       @keydown.enter.prevent title="Tekan Tab untuk lanjut ke nota berikutnya">
                                                 <button type="button" class="pay-fill" @click="fill('{{ $key }}')" title="Isi sebesar sisa piutang">Lunas</button>
                                             </div>
+                                            <span x-show="amount('{{ $key }}') > 0" x-cloak class="pay-entered">
+                                                Sudah diisi: Rp <span class="ml-1" x-text="rupiah(amount('{{ $key }}'))"></span>
+                                            </span>
                                         </td>
                                     </tr>
                                 @empty
@@ -165,6 +170,15 @@
                                     <div style="background:#eef6ff;"><span>Pembayaran (<span x-text="countPaying()"></span> nota)</span><b x-text="rupiah(total())"></b></div>
                                     <div><span>Sisa Piutang</span><b x-text="rupiah({{ (float) $totals->remaining }} - total())"></b></div>
                                 </div>
+                                <div x-show="countPaying() > 0" x-cloak class="rounded-lg border border-green-200 bg-green-50 p-3 text-xs text-green-900">
+                                    <div class="mb-2 font-bold">Nota yang sudah diisi:</div>
+                                    <template x-for="row in selectedRows()" :key="row.key">
+                                        <div class="flex justify-between gap-4 border-t border-green-200 py-1 first:border-0">
+                                            <span x-text="row.label"></span>
+                                            <b x-text="`Rp ${rupiah(amount(row.key))}`"></b>
+                                        </div>
+                                    </template>
+                                </div>
                                 <p x-show="hasOver()" x-cloak class="text-sm font-semibold" style="color:#c8246c;">Ada nominal yang melebihi sisa piutang nota.</p>
                                 <button type="submit" :disabled="total() <= 0 || hasOver()"
                                         class="w-full rounded-md px-4 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
@@ -189,6 +203,7 @@
                             clearAll() { this.rows.forEach((row) => { this.amounts[row.key] = ''; }); },
                             total() { return this.rows.reduce((sum, row) => sum + this.amount(row.key), 0); },
                             countPaying() { return this.rows.filter((row) => this.amount(row.key) > 0).length; },
+                            selectedRows() { return this.rows.filter((row) => this.amount(row.key) > 0); },
                             hasOver() { return this.rows.some((row) => this.amount(row.key) > row.remaining); },
                             rupiah(value) { return Math.round(value).toLocaleString('id-ID'); },
                             confirmSubmit(event) {

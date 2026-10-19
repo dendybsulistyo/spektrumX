@@ -51,10 +51,25 @@ class ReportController extends Controller
 
         foreach (['indoor' => OrderIndoor::class, 'outdoor' => OrderOutdoor::class, 'artwork' => OrderArtwork::class] as $type => $model) {
             $relations = $type === 'outdoor' ? ['customer.limit', 'items.hargaCetak'] : ['customer.limit', 'items'];
+            $orderTable = (new $model)->getTable();
             $orders = $model::query()
                 ->with($relations)
                 ->where('TglOrder', $date)
                 ->where('status', '!=', 'batal')
+                ->whereExists(function ($document) use ($type, $orderTable): void {
+                    $document->selectRaw('1')
+                        ->from('order_documents')
+                        ->whereColumn('order_documents.order_id', $orderTable.'.id')
+                        ->where('order_documents.order_type', $type)
+                        ->where('order_documents.kind', 'do');
+                })
+                ->whereExists(function ($document) use ($type, $orderTable): void {
+                    $document->selectRaw('1')
+                        ->from('order_documents')
+                        ->whereColumn('order_documents.order_id', $orderTable.'.id')
+                        ->where('order_documents.order_type', $type)
+                        ->where('order_documents.kind', 'inv');
+                })
                 ->where(function ($query) use ($kind): void {
                     if ($kind !== 'tagihan') {
                         $query->where('status_bayar', 'lunas');

@@ -35,6 +35,7 @@ class DashboardStatsService
                 .'SUM(CASE WHEN status = "bungkus" THEN 1 ELSE 0 END) as bungkus, '
                 .'SUM(CASE WHEN status = "siap_diambil" THEN 1 ELSE 0 END) as siap_diambil, '
                 .'SUM(CASE WHEN status = "selesai" THEN 1 ELSE 0 END) as selesai, '
+                .'SUM(CASE WHEN status = "batal" THEN 1 ELSE 0 END) as batal, '
                 .'SUM(CASE WHEN status NOT IN ("siap_diambil", "selesai", "batal") '
                 .'AND created_at IS NOT NULL AND created_at < ? THEN 1 ELSE 0 END) as telat',
                 [now()->subHours(72)]
@@ -58,6 +59,7 @@ class DashboardStatsService
             'bungkus' => $sum('bungkus'),
             'siap_diambil' => $sum('siap_diambil'),
             'selesai' => $sum('selesai'),
+            'batal' => $sum('batal'),
             'telat' => $sum('telat'),
         ];
     }
@@ -69,9 +71,18 @@ class DashboardStatsService
     {
         [$indoorQuery, $outdoorQuery, $artworkQuery] = $this->scopedQueries($from, $to);
 
-        $indoor = $indoorQuery->latest('created_at')->limit($limit)->get();
-        $outdoor = $outdoorQuery->latest('created_at')->limit($limit)->get();
-        $artwork = $artworkQuery->latest('created_at')->limit($limit)->get();
+        // Order batal tetap disertakan sebagai warning meski lebih lama dari
+        // daftar terbaru, tanpa menggusur order aktif dan tanpa duplikasi.
+        $cancelledLimit = min($limit, 30);
+        $loadRecentAndCancelled = fn (Builder $query) => $query->getModel()->newQuery()
+            ->whereIn('id', (clone $query)->latest('created_at')->limit($limit)->pluck('id')
+                ->merge((clone $query)->where('status', 'batal')->latest('created_at')->limit($cancelledLimit)->pluck('id'))
+                ->unique()->values())
+            ->get();
+
+        $indoor = $loadRecentAndCancelled($indoorQuery);
+        $outdoor = $loadRecentAndCancelled($outdoorQuery);
+        $artwork = $loadRecentAndCancelled($artworkQuery);
 
         $indoor->load('customer', 'createdBy', 'kasir', 'desainBy', 'cetakBy', 'finishingBy', 'qcBy', 'bungkusBy', 'pengambilanBy', 'items');
         $outdoor->load('customer', 'createdBy', 'kasir', 'desainBy', 'cetakBy', 'finishingBy', 'qcBy', 'bungkusBy', 'pengambilanBy', 'items');
@@ -81,7 +92,7 @@ class DashboardStatsService
             ->concat($outdoor->map(fn ($o) => $this->toRow($o, 'Outdoor')))
             ->concat($artwork->map(fn ($o) => $this->toRow($o, 'Artwork')));
 
-        return $mapped->sortByDesc('created_at')->take($limit)->values();
+        return $mapped->sortByDesc('created_at')->values();
     }
 
     /**

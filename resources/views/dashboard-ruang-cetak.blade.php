@@ -134,6 +134,8 @@
             #rc-dashboard .rcd-table thead th.stage-col { text-align: center; }
             #rc-dashboard .rcd-table tbody td { padding: 6px 10px; border-bottom: 1px solid var(--rule) !important; vertical-align: middle; }
             #rc-dashboard .rcd-table tbody tr:hover td { background: #faf6ec; }
+            #rc-dashboard .rcd-table tbody tr.is-cancelled td { background: #fff1f2; }
+            #rc-dashboard .rcd-table tbody tr.is-cancelled:hover td { background: #ffe4e6; }
             #rc-dashboard .rcd-order { padding: 0; border: 0; background: none; font: inherit; font-family: var(--mono); font-weight: 600; color: var(--ink); cursor: pointer; border-bottom: 1px dashed var(--rule-strong); }
             #rc-dashboard .rcd-order:hover { color: var(--cyan); border-bottom-color: var(--cyan); }
             #rc-dashboard .rcd-tipe { display: inline-block; margin-left: 6px; padding: 0 5px; font-size: 9.5px; font-weight: 700; letter-spacing: .06em; border-radius: 3px; color: var(--muted); border: 1px solid var(--rule-strong); vertical-align: 1px; }
@@ -270,8 +272,8 @@
              overdueMeta: { current_page: 1, last_page: 1, total: 0, from: 0, to: 0 },
              overdueType: '',
              overdueStatus: '',
-             matches(tipe, text) {
-                 const okTipe = this.tipeTab === 'semua' || this.tipeTab === tipe;
+             matches(tipe, status, text) {
+                 const okTipe = this.tipeTab === 'semua' || this.tipeTab === tipe || (this.tipeTab === 'batal' && status === 'batal');
                  const q = this.search.trim().toLowerCase();
                  return okTipe && (q === '' || text.includes(q));
              },
@@ -428,6 +430,7 @@
                         <button type="button" :class="tipeTab === 'semua' && 'is-active'" @click="tipeTab = 'semua'">Semua ({{ $recent->count() }})</button>
                         <button type="button" :class="tipeTab === 'indoor' && 'is-active'" @click="tipeTab = 'indoor'">Indoor ({{ $countsByTipe['Indoor'] ?? 0 }})</button>
                         <button type="button" :class="tipeTab === 'outdoor' && 'is-active'" @click="tipeTab = 'outdoor'">Outdoor ({{ $countsByTipe['Outdoor'] ?? 0 }})</button>
+                        <button type="button" :class="tipeTab === 'batal' && 'is-active'" @click="tipeTab = 'batal'">Batal ({{ $stats['batal'] }})</button>
                     </div>
                     <label class="rcd-search">
                         <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="9" r="5.5"/><path d="M13.2 13.2L17 17" stroke-linecap="round"/></svg>
@@ -458,7 +461,8 @@
                                     $searchText = mb_strtolower(($row['no_order'] ?? '').' '.($row['customer'] ?? ''));
                                     $statusColor = $stageColors[$row['status']] ?? '#77736a';
                                 @endphp
-                                <tr x-show="matches('{{ strtolower($row['tipe']) }}', @js($searchText))">
+                                <tr x-show="matches('{{ strtolower($row['tipe']) }}', '{{ $row['status'] }}', @js($searchText))"
+                                    @class(['is-cancelled' => $row['status'] === 'batal'])>
                                     <td class="mono" style="color: var(--muted);">{{ $loop->iteration }}</td>
                                     <td style="white-space: nowrap;">
                                         <button type="button" class="rcd-order" @click="openHistory('{{ $row['type_slug'] }}', {{ $row['id'] }})"
