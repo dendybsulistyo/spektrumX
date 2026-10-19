@@ -429,6 +429,10 @@ class KeuanganController extends Controller
                 $row[$creditKey] = (float) $group->sum($creditKey);
                 $row[$descriptionKey] = $row['receivable_batch_description'];
                 $row['receivable_group_key'] = 'batch:'.$row['receivable_batch_id'];
+                if ($group->contains(fn (array $item) => ! empty($item['order_numbers']))) {
+                    $row['order_numbers'] = $group->flatMap(fn (array $item) => $item['order_numbers'] ?? [])
+                        ->filter()->unique()->values()->all();
+                }
                 if (array_key_exists('no_nota', $row)) {
                     $row['no_nota'] = null;
                 }
@@ -943,6 +947,7 @@ class KeuanganController extends Controller
                     'debit' => $diterima,
                     'credit' => 0.0,
                     'user_id' => $payment->user_id,
+                    'order_numbers' => array_filter([$order?->NoOrder]),
                     'sort' => $baseSort.'-0',
                     ...$this->receivableBatchMeta($payment, $batchCounts, $customer, 'receipt'),
                 ]);
@@ -962,6 +967,7 @@ class KeuanganController extends Controller
                     'debit' => 0.0,
                     'credit' => $diterima,
                     'user_id' => $payment->user_id,
+                    'order_numbers' => array_filter([$order?->NoOrder]),
                     'group_date' => $payment->created_at?->format('Y-m-d'),
                     'sort' => $baseSort.'-1',
                     ...$this->receivableBatchMeta($payment, $batchCounts, $customer, 'non_cash'),
@@ -992,11 +998,15 @@ class KeuanganController extends Controller
             // Laporan lama merangkum piutang per customer. Baris transaksi
             // lain tetap dipertahankan agar nomor nota dan kanal bayar jelas.
             if ($key === 'receivable') {
-                $sectionRows = $sectionRows->groupBy(fn (array $row) => $row['receivable_group_key'] ?? $row['description'])->map(fn (Collection $rows) => [
-                    'description' => $rows->first()['description'],
-                    'debit' => (float) $rows->sum('debit'),
-                    'credit' => (float) $rows->sum('credit'),
-                ])->sortBy('description')->values();
+                $sectionRows = $sectionRows->groupBy(fn (array $row) => $row['receivable_group_key'] ?? $row['description'])->map(function (Collection $rows) {
+                    $numbers = $rows->flatMap(fn (array $row) => $row['order_numbers'] ?? [])->filter()->unique()->values();
+
+                    return [
+                        'description' => $rows->first()['description'].($numbers->isNotEmpty() ? ' · Nota '.$numbers->implode(', ') : ''),
+                        'debit' => (float) $rows->sum('debit'),
+                        'credit' => (float) $rows->sum('credit'),
+                    ];
+                })->sortBy('description')->values();
             } elseif ($key === 'non_cash') {
                 // Transfer/QRIS customer yang sama pada tanggal yang sama
                 // diringkas menjadi satu baris. Rincian OrderPayment tetap
@@ -1009,9 +1019,10 @@ class KeuanganController extends Controller
                     })
                     ->map(function (Collection $rows) {
                         $description = preg_replace('/ · \d+ nota(?: · Ref .*)?$/u', '', $rows->first()['description']);
+                        $numbers = $rows->flatMap(fn (array $row) => $row['order_numbers'] ?? [])->filter()->unique()->values();
 
                         return [
-                            'description' => $description,
+                            'description' => $description.($numbers->isNotEmpty() ? ' · Nota '.$numbers->implode(', ') : ''),
                             'debit' => (float) $rows->sum('debit'),
                             'credit' => (float) $rows->sum('credit'),
                         ];
