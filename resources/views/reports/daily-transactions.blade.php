@@ -44,7 +44,7 @@
                 <div class="overflow-x-auto">
                     <table>
                         <thead><tr>
-                            <th>Tanggal</th><th>No. Invoice / Nota</th><th>Customer</th><th>Status Nota</th><th>Produk</th><th>Keterangan</th>
+                            <th>Tanggal SO</th><th>No. SO</th><th>Customer</th><th>Status Nota</th><th>Produk</th><th>Keterangan</th>
                             <th>Pj.</th><th>Leb.</th><th>Qty</th><th>Harga</th><th>Sub Total</th>
                             <th>Diskon</th><th>Total</th><th>Tunai</th><th>Kredit</th>
                         </tr></thead>

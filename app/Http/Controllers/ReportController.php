@@ -73,21 +73,13 @@ class ReportController extends Controller
                 continue;
             }
 
-            $documents = DB::table('order_documents')
-                ->where('order_type', $type)
-                ->whereIn('order_id', $orders->pluck('id'))
-                ->where('kind', 'inv')
-                ->orderBy('sequence')
-                ->get(['order_id', 'kind', 'number'])
-                ->groupBy('order_id');
             $payments = OrderPayment::query()
                 ->where('order_type', $type)
                 ->whereIn('order_id', $orders->pluck('id'))
                 ->get(['order_id', 'jumlah'])
                 ->groupBy('order_id');
 
-            $orders->each(function ($order) use ($type, $documents, $payments, &$rows) {
-                $orderDocuments = $documents->get($order->id, collect());
+            $orders->each(function ($order) use ($type, $payments, &$rows) {
                 $items = $this->pricing->detailedLineItems($type, $order, $order->items);
                 $gross = (float) $items->sum('subtotal');
                 $net = $order->diskonStatus() === 'approved' ? $order->totalSetelahDiskon() : (float) $order->total;
@@ -119,9 +111,9 @@ class ReportController extends Controller
 
                     $rows->push((object) [
                         'date' => $order->TglOrder, 'number' => $order->NoOrder,
-                        'invoices' => $orderDocuments->isNotEmpty()
-                            ? $orderDocuments->pluck('number')->values()
-                            : collect([$order->NoOrder]),
+                        // Rekap harian adalah rekap SO baru pada TglOrder.
+                        // Nomor DO/INV tidak mengganti identitas transaksi.
+                        'invoices' => collect([$order->NoOrder]),
                         'customer' => $order->customer?->NmCust ?? '-',
                         'note_status' => $order->status_bayar === 'hutang' ? 'Tagihan VIP' : 'Lunas',
                         'product' => collect([$item->printer, $item->bahan])->filter()->implode(' / ') ?: '-',
