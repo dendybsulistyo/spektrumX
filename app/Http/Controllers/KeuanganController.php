@@ -935,7 +935,7 @@ class KeuanganController extends Controller
             };
             $description = match ($category) {
                 'advance' => ($order?->NoOrder ?? 'DP').' ('.$customer.')',
-                'receivable' => 'Piutang '.$customer,
+                'receivable' => ($order?->NoOrder ?? '-').' '.$customer,
                 default => 'Nota '.($order?->NoOrder ?? '-').' ('.$customer.')',
             };
 
@@ -947,9 +947,7 @@ class KeuanganController extends Controller
                     'debit' => $diterima,
                     'credit' => 0.0,
                     'user_id' => $payment->user_id,
-                    'order_numbers' => array_filter([$order?->NoOrder]),
                     'sort' => $baseSort.'-0',
-                    ...$this->receivableBatchMeta($payment, $batchCounts, $customer, 'receipt'),
                 ]);
             }
 
@@ -998,15 +996,11 @@ class KeuanganController extends Controller
             // Laporan lama merangkum piutang per customer. Baris transaksi
             // lain tetap dipertahankan agar nomor nota dan kanal bayar jelas.
             if ($key === 'receivable') {
-                $sectionRows = $sectionRows->groupBy(fn (array $row) => $row['receivable_group_key'] ?? $row['description'])->map(function (Collection $rows) {
-                    $numbers = $rows->flatMap(fn (array $row) => $row['order_numbers'] ?? [])->filter()->unique()->values();
-
-                    return [
-                        'description' => $rows->first()['description'].($numbers->isNotEmpty() ? ' · Nota '.$numbers->implode(', ') : ''),
-                        'debit' => (float) $rows->sum('debit'),
-                        'credit' => (float) $rows->sum('credit'),
-                    ];
-                })->sortBy('description')->values();
+                $sectionRows = $sectionRows->map(fn (array $row) => [
+                    'description' => $row['description'],
+                    'debit' => $row['debit'],
+                    'credit' => $row['credit'],
+                ])->values();
             } elseif ($key === 'non_cash') {
                 // Transfer/QRIS customer yang sama pada tanggal yang sama
                 // diringkas menjadi satu baris. Rincian OrderPayment tetap
