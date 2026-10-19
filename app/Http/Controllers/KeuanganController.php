@@ -834,6 +834,7 @@ class KeuanganController extends Controller
                     'debit' => (float) $entry->debet,
                     'credit' => (float) $entry->kredit,
                     'user_id' => $entry->user_id,
+                    'group_date' => Carbon::parse($entry->tanggal)->format('Y-m-d'),
                     'sort' => '1-'.str_pad((string) $entry->urutan, 10, '0', STR_PAD_LEFT),
                 ];
             });
@@ -961,6 +962,7 @@ class KeuanganController extends Controller
                     'debit' => 0.0,
                     'credit' => $diterima,
                     'user_id' => $payment->user_id,
+                    'group_date' => $payment->created_at?->format('Y-m-d'),
                     'sort' => $baseSort.'-1',
                     ...$this->receivableBatchMeta($payment, $batchCounts, $customer, 'non_cash'),
                 ]);
@@ -995,6 +997,25 @@ class KeuanganController extends Controller
                     'debit' => (float) $rows->sum('debit'),
                     'credit' => (float) $rows->sum('credit'),
                 ])->sortBy('description')->values();
+            } elseif ($key === 'non_cash') {
+                // Transfer/QRIS customer yang sama pada tanggal yang sama
+                // diringkas menjadi satu baris. Rincian OrderPayment tetap
+                // tersimpan per nota/batch untuk audit.
+                $sectionRows = $sectionRows
+                    ->groupBy(function (array $row) {
+                        $description = preg_replace('/ · \d+ nota(?: · Ref .*)?$/u', '', $row['description']);
+
+                        return ($row['group_date'] ?? '-').'|'.$description;
+                    })
+                    ->map(function (Collection $rows) {
+                        $description = preg_replace('/ · \d+ nota(?: · Ref .*)?$/u', '', $rows->first()['description']);
+
+                        return [
+                            'description' => $description,
+                            'debit' => (float) $rows->sum('debit'),
+                            'credit' => (float) $rows->sum('credit'),
+                        ];
+                    })->sortBy('description')->values();
             } else {
                 $sectionRows = $sectionRows->map(fn (array $row) => [
                     'description' => $row['description'],
