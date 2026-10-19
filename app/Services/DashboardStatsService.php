@@ -92,7 +92,12 @@ class DashboardStatsService
             ->concat($outdoor->map(fn ($o) => $this->toRow($o, 'Outdoor')))
             ->concat($artwork->map(fn ($o) => $this->toRow($o, 'Artwork')));
 
-        return $mapped->sortByDesc('created_at')->values();
+        // Batal dipasang di paling atas sebagai warning dan tidak mengambil
+        // jatah daftar order aktif terbaru.
+        $cancelled = $mapped->where('status', 'batal')->sortByDesc('created_at');
+        $active = $mapped->where('status', '!=', 'batal')->sortByDesc('created_at')->take($limit);
+
+        return $cancelled->concat($active)->values();
     }
 
     /**

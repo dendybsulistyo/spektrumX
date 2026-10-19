@@ -419,7 +419,8 @@
                     @if ($from || $to)
                         Order pada periode terpilih
                     @else
-                        <span class="mono">{{ $recent->count() }}</span> order terbaru
+                        <span class="mono">{{ $recent->where('status', '!=', 'batal')->count() }}</span> order terbaru +
+                        <span class="mono">{{ $recent->where('status', 'batal')->count() }}</span> warning batal
                     @endif
                     &middot; kasir &rarr; layout &rarr; cetak &rarr; finishing &rarr; back office &rarr; bungkus &rarr; ambil
                 </span>

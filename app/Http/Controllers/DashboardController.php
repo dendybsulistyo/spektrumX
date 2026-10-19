@@ -152,10 +152,10 @@ class DashboardController extends Controller
         $from = $request->filled('from') ? $request->string('from')->toString() : null;
         $to = $request->filled('to') ? $request->string('to')->toString() : null;
 
-        // Tanpa filter tanggal, cukup tampilkan 30 order terbaru seperti
+        // Tanpa filter tanggal, cukup tampilkan 50 order terbaru seperti
         // biasa. Begitu operator mencari rentang tanggal tertentu, batas
         // dinaikkan supaya semua order dalam rentang itu ikut tampil.
-        $limit = ($from || $to) ? 500 : 30;
+        $limit = ($from || $to) ? 500 : 50;
 
         return [
             'stats' => $this->stats->stats($from, $to),
