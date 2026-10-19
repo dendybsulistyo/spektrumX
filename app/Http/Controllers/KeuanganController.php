@@ -844,6 +844,13 @@ class KeuanganController extends Controller
                 continue;
             }
 
+            // Rekap Kasir Harian Spektrum hanya menampilkan aktivitas
+            // pembatalannya (refund di Kredit). Uang masuk awal tetap ada
+            // pada Rekap Kasir per User milik kasir yang menerimanya.
+            if ($batal) {
+                continue;
+            }
+
             $category = match ($payment->jenis) {
                 'dp' => 'advance',
                 'pelunasan_hutang' => 'receivable',
@@ -858,10 +865,8 @@ class KeuanganController extends Controller
             $diterima = $amount - ($cashDiscounts['receipt'][$payment->id] ?? 0.0);
             if ($diterima > 0) {
                 $details->push([
-                    'category' => $batal ? 'other_transaction' : $category,
-                    'description' => $batal
-                        ? $batal.'uang masuk ('.(OrderPayment::JENIS_LABELS[$payment->jenis] ?? ucfirst($payment->jenis)).") - {$customer}"
-                        : $description,
+                    'category' => $category,
+                    'description' => $description,
                     'debit' => $diterima,
                     'credit' => 0.0,
                     'user_id' => $payment->user_id,
