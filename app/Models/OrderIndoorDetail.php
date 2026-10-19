@@ -88,6 +88,14 @@ class OrderIndoorDetail extends Model
      */
     public function divisionName(): ?string
     {
+        // Pada order Print Only, teknik cetak dicatat di Judul (contoh:
+        // "Oscar Putih (Print CMYK) 43 cm"), bukan sebagai produk tersendiri.
+        // Item CMYK dikerjakan oleh divisi Flatbed meskipun master Print Only
+        // yang terpilih berada di Dye Sublimation.
+        if (preg_match('/\bprint\s+(?:cmyk|cymk)\b/iu', (string) $this->Judul)) {
+            return 'Print Flatbed';
+        }
+
         $candidates = $this->isArtwork()
             ? [$this->produkArtwork]
             : [$this->produk, $this->produkArtwork];
