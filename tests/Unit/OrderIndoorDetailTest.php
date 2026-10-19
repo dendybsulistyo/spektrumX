@@ -24,4 +24,21 @@ class OrderIndoorDetailTest extends TestCase
 
         $this->assertSame('Print Flatbed', $item->divisionName());
     }
+
+    #[DataProvider('dtfDescriptions')]
+    public function test_dtf_description_is_routed_to_dtf(string $description): void
+    {
+        $item = new OrderIndoorDetail(['Judul' => $description]);
+
+        $this->assertSame('DTF', $item->divisionName());
+    }
+
+    public static function dtfDescriptions(): array
+    {
+        return [
+            'parenthesized' => ['BAGAS & SALSA (DTF)'],
+            'print DTF' => ['Gingham Print DTF 145 cm'],
+            'case insensitive' => ['print dtf'],
+        ];
+    }
 }

@@ -88,6 +88,12 @@ class OrderIndoorDetail extends Model
      */
     public function divisionName(): ?string
     {
+        // Print Only untuk teknik DTF juga menyimpan penanda teknik pada
+        // Judul (contoh: "BAGAS & SALSA (DTF)"), bukan pada master produk.
+        if (preg_match('/\bdtf\b/iu', (string) $this->Judul)) {
+            return 'DTF';
+        }
+
         // Pada order Print Only, teknik cetak dicatat di Judul (contoh:
         // "Oscar Putih (Print CMYK) 43 cm"), bukan sebagai produk tersendiri.
         // Item CMYK dikerjakan oleh divisi Flatbed meskipun master Print Only

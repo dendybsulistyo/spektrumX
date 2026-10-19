@@ -17,8 +17,8 @@ use App\Models\PaymentMethodCorrection;
 use App\Models\PengaturanKeuangan;
 use App\Models\User;
 use App\Services\OrderDocumentService;
-use App\Support\SimpleXlsx;
 use App\Services\ReceivableBatchPayment;
+use App\Support\SimpleXlsx;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -131,10 +131,7 @@ class KeuanganController extends Controller
         $tanggal = $filters['tanggal'] ?? now()->format('Y-m-d');
         $kasirId = isset($filters['kasir']) ? (int) $filters['kasir'] : null;
 
-        $activityUserIds = OrderPayment::query()->whereNotNull('user_id')->pluck('user_id')
-            ->merge(CashDailyEntry::query()->whereNotNull('user_id')->pluck('user_id'))
-            ->merge(FinalSalesDiscount::query()->whereNotNull('user_id')->pluck('user_id'))
-            ->unique();
+        $activityUserIds = $this->cashierActivityUserIds();
 
         $kasirUsers = User::query()
             ->where(function ($query) use ($activityUserIds) {
@@ -147,7 +144,6 @@ class KeuanganController extends Controller
 
         $payments = OrderPayment::with('user')
             ->whereDate('created_at', $tanggal)
-            ->when($kasirId, fn ($query) => $query->where('user_id', $kasirId))
             ->orderBy('created_at')
             ->get();
 
@@ -162,7 +158,7 @@ class KeuanganController extends Controller
                 continue;
             }
 
-            $model::query()->with('customer')->whereIn('id', $rows->pluck('order_id')->unique())->get()
+            $model::query()->with('customer', 'cancelApprovedBy')->whereIn('id', $rows->pluck('order_id')->unique())->get()
                 ->each(function ($order) use (&$ordersByKey, $type) {
                     $ordersByKey["{$type}-{$order->id}"] = $order;
                 });
@@ -188,21 +184,25 @@ class KeuanganController extends Controller
                     return [];
                 }
 
+                $isCancellation = $this->refundKind($p, $order, $discountRefunds) === 'pembatalan';
+                $activityUserId = $isCancellation ? ($order?->cancel_approved_by ?: $p->user_id) : $p->user_id;
+                $activityUser = $isCancellation ? ($order?->cancelApprovedBy?->name ?: $p->user?->name) : $p->user?->name;
+
                 return [[
-                    'user_id' => $p->user_id,
-                    'kasir' => $p->user?->name ?? '-',
+                    'user_id' => $activityUserId,
+                    'kasir' => $activityUser ?? '-',
                     'no_nota' => $order?->NoOrder,
                     'keterangan' => match ($this->refundKind($p, $order, $discountRefunds)) {
                         'potongan' => 'Potongan Penjualan Akhir · By system - ',
-                        'pembatalan' => 'Refund pembatalan - ',
+                        'pembatalan' => 'Refund pembatalan · disetujui oleh '.($activityUser ?? '-').' - ',
                         default => 'Refund - ',
                     }.$customer,
                     'debet' => 0,
                     'kredit' => abs($jumlah),
                     'sort' => '2-'.$baseSort.'-0',
                 ], ...($this->refundKind($p, $order, $discountRefunds) === 'potongan' ? [] : $this->nonCashRefundOffset($p, fn (string $method) => [
-                    'user_id' => $p->user_id,
-                    'kasir' => $p->user?->name ?? '-',
+                    'user_id' => $activityUserId,
+                    'kasir' => $activityUser ?? '-',
                     'no_nota' => null,
                     'keterangan' => $this->nonCashOffsetLabel($this->refundKind($p, $order, $discountRefunds), $method).' - '.$customer,
                     'debet' => abs($jumlah),
@@ -299,7 +299,11 @@ class KeuanganController extends Controller
             ]);
         }
 
-        $rows = $seededRows->concat($paymentRows)->concat($discountRows)->sortBy('sort')->values();
+        $rows = $seededRows->concat($paymentRows)->concat($discountRows)
+            ->when($kasirId, fn (Collection $rows) => $rows->filter(
+                fn (array $row) => $row['user_id'] === null || (int) $row['user_id'] === $kasirId
+            ))
+            ->sortBy('sort')->values();
         $groups = collect();
 
         $openingRows = $rows->whereNull('user_id')->values();
@@ -499,6 +503,25 @@ class KeuanganController extends Controller
     }
 
     /**
+     * User yang perlu tersedia pada filter laporan kasir. Approver pembatalan
+     * ikut dimasukkan karena refund pembatalan menjadi aktivitas approver,
+     * walaupun penerimaan awal tetap menjadi aktivitas kasir penerima uang.
+     *
+     * @return Collection<int, int>
+     */
+    private function cashierActivityUserIds(): Collection
+    {
+        return OrderPayment::query()->whereNotNull('user_id')->pluck('user_id')
+            ->merge(CashDailyEntry::query()->whereNotNull('user_id')->pluck('user_id'))
+            ->merge(FinalSalesDiscount::query()->whereNotNull('user_id')->pluck('user_id'))
+            ->merge(OrderIndoor::query()->whereNotNull('cancel_approved_by')->pluck('cancel_approved_by'))
+            ->merge(OrderOutdoor::query()->whereNotNull('cancel_approved_by')->pluck('cancel_approved_by'))
+            ->merge(OrderArtwork::query()->whereNotNull('cancel_approved_by')->pluck('cancel_approved_by'))
+            ->map(fn ($id) => (int) $id)
+            ->unique()->values();
+    }
+
+    /**
      * Kunci "jenis-id-nominal" untuk refund yang berasal dari Potongan
      * Penjualan, agar barisnya diberi keterangan pasangannya.
      *
@@ -681,10 +704,7 @@ class KeuanganController extends Controller
             [$dari, $sampai] = [$sampai, $dari];
         }
 
-        $activityUserIds = OrderPayment::query()->whereNotNull('user_id')->pluck('user_id')
-            ->merge(CashDailyEntry::query()->whereNotNull('user_id')->pluck('user_id'))
-            ->merge(FinalSalesDiscount::query()->whereNotNull('user_id')->pluck('user_id'))
-            ->unique();
+        $activityUserIds = $this->cashierActivityUserIds();
 
         $kasirUsers = User::query()
             ->where(function ($query) use ($activityUserIds) {
@@ -697,7 +717,6 @@ class KeuanganController extends Controller
 
         $payments = OrderPayment::with('user')
             ->whereBetween('created_at', ["{$dari} 00:00:00", "{$sampai} 23:59:59"])
-            ->when($kasirId, fn ($query) => $query->where('user_id', $kasirId))
             ->orderBy('created_at')
             ->get();
 
@@ -708,7 +727,7 @@ class KeuanganController extends Controller
             if (! $model) {
                 continue;
             }
-            $model::query()->with('customer')->whereIn('id', $typePayments->pluck('order_id')->unique())->get()
+            $model::query()->with('customer', 'cancelApprovedBy')->whereIn('id', $typePayments->pluck('order_id')->unique())->get()
                 ->each(fn ($order) => $ordersByKey->put("{$type}-{$order->id}", $order));
         }
 
@@ -792,16 +811,21 @@ class KeuanganController extends Controller
                         continue;
                     }
                 }
+                $isCancellation = ! $isPotongan && $this->refundKind($payment, $order, $discountRefunds) === 'pembatalan';
+                $activityUserId = $isCancellation ? ($order?->cancel_approved_by ?: $payment->user_id) : $payment->user_id;
+                $activityUser = $isCancellation ? ($order?->cancelApprovedBy?->name ?: $payment->user?->name) : $payment->user?->name;
+                $approvalInfo = $isCancellation ? ' · disetujui oleh '.($activityUser ?? '-') : '';
+
                 $details->push([
                     'category' => $isPotongan ? 'sales_discount' : ($batal ? 'other_transaction' : 'refund'),
-                    'description' => $batal && ! $isPotongan ? "{$batal}refund via {$method} - {$customer}" : match ($this->refundKind($payment, $order, $discountRefunds)) {
+                    'description' => $batal && ! $isPotongan ? "{$batal}refund via {$method}{$approvalInfo} - {$customer}" : match ($this->refundKind($payment, $order, $discountRefunds)) {
                         'potongan' => 'Potongan Penjualan Akhir · '.($order?->NoOrder ?? '-')." · By system - {$customer}",
-                        'pembatalan' => 'Refund pembatalan · '.($order?->NoOrder ?? '-')." · via {$method} - {$customer}",
+                        'pembatalan' => 'Refund pembatalan · '.($order?->NoOrder ?? '-')." · via {$method}{$approvalInfo} - {$customer}",
                         default => "Refund via {$method} - {$customer}",
                     },
                     'debit' => 0.0,
                     'credit' => abs($amount),
-                    'user_id' => $payment->user_id,
+                    'user_id' => $activityUserId,
                     'sort' => $baseSort.'-0',
                 ]);
                 foreach (($isPotongan ? [] : $this->nonCashRefundOffset($payment, fn (string $method) => [
@@ -811,7 +835,7 @@ class KeuanganController extends Controller
                         : $this->nonCashOffsetLabel($this->refundKind($payment, $order, $discountRefunds), $method)." - {$customer}",
                     'debit' => abs($amount),
                     'credit' => 0.0,
-                    'user_id' => $payment->user_id,
+                    'user_id' => $activityUserId,
                     'sort' => $baseSort.'-1',
                 ])) as $offset) {
                     $details->push($offset);
@@ -864,8 +888,11 @@ class KeuanganController extends Controller
             }
         }
 
-
-        $details = $details->sortBy('sort')->values();
+        $details = $details
+            ->when($kasirId, fn (Collection $rows) => $rows->filter(
+                fn (array $row) => $row['user_id'] === null || (int) $row['user_id'] === $kasirId
+            ))
+            ->sortBy('sort')->values();
         $sectionDefinitions = [
             'opening' => 'Saldo Awal',
             'cash_note' => 'Penerimaan Nota Tunai (Cash)',
@@ -975,10 +1002,7 @@ class KeuanganController extends Controller
         $tanggal = $filters['tanggal'] ?? now()->format('Y-m-d');
         $kasirId = isset($filters['kasir']) ? (int) $filters['kasir'] : null;
 
-        $activityUserIds = OrderPayment::query()->whereNotNull('user_id')->pluck('user_id')
-            ->merge(CashDailyEntry::query()->whereNotNull('user_id')->pluck('user_id'))
-            ->merge(FinalSalesDiscount::query()->whereNotNull('user_id')->pluck('user_id'))
-            ->unique();
+        $activityUserIds = $this->cashierActivityUserIds();
         $kasirUsers = User::query()
             ->where(function ($query) use ($activityUserIds) {
                 $query->whereHas('role', fn ($role) => $role->where('name', 'kasir'))
