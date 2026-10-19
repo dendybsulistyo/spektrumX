@@ -146,6 +146,7 @@ class KeuanganController extends Controller
             ->whereDate('created_at', $tanggal)
             ->orderBy('created_at')
             ->get();
+        $batchCounts = $payments->where('jenis', 'pelunasan_hutang')->whereNotNull('batch_id')->countBy('batch_id');
 
         // Resolve NoOrder/customer per order without N+1 — group ids by
         // type, one query per type, then map back onto each payment row.
@@ -168,7 +169,7 @@ class KeuanganController extends Controller
         $paymentDiscounts = $this->discountsAttachedToPayments($payments);
         $discountReductions = $this->nonCashDiscountReductions($payments);
         $cashDiscounts = $this->cashDiscountAllocations();
-        $paymentRows = $payments->flatMap(function (OrderPayment $p) use ($ordersByKey, $discountRefunds, $paymentDiscounts, $discountReductions, $cashDiscounts) {
+        $paymentRows = $payments->flatMap(function (OrderPayment $p) use ($ordersByKey, $discountRefunds, $paymentDiscounts, $discountReductions, $cashDiscounts, $batchCounts) {
             $order = $ordersByKey["{$p->order_type}-{$p->order_id}"] ?? null;
             $jumlah = (float) $p->jumlah;
             $customer = $order?->customer?->NmCust
@@ -222,6 +223,7 @@ class KeuanganController extends Controller
                 'debet' => $jumlah + array_sum(array_map(fn ($d) => (float) $d->receivable_offset, $discounts)),
                 'kredit' => 0,
                 'sort' => '2-'.$baseSort.'-0',
+                ...$this->receivableBatchMeta($p, $batchCounts, $customer, 'receipt'),
             ]];
             foreach ($discounts as $i => $discount) {
                 $rows[] = [
@@ -260,11 +262,13 @@ class KeuanganController extends Controller
                     'debet' => 0,
                     'kredit' => $diterima,
                     'sort' => '2-'.$baseSort.'-1',
+                    ...$this->receivableBatchMeta($p, $batchCounts, $customer, 'non_cash'),
                 ];
             }
 
             return $rows;
         });
+        $paymentRows = $this->collapseReceivableBatchRows($paymentRows, 'debet', 'kredit', 'keterangan');
 
         $seededRows = CashDailyEntry::with('user')
             ->whereDate('tanggal', $tanggal)
@@ -370,6 +374,73 @@ class KeuanganController extends Controller
     private function salesDiscountDescription(FinalSalesDiscount $discount, string $customer): string
     {
         return 'Potongan Penjualan - '.$customer.($discount->userReason() ? ' · '.$discount->userReason() : '');
+    }
+
+    /**
+     * Metadata sementara untuk meringkas beberapa nota yang dibayar lewat
+     * satu kali klik "Proses Pembayaran". Data sumber tetap per nota.
+     *
+     * @return array<string, string>
+     */
+    private function receivableBatchMeta(
+        OrderPayment $payment,
+        Collection $batchCounts,
+        string $customer,
+        string $role,
+    ): array {
+        if ($payment->jenis !== 'pelunasan_hutang' || ! $payment->batch_id) {
+            return [];
+        }
+
+        $method = OrderPayment::CARA_BAYAR_LABELS[$payment->cara_bayar] ?? ucfirst($payment->cara_bayar);
+        $reference = $payment->no_referensi ? ' · Ref '.$payment->no_referensi : '';
+        $count = (int) ($batchCounts[$payment->batch_id] ?? 1);
+        $description = $role === 'non_cash'
+            ? "Bayar via {$method} - {$customer} · {$count} nota{$reference}"
+            : "Penerimaan Piutang - {$customer} · {$count} nota · {$method}{$reference}";
+
+        return [
+            'receivable_batch_id' => $payment->batch_id,
+            'receivable_batch_role' => $role,
+            'receivable_batch_description' => $description,
+        ];
+    }
+
+    /**
+     * Gabungkan baris tampilan satu batch tanpa menyentuh OrderPayment atau
+     * jurnal per nota. Baris lama tanpa batch_id dibiarkan apa adanya.
+     */
+    private function collapseReceivableBatchRows(
+        Collection $rows,
+        string $debitKey,
+        string $creditKey,
+        string $descriptionKey,
+    ): Collection {
+        $batched = $rows->filter(fn (array $row) => ! empty($row['receivable_batch_id']));
+        if ($batched->isEmpty()) {
+            return $rows;
+        }
+
+        $collapsed = $batched
+            ->groupBy(fn (array $row) => $row['receivable_batch_id'].'|'.$row['receivable_batch_role'])
+            ->map(function (Collection $group) use ($debitKey, $creditKey, $descriptionKey) {
+                $row = $group->first();
+                $row[$debitKey] = (float) $group->sum($debitKey);
+                $row[$creditKey] = (float) $group->sum($creditKey);
+                $row[$descriptionKey] = $row['receivable_batch_description'];
+                $row['receivable_group_key'] = 'batch:'.$row['receivable_batch_id'];
+                if (array_key_exists('no_nota', $row)) {
+                    $row['no_nota'] = null;
+                }
+                unset($row['receivable_batch_id'], $row['receivable_batch_role'], $row['receivable_batch_description']);
+
+                return $row;
+            });
+
+        return $rows->reject(fn (array $row) => ! empty($row['receivable_batch_id']))
+            ->concat($collapsed)
+            ->sortBy('sort')
+            ->values();
     }
 
     /**
@@ -719,6 +790,7 @@ class KeuanganController extends Controller
             ->whereBetween('created_at', ["{$dari} 00:00:00", "{$sampai} 23:59:59"])
             ->orderBy('created_at')
             ->get();
+        $batchCounts = $payments->where('jenis', 'pelunasan_hutang')->whereNotNull('batch_id')->countBy('batch_id');
 
         $models = ['indoor' => OrderIndoor::class, 'outdoor' => OrderOutdoor::class, 'artwork' => OrderArtwork::class];
         $ordersByKey = collect();
@@ -871,6 +943,7 @@ class KeuanganController extends Controller
                     'credit' => 0.0,
                     'user_id' => $payment->user_id,
                     'sort' => $baseSort.'-0',
+                    ...$this->receivableBatchMeta($payment, $batchCounts, $customer, 'receipt'),
                 ]);
             }
 
@@ -889,11 +962,12 @@ class KeuanganController extends Controller
                     'credit' => $diterima,
                     'user_id' => $payment->user_id,
                     'sort' => $baseSort.'-1',
+                    ...$this->receivableBatchMeta($payment, $batchCounts, $customer, 'non_cash'),
                 ]);
             }
         }
 
-        $details = $details
+        $details = $this->collapseReceivableBatchRows($details, 'debit', 'credit', 'description')
             ->when($kasirId, fn (Collection $rows) => $rows->filter(
                 fn (array $row) => $row['user_id'] === null || (int) $row['user_id'] === $kasirId
             ))
@@ -916,7 +990,7 @@ class KeuanganController extends Controller
             // Laporan lama merangkum piutang per customer. Baris transaksi
             // lain tetap dipertahankan agar nomor nota dan kanal bayar jelas.
             if ($key === 'receivable') {
-                $sectionRows = $sectionRows->groupBy('description')->map(fn (Collection $rows) => [
+                $sectionRows = $sectionRows->groupBy(fn (array $row) => $row['receivable_group_key'] ?? $row['description'])->map(fn (Collection $rows) => [
                     'description' => $rows->first()['description'],
                     'debit' => (float) $rows->sum('debit'),
                     'credit' => (float) $rows->sum('credit'),
@@ -1056,6 +1130,7 @@ class KeuanganController extends Controller
             ->whereDate('created_at', $tanggal)
             ->when($kasirId, fn ($query) => $query->where('user_id', $kasirId))
             ->orderBy('created_at')->orderBy('id')->get();
+        $batchCounts = $payments->where('jenis', 'pelunasan_hutang')->whereNotNull('batch_id')->countBy('batch_id');
         $models = ['indoor' => OrderIndoor::class, 'outdoor' => OrderOutdoor::class, 'artwork' => OrderArtwork::class];
         $ordersByKey = collect();
 
@@ -1073,7 +1148,7 @@ class KeuanganController extends Controller
         $paymentDiscounts = $this->discountsAttachedToPayments($payments);
         $discountReductions = $this->nonCashDiscountReductions($payments);
         $cashDiscounts = $this->cashDiscountAllocations();
-        $paymentRows = $payments->flatMap(function (OrderPayment $payment) use ($ordersByKey, $discountRefunds, $paymentDiscounts, $discountReductions, $cashDiscounts) {
+        $paymentRows = $payments->flatMap(function (OrderPayment $payment) use ($ordersByKey, $discountRefunds, $paymentDiscounts, $discountReductions, $cashDiscounts, $batchCounts) {
             $order = $ordersByKey["{$payment->order_type}-{$payment->order_id}"] ?? null;
             $customer = $order?->customer?->NmCust ? mb_strtoupper($order->customer->NmCust) : '-';
             $amount = (float) $payment->jumlah;
@@ -1125,6 +1200,7 @@ class KeuanganController extends Controller
                 'kasir' => $payment->user?->name,
                 'user_id' => $payment->user_id,
                 'sort' => $baseSort.'-0',
+                ...$this->receivableBatchMeta($payment, $batchCounts, $customer, 'receipt'),
             ]];
             foreach ($discounts as $i => $discount) {
                 $rows[] = [
@@ -1162,11 +1238,13 @@ class KeuanganController extends Controller
                     'kasir' => $payment->user?->name,
                     'user_id' => $payment->user_id,
                     'sort' => $baseSort.'-1',
+                    ...$this->receivableBatchMeta($payment, $batchCounts, $customer, 'non_cash'),
                 ];
             }
 
             return $rows;
         });
+        $paymentRows = $this->collapseReceivableBatchRows($paymentRows, 'debet', 'kredit', 'keterangan');
 
         // Potongan penjualan ditampilkan bersama pembayaran tagihannya (lihat di atas).
         $discountRows = collect();

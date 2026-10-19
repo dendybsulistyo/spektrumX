@@ -26,6 +26,7 @@ class OrderPayment extends Model
     ];
 
     protected $fillable = [
+        'batch_id',
         'order_type',
         'order_id',
         'jenis',

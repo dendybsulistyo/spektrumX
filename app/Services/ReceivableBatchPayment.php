@@ -9,6 +9,7 @@ use App\Models\OrderPayment;
 use App\Models\OrderStatusNote;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
 
@@ -43,9 +44,10 @@ class ReceivableBatchPayment
     public function pay(string $customerCode, array $lines, string $method, ?string $reference, ?string $note): array
     {
         $result = ['count' => 0, 'total' => 0.0, 'settled' => 0];
+        $batchId = (string) Str::uuid();
 
         try {
-            DB::transaction(function () use ($customerCode, $lines, $method, $reference, $note, &$result) {
+            DB::transaction(function () use ($customerCode, $lines, $method, $reference, $note, $batchId, &$result) {
                 foreach ($lines as $line) {
                     $model = self::MODELS[$line['type']] ?? null;
                     $order = $model ? $model::query()->find($line['id']) : null;
@@ -54,8 +56,8 @@ class ReceivableBatchPayment
                         throw ValidationException::withMessages(['pembayaran' => 'Nota tidak ditemukan untuk customer ini. Muat ulang halaman.']);
                     }
 
-                    $this->workflow->run($order, 'hutang', function (Model $locked) use ($line, $method, $reference, $note, &$result) {
-                        $settled = $this->payOne($locked, $line['type'], (float) $line['amount'], $method, $reference, $note);
+                    $this->workflow->run($order, 'hutang', function (Model $locked) use ($line, $method, $reference, $note, $batchId, &$result) {
+                        $settled = $this->payOne($locked, $line['type'], (float) $line['amount'], $method, $reference, $note, $batchId);
                         $result['count']++;
                         $result['total'] += (float) $line['amount'];
                         $result['settled'] += $settled ? 1 : 0;
@@ -70,7 +72,7 @@ class ReceivableBatchPayment
     }
 
     /** @return bool true bila nota menjadi lunas. */
-    private function payOne(Model $order, string $type, float $amount, string $method, ?string $reference, ?string $note): bool
+    private function payOne(Model $order, string $type, float $amount, string $method, ?string $reference, ?string $note, string $batchId): bool
     {
         $remaining = (float) $order->jumlah_piutang;
 
@@ -120,6 +122,7 @@ class ReceivableBatchPayment
         ]);
 
         OrderPayment::create([
+            'batch_id' => $batchId,
             'order_type' => $type,
             'order_id' => $order->id,
             'jenis' => 'pelunasan_hutang',
