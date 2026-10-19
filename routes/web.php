@@ -4,12 +4,14 @@ use App\Http\Controllers\AccountingFixedAssetController;
 use App\Http\Controllers\AccountingPurchaseController;
 use App\Http\Controllers\AccountingSupplierController;
 use App\Http\Controllers\AkunController;
+use App\Http\Controllers\AvatarController;
 use App\Http\Controllers\BahanCetakOutdoorController;
 use App\Http\Controllers\BahanOutdoorController;
 use App\Http\Controllers\CashAdjustmentController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\CustomerServiceController;
+use App\Http\Controllers\DailySummaryController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DataWarehouseController;
 use App\Http\Controllers\DetailIndoorController;
@@ -36,6 +38,7 @@ use App\Http\Controllers\LaporanAkuntansiController;
 use App\Http\Controllers\LaporanOperatorIndoorController;
 use App\Http\Controllers\MonitoringKinerjaController;
 use App\Http\Controllers\MonitoringTransaksiController;
+use App\Http\Controllers\MonthlyTransactionController;
 use App\Http\Controllers\OperatorController;
 use App\Http\Controllers\OrderArtworkController;
 use App\Http\Controllers\OrderBungkusController;
@@ -43,8 +46,8 @@ use App\Http\Controllers\OrderCetakController;
 use App\Http\Controllers\OrderCommentController;
 use App\Http\Controllers\OrderDesainController;
 use App\Http\Controllers\OrderDocumentController;
-use App\Http\Controllers\OrderFinishingController;
 use App\Http\Controllers\OrderFinancialAdjustmentController;
+use App\Http\Controllers\OrderFinishingController;
 use App\Http\Controllers\OrderIndoorController;
 use App\Http\Controllers\OrderOutdoorController;
 use App\Http\Controllers\OrderQcController;
@@ -52,12 +55,6 @@ use App\Http\Controllers\OrderReworkController;
 use App\Http\Controllers\PapanPantauController;
 use App\Http\Controllers\PayrollController;
 use App\Http\Controllers\PembatalanController;
-use App\Http\Controllers\SystemStatusController;
-use App\Http\Controllers\UserStatusController;
-use App\Http\Controllers\QuickSearchController;
-use App\Http\Controllers\DailySummaryController;
-use App\Http\Controllers\AvatarController;
-use App\Http\Controllers\MonthlyTransactionController;
 use App\Http\Controllers\PengambilanController;
 use App\Http\Controllers\PengaturanCetakController;
 use App\Http\Controllers\PengaturanKeuanganController;
@@ -68,12 +65,15 @@ use App\Http\Controllers\PrinterOutdoorController;
 use App\Http\Controllers\PrinterPerformanceController;
 use App\Http\Controllers\ProdukController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\QuickSearchController;
 use App\Http\Controllers\RekapPenerimaanController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\ServerMonitorController;
+use App\Http\Controllers\SystemStatusController;
 use App\Http\Controllers\TutupBukuController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\UserStatusController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -81,6 +81,7 @@ Route::get('/', function () {
 });
 
 Route::get('/dashboard', [DashboardController::class, 'index'])->middleware(['auth', 'verified'])->name('dashboard');
+Route::get('/dashboard/overdue-orders', [DashboardController::class, 'overdueOrders'])->middleware(['auth', 'verified'])->name('dashboard.overdue-orders');
 Route::get('/dashboard/order-progress/{type}/{id}', [DashboardController::class, 'orderProgress'])->middleware(['auth', 'verified'])->name('dashboard.order-progress');
 
 Route::middleware('auth')->group(function () {
@@ -264,7 +265,6 @@ Route::middleware('auth')->group(function () {
         Route::get('/pengaturan/cetak-sales-order', [PengaturanCetakController::class, 'edit'])->name('pengaturan.cetak-sales-order.edit');
         Route::put('/pengaturan/cetak-sales-order', [PengaturanCetakController::class, 'update'])->name('pengaturan.cetak-sales-order.update');
     });
-
 
     Route::middleware('permission:pengeluaran.view')->group(function () {
         Route::get('/pengeluaran', [PengeluaranController::class, 'index'])->name('pengeluaran.index');

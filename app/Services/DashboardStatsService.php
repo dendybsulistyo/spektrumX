@@ -6,10 +6,14 @@ use App\Models\OrderArtwork;
 use App\Models\OrderIndoor;
 use App\Models\OrderOutdoor;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 class DashboardStatsService
 {
+    private const OVERDUE_EXCLUDED_STATUSES = ['siap_diambil', 'selesai', 'batal'];
+
     /**
      * @return array<string, mixed>
      */
@@ -78,6 +82,63 @@ class DashboardStatsService
             ->concat($artwork->map(fn ($o) => $this->toRow($o, 'Artwork')));
 
         return $mapped->sortByDesc('created_at')->take($limit)->values();
+    }
+
+    /**
+     * Daftar order telat lintas tiga tabel. Query memakai UNION ALL lalu baru
+     * dipaginasi, sehingga detail/order history tidak ikut dimuat ke memori.
+     *
+     * @return LengthAwarePaginator<object>
+     */
+    public function overdueOrders(
+        int $page = 1,
+        int $perPage = 25,
+        ?string $type = null,
+        ?string $status = null,
+        ?string $from = null,
+        ?string $to = null,
+    ): LengthAwarePaginator {
+        $cutoff = now()->subHours(72);
+        $union = null;
+
+        foreach (['indoor' => 'order_indoor', 'outdoor' => 'order_outdoor', 'artwork' => 'order_artwork'] as $slug => $table) {
+            $query = DB::table($table)
+                ->select([
+                    'id', 'NoOrder', 'KdCust', 'status', 'status_bayar', 'created_at',
+                    'desain_by', 'cetak_by', 'finishing_by', 'qc_by', 'bungkus_by',
+                ])
+                ->selectRaw('? as type_slug', [$slug])
+                ->whereNotNull('created_at')
+                ->where('created_at', '<', $cutoff)
+                ->whereNotIn('status', self::OVERDUE_EXCLUDED_STATUSES)
+                ->when($from, fn ($builder) => $builder->where('created_at', '>=', $from.' 00:00:00'))
+                ->when($to, fn ($builder) => $builder->where('created_at', '<=', $to.' 23:59:59'));
+
+            $union = $union ? $union->unionAll($query) : $query;
+        }
+
+        $orders = DB::query()->fromSub($union, 'overdue')
+            ->leftJoin('customers', 'customers.KdCust', '=', 'overdue.KdCust')
+            ->leftJoin('users as overdue_desain', 'overdue_desain.id', '=', 'overdue.desain_by')
+            ->leftJoin('users as overdue_cetak', 'overdue_cetak.id', '=', 'overdue.cetak_by')
+            ->leftJoin('users as overdue_finishing', 'overdue_finishing.id', '=', 'overdue.finishing_by')
+            ->leftJoin('users as overdue_qc', 'overdue_qc.id', '=', 'overdue.qc_by')
+            ->leftJoin('users as overdue_bungkus', 'overdue_bungkus.id', '=', 'overdue.bungkus_by')
+            ->select(
+                'overdue.*', 'customers.NmCust as customer',
+                'overdue_desain.name as desain_operator', 'overdue_cetak.name as cetak_operator',
+                'overdue_finishing.name as finishing_operator', 'overdue_qc.name as qc_operator',
+                'overdue_bungkus.name as bungkus_operator',
+            )
+            ->when($type, fn ($query) => $query->where('overdue.type_slug', $type))
+            ->when($status, fn ($query) => $query->where('overdue.status', $status))
+            ->orderBy('overdue.created_at')
+            ->orderBy('overdue.id');
+
+        return $orders->paginate(
+            perPage: max(10, min(50, $perPage)),
+            page: max(1, $page)
+        );
     }
 
     /**

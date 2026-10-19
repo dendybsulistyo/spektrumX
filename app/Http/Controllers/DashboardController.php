@@ -9,6 +9,7 @@ use App\Models\OrderStatusNote;
 use App\Services\DashboardStatsService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\View\View;
 
 class DashboardController extends Controller
@@ -75,6 +76,71 @@ class DashboardController extends Controller
             'customer' => $order->customer?->NmCust,
             'items' => $items,
             'history' => $history,
+        ]);
+    }
+
+    /**
+     * Resume order yang belum siap setelah 72 jam. Endpoint ini dipanggil
+     * hanya saat kartu telat dibuka dan selalu mengembalikan data paginasi.
+     */
+    public function overdueOrders(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'page' => ['sometimes', 'integer', 'min:1'],
+            'per_page' => ['sometimes', 'integer', 'between:10,50'],
+            'type' => ['nullable', 'in:indoor,outdoor,artwork'],
+            'status' => ['nullable', 'in:baru,desain,cetak,finishing,qc,bungkus'],
+            'from' => ['nullable', 'date_format:Y-m-d'],
+            'to' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:from'],
+        ]);
+
+        $orders = $this->stats->overdueOrders(
+            page: (int) ($validated['page'] ?? 1),
+            perPage: (int) ($validated['per_page'] ?? 25),
+            type: $validated['type'] ?? null,
+            status: $validated['status'] ?? null,
+            from: $validated['from'] ?? null,
+            to: $validated['to'] ?? null,
+        );
+
+        $stageLabels = self::STAGE_LABELS;
+        $typeLabels = ['indoor' => 'Indoor', 'outdoor' => 'Outdoor', 'artwork' => 'Artwork'];
+
+        return response()->json([
+            'data' => $orders->getCollection()->map(function ($order) use ($stageLabels, $typeLabels) {
+                $createdAt = Carbon::parse($order->created_at);
+                $operatorColumn = match ($order->status) {
+                    'desain' => 'desain_by',
+                    'cetak' => 'cetak_by',
+                    'finishing' => 'finishing_by',
+                    'qc' => 'qc_by',
+                    'bungkus' => 'bungkus_by',
+                    default => null,
+                };
+                $operator = $operatorColumn ? $order->{str_replace('_by', '_operator', $operatorColumn)} : null;
+
+                return [
+                    'id' => $order->id,
+                    'type_slug' => $order->type_slug,
+                    'type' => $typeLabels[$order->type_slug] ?? ucfirst($order->type_slug),
+                    'no_order' => $order->NoOrder,
+                    'customer' => $order->customer ?: $order->KdCust,
+                    'created_at' => $createdAt->format('d M Y · H:i'),
+                    'overdue' => $createdAt->locale('id')->diffForHumans(now(), true),
+                    'status' => $order->status,
+                    'status_label' => $stageLabels[$order->status] ?? ucfirst($order->status),
+                    'status_bayar' => $order->status_bayar,
+                    'operator' => $operator,
+                ];
+            })->values(),
+            'meta' => [
+                'current_page' => $orders->currentPage(),
+                'last_page' => $orders->lastPage(),
+                'per_page' => $orders->perPage(),
+                'total' => $orders->total(),
+                'from' => $orders->firstItem(),
+                'to' => $orders->lastItem(),
+            ],
         ]);
     }
 

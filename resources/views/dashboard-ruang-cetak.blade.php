@@ -77,6 +77,9 @@
             #rc-dashboard .rcd-kpi.alert .rcd-kpi-meta { color: #c4c9d8; }
             #rc-dashboard .rcd-kpi.alert.calm::before { background: var(--green); }
             #rc-dashboard .rcd-kpi.alert.calm .rcd-kpi-label { color: #a7dcbc; }
+            #rc-dashboard button.rcd-kpi.alert { width: 100%; text-align: left; border-top: 0; border-right: 0; border-bottom: 0; cursor: pointer; font-family: inherit; }
+            #rc-dashboard button.rcd-kpi.alert:hover { background: var(--ink-soft); }
+            #rc-dashboard button.rcd-kpi.alert:focus-visible { outline: 3px solid var(--cyan); outline-offset: -3px; }
 
             /* ---------- Alur produksi ---------- */
             #rc-dashboard .rcd-flow { padding: 14px 16px 16px; }
@@ -164,6 +167,13 @@
             #rc-dashboard .rcd-modal-head div div { margin-top: 2px; font-size: 13px; color: #c4c9d8; }
             #rc-dashboard .rcd-modal-head button { height: 30px; padding: 0 12px; font-size: 12px; font-weight: 600; color: var(--ink); background: #fff; border: 0; border-radius: 6px; cursor: pointer; }
             #rc-dashboard .rcd-modal-body { padding: 16px 18px; display: flex; flex-direction: column; gap: 18px; }
+            #rc-dashboard .rcd-modal.is-wide { max-width: 980px; overflow: hidden; }
+            #rc-dashboard .rcd-overdue-tools { display: flex; gap: 8px; flex-wrap: wrap; padding: 12px 16px; border-bottom: 1px dashed var(--rule-strong); }
+            #rc-dashboard .rcd-overdue-tools select { height: 32px; padding: 0 28px 0 9px; font-size: 12px; border: 1px solid var(--rule-strong); border-radius: 6px; background-color: #fff; }
+            #rc-dashboard .rcd-overdue-pager { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 16px; border-top: 1px solid var(--rule); font-size: 12px; color: var(--muted); }
+            #rc-dashboard .rcd-overdue-pager div { display: flex; gap: 6px; }
+            #rc-dashboard .rcd-overdue-pager button { padding: 5px 10px; border: 1px solid var(--rule-strong); border-radius: 5px; background: #fff; color: var(--ink); cursor: pointer; }
+            #rc-dashboard .rcd-overdue-pager button:disabled { opacity: .4; cursor: default; }
             #rc-dashboard .rcd-label { margin-bottom: 8px; font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
             #rc-dashboard .rcd-item { padding: 8px 10px; margin-bottom: 6px; border: 1px solid var(--rule); border-radius: 8px; background: #fff; }
             #rc-dashboard .rcd-item-name { font-weight: 600; color: var(--ink); margin-bottom: 4px; }
@@ -254,18 +264,41 @@
              historyOpen: false,
              historyLoading: false,
              historyData: null,
+             overdueOpen: false,
+             overdueLoading: false,
+             overdueRows: [],
+             overdueMeta: { current_page: 1, last_page: 1, total: 0, from: 0, to: 0 },
+             overdueType: '',
+             overdueStatus: '',
              matches(tipe, text) {
                  const okTipe = this.tipeTab === 'semua' || this.tipeTab === tipe;
                  const q = this.search.trim().toLowerCase();
                  return okTipe && (q === '' || text.includes(q));
              },
              openHistory(type, id) {
+                 this.overdueOpen = false;
                  this.historyOpen = true;
                  this.historyLoading = true;
                  this.historyData = null;
                  axios.get(`{{ url('/dashboard/order-progress') }}/${type}/${id}`)
                      .then(r => { this.historyData = r.data; })
                      .finally(() => { this.historyLoading = false; });
+             },
+             openOverdue() {
+                 this.overdueOpen = true;
+                 this.loadOverdue(1);
+             },
+             loadOverdue(page = 1) {
+                 this.overdueLoading = true;
+                 axios.get(@js(route('dashboard.overdue-orders')), {
+                     params: {
+                         page, per_page: 25, type: this.overdueType || null, status: this.overdueStatus || null,
+                         from: @js($from), to: @js($to)
+                     }
+                 }).then(r => {
+                     this.overdueRows = r.data.data;
+                     this.overdueMeta = r.data.meta;
+                 }).finally(() => { this.overdueLoading = false; });
              },
              historyIcons: {
                  kasir:  '<rect x=\'2\' y=\'6\' width=\'16\' height=\'9\' rx=\'1.3\'/><circle cx=\'10\' cy=\'10.5\' r=\'2\'/>',
@@ -329,11 +362,12 @@
                         @endif
                     </div>
                 @endforeach
-                <div @class(['rcd-kpi alert', 'calm' => (int) $stats['telat'] === 0])>
+                <button type="button" @click="openOverdue()" @class(['rcd-kpi alert', 'calm' => (int) $stats['telat'] === 0])
+                        title="Buka resume semua order telat">
                     <div class="rcd-kpi-label">Telat &gt; 3&times;24 jam</div>
                     <div class="rcd-kpi-value">{{ number_format($stats['telat'], 0, ',', '.') }}</div>
                     <div class="rcd-kpi-meta">{{ (int) $stats['telat'] === 0 ? 'Semua order sesuai jadwal' : 'Order belum siap diambil' }}</div>
-                </div>
+                </button>
             </div>
         </section>
 
@@ -475,6 +509,66 @@
                 </div>
             </div>
         </section>
+
+        {{-- ================= Resume order telat (lazy + pagination) ================= --}}
+        <div x-show="overdueOpen" x-cloak @keydown.escape.window="overdueOpen = false"
+             style="position: fixed; inset: 0; z-index: 49; display: flex; align-items: center; justify-content: center; padding: 16px;">
+            <div class="rcd-modal-backdrop" @click="overdueOpen = false"></div>
+            <div class="sheet rcd-modal is-wide">
+                <div class="rcd-modal-head">
+                    <div>
+                        <h4>Resume order telat &gt; 3×24 jam</h4>
+                        <div x-text="overdueMeta.total + ' order belum siap diambil'"></div>
+                    </div>
+                    <button type="button" @click="overdueOpen = false">Tutup</button>
+                </div>
+                <div class="rcd-overdue-tools">
+                    <select x-model="overdueType" @change="loadOverdue(1)" aria-label="Filter tipe order">
+                        <option value="">Semua tipe</option>
+                        <option value="indoor">Indoor</option>
+                        <option value="outdoor">Outdoor</option>
+                        <option value="artwork">Artwork</option>
+                    </select>
+                    <select x-model="overdueStatus" @change="loadOverdue(1)" aria-label="Filter tahap">
+                        <option value="">Semua tahap</option>
+                        <option value="baru">Baru</option>
+                        <option value="desain">Desain</option>
+                        <option value="cetak">Cetak</option>
+                        <option value="finishing">Finishing</option>
+                        <option value="qc">Back Office</option>
+                        <option value="bungkus">Bungkus</option>
+                    </select>
+                </div>
+                <div class="rcd-table-wrap" style="max-height: 58vh;">
+                    <template x-if="overdueLoading"><div class="rcd-empty">Memuat order telat…</div></template>
+                    <table class="rcd-table" style="min-width: 820px;" x-show="!overdueLoading">
+                        <thead><tr><th>No. Order</th><th>Tipe</th><th>Customer</th><th>Masuk</th><th>Umur order</th><th>Posisi</th><th>Operator</th><th>Bayar</th></tr></thead>
+                        <tbody>
+                            <template x-for="row in overdueRows" :key="row.type_slug + '-' + row.id">
+                                <tr>
+                                    <td><button type="button" class="rcd-order" @click="openHistory(row.type_slug, row.id)" x-text="row.no_order"></button></td>
+                                    <td><span class="rcd-tipe" style="margin-left:0" x-text="row.type"></span></td>
+                                    <td class="rcd-customer" x-text="row.customer || '-'"></td>
+                                    <td class="rcd-date" x-text="row.created_at"></td>
+                                    <td class="rcd-proses" style="text-align:left" x-text="row.overdue"></td>
+                                    <td><span class="pill pill-late" x-text="row.status_label"></span></td>
+                                    <td class="rcd-people" x-text="row.operator || '-'"></td>
+                                    <td class="rcd-people" x-text="({'lunas':'Lunas','dp':'DP','hutang':'Hutang','belum_bayar':'Belum Bayar'})[row.status_bayar] || '-'"></td>
+                                </tr>
+                            </template>
+                            <tr x-show="overdueRows.length === 0"><td colspan="8" class="rcd-empty">Tidak ada order telat untuk filter ini.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="rcd-overdue-pager" x-show="!overdueLoading && overdueMeta.total > 0">
+                    <span x-text="`${overdueMeta.from}–${overdueMeta.to} dari ${overdueMeta.total} order`"></span>
+                    <div>
+                        <button type="button" :disabled="overdueMeta.current_page <= 1" @click="loadOverdue(overdueMeta.current_page - 1)">Sebelumnya</button>
+                        <button type="button" :disabled="overdueMeta.current_page >= overdueMeta.last_page" @click="loadOverdue(overdueMeta.current_page + 1)">Berikutnya</button>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         {{-- ================= Popup riwayat proses ================= --}}
         <div x-show="historyOpen" x-cloak @keydown.escape.window="historyOpen = false"
