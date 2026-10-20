@@ -73,7 +73,9 @@ class OrderCetakController extends Controller
 
         $result = $this->stageProgress->advance($item, self::STAGE, $qty, $data['catatan'] ?? null, auth()->id());
 
-        $message = "{$result['moved']} unit dipindahkan ke antrian Finishing.".($result['stageCleared'] ? ' Baris item ini tuntas di Cetak.' : '');
+        $message = $result['autoCompleted']
+            ? "{$result['moved']} unit CTcP diselesaikan otomatis sampai Pengambilan Barang atas nama Operator Cetak."
+            : "{$result['moved']} unit dipindahkan ke antrian Finishing.".($result['stageCleared'] ? ' Baris item ini tuntas di Cetak.' : '');
 
         return redirect()->route('order-cetak.index', ['tab' => $type])->with('status', $message);
     }

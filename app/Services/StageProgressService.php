@@ -29,7 +29,7 @@ class StageProgressService
     public const EXCLUDE_ORDER_STATUSES = ['baru', 'dibayar', 'batal'];
 
     /**
-     * @return array{order: Model, item: Model, moved: int, stageCleared: bool}
+     * @return array{order: Model, item: Model, moved: int, stageCleared: bool, autoCompleted: bool}
      */
     public function advance(Model $item, string $fromStage, int $qty, ?string $catatan, int $userId): array
     {
@@ -63,27 +63,66 @@ class StageProgressService
                 throw ValidationException::withMessages(['qty' => $message]);
             }
 
+            $autoCompleted = $fromStage === 'cetak'
+                && $item instanceof OrderIndoorDetail
+                && $item->isCtcp();
+
             $item->decrement("qty_{$fromStage}", $qty);
-            $item->increment("qty_{$nextStage}", $qty);
+            $item->increment($autoCompleted ? 'qty_selesai' : "qty_{$nextStage}", $qty);
             $item->refresh();
 
             $stageCleared = $item->qtyAt($fromStage) === 0;
 
-            OrderStatusNote::create([
-                'order_type' => $item->orderTypeSlug(),
-                'order_id' => $order->id,
-                'order_detail_id' => $item->id,
-                'qty' => $qty,
-                'stage' => $fromStage,
-                'action' => $stageCleared ? 'selesai' : 'progress',
-                'catatan' => $catatan,
-                'user_id' => $userId,
-                'created_at' => now(),
-            ]);
+            $completedAt = now();
+            $loggedStages = $autoCompleted
+                ? ['cetak', 'finishing', 'qc', 'bungkus', 'siap_diambil']
+                : [$fromStage];
+
+            foreach ($loggedStages as $loggedStage) {
+                OrderStatusNote::create([
+                    'order_type' => $item->orderTypeSlug(),
+                    'order_id' => $order->id,
+                    'order_detail_id' => $item->id,
+                    'qty' => $qty,
+                    'stage' => $loggedStage,
+                    'action' => $loggedStage === $fromStage && ! $stageCleared ? 'progress' : 'selesai',
+                    'catatan' => $loggedStage === $fromStage
+                        ? $catatan
+                        : 'Otomatis selesai bersama proses Cetak CTcP.',
+                    'user_id' => $userId,
+                    'created_at' => $completedAt,
+                ]);
+            }
 
             $order->recalculateStatus();
 
-            return ['order' => $order, 'item' => $item, 'moved' => $qty, 'stageCleared' => $stageCleared];
+            // Bila seluruh item pada nota sudah selesai (termasuk nota CTcP
+            // murni), header setiap tahap memakai Operator Cetak yang sama.
+            // Pada nota campuran, header tidak dipaksa selesai karena item
+            // non-CTcP tetap harus melalui antrean normal.
+            $order->refresh();
+            if ($autoCompleted && $order->status === 'selesai') {
+                $order->update([
+                    'cetak_by' => $userId,
+                    'cetak_at' => $completedAt,
+                    'finishing_by' => $userId,
+                    'finishing_at' => $completedAt,
+                    'qc_by' => $userId,
+                    'qc_at' => $completedAt,
+                    'bungkus_by' => $userId,
+                    'bungkus_at' => $completedAt,
+                    'pengambilan_by' => $userId,
+                    'diambil_at' => $completedAt,
+                ]);
+            }
+
+            return [
+                'order' => $order,
+                'item' => $item,
+                'moved' => $qty,
+                'stageCleared' => $stageCleared,
+                'autoCompleted' => $autoCompleted,
+            ];
         });
     }
 

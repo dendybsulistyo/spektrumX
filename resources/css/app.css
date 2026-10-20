@@ -198,3 +198,29 @@ body:has(form[action*="/akuntansi/purchases"]) .overflow-x-auto > table td:nth-c
     padding-right: 1rem !important;
 }
 
+/* Warning estimasi operator: warna badge berganti agar order terlambat
+   langsung terlihat tanpa membuat teks kehilangan keterbacaan. */
+@keyframes estimate-overdue-flash {
+    0%, 100% {
+        color: #b91c1c;
+        background-color: #fef2f2;
+        border-color: #fca5a5;
+        box-shadow: 0 0 0 rgba(239, 68, 68, 0);
+    }
+    50% {
+        color: #9a3412;
+        background-color: #fef3c7;
+        border-color: #fb923c;
+        box-shadow: 0 0 7px rgba(249, 115, 22, .5);
+    }
+}
+
+.estimate-overdue-flash {
+    animation: estimate-overdue-flash .7s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .estimate-overdue-flash {
+        animation: none;
+    }
+}

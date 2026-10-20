@@ -80,6 +80,16 @@ class OrderIndoorDetail extends Model
     }
 
     /**
+     * Produk divisi 09 adalah CTcP/Prepress. Setelah selesai Cetak, item ini
+     * tidak membutuhkan proses fisik Finishing sampai serah-terima.
+     */
+    public function isCtcp(): bool
+    {
+        return (string) $this->produk?->KdDivs === '09'
+            || str_starts_with((string) $this->KdProd, '09');
+    }
+
+    /**
      * Nama divisi untuk tampilan antrean "By Divisi". Item artwork diambil
      * dari master Artwork; data lama yang tercatat 'indoor' tapi kodenya
      * hanya ada di master Artwork ikut jatuh ke master Artwork. Bila kodenya
