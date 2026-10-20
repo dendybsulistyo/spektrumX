@@ -44,7 +44,6 @@
                         ? $order->operatorEstimateEndsAt()?->toIso8601String()
                         : null"
                 />
-                <x-macet-badge :show="$order->isMacet()" />
                 <span class="order-meta-divider" aria-hidden="true"></span>
                 <span class="order-meta-customer">{{ $order->customer?->NmCust ? ucwords(mb_strtolower($order->customer->NmCust)) : '-' }}</span>
             </div>
