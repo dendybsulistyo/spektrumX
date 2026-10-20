@@ -83,7 +83,7 @@ class OrderDesainController extends Controller
             // answer it even though "Update Status" no longer applies.
             $needsReplyIds = OrderComment::orderIdsWithUnreadFor('outdoor')->diff($outdoorItems->keys());
 
-            $outdoorNeedsReply = OrderOutdoor::query()->with('customer', 'items', 'createdBy')
+            $outdoorNeedsReply = OrderOutdoor::query()->with('customer', 'items', 'createdBy', 'customerServiceJobSheet')
                 ->whereIn('id', $needsReplyIds)
                 ->orderByDesc('TglOrder')->orderByDesc('NoOrder')->get();
 

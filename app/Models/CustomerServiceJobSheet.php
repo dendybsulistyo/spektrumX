@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
 class CustomerServiceJobSheet extends Model
 {
@@ -65,5 +66,14 @@ class CustomerServiceJobSheet extends Model
     public function indoorFolderLabel(): ?string
     {
         return self::INDOOR_FOLDER_LABELS[$this->indoor_folder] ?? null;
+    }
+
+    public function estimateEndsAt(): ?Carbon
+    {
+        if (! $this->created_at || ! $this->progress_hari) {
+            return null;
+        }
+
+        return $this->created_at->copy()->addDays($this->progress_hari);
     }
 }

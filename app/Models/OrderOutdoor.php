@@ -10,6 +10,7 @@ use App\Traits\HasTrackingToken;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Collection;
 
 class OrderOutdoor extends Model
@@ -134,6 +135,12 @@ class OrderOutdoor extends Model
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class, 'KdCust', 'KdCust');
+    }
+
+    public function customerServiceJobSheet(): HasOne
+    {
+        return $this->hasOne(CustomerServiceJobSheet::class, 'order_id')
+            ->where('order_type', 'outdoor');
     }
 
     public function items(): HasMany

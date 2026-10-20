@@ -101,6 +101,8 @@ class StageProgressService
         $result = [];
 
         if ($showTypes['indoor'] ?? false) {
+            $indoorWith = array_values(array_unique([...$indoorWith, 'order.customerServiceJobSheet']));
+
             $result['indoor'] = OrderIndoorDetail::query()
                 ->where("qty_{$stage}", '>', 0)
                 ->whereHas('order', fn ($q) => $q->whereNotIn('status', self::EXCLUDE_ORDER_STATUSES))
@@ -111,7 +113,11 @@ class StageProgressService
         }
 
         if ($showTypes['outdoor'] ?? false) {
-            $outdoorWith = array_values(array_unique([...$outdoorWith, 'layoutRevisionCompletions.user']));
+            $outdoorWith = array_values(array_unique([
+                ...$outdoorWith,
+                'order.customerServiceJobSheet',
+                'layoutRevisionCompletions.user',
+            ]));
 
             $result['outdoor'] = OrderOutdoorDetail::query()
                 ->where("qty_{$stage}", '>', 0)

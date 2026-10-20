@@ -38,7 +38,12 @@
     <div class="order-card-head">
         <div class="order-summary">
             <div class="order-identity">
-                <x-order-number :number="$order->NoOrder" />
+                <x-order-number
+                    :number="$order->NoOrder"
+                    :estimate-deadline="in_array($stage, ['desain', 'cetak', 'finishing', 'qc'], true)
+                        ? $order->customerServiceJobSheet?->estimateEndsAt()?->toIso8601String()
+                        : null"
+                />
                 <x-macet-badge :show="$order->isMacet()" />
                 <span class="order-meta-divider" aria-hidden="true"></span>
                 <span class="order-meta-customer">{{ $order->customer?->NmCust ? ucwords(mb_strtolower($order->customer->NmCust)) : '-' }}</span>
