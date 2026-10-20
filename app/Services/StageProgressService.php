@@ -26,7 +26,7 @@ class StageProgressService
      * (unpaid) or is cancelled — items must never surface in a production
      * queue for these.
      */
-    public const EXCLUDE_ORDER_STATUSES = ['baru', 'dibayar', 'batal'];
+    public const EXCLUDE_ORDER_STATUSES = ['baru', 'dibayar', 'batal', 'selesai'];
 
     /**
      * @return array{order: Model, item: Model, moved: int, stageCleared: bool, autoCompleted: bool}
