@@ -28,7 +28,7 @@
         .cmyk { background: linear-gradient(90deg, var(--cyan) 0 25%, var(--magenta) 25% 50%, var(--yellow) 50% 75%, #fff 75% 100%); }
 
         /* ---------- Panel kiri: tinta ---------- */
-        .rc-brand { position: relative; display: flex; flex-direction: column; justify-content: space-between; width: 44%; max-width: 640px; padding: 48px 56px; overflow: hidden; color: #fff; background: var(--ink); }
+        .rc-brand { position: relative; display: flex; flex: 0 0 42%; flex-direction: column; justify-content: space-between; min-width: 520px; padding: 48px clamp(48px, 4vw, 76px); overflow: hidden; color: #fff; background: var(--ink); }
         .rc-brand::before { content: ""; position: absolute; inset: 0; opacity: .05; background-image: radial-gradient(#fff 1px, transparent 1.2px); background-size: 14px 14px; }
         .rc-brand > * { position: relative; }
         .rc-logo { display: flex; align-items: center; gap: 12px; }
@@ -47,8 +47,8 @@
         .rc-register { width: 46px; height: 46px; color: rgba(255, 255, 255, .28); }
 
         /* ---------- Panel kanan: kertas ---------- */
-        .rc-form-side { flex: 1; display: flex; align-items: center; justify-content: center; padding: 48px 24px; }
-        .rc-card { position: relative; width: 100%; max-width: 400px; padding: 34px 32px 30px; background: var(--sheet); border: 1px solid var(--rule); border-radius: 12px; box-shadow: 0 1px 0 var(--rule), 0 24px 48px -30px rgba(27, 34, 54, .45); }
+        .rc-form-side { flex: 1; display: flex; align-items: center; justify-content: center; padding: 48px clamp(32px, 5vw, 88px); }
+        .rc-card { position: relative; width: 100%; max-width: 440px; padding: 38px 36px 32px; background: var(--sheet); border: 1px solid var(--rule); border-radius: 12px; box-shadow: 0 1px 0 var(--rule), 0 24px 48px -30px rgba(27, 34, 54, .45); }
         .rc-card::before { content: ""; position: absolute; left: 32px; right: 32px; top: -1px; height: 4px; border-radius: 0 0 2px 2px; background: linear-gradient(90deg, var(--cyan) 0 25%, var(--magenta) 25% 50%, var(--yellow) 50% 75%, var(--ink) 75% 100%); }
         .rc-mobile-logo { display: none; }
         .rc-card h2 { margin: 0; font-size: 22px; font-weight: 700; color: var(--ink); }
@@ -80,13 +80,13 @@
 
         @media (max-width: 960px) {
             body.rc-login { flex-direction: column; }
-            .rc-brand { display: none; }
+            .rc-brand { display: none; min-width: 0; }
             .rc-form-side { align-items: flex-start; padding-top: 0; }
             .rc-band { display: block !important; }
             .rc-mobile-logo { display: flex; align-items: center; gap: 10px; margin-bottom: 22px; }
             .rc-mobile-logo .rc-mark { color: #fff; background: var(--ink); width: 34px; height: 34px; font-size: 15px; }
             .rc-mobile-logo span { font-size: 13px; font-weight: 600; letter-spacing: .28em; text-transform: uppercase; color: var(--ink); }
-            .rc-card { margin-top: 28px; padding: 28px 22px 24px; }
+            .rc-card { max-width: 400px; margin-top: 28px; padding: 28px 22px 24px; }
         }
         .rc-band { display: none; height: 8px; background: linear-gradient(90deg, var(--cyan) 0 25%, var(--magenta) 25% 50%, var(--yellow) 50% 75%, var(--ink) 75% 100%) !important; }
     </style>
