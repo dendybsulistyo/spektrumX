@@ -41,6 +41,7 @@
         .bottom-area--dp { min-height:2.7cm; }
         .print-meta { align-self:end; color:var(--muted); font-size:10pt; line-height:1.55; }
         .print-meta .key { display:inline-block; min-width:1.85cm; color:var(--ink); font-weight:700; }
+        .storage-warning { max-width:8.2cm; margin:.12cm 0 0; color:#9f1d1d; font-size:7.2pt; font-weight:700; line-height:1.25; }
         .dp-breakdown { grid-column:2 / span 2; align-self:end; font-size:9pt; }
         .dp-breakdown .row { display:flex; white-space:nowrap; justify-content:space-between; gap:.45cm; padding:.06cm 0; }
         .dp-breakdown .label { color:var(--ink); font-weight:700; }
@@ -88,6 +89,7 @@
             .total-amount { font-size:10pt; }
             .payment-summary { font-size:8.5pt; }
             .print-meta, .dp-breakdown { font-size:10pt; line-height:1.35; }
+            .print-meta .storage-warning { color:#000 !important; font-size:7pt; font-weight:700 !important; line-height:1.2; }
             .customer-row .value, .item-name, .total-label,
             .total-amount, .print-meta .key, .dp-breakdown .label,
             .dp-breakdown .amount { font-weight:400 !important; }
@@ -198,6 +200,7 @@
                     <div class="print-meta">
                         <div><span class="key">Operator Kasir</span>: {{ $order->kasir?->name ?? '-' }}</div>
                         <div><span class="key">Tanggal Order</span>: {{ $tanggalOrder ?? '-' }}</div>
+                        <p class="storage-warning">Barang jadi yang sudah 1 Bulan dan tidak diambil/rusak/hilang, bukan tanggung jawab Spektrum</p>
                     </div>
                 @endif
             </div>
