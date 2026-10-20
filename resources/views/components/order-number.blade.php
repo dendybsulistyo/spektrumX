@@ -46,11 +46,6 @@
           class="ml-1 inline-flex rounded border px-1.5 py-0.5 text-[11px] font-bold tabular-nums whitespace-nowrap"
           :title="isOverdue() ? 'Estimasi pengerjaan sudah terlewati' : 'Sisa waktu sampai akhir estimasi'"
     >
-        <svg x-show="isOverdue()" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"
-             class="mr-1 h-3.5 w-3.5 animate-pulse text-orange-500"
-             style="animation-duration:.55s;filter:drop-shadow(0 0 3px rgba(249,115,22,.75))">
-            <path d="M13.5 2.1c.4 3.2-1.7 4.6-3.2 6.2-1.2 1.2-2.1 2.5-1.6 4.5.6-1.3 1.6-2.1 2.7-2.9-.2 2.1 1.5 3.2 2.2 4.8.5-1.1.7-2.3.3-3.6 1.8 1.4 3.1 3.3 3.1 5.7 0 3.1-2.3 5.2-5.2 5.2-3.5 0-6.3-2.6-6.3-6.2 0-2.7 1.4-4.7 3.2-6.5 2.1-2 4.1-3.8 4.8-7.2Z"/>
-        </svg>
         <span x-text="isOverdue() ? `Lewat ${overdueHours()} Jam` : `-${remainingHours()} Jam`"></span>
     </span>
 </span>
