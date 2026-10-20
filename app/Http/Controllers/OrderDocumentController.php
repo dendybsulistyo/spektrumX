@@ -26,6 +26,16 @@ class OrderDocumentController extends Controller
         );
     }
 
+    private function authorizeDocumentAccess(OrderDocument $document): void
+    {
+        abort_unless(
+            auth()->user()->hasPermission('keuangan.view')
+                || (auth()->user()->hasPermission('pengambilan.view')
+                    && in_array($document->kind, ['do', 'inv'], true)),
+            403
+        );
+    }
+
     public function index(Request $request)
     {
         $this->authorizeAccess();
@@ -66,7 +76,7 @@ class OrderDocumentController extends Controller
 
     public function show(OrderDocument $document)
     {
-        $this->authorizeAccess();
+        $this->authorizeDocumentAccess($document);
         $document->load('issuedBy');
         $model = OrderDocumentService::MODELS[$document->order_type];
         $order = $model::find($document->order_id);

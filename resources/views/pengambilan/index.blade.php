@@ -3,6 +3,23 @@
         <h2 class="operator-page-title font-semibold text-xl text-gray-800">Pengambilan Barang</h2>
     </x-slot>
 
+    @if ($documents = session('pickup_documents'))
+        <div class="mb-4 flex flex-wrap items-center justify-between gap-3 rounded border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+            <div>
+                <p class="font-semibold">Dokumen penyerahan sudah tersedia.</p>
+                @if ($documents['invoice_unpaid'] ?? false)
+                    <p class="mt-0.5 text-xs text-amber-800">Invoice masih berstatus BELUM LUNAS · TAGIHAN VIP dan tetap tercatat sebagai piutang.</p>
+                @endif
+            </div>
+            <div class="flex gap-2">
+                <a target="_blank" href="{{ route('order-documents.show', $documents['do']) }}" class="rounded bg-emerald-700 px-3 py-2 font-semibold text-white">Cetak DO</a>
+                @if ($documents['invoice'] ?? null)
+                    <a target="_blank" href="{{ route('order-documents.show', $documents['invoice']) }}" class="rounded bg-slate-800 px-3 py-2 font-semibold text-white">Cetak Invoice</a>
+                @endif
+            </div>
+        </div>
+    @endif
+
     @push('styles')
         <link rel="stylesheet" href="{{ asset('_ds/industry-8c70c3bf-fa3d-4d54-8c9e-e44ac24ed178/styles.css') }}">
         <style>
@@ -120,6 +137,14 @@
                                     </td>
                                     <td style="text-align: right; white-space: nowrap;">Rp {{ number_format($transaction->jumlah_piutang, 0, ',', '.') }}</td>
                                     <td style="text-align: right; white-space: nowrap;">
+                                        @if ($transaction->do_document_id)
+                                            <a target="_blank" href="{{ route('order-documents.show', $transaction->do_document_id) }}"
+                                               class="in-btn" style="text-decoration:none;background:#047857;border-color:#047857;">DO</a>
+                                        @endif
+                                        @if ($transaction->invoice_document_id)
+                                            <a target="_blank" href="{{ route('order-documents.show', $transaction->invoice_document_id) }}"
+                                               class="in-btn" style="text-decoration:none;background:#334155;border-color:#334155;">Invoice</a>
+                                        @endif
                                         @if (in_array($transaction->status_bayar, ['dp', 'hutang']))
                                             <button type="button" class="in-btn"
                                                     @click="paymentOpen = true; paymentType = @js($transaction->order_type); paymentId = @js((int) $transaction->order_id); paymentMode = @js($transaction->status_bayar); paymentOrder = @js($transaction->invoice); paymentRemaining = @js((float) $transaction->jumlah_piutang); paymentMethod = 'tunai'">

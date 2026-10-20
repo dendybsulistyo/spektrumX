@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\OrderComment;
 use App\Models\OrderIndoor;
+use App\Models\OrderDocument;
 use App\Models\OrderOutdoor;
 use App\Models\OrderPayment;
 use App\Models\OrderReworkRequest;
@@ -86,6 +87,10 @@ class PengambilanController extends Controller
                 ->where('order_type', $type)
                 ->select('order_id', DB::raw('SUM(jumlah) as payment_total'))
                 ->groupBy('order_id');
+            $deliveryDocuments = DB::table('order_documents')
+                ->where('kind', 'do')->where('order_type', $type)
+                ->select('order_id', DB::raw('MIN(id) as do_document_id'))
+                ->groupBy('order_id');
 
             // Lunas is anchored on the indexed document list. Starting from
             // the 150k+ historical order rows made MySQL scan the full order
@@ -94,23 +99,31 @@ class PengambilanController extends Controller
                 ->join($orderTable.' as orders', 'orders.id', '=', 'document.order_id')
                 ->leftJoin('customers as customer', 'customer.KdCust', '=', 'orders.KdCust')
                 ->leftJoinSub(clone $payments, 'payments', 'payments.order_id', '=', 'orders.id')
+                ->leftJoinSub(clone $deliveryDocuments, 'delivery_document', 'delivery_document.order_id', '=', 'orders.id')
                 ->where('document.kind', 'inv')->where('document.order_type', $type)->where('document.sequence', 1)
                 ->where('orders.status_bayar', 'lunas')->where('orders.status', '!=', 'batal')->whereNull('orders.invoice_voided_at')
                 ->whereNotExists(fn ($query) => $query->selectRaw('1')->from('sales_transaction_archives as archive')
                     ->where('archive.order_type', $type)->whereColumn('archive.order_id', 'orders.id'))
-                ->selectRaw("orders.id as order_id, document.number as invoice, COALESCE(NULLIF(TRIM(customer.NmCust), ''), orders.KdCust) as customer, orders.TglOrder as sales_order_date, orders.status_bayar, orders.jumlah_piutang, orders.jumlah_dibayar, COALESCE(payments.payment_total, 0) as payment_total, ? as order_type", [$type]));
+                ->selectRaw("orders.id as order_id, document.number as invoice, COALESCE(NULLIF(TRIM(customer.NmCust), ''), orders.KdCust) as customer, orders.TglOrder as sales_order_date, orders.status_bayar, orders.jumlah_piutang, orders.jumlah_dibayar, COALESCE(payments.payment_total, 0) as payment_total, document.id as invoice_document_id, delivery_document.do_document_id, ? as order_type", [$type]));
 
             // DP/Hutang may not have an invoice yet; they still need to be
             // visible so Pengambilan can require settlement before release.
             $queries->push(DB::table($orderTable.' as orders')
                 ->leftJoin('customers as customer', 'customer.KdCust', '=', 'orders.KdCust')
                 ->leftJoinSub(clone $payments, 'payments', 'payments.order_id', '=', 'orders.id')
+                ->leftJoin('order_documents as invoice_document', function ($join) use ($type) {
+                    $join->on('invoice_document.order_id', '=', 'orders.id')
+                        ->where('invoice_document.kind', 'inv')
+                        ->where('invoice_document.order_type', $type)
+                        ->where('invoice_document.sequence', 1);
+                })
+                ->leftJoinSub(clone $deliveryDocuments, 'delivery_document', 'delivery_document.order_id', '=', 'orders.id')
                 ->where('orders.status', '!=', 'batal')
                 ->whereNull('orders.invoice_voided_at')
                 ->whereIn('orders.status_bayar', ['dp', 'hutang'])
                 ->whereNotExists(fn ($query) => $query->selectRaw('1')->from('sales_transaction_archives as archive')
                     ->where('archive.order_type', $type)->whereColumn('archive.order_id', 'orders.id'))
-                ->selectRaw("orders.id as order_id, orders.NoOrder as invoice, COALESCE(NULLIF(TRIM(customer.NmCust), ''), orders.KdCust) as customer, orders.TglOrder as sales_order_date, orders.status_bayar, orders.jumlah_piutang, orders.jumlah_dibayar, COALESCE(payments.payment_total, 0) as payment_total, ? as order_type", [$type]));
+                ->selectRaw("orders.id as order_id, COALESCE(invoice_document.number, orders.NoOrder) as invoice, COALESCE(NULLIF(TRIM(customer.NmCust), ''), orders.KdCust) as customer, orders.TglOrder as sales_order_date, orders.status_bayar, orders.jumlah_piutang, orders.jumlah_dibayar, COALESCE(payments.payment_total, 0) as payment_total, invoice_document.id as invoice_document_id, delivery_document.do_document_id, ? as order_type", [$type]));
         }
 
         $query = $queries->shift();
@@ -241,7 +254,17 @@ class PengambilanController extends Controller
             throw $exception;
         }
 
-        return redirect()->route('pengambilan.index')->with('status', "Barang diserahkan. DO {$document->number} tersedia di Dokumen SO / DO / Invoice.");
+        $invoice = OrderDocument::query()
+            ->where('kind', 'inv')->where('order_type', $type)->where('order_id', $order->id)
+            ->where('sequence', 1)->first();
+
+        return redirect()->route('pengambilan.index', ['tab' => $type])
+            ->with('status', "Barang diserahkan. DO {$document->number} berhasil diterbitkan.")
+            ->with('pickup_documents', [
+                'do' => $document->id,
+                'invoice' => $invoice?->id,
+                'invoice_unpaid' => $order->status_bayar === 'hutang' && (float) $order->jumlah_piutang > 0,
+            ]);
     }
 
     private function signatureSvg(string $payload): string
