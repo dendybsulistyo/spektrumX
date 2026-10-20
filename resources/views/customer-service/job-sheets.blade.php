@@ -108,6 +108,7 @@
                             <th class="px-4 py-3">Customer</th>
                             <th class="px-4 py-3">Tgl. Lembar Kerja</th>
                         @endif
+                        <th class="px-4 py-3">Progress Hari</th>
                         {{-- <th class="px-4 py-3">Tujuan</th> --}}
                         {{-- <th class="px-4 py-3">Deadline</th> --}}
                         <th class="px-4 py-3">Pembuat</th>
@@ -142,6 +143,7 @@
                                 <td class="px-4 py-3 font-medium text-slate-800">{{ $sheet->customer_name ?: '-' }}</td>
                                 <td class="whitespace-nowrap px-4 py-3 text-slate-600">{{ $sheet->received_at?->format('d/m/Y') ?? '-' }}</td>
                             @endif
+                            <td class="whitespace-nowrap px-4 py-3 font-semibold text-slate-700">{{ $sheet->progress_hari ? $sheet->progress_hari.' hari' : '-' }}</td>
                             <td class="px-4 py-3 text-slate-600">{{ $sheet->creator?->name ? ucwords(mb_strtolower($sheet->creator->name)) : '-' }}</td>
                             <td class="px-4 py-3 text-slate-600">
                                 @if ($sheet->claimed_at)
@@ -179,7 +181,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="{{ $csHistory ? 6 : 4 }}" class="px-6 py-14 text-center text-slate-400">{{ $tab === 'claimed' ? 'Tidak ada riwayat lembar kerja pada pencarian ini.' : 'Belum ada lembar kerja yang menunggu diambil.' }}</td></tr>
+                        <tr><td colspan="{{ $csHistory ? 7 : 5 }}" class="px-6 py-14 text-center text-slate-400">{{ $tab === 'claimed' ? 'Tidak ada riwayat lembar kerja pada pencarian ini.' : 'Belum ada lembar kerja yang menunggu diambil.' }}</td></tr>
                     @endforelse
                 </tbody>
             </table>
@@ -203,6 +205,7 @@
                 <div><p class="text-xs text-slate-400">Tanggal Masuk</p><p class="mt-1 font-medium">{{ $sheet->received_at->format('d/m/Y') }}</p></div>
                 <div><p class="text-xs text-slate-400">Tujuan Order</p><p class="mt-1 font-medium">{{ $sheet->order_type ? 'Order '.ucfirst($sheet->order_type) : '-' }}</p></div>
                 <div><p class="text-xs text-slate-400">Deadline</p><p class="mt-1 font-medium">{{ $sheet->deadline?->format('d/m/Y') ?? '-' }}</p></div>
+                <div><p class="text-xs text-slate-400">Progress Hari</p><p class="mt-1 font-medium">{{ $sheet->progress_hari ? $sheet->progress_hari.' hari' : '-' }}</p></div>
                 <div><p class="text-xs text-slate-400">PC</p><p class="mt-1 font-medium">{{ $sheet->pc ?: '-' }}</p></div>
                 <div><p class="text-xs text-slate-400">OPF</p><p class="mt-1 font-medium">{{ $sheet->opf ?: '-' }}</p></div>
                 <div class="sm:col-span-2"><p class="text-xs text-slate-400">Folder / File</p><p class="mt-1 font-medium">{{ $sheet->folder_file ?: '-' }}</p></div>

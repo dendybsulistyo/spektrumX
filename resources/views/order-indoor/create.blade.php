@@ -12,7 +12,9 @@
                 <div class="mb-4 rounded border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
                     <p>
                         Diambil dari Lembar Kerja CS #{{ $sourceJobSheet->id }} — {{ $sourceJobSheet->customer_name }}.
-                        Folder: <strong>{{ $sourceJobSheet->indoorFolderLabel() ?? 'Belum ditentukan' }}</strong>. Pilih produk sebelum menyimpan order.
+                        Folder: <strong>{{ $sourceJobSheet->indoorFolderLabel() ?? 'Belum ditentukan' }}</strong>.
+                        Progress: <strong>{{ $sourceJobSheet->progress_hari ? $sourceJobSheet->progress_hari.' hari' : 'Belum ditentukan' }}</strong>.
+                        Pilih produk sebelum menyimpan order.
                     </p>
                     <div class="mt-2 border-t border-blue-200 pt-2">
                         <p class="text-xs font-bold uppercase tracking-wide text-blue-600">Keterangan dari CS</p>

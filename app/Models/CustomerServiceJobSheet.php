@@ -20,6 +20,7 @@ class CustomerServiceJobSheet extends Model
         'folder_file',
         'received_at',
         'deadline',
+        'progress_hari',
         'opf',
         'notes',
         'is_urgent',
@@ -39,6 +40,7 @@ class CustomerServiceJobSheet extends Model
         return [
             'received_at' => 'date',
             'deadline' => 'date',
+            'progress_hari' => 'integer',
             'is_urgent' => 'boolean',
             'items' => 'array',
             'claimed_at' => 'datetime',

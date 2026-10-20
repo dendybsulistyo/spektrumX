@@ -211,6 +211,7 @@ class CustomerServiceController extends Controller
             'folder_file' => ['nullable', 'string', 'max:255'],
             'received_at' => ['required', 'date'],
             'deadline' => ['nullable', 'date', 'after_or_equal:received_at'],
+            'progress_hari' => ['required', 'integer', 'between:1,10'],
             'opf' => ['nullable', 'string', 'max:100'],
             'notes' => ['nullable', 'string', 'max:1000'],
             'order_type' => ['required', 'in:indoor,outdoor'],

@@ -10,7 +10,11 @@
             @if (isset($sourceJobSheet) && $sourceJobSheet)
                 <input type="hidden" name="job_sheet_id" value="{{ $sourceJobSheet->id }}">
                 <div class="mb-4 rounded border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
-                    <p>Diambil dari Lembar Kerja CS #{{ $sourceJobSheet->id }} — {{ $sourceJobSheet->customer_name }}. Pilih printer dan bahan cetak sebelum menyimpan order.</p>
+                    <p>
+                        Diambil dari Lembar Kerja CS #{{ $sourceJobSheet->id }} — {{ $sourceJobSheet->customer_name }}.
+                        Progress: <strong>{{ $sourceJobSheet->progress_hari ? $sourceJobSheet->progress_hari.' hari' : 'Belum ditentukan' }}</strong>.
+                        Pilih printer dan bahan cetak sebelum menyimpan order.
+                    </p>
                     <div class="mt-2 border-t border-blue-200 pt-2">
                         <p class="text-xs font-bold uppercase tracking-wide text-blue-600">Keterangan dari CS</p>
                         <p class="mt-1 whitespace-pre-line font-semibold text-blue-950">{{ $sourceJobSheet->notes ?: 'Tidak ada keterangan.' }}</p>

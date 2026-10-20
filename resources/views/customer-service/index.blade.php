@@ -108,6 +108,17 @@
                                class="mt-1.5 w-full rounded border-slate-300 text-sm normal-case tracking-normal focus:border-blue-500 focus:ring-blue-500">
                     </label>
                     <label class="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        Progress Hari
+                        <select name="progress_hari" required
+                                class="mt-1.5 w-full rounded border-slate-300 text-sm normal-case tracking-normal focus:border-blue-500 focus:ring-blue-500">
+                            <option value="">Pilih progress...</option>
+                            @for ($day = 1; $day <= 10; $day++)
+                                <option value="{{ $day }}" @selected((string) old('progress_hari') === (string) $day)>{{ $day }} hari</option>
+                            @endfor
+                        </select>
+                        <x-input-error :messages="$errors->get('progress_hari')" class="mt-1 normal-case tracking-normal" />
+                    </label>
+                    <label class="text-xs font-semibold uppercase tracking-wide text-slate-500">
                         Pembuat Order
                         <input value="{{ auth()->user()->name }}" readonly
                                class="mt-1.5 w-full rounded border-slate-200 bg-slate-100 text-sm font-medium normal-case tracking-normal text-slate-600">
