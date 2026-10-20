@@ -13,7 +13,7 @@
                     <p>
                         Diambil dari Lembar Kerja CS #{{ $sourceJobSheet->id }} — {{ $sourceJobSheet->customer_name }}.
                         Folder: <strong>{{ $sourceJobSheet->indoorFolderLabel() ?? 'Belum ditentukan' }}</strong>.
-                        Progress: <strong>{{ $sourceJobSheet->progress_hari ? $sourceJobSheet->progress_hari.' hari' : 'Belum ditentukan' }}</strong>.
+                        Estimasi: <strong>{{ $sourceJobSheet->progress_hari ? $sourceJobSheet->progress_hari.' hari' : 'Belum ditentukan' }}</strong>.
                         Pilih produk sebelum menyimpan order.
                     </p>
                     <div class="mt-2 border-t border-blue-200 pt-2">

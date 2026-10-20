@@ -12,7 +12,7 @@
                 <div class="mb-4 rounded border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
                     <p>
                         Diambil dari Lembar Kerja CS #{{ $sourceJobSheet->id }} — {{ $sourceJobSheet->customer_name }}.
-                        Progress: <strong>{{ $sourceJobSheet->progress_hari ? $sourceJobSheet->progress_hari.' hari' : 'Belum ditentukan' }}</strong>.
+                        Estimasi: <strong>{{ $sourceJobSheet->progress_hari ? $sourceJobSheet->progress_hari.' hari' : 'Belum ditentukan' }}</strong>.
                         Pilih printer dan bahan cetak sebelum menyimpan order.
                     </p>
                     <div class="mt-2 border-t border-blue-200 pt-2">
