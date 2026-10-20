@@ -308,6 +308,26 @@
                     if (this.metode === 'dp' || this.rincianDiff <= 0) return '';
                     return `Kurang Rp ${this.rincianDiff.toLocaleString('id-ID')}.`;
                 },
+                // Auto = isi sisa tagihan pada baris ini (total dikurangi baris lain). Hanya untuk Lunas.
+                autoRincian(i) {
+                    const lain = this.rincian.reduce((sum, r, j) => j === i ? sum : sum + Number(r.jumlah || 0), 0);
+                    this.rincian[i].jumlah = String(Math.max(0, Math.round((this.totalBayar - lain) / 100) * 100));
+                },
+                // Data rencana bayar dari CS, untuk peringatan bila kasir memproses berbeda (tidak memblokir).
+                csType: @js($order->cs_processed_at && in_array($order->cs_payment_type, ['dp', 'pelunasan'], true) ? $order->cs_payment_type : null),
+                csAmount: {{ (float) ($order->cs_transfer_amount ?? 0) }},
+                get csWarning() {
+                    if (!this.csType || this.isReplacement || this.metode === 'hutang') return '';
+                    const rp = (n) => 'Rp ' + Number(n).toLocaleString('id-ID');
+                    const label = this.csType === 'dp' ? 'DP' : 'Pelunasan';
+                    if (this.csType === 'dp' && this.metode !== 'dp') return `CS mencatat DP ${rp(this.csAmount)}, tetapi kasir memproses Lunas.`;
+                    if (this.csType === 'pelunasan' && this.metode === 'dp') return `CS mencatat Pelunasan ${rp(this.csAmount)}, tetapi kasir memproses DP.`;
+                    if (this.rincianTotal === 0) return '';
+                    // Lunas: kembalian tunai bukan selisih; yang dibandingkan nominal yang dipakai untuk nota.
+                    const dipakai = this.metode === 'dp' ? this.rincianTotal : Math.min(this.rincianTotal, this.totalBayar);
+                    if (Math.abs(dipakai - this.csAmount) < 1) return '';
+                    return `Nominal ${rp(dipakai)} berbeda dari data CS ${label} ${rp(this.csAmount)} (selisih ${rp(Math.abs(dipakai - this.csAmount))}).`;
+                },
                 addRincian() { this.rincian.push({ cara_bayar: 'tunai', jumlah: '', no_referensi: '' }); },
                 removeRincian(i) { this.rincian.splice(i, 1); },
              }">
@@ -404,7 +424,7 @@
                         <div class="mt-2 space-y-2">
                             <template x-for="(row, idx) in rincian" :key="idx">
                                 <div class="flex items-start gap-2 rounded-md border border-gray-200 p-2">
-                                    <div class="flex-1 space-y-1.5">
+                                    <div class="min-w-0 flex-1 space-y-1.5">
                                         <div class="flex gap-2">
                                             <select :name="`rincian[${idx}][cara_bayar]`" x-model="row.cara_bayar" :disabled="metode === 'hutang'"
                                                     class="rounded-md border-gray-300 text-sm py-1.5 w-28">
@@ -415,8 +435,11 @@
                                             <input type="text" inputmode="numeric"
                                                    :value="row.jumlah ? Number(row.jumlah).toLocaleString('id-ID') : ''"
                                                    @input="row.jumlah = $event.target.value.replace(/\D/g, '')"
-                                                   placeholder="Jumlah" class="flex-1 rounded-md border-gray-300 text-sm py-1.5">
+                                                   placeholder="Jumlah" class="min-w-0 flex-1 rounded-md border-gray-300 text-sm py-1.5">
                                             <input type="hidden" :name="`rincian[${idx}][jumlah]`" :value="row.jumlah" :disabled="metode === 'hutang'">
+                                            <button type="button" x-show="metode !== 'dp' && metode !== 'hutang'" @click="autoRincian(idx)"
+                                                    title="Isi sisa tagihan pada baris ini"
+                                                    class="shrink-0 rounded-md border border-gray-300 bg-white px-2.5 text-xs font-semibold text-gray-700 hover:bg-gray-50">Auto</button>
                                             <button type="button" x-show="rincian.length > 1" @click="removeRincian(idx)"
                                                     class="text-gray-400 hover:text-red-600 px-1">&times;</button>
                                         </div>
@@ -447,6 +470,9 @@
                                     <span x-show="rincianKembalian > 0" x-text="'— Kembalian: Rp ' + rincianKembalian.toLocaleString('id-ID')"></span>
                                 </span>
                             </template>
+                        </p>
+                        <p x-show="csWarning" x-cloak class="mt-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
+                            ⚠ <span x-text="csWarning"></span> Pastikan sesuai uang/mutasi yang benar-benar diterima.
                         </p>
                         <x-input-error :messages="$errors->get('rincian')" class="mt-1" />
                     </div>

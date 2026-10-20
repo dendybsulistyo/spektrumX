@@ -71,7 +71,7 @@
                             </tr>
                         @endif
                         <tr x-show="tab === @js($order->order_type)" @if ($order->order_type !== $initialTab) x-cloak @endif class="align-middle hover:bg-slate-50/70"
-                            x-data="{ mode: 'payment', raw: '', display: '', total: {{ (float) $order->total }}, minimum: {{ (float) $minimumTransfer }}, customArtwork: @js((bool) $order->is_custom_artwork), format(event) { this.raw = event.target.value.replace(/\D/g, ''); this.display = this.raw ? 'Rp ' + Number(this.raw).toLocaleString('id-ID') : ''; } }">
+                            x-data="{ mode: 'payment', raw: '', display: '', total: {{ (float) $order->total }}, minimum: {{ (float) $minimumTransfer }}, customArtwork: @js((bool) $order->is_custom_artwork), format(event) { this.raw = event.target.value.replace(/\D/g, ''); this.display = this.raw ? 'Rp ' + Number(this.raw).toLocaleString('id-ID') : ''; }, auto() { this.raw = String(Math.round(this.total / 100) * 100); this.display = 'Rp ' + Number(this.raw).toLocaleString('id-ID'); } }">
                             <td class="whitespace-nowrap px-4 py-4 text-slate-600">{{ $order->TglOrder?->format('d/m/Y') ?? $order->TglOrder }}</td>
                             <td class="px-4 py-4 font-semibold text-slate-900">{{ $order->NoOrder }}</td>
                             <td class="px-4 py-4"><span class="rounded bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600">{{ ucfirst($order->order_type) }}</span></td>
@@ -101,9 +101,16 @@
                                     <option value="debt" @disabled(! $order->customer?->isVip)>Hutang{{ $order->customer?->isVip ? '' : ' — khusus VIP' }}</option>
                                 </select>
 
-                                <input x-show="mode === 'payment'" type="text" inputmode="numeric" x-model="display" @input="format($event)" placeholder="Rp 0"
-                                       form="cs-payment-{{ $order->order_type }}-{{ $order->id }}"
-                                       class="w-52 rounded border-slate-300 text-sm focus:border-blue-500 focus:ring-blue-500">
+                                <div x-show="mode === 'payment'" class="flex w-52 gap-1">
+                                    <input type="text" inputmode="numeric" x-model="display" @input="format($event)" placeholder="Rp 0"
+                                           form="cs-payment-{{ $order->order_type }}-{{ $order->id }}"
+                                           class="min-w-0 flex-1 rounded border-slate-300 text-sm focus:border-blue-500 focus:ring-blue-500">
+                                    {{-- Auto = isi total order (pelunasan). Harga artwork custom belum final → tidak ada Auto. --}}
+                                    @unless ($order->is_custom_artwork)
+                                        <button type="button" @click="auto()" title="Isi total order (pelunasan penuh)"
+                                                class="shrink-0 rounded border border-slate-300 bg-white px-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50">Auto</button>
+                                    @endunless
+                                </div>
                                 <input type="hidden" name="cs_transfer_amount" :value="raw" form="cs-payment-{{ $order->order_type }}-{{ $order->id }}">
                                 <input type="hidden" name="cs_payment_type" :value="mode === 'debt' ? 'hutang' : ''" form="cs-payment-{{ $order->order_type }}-{{ $order->id }}">
                                 <p x-show="mode === 'payment'" class="mt-1 text-[11px] text-slate-400">Minimal 50%: Rp {{ number_format($minimumTransfer, 0, ',', '.') }}{{ $order->is_custom_artwork ? ' · Harga Artwork custom' : '' }}</p>
