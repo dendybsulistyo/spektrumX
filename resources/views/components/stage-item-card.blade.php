@@ -41,7 +41,7 @@
                 <x-order-number
                     :number="$order->NoOrder"
                     :estimate-deadline="in_array($stage, ['desain', 'cetak', 'finishing', 'qc'], true)
-                        ? $order->customerServiceJobSheet?->estimateEndsAt()?->toIso8601String()
+                        ? $order->operatorEstimateEndsAt()?->toIso8601String()
                         : null"
                 />
                 <x-macet-badge :show="$order->isMacet()" />

@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Traits\HasCancelAndNotaPengganti;
 use App\Traits\HasDiskonNota;
 use App\Traits\HasHutangApproval;
+use App\Traits\HasOperatorEstimate;
 use App\Traits\HasStageProgress;
 use App\Traits\HasTrackingToken;
 use Illuminate\Database\Eloquent\Model;
@@ -15,7 +16,7 @@ use Illuminate\Support\Collection;
 
 class OrderOutdoor extends Model
 {
-    use HasCancelAndNotaPengganti, HasDiskonNota, HasHutangApproval, HasStageProgress, HasTrackingToken;
+    use HasCancelAndNotaPengganti, HasDiskonNota, HasHutangApproval, HasOperatorEstimate, HasStageProgress, HasTrackingToken;
 
     protected $table = 'order_outdoor';
 
