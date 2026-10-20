@@ -63,7 +63,7 @@ class StageProgressService
                 throw ValidationException::withMessages(['qty' => $message]);
             }
 
-            $autoCompleted = $fromStage === 'cetak'
+            $autoCompleted = in_array($fromStage, ['desain', 'cetak'], true)
                 && $item instanceof OrderIndoorDetail
                 && $item->isCtcp();
 
@@ -74,9 +74,11 @@ class StageProgressService
             $stageCleared = $item->qtyAt($fromStage) === 0;
 
             $completedAt = now();
-            $loggedStages = $autoCompleted
-                ? ['cetak', 'finishing', 'qc', 'bungkus', 'siap_diambil']
-                : [$fromStage];
+            $loggedStages = match (true) {
+                $autoCompleted && $fromStage === 'desain' => ['desain', 'cetak', 'finishing', 'qc', 'bungkus', 'siap_diambil'],
+                $autoCompleted => ['cetak', 'finishing', 'qc', 'bungkus', 'siap_diambil'],
+                default => [$fromStage],
+            };
 
             foreach ($loggedStages as $loggedStage) {
                 OrderStatusNote::create([
@@ -102,7 +104,7 @@ class StageProgressService
             // non-CTcP tetap harus melalui antrean normal.
             $order->refresh();
             if ($autoCompleted && $order->status === 'selesai') {
-                $order->update([
+                $stageOperators = [
                     'cetak_by' => $userId,
                     'cetak_at' => $completedAt,
                     'finishing_by' => $userId,
@@ -113,7 +115,15 @@ class StageProgressService
                     'bungkus_at' => $completedAt,
                     'pengambilan_by' => $userId,
                     'diambil_at' => $completedAt,
-                ]);
+                ];
+                if ($fromStage === 'desain') {
+                    $stageOperators = [
+                        'desain_by' => $userId,
+                        'desain_at' => $completedAt,
+                        ...$stageOperators,
+                    ];
+                }
+                $order->update($stageOperators);
             }
 
             return [

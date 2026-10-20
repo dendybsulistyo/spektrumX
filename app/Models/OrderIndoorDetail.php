@@ -85,8 +85,19 @@ class OrderIndoorDetail extends Model
      */
     public function isCtcp(): bool
     {
-        return (string) $this->produk?->KdDivs === '09'
-            || str_starts_with((string) $this->KdProd, '09');
+        $divisionCode = trim((string) $this->produk?->KdDivs);
+        $productCode = trim((string) $this->KdProd);
+
+        if (($divisionCode !== '' && (int) $divisionCode === 9)
+            || str_starts_with(str_pad($productCode, 2, '0', STR_PAD_LEFT), '09')) {
+            return true;
+        }
+
+        $divisionName = $this->produk?->relationLoaded('kategori')
+            ? trim((string) $this->produk->kategori?->NmDivs)
+            : '';
+
+        return preg_match('/\bctc?p\b/iu', $divisionName) === 1;
     }
 
     /**

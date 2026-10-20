@@ -152,7 +152,9 @@ class OrderDesainController extends Controller
 
         PageVersion::touch(self::PAGE_VERSION_KEY);
 
-        $message = "{$result['moved']} unit dipindahkan ke antrian Cetak.".($result['stageCleared'] ? ' Baris item ini tuntas di Desain.' : '');
+        $message = $result['autoCompleted']
+            ? "{$result['moved']} unit CTcP diselesaikan otomatis sampai Pengambilan Barang atas nama pengirim dari Layout."
+            : "{$result['moved']} unit dipindahkan ke antrian Cetak.".($result['stageCleared'] ? ' Baris item ini tuntas di Desain.' : '');
         if ($layoutRevision && $result['stageCleared']) {
             $message .= ' Revisi Layout ditandai selesai.';
         }
