@@ -18,7 +18,44 @@
     <div class="customer-paid-report py-6"><div class="mx-auto max-w-[1900px] px-4 sm:px-6">
         <div class="no-print mb-4 flex flex-wrap items-end justify-between gap-3 rounded-lg border bg-white p-4 shadow-sm">
             <form method="GET" class="flex flex-wrap items-end gap-3">
-                <label class="text-sm text-gray-700">Customer<select name="customer" required class="mt-1 block min-w-64 rounded-md border-gray-300"><option value="">Pilih customer</option>@foreach($customers as $customer)<option value="{{ $customer->KdCust }}" @selected($customerCode === $customer->KdCust)>{{ $customer->NmCust }} — {{ $customer->KdCust }}</option>@endforeach</select></label>
+                <div class="relative text-sm text-gray-700"
+                     x-data="{
+                        code: @js($selectedCustomer?->KdCust ?? ''),
+                        text: @js($selectedCustomer ? $selectedCustomer->NmCust.' — '.$selectedCustomer->KdCust : ''),
+                        results: [], open: false, active: 0, loading: false,
+                        search() {
+                            this.code = '';
+                            const q = this.text.trim();
+                            if (q.length < 2) { this.results = []; this.open = false; return; }
+                            this.loading = true;
+                            fetch(@js(route('customers.search')) + '?q=' + encodeURIComponent(q), { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
+                                .then(r => r.ok ? r.json() : [])
+                                .then(rows => { this.results = rows; this.active = 0; this.open = true; })
+                                .finally(() => { this.loading = false; });
+                        },
+                        pick(c) { if (!c) return; this.code = c.KdCust; this.text = c.NmCust + ' — ' + c.KdCust; this.open = false; },
+                     }"
+                     @click.outside="open = false">
+                    <label for="customer-search">Customer</label>
+                    <input id="customer-search" type="text" x-model="text" @input.debounce.300ms="search()" autocomplete="off"
+                           @keydown.arrow-down.prevent="active = Math.min(active + 1, results.length - 1)"
+                           @keydown.arrow-up.prevent="active = Math.max(active - 1, 0)"
+                           @keydown.enter="if (open && results.length) { $event.preventDefault(); pick(results[active]); }"
+                           @keydown.escape="open = false"
+                           placeholder="Ketik nama atau kode customer…" class="mt-1 block w-80 rounded-md border-gray-300">
+                    <input type="hidden" name="customer" :value="code">
+                    <div x-show="open" x-cloak class="absolute z-20 mt-1 max-h-72 w-80 overflow-y-auto rounded-md border border-gray-200 bg-white shadow-lg">
+                        <template x-for="(c, i) in results" :key="c.KdCust">
+                            <button type="button" @click="pick(c)" @mouseenter="active = i"
+                                    :class="i === active ? 'bg-slate-100' : ''" class="block w-full px-3 py-2 text-left">
+                                <span class="font-medium text-gray-900" x-text="c.NmCust"></span>
+                                <span class="ml-1 text-xs text-gray-500" x-text="c.KdCust"></span>
+                            </button>
+                        </template>
+                        <p x-show="!loading && results.length === 0" class="px-3 py-2 text-xs text-gray-500">Customer tidak ditemukan.</p>
+                    </div>
+                    <p x-show="text && !code" x-cloak class="mt-1 text-xs text-amber-600">Pilih customer dari daftar.</p>
+                </div>
                 <label class="text-sm text-gray-700">Dari tanggal<input type="date" name="dari" value="{{ $from }}" class="mt-1 block rounded-md border-gray-300"></label>
                 <label class="text-sm text-gray-700">Sampai tanggal<input type="date" name="sampai" value="{{ $to }}" class="mt-1 block rounded-md border-gray-300"></label>
                 <button class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white">Tampilkan</button>

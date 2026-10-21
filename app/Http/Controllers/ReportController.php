@@ -473,8 +473,8 @@ class ReportController extends Controller
             [$from, $to] = [$to, $from];
         }
         $customerCode = $request->string('customer')->trim()->toString();
-        $customers = Customer::orderBy('NmCust')->get(['KdCust', 'NmCust']);
-        $selectedCustomer = $customerCode !== '' ? $customers->firstWhere('KdCust', $customerCode) : null;
+        // Customer dipilih lewat kotak ketik (autocomplete), tidak lagi memuat semua customer.
+        $selectedCustomer = $customerCode !== '' ? Customer::query()->where('KdCust', $customerCode)->first(['KdCust', 'NmCust']) : null;
         $rows = collect();
 
         if ($selectedCustomer) {
@@ -540,7 +540,7 @@ class ReportController extends Controller
             ->mapWithKeys(fn ($column) => [$column => (float) $rows->sum($column)])->all();
 
         return view('reports.paid-orders-by-customer', compact(
-            'from', 'to', 'customers', 'selectedCustomer', 'customerCode', 'rows', 'totals'
+            'from', 'to', 'selectedCustomer', 'customerCode', 'rows', 'totals'
         ));
     }
 
