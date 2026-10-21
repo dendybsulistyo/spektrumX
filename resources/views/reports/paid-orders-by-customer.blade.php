@@ -6,11 +6,20 @@
         .customer-paid-report th,.customer-paid-report td { border:1px solid #64748b; padding:4px 5px; vertical-align:top; }
         .customer-paid-report th { background:#e2e8f0; text-align:center; white-space:nowrap; }
         .customer-paid-report .number { text-align:right; white-space:nowrap; }
+        /* Muat di layar tanpa scroll: lebar kolom tetap, huruf & jarak sel dirapatkan.
+           (Sengaja tidak memakai .overflow-x-auto agar aturan tabel 14 kolom di app.css tidak berlaku.) */
+        .customer-paid-report .rekap-wrap { width:100%; }
+        .customer-paid-report table.rekap-table { table-layout:fixed; width:100%; font-size:11.5px; line-height:1.35; }
+        .customer-paid-report table.rekap-table th { white-space:normal; padding:5px 4px; font-size:11px; line-height:1.2; vertical-align:middle; }
+        .customer-paid-report table.rekap-table td { padding:4px 5px; overflow-wrap:anywhere; }
+        .customer-paid-report table.rekap-table td.number { overflow-wrap:normal; }
+        .customer-paid-report table.rekap-table tfoot td { padding:5px; }
         @media print {
             @page { size:A4 landscape; margin:7mm; }
             body { background:#fff !important; } header,nav,.no-print { display:none !important; } main { padding:0 !important; }
             .customer-paid-report section { box-shadow:none !important; padding:0 !important; }
-            .customer-paid-report table { font-family:Arial,sans-serif; font-size:7.5pt; }
+            .customer-paid-report table, .customer-paid-report table.rekap-table { font-family:Arial,sans-serif; font-size:7.5pt; }
+            .customer-paid-report table.rekap-table th { font-size:7pt; }
             .customer-paid-report th,.customer-paid-report td { padding:2px 3px; }
             .customer-paid-report thead { display:table-header-group; } .customer-paid-report tr { break-inside:avoid; }
         }
@@ -54,7 +63,7 @@
                         </template>
                         <p x-show="!loading && results.length === 0" class="px-3 py-2 text-xs text-gray-500">Customer tidak ditemukan.</p>
                     </div>
-                    <p x-show="text && !code" x-cloak class="mt-1 text-xs text-amber-600">Pilih customer dari daftar.</p>
+                    <p x-show="text && !code && !open" x-cloak class="absolute left-0 top-full mt-1 whitespace-nowrap text-xs text-amber-600">Pilih customer dari daftar.</p>
                 </div>
                 <label class="text-sm text-gray-700">Dari tanggal<input type="date" name="dari" value="{{ $from }}" class="mt-1 block rounded-md border-gray-300"></label>
                 <label class="text-sm text-gray-700">Sampai tanggal<input type="date" name="sampai" value="{{ $to }}" class="mt-1 block rounded-md border-gray-300"></label>
@@ -66,7 +75,9 @@
             <div class="mb-3 text-center"><h1 class="text-base font-bold">REKAP ORDER PER CUSTOMER - SPEKTRUM</h1>
                 <p class="text-sm font-semibold">Customer: {{ $selectedCustomer?->NmCust ?? 'Pilih customer terlebih dahulu' }}</p>
                 <p class="text-sm">{{ \Carbon\Carbon::parse($from)->translatedFormat('d F Y') }} s/d {{ \Carbon\Carbon::parse($to)->translatedFormat('d F Y') }}</p></div>
-            <div class="overflow-x-auto"><table><thead><tr><th>Tanggal</th><th>No. INV</th><th>Nama Produk</th><th>Keterangan</th><th>Pj.</th><th>Leb.</th><th>Qty</th><th>Harga</th><th>Sub Total</th><th>Diskon</th><th>Total</th><th>Uang Muka</th><th>Bayar</th><th>Kredit</th></tr></thead>
+            <div class="rekap-wrap"><table class="rekap-table">
+                <colgroup><col style="width:7%"><col style="width:10.5%"><col style="width:11.5%"><col style="width:10.5%"><col style="width:4.5%"><col style="width:4.5%"><col style="width:3.5%"><col style="width:6%"><col style="width:7%"><col style="width:6%"><col style="width:7%"><col style="width:7.5%"><col style="width:7.5%"><col style="width:7%"></colgroup>
+                <thead><tr><th>Tanggal</th><th>No. INV</th><th>Nama Produk</th><th>Keterangan</th><th>Pj.</th><th>Leb.</th><th>Qty</th><th>Harga</th><th>Sub Total</th><th>Diskon</th><th>Total</th><th>Uang Muka</th><th>Bayar</th><th>Kredit</th></tr></thead>
                 <tbody>@forelse($rows as $row)<tr><td>{{ \Carbon\Carbon::parse($row->date)->format('d-m-Y') }}</td><td>{{ $row->invoice }}</td><td>{{ $row->product }}</td><td>{{ $row->description }}</td>
                     <td class="number">{{ number_format((float)$row->length,2,',','.') }}</td><td class="number">{{ number_format((float)$row->width,2,',','.') }}</td><td class="number">{{ number_format((float)$row->qty,0,',','.') }}</td>
                     <td class="number">{{ $row->price !== null ? number_format($row->price,0,',','.') : '-' }}</td><td class="number">{{ number_format($row->subtotal,0,',','.') }}</td><td class="number">{{ number_format($row->discount,0,',','.') }}</td><td class="number">{{ number_format($row->total,0,',','.') }}</td><td class="number">{{ number_format($row->advance,0,',','.') }}</td><td class="number">{{ number_format($row->payment,0,',','.') }}</td><td class="number">{{ number_format($row->credit,0,',','.') }}</td>
