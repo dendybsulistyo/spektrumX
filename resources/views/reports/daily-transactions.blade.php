@@ -44,7 +44,7 @@
                 <div class="overflow-x-auto">
                     <table>
                         <thead><tr>
-                            <th>Tanggal SO</th><th>No. SO</th><th>Customer</th><th>Status Nota</th><th>Produk</th><th>Keterangan</th>
+                            <th>Tanggal SO</th><th>No. INV</th><th>Customer</th><th>Status Nota</th><th>Produk</th><th>Keterangan</th>
                             <th>Pj.</th><th>Leb.</th><th>Qty</th><th>Harga</th><th>Sub Total</th>
                             <th>Diskon</th><th>Total</th><th>Tunai</th><th>Kredit</th>
                         </tr></thead>
@@ -54,6 +54,7 @@
                                 <td class="center">{{ \Carbon\Carbon::parse($row->date)->format('d-m-Y') }}</td>
                                 <td class="document-number">
                                     @foreach ($row->invoices as $number)<div>{{ $number }}</div>@endforeach
+                                    <div style="font-size:.8em;color:#6b7280;">SO {{ $row->number }}</div>
                                 </td><td>{{ $row->customer }}</td><td class="center">{{ $row->note_status }}</td><td>{{ $row->product }}</td><td>{{ $row->description }}</td>
                                 <td class="number">{{ number_format((float) $row->length, 2, ',', '.') }}</td>
                                 <td class="number">{{ number_format((float) $row->width, 2, ',', '.') }}</td>

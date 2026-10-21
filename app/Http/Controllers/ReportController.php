@@ -88,8 +88,13 @@ class ReportController extends Controller
                 ->whereIn('order_id', $orders->pluck('id'))
                 ->get(['order_id', 'jumlah'])
                 ->groupBy('order_id');
+            // Nomor INV per order (terbaru bila pernah diterbitkan ulang).
+            $invoiceNumbers = \App\Models\OrderDocument::query()
+                ->where('kind', 'inv')->where('order_type', $type)
+                ->whereIn('order_id', $orders->pluck('id'))
+                ->orderBy('sequence')->pluck('number', 'order_id');
 
-            $orders->each(function ($order) use ($type, $payments, &$rows) {
+            $orders->each(function ($order) use ($type, $payments, $invoiceNumbers, &$rows) {
                 $items = $this->pricing->detailedLineItems($type, $order, $order->items);
                 $gross = (float) $items->sum('subtotal');
                 $net = $order->diskonStatus() === 'approved' ? $order->totalSetelahDiskon() : (float) $order->total;
@@ -121,9 +126,9 @@ class ReportController extends Controller
 
                     $rows->push((object) [
                         'date' => $order->TglOrder, 'number' => $order->NoOrder,
-                        // Rekap harian adalah rekap SO baru pada TglOrder.
-                        // Nomor DO/INV tidak mengganti identitas transaksi.
-                        'invoices' => collect([$order->NoOrder]),
+                        // Rekap harian tetap per TglOrder, tetapi yang ditampilkan nomor INV-nya
+                        // (SO hanya sebagai keterangan kecil di bawahnya).
+                        'invoices' => collect([$invoiceNumbers[$order->id] ?? 'Belum INV']),
                         'customer' => $order->customer?->NmCust ?? '-',
                         'note_status' => $order->status_bayar === 'hutang' ? 'Tagihan VIP' : 'Lunas',
                         'product' => collect([$item->printer, $item->bahan])->filter()->implode(' / ') ?: '-',
@@ -137,7 +142,7 @@ class ReportController extends Controller
             });
         }
 
-        $rows = $rows->sortBy(fn ($row) => $row->number.'|'.$row->description)->values();
+        $rows = $rows->sortBy(fn ($row) => $row->invoices->first().'|'.$row->number.'|'.$row->description)->values();
 
         return view('reports.daily-transactions', [
             'date' => $date, 'rows' => $rows, 'kind' => $kind,
