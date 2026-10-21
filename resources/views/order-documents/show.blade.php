@@ -231,7 +231,7 @@
         @endif
 
         <footer class="footer">
-            <div>Kasir: {{ $snapshot['issued_by_name'] ?? $document->issuedBy?->name ?? '-' }}</div>
+            <div>Kasir: {{ \App\Support\TeksTampil::bersih($snapshot['issued_by_name'] ?? $document->issuedBy?->name) ?? '-' }}</div>
             <div style="text-align:right">Terima kasih telah mempercayakan kebutuhan cetak Anda kepada kami.</div>
         </footer>
     </main>

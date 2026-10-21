@@ -27,7 +27,7 @@ class UserStatusController extends Controller
             ->oldest()
             ->get();
 
-        $mentionNames = User::whereIn('id', $statuses->pluck('mentions')->flatten()->filter()->unique())->pluck('name', 'id');
+        $mentionNames = User::whereIn('id', $statuses->pluck('mentions')->flatten()->filter()->unique())->toBase()->pluck('name', 'id');
 
         $groups = $statuses->groupBy('user_id')->map(function ($items) use ($me, $mentionNames) {
             $user = $items->first()->user;
@@ -36,8 +36,8 @@ class UserStatusController extends Controller
 
             return [
                 'user_id' => $user->id,
-                'name' => $user->name,
-                'initials' => self::initials($user->name),
+                'name' => $user->getRawOriginal('name'),
+                'initials' => self::initials($user->getRawOriginal('name')),
                 'avatar' => $user->avatarUrl(),
                 'mine' => $user->id === $me,
                 'unseen' => $user->id !== $me && $items->contains(fn ($status) => ! $status->seen),
@@ -96,7 +96,7 @@ class UserStatusController extends Controller
         // Simpan hanya mention yang namanya masih tertulis "@Nama" di teks.
         $body = trim($data['body']);
         $mentions = User::whereIn('id', $data['mentions'] ?? [])->get(['id', 'name'])
-            ->filter(fn (User $user) => $user->id !== $request->user()->id && str_contains($body, '@'.$user->name))
+            ->filter(fn (User $user) => $user->id !== $request->user()->id && str_contains($body, '@'.$user->getRawOriginal('name')))
             ->pluck('id')->values()->all();
 
         UserStatus::create([
@@ -117,7 +117,7 @@ class UserStatusController extends Controller
     {
         return response()->json(User::where('id', '!=', $request->user()->id)
             ->orderBy('name')->get(['id', 'name', 'avatar_updated_at', 'avatar_photo'])
-            ->map(fn (User $user) => ['id' => $user->id, 'name' => $user->name, 'initials' => self::initials($user->name), 'avatar' => $user->avatarUrl()]));
+            ->map(fn (User $user) => ['id' => $user->id, 'name' => $user->getRawOriginal('name'), 'initials' => self::initials($user->getRawOriginal('name')), 'avatar' => $user->avatarUrl()]));
     }
 
     public function destroy(Request $request, UserStatus $status): JsonResponse
@@ -154,8 +154,8 @@ class UserStatusController extends Controller
 
         $viewers = $status->views()->with('user:id,name,avatar_updated_at,avatar_photo')->latest('viewed_at')->get()
             ->map(fn (UserStatusView $view) => [
-                'name' => $view->user?->name ?? '-',
-                'initials' => self::initials($view->user?->name ?? '-'),
+                'name' => $view->user?->getRawOriginal('name') ?? '-',
+                'initials' => self::initials($view->user?->getRawOriginal('name') ?? '-'),
                 'avatar' => $view->user?->avatarUrl(),
                 'time' => $view->viewed_at->locale('id')->diffForHumans(),
                 'reaction' => $reactions->get($view->user_id)?->emoji,
@@ -163,8 +163,8 @@ class UserStatusController extends Controller
 
         $replies = $responses->where('type', UserStatusResponse::TYPE_REPLY)->values()
             ->map(fn (UserStatusResponse $reply) => [
-                'name' => $reply->user?->name ?? '-',
-                'initials' => self::initials($reply->user?->name ?? '-'),
+                'name' => $reply->user?->getRawOriginal('name') ?? '-',
+                'initials' => self::initials($reply->user?->getRawOriginal('name') ?? '-'),
                 'avatar' => $reply->user?->avatarUrl(),
                 'body' => $reply->body,
                 'time' => $reply->created_at->locale('id')->diffForHumans(),

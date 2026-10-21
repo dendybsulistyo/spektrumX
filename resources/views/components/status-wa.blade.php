@@ -318,7 +318,7 @@
                     users: null,
                     mention: { open: false, query: '', start: 0, index: 0 },
                     myAvatar: @js(auth()->user()->avatarUrl()),
-                    myInitials: @js(mb_strtoupper(collect(preg_split('/\s+/', trim(auth()->user()->name)))->filter()->map(fn ($w) => mb_substr($w, 0, 1))->take(2)->implode(''))),
+                    myInitials: @js(mb_strtoupper(collect(preg_split('/\s+/', trim(auth()->user()->getRawOriginal('name'))))->filter()->map(fn ($w) => mb_substr($w, 0, 1))->take(2)->implode(''))),
                     panelOpen: false,
                     composerOpen: false,
                     sending: false,

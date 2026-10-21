@@ -571,15 +571,15 @@
                                            } }"
                                  class="relative" @click.outside="open = false">
                                 <button @click="open = !open; if (open) loadSummary()" class="flex items-center gap-2.5">
-                                    <div data-my-avatar data-initials="{{ collect(explode(' ', Auth::user()->name))->map(fn ($w) => mb_substr($w, 0, 1))->take(2)->implode('') }}" class="nav-avatar w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs font-semibold shrink-0 overflow-hidden">
+                                    <div data-my-avatar data-initials="{{ collect(explode(' ', Auth::user()->getRawOriginal('name')))->map(fn ($w) => mb_substr($w, 0, 1))->take(2)->implode('') }}" class="nav-avatar w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs font-semibold shrink-0 overflow-hidden">
                                         @if (Auth::user()->avatarUrl())
                                             <img src="{{ Auth::user()->avatarUrl() }}" alt="" onerror="this.remove()">
                                         @else
-                                            {{ collect(explode(' ', Auth::user()->name))->map(fn ($w) => mb_substr($w, 0, 1))->take(2)->implode('') }}
+                                            {{ collect(explode(' ', Auth::user()->getRawOriginal('name')))->map(fn ($w) => mb_substr($w, 0, 1))->take(2)->implode('') }}
                                         @endif
                                     </div>
                                     <div class="text-left leading-tight">
-                                        <div class="text-[13px] font-medium text-gray-800">{{ Auth::user()->name }}</div>
+                                        <div class="text-[13px] font-medium text-gray-800">{{ Auth::user()->getRawOriginal('name') }}</div>
                                         <div class="text-[11px] text-gray-400">{{ Auth::user()->role?->label ?? 'Belum ada role' }}</div>
                                     </div>
                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3 h-3 text-gray-400 transition-transform" :class="open ? 'rotate-180' : ''">{!! $navIcon('chevron-down') !!}</svg>
@@ -843,10 +843,10 @@
                     <div class="pt-3 pb-3 border-t border-gray-200">
                         <div class="flex items-center gap-3 px-4">
                             <div class="w-9 h-9 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs font-semibold shrink-0">
-                                {{ collect(explode(' ', Auth::user()->name))->map(fn ($w) => mb_substr($w, 0, 1))->take(2)->implode('') }}
+                                {{ collect(explode(' ', Auth::user()->getRawOriginal('name')))->map(fn ($w) => mb_substr($w, 0, 1))->take(2)->implode('') }}
                             </div>
                             <div>
-                                <div class="text-sm font-medium text-gray-800">{{ Auth::user()->name }}</div>
+                                <div class="text-sm font-medium text-gray-800">{{ Auth::user()->getRawOriginal('name') }}</div>
                                 <div class="text-xs text-gray-400">{{ Auth::user()->role?->label ?? 'Belum ada role' }}</div>
                             </div>
                         </div>
