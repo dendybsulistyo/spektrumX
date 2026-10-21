@@ -291,7 +291,7 @@
                                                 <a href="{{ route('report.paid-orders-by-customer') }}" class="{{ $dropdownLink(request()->routeIs('report.paid-orders-by-customer')) }}">Rekap Order Customer (Lunas)</a>
                                                 <a href="{{ route('keuangan.daily-receivable-collections') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.daily-receivable-collections')) }}">Penerimaan Piutang Harian</a>
                                                 <a href="{{ route('keuangan.credit-limits') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.credit-limits')) }}">Rekap Limit Piutang</a>
-                                                {{-- DISEMBUNYIKAN SEMENTARA (7 Okt 2026): <a href="{{ route('keuangan.total-tagihan-piutang') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.total-tagihan-piutang')) }}">Total Tagihan</a> --}}
+                                                <a href="{{ route('keuangan.total-tagihan-piutang') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.total-tagihan-piutang')) }}">Total Tagihan Customer VIP</a>
                                                 <a href="{{ route('keuangan.pembatalan-order') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.pembatalan-order')) }}">Pembatalan Pre-Order &amp; Nota</a>
                                                 <a href="{{ route('keuangan.customer-receivable-details') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.customer-receivable-details') && request('mode') !== 'report') }}">Pembayaran Piutang</a>
                                                 <a href="{{ route('keuangan.customer-receivables-recap') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.customer-receivables-recap')) }}">Rekap Piutang Customer</a>
@@ -674,7 +674,7 @@
                                 <a href="{{ route('report.paid-orders-by-customer') }}" class="{{ $mobileLink(request()->routeIs('report.paid-orders-by-customer')) }}">Rekap Order Customer (Lunas)</a>
                                 <a href="{{ route('keuangan.daily-receivable-collections') }}" class="{{ $mobileLink(request()->routeIs('keuangan.daily-receivable-collections')) }}">Penerimaan Piutang Harian</a>
                                 <a href="{{ route('keuangan.credit-limits') }}" class="{{ $mobileLink(request()->routeIs('keuangan.credit-limits')) }}">Rekap Limit Piutang</a>
-                                {{-- DISEMBUNYIKAN SEMENTARA (7 Okt 2026): <a href="{{ route('keuangan.total-tagihan-piutang') }}" class="{{ $mobileLink(request()->routeIs('keuangan.total-tagihan-piutang')) }}">Total Tagihan</a> --}}
+                                <a href="{{ route('keuangan.total-tagihan-piutang') }}" class="{{ $mobileLink(request()->routeIs('keuangan.total-tagihan-piutang')) }}">Total Tagihan Customer VIP</a>
                                 <a href="{{ route('keuangan.pembatalan-order') }}" class="{{ $mobileLink(request()->routeIs('keuangan.pembatalan-order')) }}">Pembatalan Pre-Order &amp; Nota</a>
                                 <a href="{{ route('keuangan.customer-receivable-details') }}" class="{{ $mobileLink(request()->routeIs('keuangan.customer-receivable-details') && request('mode') !== 'report') }}">Pembayaran Piutang</a>
                                 <a href="{{ route('keuangan.customer-receivables-recap') }}" class="{{ $mobileLink(request()->routeIs('keuangan.customer-receivables-recap')) }}">Rekap Piutang Customer</a>
