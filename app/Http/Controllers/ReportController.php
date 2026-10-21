@@ -56,19 +56,14 @@ class ReportController extends Controller
                 ->with($relations)
                 ->where('TglOrder', $date)
                 ->where('status', '!=', 'batal')
+                // Cukup sudah terbit DO ATAU INV: reguler lunas biasanya baru punya INV
+                // (DO keluar saat barang diambil); tagihan VIP mendapat INV bersamaan DO.
                 ->whereExists(function ($document) use ($type, $orderTable): void {
                     $document->selectRaw('1')
                         ->from('order_documents')
                         ->whereColumn('order_documents.order_id', $orderTable.'.id')
                         ->where('order_documents.order_type', $type)
-                        ->where('order_documents.kind', 'do');
-                })
-                ->whereExists(function ($document) use ($type, $orderTable): void {
-                    $document->selectRaw('1')
-                        ->from('order_documents')
-                        ->whereColumn('order_documents.order_id', $orderTable.'.id')
-                        ->where('order_documents.order_type', $type)
-                        ->where('order_documents.kind', 'inv');
+                        ->whereIn('order_documents.kind', ['do', 'inv']);
                 })
                 ->where(function ($query) use ($kind): void {
                     if ($kind !== 'tagihan') {
