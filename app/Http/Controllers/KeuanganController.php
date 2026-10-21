@@ -167,9 +167,8 @@ class KeuanganController extends Controller
 
         $discountRefunds = $this->discountRefundKeys($payments);
         $paymentDiscounts = $this->discountsAttachedToPayments($payments);
-        $discountReductions = $this->nonCashDiscountReductions($payments);
         $cashDiscounts = $this->cashDiscountAllocations();
-        $paymentRows = $payments->flatMap(function (OrderPayment $p) use ($ordersByKey, $discountRefunds, $paymentDiscounts, $discountReductions, $cashDiscounts, $batchCounts) {
+        $paymentRows = $payments->flatMap(function (OrderPayment $p) use ($ordersByKey, $discountRefunds, $paymentDiscounts, $cashDiscounts, $batchCounts) {
             $order = $ordersByKey["{$p->order_type}-{$p->order_id}"] ?? null;
             $jumlah = (float) $p->jumlah;
             $customer = $order?->customer?->NmCust
@@ -201,7 +200,7 @@ class KeuanganController extends Controller
                     'debet' => 0,
                     'kredit' => abs($jumlah),
                     'sort' => '2-'.$baseSort.'-0',
-                ], ...($this->refundKind($p, $order, $discountRefunds) === 'potongan' ? [] : $this->nonCashRefundOffset($p, fn (string $method) => [
+                ], ...($this->nonCashRefundOffset($p, fn (string $method) => [
                     'user_id' => $activityUserId,
                     'kasir' => $activityUser ?? '-',
                     'no_nota' => null,
@@ -251,7 +250,8 @@ class KeuanganController extends Controller
             // Pembayaran non-tunai mengurangi uang yang seharusnya berada
             // di laci kas. Karena itu transaksi ditampilkan berpasangan:
             // nilai nota di Debet dan pembayaran bank/QRIS di Kredit.
-            $diterima = $jumlah - ($discountReductions[$p->id] ?? 0.0);
+            // Uang yang masuk ditampilkan penuh; potongan dicatat terpisah (berpasangan).
+            $diterima = $jumlah;
             if (in_array($p->cara_bayar, self::NON_CASH_METHODS, true) && $diterima > 0) {
                 $method = OrderPayment::CARA_BAYAR_LABELS[$p->cara_bayar] ?? ucfirst($p->cara_bayar);
                 $rows[] = [
@@ -488,73 +488,22 @@ class KeuanganController extends Controller
     }
 
     /**
-     * Baris penetral untuk refund yang dibayar lewat bank/QRIS/debit: baris
+     * Keterangan baris penyeimbang (Debet) untuk refund / Potongan Penjualan
+     * Akhir non-tunai: uangnya tidak keluar dari laci kas, jadi Saldo Kas tetap.
+     */
+    private function nonCashOffsetLabel(?string $kind, string $method): string
+    {
+        return $kind === 'potongan'
+            ? 'Potongan Penjualan Akhir · By system (bukan dari kas)'
+            : "Refund via {$method} (keluar dari bank, bukan kas)";
+    }
+
+    /**
+     * Baris penetral untuk refund / Potongan Penjualan Akhir yang dibayar lewat bank/QRIS/debit: baris
      * Refund tetap tampil (Kredit) sebagai catatan, lalu dinetralkan di
      * Debet karena uangnya keluar dari rekening bank, bukan dari laci kas.
      * Pola ini sama dengan pembayaran non-tunai ("Bayar via ...").
      */
-    /**
-     * Potongan Penjualan Akhir non-tunai ("By system") tampil satu baris Kredit
-     * di user & tanggal yang menginputnya. Sebagai pasangannya, baris "Bayar via
-     * ..." pembayaran nota itu dikurangi sebesar potongan (= yang benar-benar
-     * diterima), dibagi mundur dari penerimaan non-tunai terakhir sebelum
-     * potongan dicatat. Total laporan tetap seimbang; per user/hari bisa
-     * bergeser bila potongan diinput orang atau hari lain (disetujui keuangan).
-     *
-     * @return array<int, float> id pembayaran → pengurang baris "Bayar via ..."
-     */
-    private function nonCashDiscountReductions(Collection $payments): array
-    {
-        $incoming = $payments->filter(fn (OrderPayment $payment) => (float) $payment->jumlah > 0
-            && in_array($payment->cara_bayar, self::NON_CASH_METHODS, true));
-        if ($incoming->isEmpty()) {
-            return [];
-        }
-
-        $discounts = FinalSalesDiscount::query()
-            ->where('refund_amount', '>', 0)
-            ->whereIn('refund_method', self::NON_CASH_METHODS)
-            ->where(function ($query) use ($incoming) {
-                foreach ($incoming->groupBy('order_type') as $type => $rows) {
-                    $query->orWhere(fn ($scope) => $scope->where('order_type', $type)->whereIn('order_id', $rows->pluck('order_id')->unique()));
-                }
-            })
-            ->orderBy('id')->get();
-
-        $reductions = [];
-        foreach ($discounts as $discount) {
-            $remaining = (float) $discount->refund_amount;
-            $receipts = OrderPayment::query()
-                ->where('order_type', $discount->order_type)->where('order_id', $discount->order_id)
-                ->where('jumlah', '>', 0)->whereIn('cara_bayar', self::NON_CASH_METHODS)
-                ->where('created_at', '<=', $discount->created_at)
-                ->orderByDesc('created_at')->orderByDesc('id')->get(['id', 'jumlah']);
-
-            foreach ($receipts as $receipt) {
-                if ($remaining <= 0) {
-                    break;
-                }
-                $already = $reductions[$receipt->id] ?? 0.0;
-                $portion = min($remaining, max(0.0, (float) $receipt->jumlah - $already));
-                if ($portion > 0) {
-                    $reductions[$receipt->id] = $already + $portion;
-                    $remaining -= $portion;
-                }
-            }
-        }
-
-        return array_intersect_key($reductions, $incoming->pluck('id')->flip()->all());
-    }
-
-    /**
-     * Keterangan baris penyeimbang refund non-tunai (bukan untuk potongan:
-     * potongan non-tunai dinetralkan lewat nonCashDiscountReductions).
-     */
-    private function nonCashOffsetLabel(?string $kind, string $method): string
-    {
-        return "Refund via {$method} (keluar dari bank, bukan kas)";
-    }
-
     private function nonCashRefundOffset(OrderPayment $payment, callable $row): array
     {
         if (! in_array($payment->cara_bayar, self::NON_CASH_METHODS, true)) {
@@ -1172,9 +1121,8 @@ class KeuanganController extends Controller
 
         $discountRefunds = $this->discountRefundKeys($payments);
         $paymentDiscounts = $this->discountsAttachedToPayments($payments);
-        $discountReductions = $this->nonCashDiscountReductions($payments);
         $cashDiscounts = $this->cashDiscountAllocations();
-        $paymentRows = $payments->flatMap(function (OrderPayment $payment) use ($ordersByKey, $discountRefunds, $paymentDiscounts, $discountReductions, $cashDiscounts, $batchCounts) {
+        $paymentRows = $payments->flatMap(function (OrderPayment $payment) use ($ordersByKey, $discountRefunds, $paymentDiscounts, $cashDiscounts, $batchCounts) {
             $order = $ordersByKey["{$payment->order_type}-{$payment->order_id}"] ?? null;
             $customer = $order?->customer?->NmCust ? mb_strtoupper($order->customer->NmCust) : '-';
             $amount = (float) $payment->jumlah;
@@ -1202,7 +1150,7 @@ class KeuanganController extends Controller
                     'kasir' => $payment->user?->name,
                     'user_id' => $payment->user_id,
                     'sort' => $baseSort.'-0',
-                ], ...($this->refundKind($payment, $order, $discountRefunds) === 'potongan' ? [] : $this->nonCashRefundOffset($payment, fn (string $method) => [
+                ], ...($this->nonCashRefundOffset($payment, fn (string $method) => [
                     'occurred_at' => $payment->created_at,
                     'no_nota' => null,
                     'keterangan' => $this->nonCashOffsetLabel($this->refundKind($payment, $order, $discountRefunds), $method)." - {$customer}",
@@ -1253,7 +1201,8 @@ class KeuanganController extends Controller
                 ];
             }
 
-            $diterima = $amount - ($discountReductions[$payment->id] ?? 0.0);
+            // Uang yang masuk ditampilkan penuh; potongan dicatat terpisah (berpasangan).
+            $diterima = $amount;
             if (in_array($payment->cara_bayar, self::NON_CASH_METHODS, true) && $diterima > 0) {
                 $rows[] = [
                     'occurred_at' => $payment->created_at,
