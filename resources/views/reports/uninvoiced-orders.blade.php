@@ -6,7 +6,13 @@
         .uninvoiced-report th,.uninvoiced-report td { border:1px solid #64748b; padding:2px 3px !important; vertical-align:top; font-size:11px !important; line-height:1.18 !important; }
         .uninvoiced-report th { background:#e2e8f0; text-align:center; white-space:nowrap; font-size:11px !important; font-weight:700; }
         .uninvoiced-report .number { text-align:right; white-space:nowrap; }
-        .uninvoiced-report .document-number { min-width:108px; line-height:1.18 !important; white-space:nowrap; }
+        .uninvoiced-report .document-number { line-height:1.18 !important; white-space:nowrap; }
+        /* Muat di layar tanpa scroll: lebar kolom tetap & teks panjang terlipat.
+           (Sengaja tanpa .overflow-x-auto agar aturan tabel lebar di app.css tidak berlaku.) */
+        .uninvoiced-report table.rekap-table { table-layout:fixed; width:100%; }
+        .uninvoiced-report table.rekap-table th { white-space:normal; vertical-align:middle; }
+        .uninvoiced-report table.rekap-table td { overflow-wrap:anywhere; }
+        .uninvoiced-report table.rekap-table td.number, .uninvoiced-report table.rekap-table td.document-number { overflow-wrap:normal; }
         .uninvoiced-report .filter-panel { margin-bottom:8px; padding:8px; gap:8px; border-radius:4px; }
         .uninvoiced-report .filter-panel form { gap:8px; }
         .uninvoiced-report .filter-panel label { font-size:13px; font-weight:600; }
@@ -38,7 +44,8 @@
                 <h1 class="text-base font-bold">REKAP ORDER YANG BELUM DI-INVOICE - SPEKTRUM</h1>
                 <p class="text-sm">Bulan: {{ \Carbon\Carbon::parse($from)->translatedFormat('F Y') }}</p>
             </div>
-            <div class="overflow-x-auto kolom-11 kolom-14"><table>
+            <div class="rekap-wrap"><table class="rekap-table">
+                <colgroup><col style="width:6.5%"><col style="width:10%"><col style="width:10%"><col style="width:10.5%"><col style="width:10%"><col style="width:6.5%"><col style="width:4.5%"><col style="width:4.5%"><col style="width:3.5%"><col style="width:5.5%"><col style="width:7%"><col style="width:6%"><col style="width:7%"><col style="width:8.5%"></colgroup>
                 <thead><tr><th>Tanggal</th><th>No. SO / DO / Invoice</th><th>Customer</th><th>Nama Produk</th><th>Keterangan</th><th>Penerima</th><th>Pj.</th><th>Leb.</th><th>Qty</th><th>Harga</th><th>Sub Total</th><th>Diskon</th><th>Total</th><th>Uang Muka</th></tr></thead>
                 <tbody>@forelse($rows as $row)<tr>
                     <td>{{ \Carbon\Carbon::parse($row->date)->format('d-m-Y') }}</td><td class="document-number">
