@@ -641,11 +641,10 @@ class ReportController extends Controller
 
     public function uninvoicedOrders(Request $request): View
     {
-        $from = $request->date('dari')?->format('Y-m-d') ?? now()->startOfMonth()->format('Y-m-d');
-        $to = $request->date('sampai')?->format('Y-m-d') ?? now()->format('Y-m-d');
-        if ($from > $to) {
-            [$from, $to] = [$to, $from];
-        }
+        // Per bulan (bukan rentang tanggal): ?bulan=2026-10, bawaan bulan berjalan.
+        $month = preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', (string) $request->query('bulan')) ? (string) $request->query('bulan') : now()->format('Y-m');
+        $from = \Illuminate\Support\Carbon::createFromFormat('Y-m-d', $month.'-01')->format('Y-m-d');
+        $to = \Illuminate\Support\Carbon::createFromFormat('Y-m-d', $month.'-01')->endOfMonth()->format('Y-m-d');
 
         $rows = collect();
         foreach (['indoor' => OrderIndoor::class, 'outdoor' => OrderOutdoor::class, 'artwork' => OrderArtwork::class] as $type => $model) {

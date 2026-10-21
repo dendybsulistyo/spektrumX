@@ -28,8 +28,7 @@
     <div class="uninvoiced-report py-3"><div class="mx-auto max-w-[1900px] px-2 sm:px-3">
         <div class="filter-panel no-print flex flex-wrap items-end justify-between border bg-white shadow-sm">
             <form method="GET" class="flex flex-wrap items-end">
-                <label class="text-sm text-gray-700">Dari tanggal<input type="date" name="dari" value="{{ $from }}" class="mt-1 block rounded-md border-gray-300"></label>
-                <label class="text-sm text-gray-700">Sampai tanggal<input type="date" name="sampai" value="{{ $to }}" class="mt-1 block rounded-md border-gray-300"></label>
+                <label class="text-sm text-gray-700">Bulan<input type="month" name="bulan" value="{{ \Carbon\Carbon::parse($from)->format('Y-m') }}" max="{{ now()->format('Y-m') }}" class="mt-1 block rounded-md border-gray-300"></label>
                 <button class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white">Tampilkan</button>
             </form>
             <button type="button" onclick="window.print()" class="rounded-md bg-slate-800 px-4 py-2 text-sm font-semibold text-white">Cetak Landscape</button>
@@ -37,7 +36,7 @@
         <section class="report-sheet bg-white shadow-sm">
             <div class="report-heading text-center">
                 <h1 class="text-base font-bold">REKAP ORDER YANG BELUM DI-INVOICE - SPEKTRUM</h1>
-                <p class="text-sm">Bulan: {{ \Carbon\Carbon::parse($from)->translatedFormat('d F Y') }} s/d {{ \Carbon\Carbon::parse($to)->translatedFormat('d F Y') }}</p>
+                <p class="text-sm">Bulan: {{ \Carbon\Carbon::parse($from)->translatedFormat('F Y') }}</p>
             </div>
             <div class="overflow-x-auto"><table>
                 <thead><tr><th>Tanggal</th><th>No. SO / DO / Invoice</th><th>Customer</th><th>Nama Produk</th><th>Keterangan</th><th>Penerima</th><th>Pj.</th><th>Leb.</th><th>Qty</th><th>Harga</th><th>Sub Total</th><th>Diskon</th><th>Total</th><th>Uang Muka</th></tr></thead>
