@@ -280,7 +280,8 @@
                                                 <a href="{{ route('keuangan.order-adjustments.index') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.order-adjustments.*')) }}">Penyesuaian Nota Order / Invoice</a>
                                                 <a href="{{ route('report.daily-transactions') }}" class="{{ $dropdownLink(request()->routeIs('report.daily-transactions')) }}">Rekap Transaksi Harian</a>
                                                 <a href="{{ route('report.pod-turnover') }}" class="{{ $dropdownLink(request()->routeIs('report.pod-turnover')) }}">Laporan Omzet Kertas POD</a>
-                                                <a href="{{ route('report.ctp-turnover') }}" class="{{ $dropdownLink(request()->routeIs('report.ctp-turnover')) }}">Laporan Omzet CTP</a>
+                                                <a href="{{ route('report.ctp-turnover') }}" class="{{ $dropdownLink(request()->routeIs('report.ctp-turnover')) }}">Laporan Omzet CTP per Tgl</a>
+                                                <a href="{{ route('report.ctp-turnover-total') }}" class="{{ $dropdownLink(request()->routeIs('report.ctp-turnover-total')) }}">Laporan Omzet CTP Total</a>
                                                 <a href="{{ route('report.outdoor-orders') }}" class="{{ $dropdownLink(request()->routeIs('report.outdoor-orders')) }}">Laporan Order</a>
                                             </div>
                                             <div class="space-y-1 border-l border-gray-100 pl-2">
@@ -664,7 +665,8 @@
                                 <a href="{{ route('keuangan.order-adjustments.index') }}" class="{{ $mobileLink(request()->routeIs('keuangan.order-adjustments.*')) }}">Penyesuaian Nota Order / Invoice</a>
                                 <a href="{{ route('report.daily-transactions') }}" class="{{ $mobileLink(request()->routeIs('report.daily-transactions')) }}">Rekap Transaksi Harian</a>
                                 <a href="{{ route('report.pod-turnover') }}" class="{{ $mobileLink(request()->routeIs('report.pod-turnover')) }}">Laporan Omzet Kertas POD</a>
-                                <a href="{{ route('report.ctp-turnover') }}" class="{{ $mobileLink(request()->routeIs('report.ctp-turnover')) }}">Laporan Omzet CTP</a>
+                                <a href="{{ route('report.ctp-turnover') }}" class="{{ $mobileLink(request()->routeIs('report.ctp-turnover')) }}">Laporan Omzet CTP per Tgl</a>
+                                <a href="{{ route('report.ctp-turnover-total') }}" class="{{ $mobileLink(request()->routeIs('report.ctp-turnover-total')) }}">Laporan Omzet CTP Total</a>
                                 <a href="{{ route('report.outdoor-orders') }}" class="{{ $mobileLink(request()->routeIs('report.outdoor-orders')) }}">Laporan Order</a>
                                 <div class="mx-2 my-2 border-t border-slate-200"></div>
                                 <p class="mx-2 rounded-md border border-slate-200 bg-slate-100 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-600">Akuntansi -</p>

@@ -1,5 +1,5 @@
 <x-app-layout>
-    <x-slot name="header"><h2 class="font-semibold text-xl text-gray-800">Laporan Omzet CTP Spektrum</h2></x-slot>
+    <x-slot name="header"><h2 class="font-semibold text-xl text-gray-800">Laporan Omzet CTP per Tgl</h2></x-slot>
     <style>
         .ctp-report { color:#111827; }
         .ctp-report table { width:100%; border-collapse:collapse; font-size:13px; }
@@ -27,7 +27,7 @@
             <button type="button" onclick="window.print()" class="rounded-md bg-slate-800 px-4 py-2 text-sm font-semibold text-white">Cetak Portrait</button>
         </div>
         <section class="bg-white p-5 shadow-sm">
-            <div class="mb-4 text-center"><h1 class="text-base font-bold">LAPORAN OMZET CTP SPEKTRUM</h1>
+            <div class="mb-4 text-center"><h1 class="text-base font-bold">LAPORAN OMZET CTP PER TGL - SPEKTRUM</h1>
                 <p class="text-sm">Dari Tanggal: {{ \Carbon\Carbon::parse($from)->translatedFormat('d F Y') }} s/d {{ \Carbon\Carbon::parse($to)->translatedFormat('d F Y') }}</p></div>
             <table><thead><tr><th>TANGGAL</th><th>NAMA PRODUK</th><th class="number">JUMLAH ORDER</th><th class="number">WARNA</th><th class="number">PLAT</th></tr></thead>
                 <tbody>@forelse($rows as $row)<tr>

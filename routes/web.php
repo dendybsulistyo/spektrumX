@@ -167,6 +167,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/report/rekap-transaksi-harian', [ReportController::class, 'dailyTransactions'])->name('report.daily-transactions');
         Route::get('/report/omzet-pod', [ReportController::class, 'podTurnover'])->name('report.pod-turnover');
         Route::get('/report/omzet-ctp', [ReportController::class, 'ctpTurnover'])->name('report.ctp-turnover');
+        Route::get('/report/omzet-ctp-total', [ReportController::class, 'ctpTurnoverTotal'])->name('report.ctp-turnover-total');
         Route::get('/report/order-outdoor', [ReportController::class, 'outdoorOrders'])->name('report.outdoor-orders');
         Route::get('/report/order-customer-lunas', [ReportController::class, 'paidOrdersByCustomer'])->name('report.paid-orders-by-customer');
         Route::get('/report/nota-invoice-customer', [ReportController::class, 'allOrdersByCustomer'])->name('report.all-orders-by-customer');

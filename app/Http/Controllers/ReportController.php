@@ -281,6 +281,37 @@ class ReportController extends Controller
         ]);
     }
 
+    /**
+     * Omzet CTP total per mesin + jumlah warna untuk satu periode.
+     * Produk CTP = divisi 09; JUMLAH = jumlah order (nota) yang memuat produk itu.
+     */
+    public function ctpTurnoverTotal(Request $request): View
+    {
+        $from = $request->date('dari')?->format('Y-m-d') ?? now()->startOfMonth()->format('Y-m-d');
+        $to = $request->date('sampai')?->format('Y-m-d') ?? now()->format('Y-m-d');
+        if ($from > $to) {
+            [$from, $to] = [$to, $from];
+        }
+
+        $rows = DB::table('order_indoor_detail as detail')
+            ->join('order_indoor as orders', 'orders.id', '=', 'detail.order_indoor_id')
+            ->join('produk_indoor as produk', 'produk.KdProd', '=', 'detail.KdProd')
+            ->where('produk.KdDivs', '09')
+            ->where('detail.jenis_produk', 'indoor')
+            ->whereBetween('orders.TglOrder', [$from, $to])
+            ->where('orders.status', '!=', 'batal')
+            ->groupBy('produk.KdProd', 'produk.NmProd')
+            ->selectRaw('produk.KdProd as code, TRIM(produk.NmProd) as product, COUNT(DISTINCT orders.id) as orders')
+            ->get()
+            ->sortBy(fn ($row) => mb_strtolower($row->product))
+            ->values();
+
+        return view('reports.ctp-turnover-total', [
+            'from' => $from, 'to' => $to, 'rows' => $rows,
+            'totalOrders' => (int) $rows->sum('orders'),
+        ]);
+    }
+
     public function outdoorOrders(Request $request): View
     {
         $from = $request->date('dari')?->format('Y-m-d') ?? now()->startOfMonth()->format('Y-m-d');
