@@ -478,10 +478,19 @@ class ReportController extends Controller
         $rows = collect();
 
         if ($selectedCustomer) {
+            // Reguler: lunas + sudah ber-INVOICE. VIP (ber-plafon): sudah ber-INVOICE dan DO,
+            // boleh belum lunas (sisa tagihannya tampil di kolom Kredit).
+            $isVip = \App\Models\CustomerLimit::query()->where('KdCust', $customerCode)->exists();
             foreach (['indoor' => OrderIndoor::class, 'outdoor' => OrderOutdoor::class, 'artwork' => OrderArtwork::class] as $type => $model) {
                 $relations = $type === 'outdoor' ? ['items.hargaCetak'] : ['items'];
-                $orders = $model::query()->with($relations)->where('KdCust', $customerCode)->where('status_bayar', 'lunas')
+                $orderTable = (new $model)->getTable();
+                $hasDocument = fn (string $kind) => fn ($q) => $q->selectRaw('1')->from('order_documents')
+                    ->whereColumn('order_documents.order_id', $orderTable.'.id')
+                    ->where('order_documents.order_type', $type)->where('order_documents.kind', $kind);
+                $orders = $model::query()->with($relations)->where('KdCust', $customerCode)
                     ->where('status', '!=', 'batal')->whereBetween('TglOrder', [$from, $to])
+                    ->whereExists($hasDocument('inv'))
+                    ->when($isVip, fn ($q) => $q->whereExists($hasDocument('do')), fn ($q) => $q->where('status_bayar', 'lunas'))
                     ->orderBy('TglOrder')->orderBy('NoOrder')->get();
                 $invoiceNumbers = DB::table('order_documents')->where('kind', 'inv')->where('order_type', $type)
                     ->whereIn('order_id', $orders->pluck('id'))->orderByDesc('sequence')
@@ -498,16 +507,18 @@ class ReportController extends Controller
                     $payments = $paymentsByOrder->get($order->id, collect());
                     $advance = max(0, (float) $payments->whereIn('jenis', ['lunas', 'dp', 'nota_pengganti'])->sum('jumlah'));
                     $settlement = max(0, (float) $payments->whereIn('jenis', ['pelunasan_dp', 'pelunasan_hutang'])->sum('jumlah'));
-                    if ($advance + $settlement <= 0) {
+                    // Data lama tanpa catatan pembayaran: nota lunas dianggap dibayar penuh.
+                    if ($advance + $settlement <= 0 && $order->status_bayar === 'lunas') {
                         $advance = $net;
                     }
+                    $credit = $order->status_bayar === 'lunas' ? 0.0 : max(0, (float) $order->jumlah_piutang);
 
-                    $allocated = ['discount' => 0.0, 'advance' => 0.0, 'settlement' => 0.0];
+                    $allocated = ['discount' => 0.0, 'advance' => 0.0, 'settlement' => 0.0, 'credit' => 0.0];
                     foreach ($items->values() as $index => $item) {
                         $last = $index === $items->count() - 1;
                         $ratio = $gross > 0 ? (float) $item->subtotal / $gross : ($last ? 1 : 0);
                         $part = [];
-                        foreach (['discount' => $discount, 'advance' => $advance, 'settlement' => $settlement] as $key => $amount) {
+                        foreach (['discount' => $discount, 'advance' => $advance, 'settlement' => $settlement, 'credit' => $credit] as $key => $amount) {
                             $part[$key] = $last ? $amount - $allocated[$key] : round($amount * $ratio);
                             $allocated[$key] += $part[$key];
                         }
@@ -517,7 +528,7 @@ class ReportController extends Controller
                             'description' => $item->name, 'length' => $item->panjang, 'width' => $item->lebar,
                             'qty' => $item->qty, 'price' => $item->harga_satuan, 'subtotal' => (float) $item->subtotal,
                             'discount' => $part['discount'], 'total' => (float) $item->subtotal - $part['discount'],
-                            'advance' => $part['advance'], 'payment' => $part['settlement'], 'credit' => 0,
+                            'advance' => $part['advance'], 'payment' => $part['settlement'], 'credit' => $part['credit'],
                         ]);
                     }
                 }
