@@ -4,6 +4,7 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Database\Factories\UserFactory;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -87,5 +88,14 @@ class User extends Authenticatable
         return $this->avatar_updated_at
             ? route('avatar.show', ['user' => $this->id, 'v' => $this->avatar_updated_at->timestamp])
             : null;
+    }
+
+    /**
+     * Nama untuk TAMPILAN: emoji/simbol hiasan dibuang agar dashboard rapi.
+     * Data asli tetap tersimpan; form edit memakai getRawOriginal('name').
+     */
+    protected function name(): Attribute
+    {
+        return Attribute::get(fn (?string $value) => \App\Support\TeksTampil::bersih($value));
     }
 }
