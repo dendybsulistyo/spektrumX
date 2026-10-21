@@ -77,7 +77,7 @@
             </p>
         </div>
 
-        <div class="overflow-x-auto">
+        <div class="overflow-x-auto kolom-11 kolom-14">
             <table class="w-full text-[13px] min-w-[1180px]">
                 <thead class="bg-gray-50 text-left text-xs uppercase text-gray-500">
                     <tr>

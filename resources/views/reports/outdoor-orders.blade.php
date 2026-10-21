@@ -59,7 +59,7 @@
             @foreach($groups as $group)
             <div class="{{ $loop->first ? '' : 'mt-6' }}">
                 <h2 class="mb-2 text-sm font-bold uppercase">Laporan Order {{ $group->label }}</h2>
-            <div class="overflow-x-auto"><table>
+            <div class="overflow-x-auto kolom-11"><table>
                 <colgroup>
                     <col style="width:7%"><col style="width:10%"><col style="width:10%"><col style="width:7%"><col style="width:9%">
                     <col style="width:10%"><col style="width:8%"><col style="width:6%"><col style="width:6%"><col style="width:4%">

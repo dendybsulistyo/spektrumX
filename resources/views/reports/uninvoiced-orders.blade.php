@@ -38,7 +38,7 @@
                 <h1 class="text-base font-bold">REKAP ORDER YANG BELUM DI-INVOICE - SPEKTRUM</h1>
                 <p class="text-sm">Bulan: {{ \Carbon\Carbon::parse($from)->translatedFormat('F Y') }}</p>
             </div>
-            <div class="overflow-x-auto"><table>
+            <div class="overflow-x-auto kolom-11 kolom-14"><table>
                 <thead><tr><th>Tanggal</th><th>No. SO / DO / Invoice</th><th>Customer</th><th>Nama Produk</th><th>Keterangan</th><th>Penerima</th><th>Pj.</th><th>Leb.</th><th>Qty</th><th>Harga</th><th>Sub Total</th><th>Diskon</th><th>Total</th><th>Uang Muka</th></tr></thead>
                 <tbody>@forelse($rows as $row)<tr>
                     <td>{{ \Carbon\Carbon::parse($row->date)->format('d-m-Y') }}</td><td class="document-number">

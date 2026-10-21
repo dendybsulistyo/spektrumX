@@ -37,7 +37,7 @@
                 <h3 class="text-sm font-semibold text-gray-700">Jumlah Order Diproses per Staf</h3>
                 <p class="text-xs text-gray-400 mt-0.5">Dihitung dari catatan perpindahan status tiap order (Order Indoor, Outdoor, Artwork).</p>
             </div>
-            <div class="overflow-x-auto">
+            <div class="overflow-x-auto {{ count($stages) + 2 >= 11 ? 'kolom-11' : '' }} {{ count($stages) + 2 >= 14 ? 'kolom-14' : '' }}">
                 <table class="w-full text-[13px] min-w-[560px]">
                     <thead class="bg-gray-50 text-left text-xs uppercase text-gray-500">
                         <tr>

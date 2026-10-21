@@ -38,7 +38,7 @@
             @csrf
 
         <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
-            <div class="overflow-x-auto" style="max-height: 75vh; overflow-y: auto;">
+            <div class="overflow-x-auto {{ count($printers) * 2 >= 11 ? 'kolom-11' : '' }} {{ count($printers) * 2 >= 14 ? 'kolom-14' : '' }}" style="max-height: 75vh; overflow-y: auto;">
                 <table class="w-full text-[13px] min-w-[900px] border-collapse">
                     <thead class="text-white text-xs uppercase sticky top-0 z-30">
                         <tr class="bg-gray-900">

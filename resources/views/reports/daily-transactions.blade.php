@@ -41,7 +41,7 @@
                     <h1 class="text-base font-bold">{{ mb_strtoupper($title) }} SPEKTRUM</h1>
                     <p class="text-sm">Tanggal: {{ \Carbon\Carbon::parse($date)->translatedFormat('d F Y') }}</p>
                 </div>
-                <div class="overflow-x-auto">
+                <div class="overflow-x-auto kolom-11 kolom-14">
                     <table>
                         <thead><tr>
                             <th>Tanggal SO</th><th>No. INV</th><th>Customer</th><th>Status Nota</th><th>Produk</th><th>Keterangan</th>
@@ -84,7 +84,7 @@
                 {{-- DISEMBUNYIKAN SEMENTARA (7 Okt 2026): tabel "Pelunasan Diterima". Hapus baris komentar ini & penutupnya untuk menampilkan lagi.
                 @isset($settlementRows)
                     <h2 class="mb-2 mt-6 text-sm font-bold">PELUNASAN DITERIMA</h2>
-                    <div class="overflow-x-auto">
+                    <div class="overflow-x-auto kolom-11">
                         <table>
                             <thead><tr>
                                 <th>No</th><th>Jam Bayar</th><th>No. Invoice / Nota</th><th>No. Order</th><th>Tgl Order</th><th>Customer</th>

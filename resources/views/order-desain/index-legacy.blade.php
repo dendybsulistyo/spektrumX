@@ -81,7 +81,7 @@
             @endforeach
 
             {{-- Outdoor: tampilan biasa 1 baris per order --}}
-            <div x-show="tab === 'outdoor'" x-cloak class="overflow-x-auto">
+            <div x-show="tab === 'outdoor'" x-cloak class="overflow-x-auto kolom-11">
                 <table class="w-full text-[13px] min-w-[560px]">
                     <thead class="bg-gray-50 text-left text-xs uppercase text-gray-500">
                         <tr>

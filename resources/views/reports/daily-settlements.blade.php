@@ -38,7 +38,7 @@
                     <h1 class="text-base font-bold">REKAP - PELUNASAN SPEKTRUM</h1>
                     <p class="text-sm">Tanggal: {{ \Carbon\Carbon::parse($date)->translatedFormat('d F Y') }}</p>
                 </div>
-                <div class="overflow-x-auto">
+                <div class="overflow-x-auto kolom-11">
                     <table>
                         <thead><tr>
                             <th>No</th><th>Jam Bayar</th><th>No. Invoice / Nota</th><th>No. Order</th><th>Tgl Order</th><th>Customer</th>
