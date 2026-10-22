@@ -468,7 +468,7 @@
                                             @if (Auth::user()->hasPermission('kasir.piutang-report.view') && ! Auth::user()->hasPermission('keuangan.view'))
                                                 <a href="{{ route('report.credit-orders-by-customer') }}" class="{{ $dropdownLink(request()->routeIs('report.credit-orders-by-customer')) }}">Rekap Order Customer (Piutang)</a>
                                             @endif
-                                            @if (Auth::user()->hasPermission('kasir.laporan-kasir-harian.view') && ! Auth::user()->hasPermission('keuangan.view'))
+                                            @if (Auth::user()->hasPermission('kasir.laporan-kasir-harian.view') && ! $menuAkun)
                                                 <a href="{{ route('keuangan.laporan-kasir-harian') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.laporan-kasir-harian')) }}">Laporan Kasir Harian</a>
                                             @endif
                                             @can('customer-service.view')
@@ -776,7 +776,7 @@
                             @if (Auth::user()->hasPermission('kasir.piutang-report.view') && ! Auth::user()->hasPermission('keuangan.view'))
                                 <a href="{{ route('report.credit-orders-by-customer') }}" class="{{ $mobileLink(request()->routeIs('report.credit-orders-by-customer')) }}">Rekap Order Customer (Piutang)</a>
                             @endif
-                            @if (Auth::user()->hasPermission('kasir.laporan-kasir-harian.view') && ! Auth::user()->hasPermission('keuangan.view'))
+                            @if (Auth::user()->hasPermission('kasir.laporan-kasir-harian.view') && ! $menuAkun)
                                 <a href="{{ route('keuangan.laporan-kasir-harian') }}" class="{{ $mobileLink(request()->routeIs('keuangan.laporan-kasir-harian')) }}">Laporan Kasir Harian</a>
                             @endif
                             @can('customer-service.view')
