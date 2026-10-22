@@ -200,7 +200,7 @@ class KeuanganController extends Controller
                     'debet' => 0,
                     'kredit' => abs($jumlah),
                     'sort' => '2-'.$baseSort.'-0',
-                ], ...($this->nonCashRefundOffset($p, fn (string $method) => [
+                ], ...($this->refundKind($p, $order, $discountRefunds) === 'potongan' ? [] : $this->nonCashRefundOffset($p, fn (string $method) => [
                     'user_id' => $activityUserId,
                     'kasir' => $activityUser ?? '-',
                     'no_nota' => null,
@@ -1150,7 +1150,7 @@ class KeuanganController extends Controller
                     'kasir' => $payment->user?->name,
                     'user_id' => $payment->user_id,
                     'sort' => $baseSort.'-0',
-                ], ...($this->nonCashRefundOffset($payment, fn (string $method) => [
+                ], ...($this->refundKind($payment, $order, $discountRefunds) === 'potongan' ? [] : $this->nonCashRefundOffset($payment, fn (string $method) => [
                     'occurred_at' => $payment->created_at,
                     'no_nota' => null,
                     'keterangan' => $this->nonCashOffsetLabel($this->refundKind($payment, $order, $discountRefunds), $method)." - {$customer}",
