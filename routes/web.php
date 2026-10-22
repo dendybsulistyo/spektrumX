@@ -441,6 +441,10 @@ Route::middleware('auth')->group(function () {
     Route::middleware('permission:keuangan.view')->group(function () {
         Route::get('/order-documents', [OrderDocumentController::class, 'index'])->name('order-documents.index');
         Route::get('/order-documents/{document}/kwitansi', [OrderDocumentController::class, 'receipt'])->name('order-documents.receipt');
+    });
+    // Pengambilan membuka DO/Invoice satu per satu dari tab Transaksi Penjualan;
+    // jenis dokumennya dibatasi di OrderDocumentController::authorizeDocumentAccess().
+    Route::middleware('permission.any:keuangan.view,pengambilan.view')->group(function () {
         Route::get('/order-documents/{document}', [OrderDocumentController::class, 'show'])->name('order-documents.show');
     });
 

@@ -110,9 +110,13 @@
     @endphp
 
     <div class="toolbar">
-        <a href="{{ route('order-documents.index') }}">← Daftar dokumen</a>
+        @if (auth()->user()->hasPermission('keuangan.view'))
+            <a href="{{ route('order-documents.index') }}">← Daftar dokumen</a>
+        @else
+            <a href="{{ route('pengambilan.index', ['tab' => 'transaksi']) }}">← Transaksi Penjualan</a>
+        @endif
         <div class="toolbar-actions">
-            @if ($document->kind === 'inv' && ! $invoiceBelumLunas)
+            @if ($document->kind === 'inv' && ! $invoiceBelumLunas && auth()->user()->hasPermission('keuangan.view'))
                 <a class="button" href="{{ route('order-documents.receipt', $document) }}">Kwitansi</a>
             @endif
             @if ($printRecord && ! $canReprint)
