@@ -46,12 +46,10 @@
             </div>
             <div class="rekap-wrap"><table class="rekap-table">
                 <colgroup><col style="width:6.5%"><col style="width:10%"><col style="width:10%"><col style="width:10.5%"><col style="width:10%"><col style="width:6.5%"><col style="width:4.5%"><col style="width:4.5%"><col style="width:3.5%"><col style="width:5.5%"><col style="width:7%"><col style="width:6%"><col style="width:7%"><col style="width:8.5%"></colgroup>
-                <thead><tr><th>Tanggal</th><th>No. SO / DO / Invoice</th><th>Customer</th><th>Nama Produk</th><th>Keterangan</th><th>Penerima</th><th>Pj.</th><th>Leb.</th><th>Qty</th><th>Harga</th><th>Sub Total</th><th>Diskon</th><th>Total</th><th>Uang Muka</th></tr></thead>
+                <thead><tr><th>Tanggal</th><th>No. Sales Order</th><th>Customer</th><th>Nama Produk</th><th>Keterangan</th><th>Penerima</th><th>Pj.</th><th>Leb.</th><th>Qty</th><th>Harga</th><th>Sub Total</th><th>Diskon</th><th>Total</th><th>Uang Muka</th></tr></thead>
                 <tbody>@forelse($rows as $row)<tr>
                     <td>{{ \Carbon\Carbon::parse($row->date)->format('d-m-Y') }}</td><td class="document-number">
                         <div>{{ $row->sales_order }}</div>
-                        @foreach ($row->delivery_orders as $number)<div>{{ $number }}</div>@endforeach
-                        @foreach ($row->invoices as $number)<div>{{ $number }}</div>@endforeach
                     </td><td>{{ $row->customer }}</td><td>{{ $row->product }}</td><td>{{ $row->description }}</td><td>{{ $row->recipient }}</td>
                     <td class="number">{{ number_format((float)$row->length,2,',','.') }}</td><td class="number">{{ number_format((float)$row->width,2,',','.') }}</td><td class="number">{{ number_format((float)$row->qty,0,',','.') }}</td>
                     <td class="number">{{ $row->price !== null ? number_format($row->price,0,',','.') : '-' }}</td><td class="number">{{ number_format($row->subtotal,0,',','.') }}</td><td class="number">{{ number_format($row->discount,0,',','.') }}</td><td class="number">{{ number_format($row->total,0,',','.') }}</td><td class="number">{{ number_format($row->advance,0,',','.') }}</td>

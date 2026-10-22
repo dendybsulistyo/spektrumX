@@ -163,6 +163,11 @@ Route::middleware('auth')->group(function () {
         Route::get('/report/order-customer-piutang', [ReportController::class, 'creditOrdersByCustomer'])->name('report.credit-orders-by-customer');
     });
 
+    Route::middleware('permission.any:keuangan.view,kasir.laporan-kasir-harian.view')->group(function () {
+        Route::get('/keuangan/laporan-kasir-harian', [KeuanganController::class, 'laporanKasirHarian'])->name('keuangan.laporan-kasir-harian');
+        Route::get('/keuangan/laporan-kasir-harian/excel', [KeuanganController::class, 'exportLaporanKasirHarianExcel'])->name('keuangan.laporan-kasir-harian.excel');
+    });
+
     Route::middleware('permission:keuangan.view')->group(function () {
         Route::get('/report/rekap-transaksi-harian', [ReportController::class, 'dailyTransactions'])->name('report.daily-transactions');
         Route::get('/report/omzet-pod', [ReportController::class, 'podTurnover'])->name('report.pod-turnover');
@@ -195,8 +200,6 @@ Route::middleware('auth')->group(function () {
         Route::get('/keuangan/kas-harian/excel', [KeuanganController::class, 'exportKasHarianExcel'])->name('keuangan.kas-harian.excel');
         Route::get('/keuangan/rekap-kasir', [KeuanganController::class, 'rekapKasir'])->name('keuangan.rekap-kasir');
         Route::get('/keuangan/rekap-kasir/excel', [KeuanganController::class, 'exportRekapKasirExcel'])->name('keuangan.rekap-kasir.excel');
-        Route::get('/keuangan/laporan-kasir-harian', [KeuanganController::class, 'laporanKasirHarian'])->name('keuangan.laporan-kasir-harian');
-        Route::get('/keuangan/laporan-kasir-harian/excel', [KeuanganController::class, 'exportLaporanKasirHarianExcel'])->name('keuangan.laporan-kasir-harian.excel');
         Route::get('/keuangan/penyesuaian-kas', [CashAdjustmentController::class, 'index'])->name('keuangan.cash-adjustments.index');
         Route::get('/keuangan/potongan-penjualan-akhir', [FinalSalesDiscountController::class, 'index'])->name('keuangan.final-sales-discounts.index');
         Route::get('/keuangan/penyesuaian-nota-dp', [OrderFinancialAdjustmentController::class, 'index'])->name('keuangan.order-adjustments.index');

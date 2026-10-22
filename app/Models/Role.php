@@ -75,6 +75,7 @@ class Role extends Model
             'kasir.approve-hutang' => 'Setujui/tolak pengajuan hutang customer VIP yang melebihi plafon',
             'kasir.replacement.manage' => 'Buat nota pengganti',
             'kasir.piutang-report.view' => 'Lihat Rekap Order Customer (Piutang)',
+            'kasir.laporan-kasir-harian.view' => 'Lihat Laporan Kasir Harian',
         ],
         'Customer Service' => [
             'customer-service.view' => 'Lihat antrean order Customer Service',
