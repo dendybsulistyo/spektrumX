@@ -17,7 +17,7 @@
     <div id="industry-rekap-kasir-customer">
         <div style="max-width: 1100px; margin: 0 auto; display: flex; flex-direction: column; gap: var(--space-6);">
 
-            <a href="{{ route('keuangan.rekap-kasir', ['dari' => $dari, 'sampai' => $sampai]) }}" class="text-muted" style="font-size: 13px;">&larr; Kembali ke Rekap Kasir</a>
+            <a href="{{ route('keuangan.rekap-kasir', ['tanggal' => $dari]) }}" class="text-muted" style="font-size: 13px;">&larr; Kembali ke Rekap Kasir</a>
 
             <div class="blueprint" style="padding: var(--space-4);">
                 <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>

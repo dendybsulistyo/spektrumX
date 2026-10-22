@@ -84,18 +84,14 @@
                         </select>
                     </div>
                     <div class="field" style="width:170px;">
-                        <label>Dari tanggal</label>
-                        <input type="date" name="dari" value="{{ $dari }}" class="input">
-                    </div>
-                    <div class="field" style="width:170px;">
-                        <label>Sampai tanggal</label>
-                        <input type="date" name="sampai" value="{{ $sampai }}" class="input">
+                        <label>Tanggal</label>
+                        <input type="date" name="tanggal" value="{{ $dari }}" class="input">
                     </div>
                     <button type="submit" class="btn btn-primary blueprint" style="height:36px;">
                         <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>Terapkan
                     </button>
                     <a href="{{ route('keuangan.rekap-kasir', array_filter(['kasir' => $kasirId])) }}" class="btn btn-secondary" style="height:36px;">Hari Ini</a>
-                    <a href="{{ route('keuangan.rekap-kasir.excel', array_filter(['dari' => $dari, 'sampai' => $sampai, 'kasir' => $kasirId])) }}" class="btn btn-secondary" style="height:36px;">Export Excel</a>
+                    <a href="{{ route('keuangan.rekap-kasir.excel', array_filter(['tanggal' => $dari, 'kasir' => $kasirId])) }}" class="btn btn-secondary" style="height:36px;">Export Excel</a>
                     <x-print-paper-controls />
                 </form>
             </div>

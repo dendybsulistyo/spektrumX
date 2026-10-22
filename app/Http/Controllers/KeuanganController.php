@@ -716,17 +716,13 @@ class KeuanganController extends Controller
     public function rekapKasir(Request $request): View
     {
         $filters = $request->validate([
+            'tanggal' => ['nullable', 'date'],
             'dari' => ['nullable', 'date'],
-            'sampai' => ['nullable', 'date'],
             'kasir' => ['nullable', 'integer', 'exists:users,id'],
         ]);
-        $dari = $filters['dari'] ?? now()->format('Y-m-d');
-        $sampai = $filters['sampai'] ?? now()->format('Y-m-d');
+        // Satu tanggal saja; 'dari' tetap diterima untuk tautan lama.
+        $dari = $sampai = $filters['tanggal'] ?? $filters['dari'] ?? now()->format('Y-m-d');
         $kasirId = isset($filters['kasir']) ? (int) $filters['kasir'] : null;
-
-        if ($dari > $sampai) {
-            [$dari, $sampai] = [$sampai, $dari];
-        }
 
         $activityUserIds = $this->cashierActivityUserIds();
 

@@ -58,7 +58,7 @@
                     · <b>Rp {{ $rp($paymentResult['total']) }}</b> · {{ $paymentResult['method'] }}.
                     <div class="mt-1">Sudah tercatat di jurnal dan di
                         @if ($canReport)
-                            <a class="font-semibold underline" href="{{ route('keuangan.rekap-kasir', ['dari' => $paymentResult['date'], 'sampai' => $paymentResult['date']]) }}">Rekap Kas Harian</a>,
+                            <a class="font-semibold underline" href="{{ route('keuangan.rekap-kasir', ['tanggal' => $paymentResult['date']]) }}">Rekap Kas Harian</a>,
                             <a class="font-semibold underline" href="{{ route('keuangan.kas-harian', ['tanggal' => $paymentResult['date']]) }}">Rekap Kasir per User</a> dan
                             <a class="font-semibold underline" href="{{ route('keuangan.laporan-kasir-harian', ['tanggal' => $paymentResult['date']]) }}">Laporan Kasir Harian</a>
                         @else
