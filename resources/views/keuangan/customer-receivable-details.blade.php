@@ -83,6 +83,14 @@
                             @endforeach
                         </datalist>
                     </label>
+                    @if($reportMode)
+                        <label class="text-sm text-gray-700">Dari Tgl. Order
+                            <input type="date" name="dari" value="{{ $dari }}" class="mt-1 block rounded-md border-gray-300">
+                        </label>
+                        <label class="text-sm text-gray-700">Sampai
+                            <input type="date" name="sampai" value="{{ $sampai }}" class="mt-1 block rounded-md border-gray-300">
+                        </label>
+                    @endif
                     <button class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">Tampilkan</button>
                     @if($reportMode)
                         <button type="button" onclick="window.print()" class="rounded-md bg-slate-700 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800">Cetak</button>
@@ -221,6 +229,9 @@
                         <h1 class="text-base font-bold">{{ $reportMode ? 'PIUTANG PER CUSTOMER' : 'PEMBAYARAN PIUTANG' }} - SPEKTRUM</h1>
                         <p class="text-sm font-semibold">Posisi per: {{ now()->translatedFormat('d F Y') }} (semua piutang belum lunas)</p>
                         <p class="text-sm font-semibold">Customer: {{ $selectedCustomer?->NmCust ?? 'Pilih customer terlebih dahulu' }}</p>
+                        @if($dari || $sampai)
+                            <p class="text-sm font-semibold">Tgl. Order: {{ $dari ? \Carbon\Carbon::parse($dari)->format('d-m-Y') : 'awal' }} s/d {{ $sampai ? \Carbon\Carbon::parse($sampai)->format('d-m-Y') : 'sekarang' }}</p>
+                        @endif
                     </div>
                     <div class="overflow-x-auto">
                         <table style="min-width:980px;">

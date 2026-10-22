@@ -1716,6 +1716,10 @@ class KeuanganController extends Controller
                 ?? $customers->first(fn ($customer) => str_starts_with(mb_strtolower((string) $customer->NmCust), $needle)))
             : null;
         $customerCode = (string) ($selectedCustomer?->KdCust ?? '');
+        // Rentang Tgl. Order hanya untuk laporan Piutang per Customer; halaman pembayaran tetap semua nota.
+        $reportMode = $request->input('mode') === 'report';
+        $dari = $reportMode && $request->filled('dari') ? $request->date('dari')?->format('Y-m-d') : null;
+        $sampai = $reportMode && $request->filled('sampai') ? $request->date('sampai')?->format('Y-m-d') : null;
         $rows = collect();
 
         if ($selectedCustomer) {
@@ -1729,6 +1733,8 @@ class KeuanganController extends Controller
                         ->whereColumn('order_documents.order_id', $model::query()->getModel()->getTable().'.id')
                         ->where('order_documents.order_type', $type)
                         ->whereIn('order_documents.kind', ['do', 'inv']))
+                    ->when($dari, fn ($query) => $query->whereDate('TglOrder', '>=', $dari))
+                    ->when($sampai, fn ($query) => $query->whereDate('TglOrder', '<=', $sampai))
                     ->orderBy('TglOrder')->orderBy('NoOrder')->get();
                 $finalDiscountsByOrder = FinalSalesDiscount::query()
                     ->where('order_type', $type)->whereIn('order_id', $orders->pluck('id'))
@@ -1769,7 +1775,7 @@ class KeuanganController extends Controller
             ->mapWithKeys(fn ($column) => [$column => (float) $rows->sum($column)])->all();
 
         return view('keuangan.customer-receivable-details', compact(
-            'customers', 'selectedCustomer', 'customerCode', 'rows', 'totals'
+            'customers', 'selectedCustomer', 'customerCode', 'rows', 'totals', 'dari', 'sampai'
         ));
     }
 
@@ -1827,34 +1833,48 @@ class KeuanganController extends Controller
         $date = $request->filled('tanggal') ? $request->string('tanggal')->toString() : now()->format('Y-m-d');
         $rows = collect();
 
+        // Aktivitas SO pada tanggal laporan: lunas, DP, hutang VIP, dan DO/Invoice terbit.
+        // Cicilan piutang lama dan nota tanpa aktivitas hari itu tidak ditampilkan.
+        $dayStart = "{$date} 00:00:00";
+        $dayEnd = "{$date} 23:59:59";
+        $paymentLabels = ['lunas' => 'Lunas', 'pelunasan_dp' => 'Lunas', 'dp' => 'DP'];
+
         foreach (['indoor' => OrderIndoor::class, 'outdoor' => OrderOutdoor::class, 'artwork' => OrderArtwork::class] as $type => $model) {
-            $settledIds = OrderPayment::query()->where('order_type', $type)->where('jenis', 'pelunasan_hutang')->pluck('order_id');
-            $orders = $model::query()->with('customer')->whereDate('TglOrder', '<=', $date)
-                ->where('status', '!=', 'batal')->where(function ($query) use ($settledIds) {
-                    $query->where('status_bayar', 'hutang');
-                    if ($settledIds->isNotEmpty()) {
-                        $query->orWhereIn('id', $settledIds);
-                    }
-                })->get();
-            $allPayments = OrderPayment::query()->where('order_type', $type)->where('jenis', 'pelunasan_hutang')
-                ->whereIn('order_id', $orders->pluck('id'))->where('created_at', '<=', "{$date} 23:59:59")
+            $todayPayments = OrderPayment::query()->where('order_type', $type)
+                ->whereIn('jenis', array_keys($paymentLabels))
+                ->whereBetween('created_at', [$dayStart, $dayEnd])
                 ->orderBy('created_at')->get()->groupBy('order_id');
+            $hutangIds = $model::query()->where('metode_bayar', 'hutang')
+                ->whereBetween('dibayar_at', [$dayStart, $dayEnd])->pluck('id');
+            $documentsToday = DB::table('order_documents')->where('order_type', $type)
+                ->whereIn('kind', ['do', 'inv'])->whereBetween('issued_at', [$dayStart, $dayEnd])
+                ->get(['order_id', 'kind'])->groupBy('order_id');
+
+            $orderIds = $todayPayments->keys()->merge($hutangIds)->merge($documentsToday->keys())->unique();
+            if ($orderIds->isEmpty()) {
+                continue;
+            }
+            $orders = $model::query()->with('customer')->whereIn('id', $orderIds)->where('status', '!=', 'batal')->get();
+            $paidToDate = OrderPayment::query()->where('order_type', $type)->whereIn('order_id', $orders->pluck('id'))
+                ->where('jumlah', '>', 0)->where('created_at', '<=', $dayEnd)
+                ->selectRaw('order_id, SUM(jumlah) AS total')->groupBy('order_id')->pluck('total', 'order_id');
 
             foreach ($orders as $order) {
-                $payments = $allPayments[$order->id] ?? collect();
-                $todayPayments = $payments->filter(fn (OrderPayment $payment) => $payment->created_at?->format('Y-m-d') === $date);
+                $payments = $todayPayments[$order->id] ?? collect();
                 $gross = (float) $order->total;
                 $discount = $order->diskon_approved_at && $order->diskon_approved_at->format('Y-m-d') <= $date
                     ? $order->diskonNominal() : 0.0;
                 $net = max(0, $gross - $discount);
-                $paidToDate = min($net, max(0, (float) $payments->sum('jumlah')));
-                $paidToday = max(0, (float) $todayPayments->sum('jumlah'));
-                $remaining = max(0, $net - $paidToDate);
-                if ($remaining <= 0 && $paidToday <= 0) {
-                    continue;
+
+                $labels = $payments->map(fn (OrderPayment $payment) => $paymentLabels[$payment->jenis])->unique()->values();
+                if ($hutangIds->contains($order->id)) {
+                    $labels->push('Hutang VIP');
                 }
-                $notes = $todayPayments->map(function (OrderPayment $payment) {
-                    $method = OrderPayment::CARA_BAYAR_LABELS[$payment->cara_bayar] ?? ucfirst($payment->cara_bayar);
+                foreach (($documentsToday[$order->id] ?? collect())->pluck('kind')->unique() as $kind) {
+                    $labels->push($kind === 'do' ? 'DO' : 'Invoice');
+                }
+                $methods = $payments->map(function (OrderPayment $payment) {
+                    $method = OrderPayment::CARA_BAYAR_LABELS[$payment->cara_bayar] ?? ucfirst((string) $payment->cara_bayar);
 
                     return $method.($payment->no_referensi ? ' '.$payment->no_referensi : '');
                 })->unique()->implode(', ');
@@ -1863,9 +1883,10 @@ class KeuanganController extends Controller
                     'customer_code' => $order->KdCust ?: '-',
                     'customer' => $order->customer?->NmCust ?: ($order->KdCust ?: 'Tanpa Customer'),
                     'date' => $order->TglOrder, 'order' => $order->NoOrder,
-                    'receivable' => $gross, 'paid' => $paidToday,
-                    'discount' => $discount, 'remaining' => $remaining,
-                    'notes' => $notes ?: '-',
+                    'receivable' => $gross, 'paid' => max(0, (float) $payments->sum('jumlah')),
+                    'discount' => $discount,
+                    'remaining' => max(0, $net - (float) ($paidToDate[$order->id] ?? 0)),
+                    'notes' => $labels->implode(' · ').($methods !== '' ? ' — '.$methods : ''),
                 ]);
             }
         }

@@ -27,7 +27,7 @@
                 <div class="customer-group mb-5"><p class="mb-1 text-sm font-bold">Customer: {{ $group->customer }}</p><table>
                     <thead><tr><th style="width:15%;">Tanggal</th><th style="width:18%;">No. Order</th><th>Piutang</th><th>Dibayar</th><th>Discount</th><th>Sisa Piutang</th><th style="width:20%;">Keterangan</th></tr></thead>
                     <tbody>@foreach($group->rows as $row)<tr><td style="text-align:center;">{{ \Carbon\Carbon::parse($row->date)->format('d-m-Y') }}</td><td>{{ $row->order }}</td><td class="number">{{ number_format($row->receivable,0,',','.') }}</td><td class="number">{{ number_format($row->paid,0,',','.') }}</td><td class="number">{{ number_format($row->discount,0,',','.') }}</td><td class="number">{{ number_format($row->remaining,0,',','.') }}</td><td>{{ $row->notes }}</td></tr>@endforeach</tbody>
-                    <tfoot><tr><td colspan="3" class="number"><strong>Total Penerimaan Piutang</strong></td><td class="number"><strong>{{ number_format($group->totalPaid,0,',','.') }}</strong></td><td colspan="3"></td></tr></tfoot>
+                    <tfoot><tr><td colspan="3" class="number"><strong>Total Diterima</strong></td><td class="number"><strong>{{ number_format($group->totalPaid,0,',','.') }}</strong></td><td colspan="3"></td></tr></tfoot>
                 </table></div>
             @empty<p style="padding:28px;text-align:center;">Tidak ada piutang berjalan atau penerimaan piutang pada tanggal ini.</p>@endforelse
             @if($groups->isNotEmpty())<div class="number mt-3 text-sm font-bold">Total Penerimaan Semua Customer: {{ number_format($grandTotalPaid,0,',','.') }}</div>@endif
