@@ -56,6 +56,12 @@ class ReceivableBatchPayment
                         throw ValidationException::withMessages(['pembayaran' => 'Nota tidak ditemukan untuk customer ini. Muat ulang halaman.']);
                     }
 
+                    $hasDocument = DB::table('order_documents')->where('order_type', $line['type'])
+                        ->where('order_id', $order->id)->whereIn('kind', ['do', 'inv'])->exists();
+                    if (! $hasDocument) {
+                        throw ValidationException::withMessages(['pembayaran' => 'Nota '.$order->NoOrder.' belum memiliki DO/Invoice.']);
+                    }
+
                     $this->workflow->run($order, 'hutang', function (Model $locked) use ($line, $method, $reference, $note, $batchId, &$result) {
                         $settled = $this->payOne($locked, $line['type'], (float) $line['amount'], $method, $reference, $note, $batchId);
                         $result['count']++;
