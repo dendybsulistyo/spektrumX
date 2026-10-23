@@ -14,46 +14,51 @@
             #order-document-archive .doc-link.inv { border-color:#cbd5e1; color:#334155; }
             #order-document-archive .print-count { color:#64748b; font-family:var(--font-body); font-size:11px; }
             #order-document-archive .muted { color:#94a3b8; }
+            #order-document-archive .filters { display:flex; flex-wrap:wrap; align-items:flex-end; gap:10px; }
+            #order-document-archive .filters label { display:flex; flex-direction:column; gap:4px; color:#475569; font-size:12px; font-weight:600; }
+            #order-document-archive .filters input,
+            #order-document-archive .filters select { height:34px; padding:0 10px; border:1px solid #cbd5e1; border-radius:4px; background:#fff; color:#1e293b; font-size:13px; }
+            #order-document-archive .filters input[name=search] { width:240px; }
+            #order-document-archive .filters input[type=date] { width:140px; }
+            #order-document-archive .filters select { width:150px; padding-right:28px; }
+            #order-document-archive .filter-btn { display:inline-flex; align-items:center; height:34px; padding:0 14px; border:1px solid #1e293b; border-radius:4px; background:#1e293b; color:#fff; font-size:13px; font-weight:600; text-decoration:none; }
+            #order-document-archive .filter-btn.secondary { border-color:#cbd5e1; background:#fff; color:#334155; }
+            #order-document-archive .filter-note { margin:10px 0 0; color:#94a3b8; font-size:12px; }
         </style>
     @endpush
 
     <div id="order-document-archive" style="max-width:1240px; margin:0 auto; display:flex; flex-direction:column; gap:16px;">
-        <div class="filter-panel" style="padding:16px; background:#fff; border:1px solid #d7dee8; border-radius:4px;">
-            <form method="GET" style="display:flex; align-items:flex-end; gap:12px; flex-wrap:wrap;">
-                <div class="field" style="width:260px;">
-                    <label>Cari</label>
-                    <input name="search" value="{{ $search }}" placeholder="No. SO / DO / Invoice / customer" class="input">
-                </div>
-                <div class="field" style="width:160px;">
-                    <label>Dari tanggal</label>
-                    <input type="date" name="dari" value="{{ $dari }}" class="input">
-                </div>
-                <div class="field" style="width:160px;">
-                    <label>Sampai tanggal</label>
-                    <input type="date" name="sampai" value="{{ $sampai }}" class="input">
-                </div>
-                <div class="field" style="width:140px;">
-                    <label>Status bayar</label>
-                    <select name="status" class="input">
+        <div style="padding:14px 16px; background:#fff; border:1px solid #d7dee8; border-radius:4px;">
+            <form method="GET" class="filters">
+                <label>Cari
+                    <input name="search" value="{{ $search }}" placeholder="No. SO / DO / Invoice / customer">
+                </label>
+                <label>Dari tanggal
+                    <input type="date" name="dari" value="{{ $dari }}">
+                </label>
+                <label>Sampai tanggal
+                    <input type="date" name="sampai" value="{{ $sampai }}">
+                </label>
+                <label>Status bayar
+                    <select name="status">
                         <option value="">Semua</option>
                         @foreach (['lunas' => 'Lunas', 'dp' => 'DP', 'hutang' => 'Hutang', 'batal' => 'Batal'] as $value => $label)
                             <option value="{{ $value }}" @selected($status === $value)>{{ $label }}</option>
                         @endforeach
                     </select>
-                </div>
-                <div class="field" style="width:170px;">
-                    <label>Dokumen</label>
-                    <select name="dokumen" class="input">
+                </label>
+                <label>Dokumen
+                    <select name="dokumen">
                         <option value="">Semua</option>
                         <option value="do" @selected($dokumen === 'do')>Sudah ada DO</option>
                         <option value="inv" @selected($dokumen === 'inv')>Sudah ada Invoice</option>
                         <option value="belum" @selected($dokumen === 'belum')>Belum ada DO/Invoice</option>
                     </select>
-                </div>
-                <button type="submit" class="btn btn-primary" style="height:36px;">Tampilkan</button>
-                <a href="{{ route('order-documents.index') }}" class="btn btn-secondary" style="height:36px;">Reset</a>
+                </label>
+                <button type="submit" class="filter-btn">Tampilkan</button>
+                <a href="{{ route('order-documents.index') }}" class="filter-btn secondary">Reset</a>
             </form>
-            <p class="muted" style="margin:10px 0 0; font-size:12px;">
+            <p class="filter-note">
                 Pencarian berlaku untuk semua tanggal bila tanggal dikosongkan.
                 @if ($canReprint)
                     Anda dapat mencetak ulang dokumen dari halaman masing-masing.
