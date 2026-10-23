@@ -212,8 +212,7 @@
             <section class="summary-wrap">
                 <div class="notes">
                     @if ($isInvoice)
-                        <strong>Catatan:</strong> Barang yang sudah dibeli tidak dapat dikembalikan, kecuali sesuai ketentuan perusahaan.<br>
-                        Referensi pembayaran: {{ $snapshot['payment_reference'] ?? '-' }}
+                        <strong>Catatan:</strong> Barang yang sudah dibeli tidak dapat dikembalikan, kecuali sesuai ketentuan perusahaan.
                     @else
                         <strong>Catatan:</strong> Dokumen ini merupakan bukti penyerahan barang untuk Sales Order tersebut.
                         @if ($signature)<br><img class="signature" src="{{ $signature }}" alt="Tanda tangan penerima">@endif

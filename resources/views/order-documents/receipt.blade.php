@@ -54,7 +54,6 @@
     @php
         $total = (float) $document->total;
         $printedAt = now();
-        $reference = $snapshot['payment_reference'] ?? null;
     @endphp
 
     <div class="toolbar">
@@ -104,7 +103,6 @@
                         <strong>Bank Transfer:</strong><br>
                         Bank BCA KCP Yogyakarta<br>
                         No. 037 567 1188 a.n CV Spektra Digital Artwork
-                        @if ($reference)<br>Referensi: {{ $reference }}@endif
                     </div>
                     <div class="amount">Terbilang Rp {{ number_format($total, 0, ',', '.') }},-</div>
                 </div>

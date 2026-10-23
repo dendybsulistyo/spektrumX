@@ -2,19 +2,18 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\OrderArtwork;
 use App\Models\OrderDocument;
 use App\Models\OrderDocumentPrint;
-use App\Models\OrderIndoor;
-use App\Models\OrderOutdoor;
 use App\Models\OrderPickupSignature;
 use App\Models\PengaturanKeuangan;
+use App\Models\SalesOrderPrint;
 use App\Services\OrderDocumentService;
 use App\Support\CetakUlang;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 
 class OrderDocumentController extends Controller
 {
@@ -36,42 +35,105 @@ class OrderDocumentController extends Controller
         );
     }
 
+    /**
+     * Arsip dokumen per transaksi: setiap SO beserta DO & Invoice-nya, untuk
+     * dicek dan dicetak ulang (cetak ulang tetap dibatasi CetakUlang).
+     * Satu query union terpaginasi untuk daftar SO, lalu dokumen dan
+     * status cetak diambil sekali untuk baris di halaman itu saja.
+     */
     public function index(Request $request)
     {
         $this->authorizeAccess();
-        $search = trim($request->string('search')->toString());
-        $documents = OrderDocument::query()->when($search !== '', function ($query) use ($search) {
-            $query->where(function ($query) use ($search) {
-                $query->where('number', 'like', "%{$search}%")
-                    ->orWhere('snapshot->sales_order', 'like', "%{$search}%")
-                    ->orWhere('snapshot->customer', 'like', "%{$search}%");
-            });
-        })->latest('issued_at')->paginate(30)->withQueryString();
+        $filters = $request->validate([
+            'dari' => ['nullable', 'date'],
+            'sampai' => ['nullable', 'date'],
+            'search' => ['nullable', 'string', 'max:80'],
+            'status' => ['nullable', Rule::in(['lunas', 'dp', 'hutang', 'batal'])],
+            'dokumen' => ['nullable', Rule::in(['do', 'inv', 'belum'])],
+        ]);
+        $search = trim((string) ($filters['search'] ?? ''));
+        // Pencarian berlaku untuk semua tanggal; tanpa pencarian default bulan berjalan.
+        $dari = $filters['dari'] ?? ($search === '' ? now()->startOfMonth()->format('Y-m-d') : null);
+        $sampai = $filters['sampai'] ?? ($search === '' ? now()->format('Y-m-d') : null);
+        $status = $filters['status'] ?? null;
+        $dokumen = $filters['dokumen'] ?? null;
 
-        $hutangOrders = collect();
-        foreach (['indoor' => OrderIndoor::class, 'outdoor' => OrderOutdoor::class, 'artwork' => OrderArtwork::class] as $orderType => $model) {
-            $model::query()
-                ->with('customer')
-                ->where('status_bayar', 'hutang')
-                ->where('jumlah_piutang', '>', 0)
-                ->where('status', '!=', 'batal')
-                ->when($search !== '', function ($query) use ($search) {
-                    $query->where(function ($query) use ($search) {
-                        $query->where('NoOrder', 'like', "%{$search}%")
-                            ->orWhereHas('customer', fn ($customer) => $customer
-                                ->where('NmCust', 'like', "%{$search}%")
-                                ->orWhere('KdCust', 'like', "%{$search}%"));
-                    });
-                })
-                ->get()
-                ->each(function ($order) use (&$hutangOrders, $orderType) {
-                    $order->order_type = $orderType;
-                    $hutangOrders->push($order);
-                });
+        // Pencarian customer & nomor dokumen diselesaikan dulu menjadi daftar kunci kecil,
+        // supaya query order tidak menjalankan subquery per baris.
+        $searchCustomers = collect();
+        $searchDocuments = collect();
+        if ($search !== '') {
+            $searchCustomers = DB::table('customers')->where('NmCust', 'like', "%{$search}%")
+                ->orWhere('KdCust', $search)->limit(500)->pluck('KdCust');
+            $searchDocuments = DB::table('order_documents')->where('number', 'like', "%{$search}%")
+                ->limit(2000)->get(['order_type', 'order_id'])->groupBy('order_type')
+                ->map(fn ($rows) => $rows->pluck('order_id')->unique()->values());
         }
-        $hutangOrders = $hutangOrders->sortByDesc('TglOrder')->values();
 
-        return view('order-documents.index', compact('documents', 'hutangOrders'));
+        $union = null;
+        foreach (OrderDocumentService::MODELS as $type => $model) {
+            $table = (new $model)->getTable();
+            $query = DB::table($table.' as o')
+                ->leftJoin('customers as c', 'c.KdCust', '=', 'o.KdCust')
+                ->select([
+                    'o.id', 'o.NoOrder', 'o.TglOrder', 'o.KdCust', 'o.status', 'o.status_bayar',
+                    'o.total', 'o.jumlah_piutang', 'c.NmCust', DB::raw("'{$type}' as order_type"),
+                ])
+                ->when($dari, fn ($q) => $q->where('o.TglOrder', '>=', $dari))
+                ->when($sampai, fn ($q) => $q->where('o.TglOrder', '<=', $sampai.' 23:59:59'))
+                ->when($status === 'batal', fn ($q) => $q->where('o.status', 'batal'))
+                ->when($status && $status !== 'batal', fn ($q) => $q->where('o.status_bayar', $status)->where('o.status', '!=', 'batal'))
+                ->when($dokumen === 'belum', fn ($q) => $q->whereNotExists(fn ($d) => $d->from('order_documents')
+                    ->whereColumn('order_documents.order_id', 'o.id')->where('order_documents.order_type', $type)))
+                ->when(in_array($dokumen, ['do', 'inv'], true), fn ($q) => $q->whereExists(fn ($d) => $d->from('order_documents')
+                    ->whereColumn('order_documents.order_id', 'o.id')->where('order_documents.order_type', $type)
+                    ->where('order_documents.kind', $dokumen)))
+                ->when($search !== '', function ($q) use ($search, $type, $searchCustomers, $searchDocuments) {
+                    $q->where(function ($q) use ($search, $type, $searchCustomers, $searchDocuments) {
+                        $q->where('o.NoOrder', 'like', "%{$search}%")
+                            ->when($searchCustomers->isNotEmpty(), fn ($q) => $q->orWhereIn('o.KdCust', $searchCustomers))
+                            ->when(isset($searchDocuments[$type]), fn ($q) => $q->orWhereIn('o.id', $searchDocuments[$type]));
+                    });
+                });
+            $union = $union ? $union->unionAll($query) : $query;
+        }
+
+        $orders = DB::query()->fromSub($union, 'orders')
+            ->orderByDesc('TglOrder')->orderByDesc('NoOrder')
+            ->paginate(50)->withQueryString();
+
+        $documents = collect();
+        $soPrints = collect();
+        $pageOrders = collect($orders->items())->groupBy('order_type');
+        if ($pageOrders->isNotEmpty()) {
+            $byType = function ($query) use ($pageOrders) {
+                $query->where(function ($query) use ($pageOrders) {
+                    foreach ($pageOrders as $type => $rows) {
+                        $query->orWhere(fn ($q) => $q->where('order_type', $type)->whereIn('order_id', $rows->pluck('id')));
+                    }
+                });
+            };
+            $documents = DB::table('order_documents')->where($byType)
+                ->orderBy('kind')->orderBy('sequence')
+                ->get(['id', 'kind', 'order_type', 'order_id', 'number']);
+            $docPrints = OrderDocumentPrint::query()->whereIn('order_document_id', $documents->pluck('id'))
+                ->pluck('print_count', 'order_document_id');
+            $documents = $documents->map(function ($document) use ($docPrints) {
+                $document->print_count = (int) ($docPrints[$document->id] ?? 0);
+
+                return $document;
+            })->groupBy(fn ($document) => $document->order_type.'-'.$document->order_id);
+            $soPrints = SalesOrderPrint::query()->where($byType)
+                ->get(['order_type', 'order_id', 'print_count'])
+                ->mapWithKeys(fn ($print) => [$print->order_type.'-'.$print->order_id => (int) $print->print_count]);
+        }
+
+        return view('order-documents.index', [
+            'orders' => $orders, 'documents' => $documents, 'soPrints' => $soPrints,
+            'dari' => $dari, 'sampai' => $sampai, 'search' => $search,
+            'status' => $status, 'dokumen' => $dokumen,
+            'canReprint' => CetakUlang::boleh(auth()->user()),
+        ]);
     }
 
     public function show(OrderDocument $document)
