@@ -25,6 +25,10 @@
         .date-filter { display: flex; gap: 8px; align-items: center; max-width: 297mm; margin: 0 auto 12px; font-size: 12px; }
         .date-filter input, .date-filter select { padding: 6px 8px; border: 1px solid #bbb; border-radius: 4px; }
         button { border: 0; border-radius: 5px; padding: 9px 16px; color: #fff; background: #172033; font-weight: 700; cursor: pointer; }
+        /* Rekap harian Back Office: huruf satu tingkat lebih besar dari cetakan Bungkus. */
+        body.daily-recap { font-size: 11px; }
+        body.daily-recap th { font-size: 10px; }
+        body.daily-recap h1 { font-size: 15px; }
         @media print {
             @page { size: A4 landscape; margin: 8mm; }
             body { padding: 0; background: #fff; font-size: 8.5px; }
@@ -33,6 +37,8 @@
             thead { display: table-header-group; }
             tr { break-inside: avoid; page-break-inside: avoid; }
             th, td { padding: 3px 4px; }
+            body.daily-recap { font-size: 9.5px; }
+            body.daily-recap th { font-size: 8.5px; }
         }
     </style>
 </head>
@@ -43,7 +49,7 @@
     // Rekap harian: Keterangan selalu ada & kosong, untuk dicoret operator saat cek fisik.
     $showNotes = $isDailyRecap || ! request()->has('keterangan') || request()->boolean('keterangan');
 @endphp
-<body class="{{ $showNotes ? '' : 'compact' }}">
+<body class="{{ $showNotes ? '' : 'compact' }} {{ $isDailyRecap ? 'daily-recap' : '' }}">
     @if ($isDailyRecap)
         <form method="GET" class="date-filter">
             <label>Jenis
