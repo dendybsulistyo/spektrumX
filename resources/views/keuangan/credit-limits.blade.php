@@ -22,9 +22,9 @@
         <section class="bg-white p-5 shadow-sm">
             <h1 class="mb-4 text-base font-bold">REKAP LIMIT PIUTANG SPEKTRUM</h1>
             <table>
-                <thead><tr><th>CUSTOMER</th><th style="width:25%;">PIUTANG</th><th style="width:25%;">BATAS</th></tr></thead>
-                <tbody>@forelse($rows as $row)<tr><td>{{ $row->customer }}</td><td class="number">{{ number_format($row->receivable,0,',','.') }}</td><td class="number">{{ number_format($row->limit,0,',','.') }}</td></tr>@empty<tr><td colspan="3" style="padding:28px;text-align:center;">Belum ada customer yang mempunyai plafon piutang.</td></tr>@endforelse</tbody>
-                <tfoot><tr><td class="number"><strong>Total</strong></td><td class="number"><strong>{{ number_format($totalReceivable,0,',','.') }}</strong></td><td class="number"><strong>{{ number_format($totalLimit,0,',','.') }}</strong></td></tr></tfoot>
+                <thead><tr><th style="width:36px;">No</th><th>CUSTOMER</th><th style="width:25%;">PIUTANG</th><th style="width:25%;">BATAS</th></tr></thead>
+                <tbody>@forelse($rows as $row)<tr><td style="text-align:center;white-space:nowrap;">{{ $loop->iteration }}</td><td>{{ $row->customer }}</td><td class="number">{{ number_format($row->receivable,0,',','.') }}</td><td class="number">{{ number_format($row->limit,0,',','.') }}</td></tr>@empty<tr><td colspan="4" style="padding:28px;text-align:center;">Belum ada customer yang mempunyai plafon piutang.</td></tr>@endforelse</tbody>
+                <tfoot><tr><td colspan="2" class="number"><strong>Total</strong></td><td class="number"><strong>{{ number_format($totalReceivable,0,',','.') }}</strong></td><td class="number"><strong>{{ number_format($totalLimit,0,',','.') }}</strong></td></tr></tfoot>
             </table>
         </section>
     </div></div>

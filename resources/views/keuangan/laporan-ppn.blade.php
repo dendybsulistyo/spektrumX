@@ -109,7 +109,7 @@
                     <table class="table" style="min-width: 900px;">
                         <thead>
                             <tr>
-                                <th>Tanggal Invoice</th><th>No Invoice</th><th>Tipe</th><th>Customer</th>
+                                <th style="width:36px;">No</th><th>Tanggal Invoice</th><th>No Invoice</th><th>Tipe</th><th>Customer</th>
                                 <th style="text-align: right;">Total</th><th style="text-align: right;">DPP</th><th style="text-align: right;">PPN</th>
                                 @unless ($laporanFinal?->status === 'final')
                                     <th style="width: 62px; text-align: center;">
@@ -124,6 +124,7 @@
                         <tbody>
                             @forelse ($rows as $row)
                                 <tr>
+                                    <td style="text-align:center;white-space:nowrap;">{{ $loop->iteration }}</td>
                                     <td class="text-muted" style="white-space: nowrap;">{{ $row['tanggal']?->format('d M Y') }}</td>
                                     <td style="font-family: var(--font-heading); font-weight: 600;">{{ $row['no_order'] }}</td>
                                     <td><span class="tag tag-neutral">{{ $row['tipe'] }}</span></td>
@@ -136,7 +137,7 @@
                                     @endunless
                                 </tr>
                             @empty
-                                <tr><td colspan="{{ $laporanFinal?->status === 'final' ? 7 : 8 }}" class="text-muted" style="text-align: center; padding: var(--space-6);">Tidak ada invoice aktif pada rentang ini.</td></tr>
+                                <tr><td colspan="{{ $laporanFinal?->status === 'final' ? 8 : 9 }}" class="text-muted" style="text-align: center; padding: var(--space-6);">Tidak ada invoice aktif pada rentang ini.</td></tr>
                             @endforelse
                         </tbody>
                     </table>

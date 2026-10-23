@@ -20,10 +20,10 @@
             #industry-kas .ledger .invoice { width: 190px; color: #475569; font-family: var(--font-heading); }
             #industry-kas .ledger .money { width: 170px; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
             #industry-kas .ledger tbody tr:nth-child(even) td { background: #fbfcfe; }
-            #industry-kas .subtotal { display: grid; grid-template-columns: minmax(0, 1fr) 170px 170px; margin-left: 190px; }
+            #industry-kas .subtotal { display: grid; grid-template-columns: minmax(0, 1fr) 170px 170px; margin-left: 226px; }
             #industry-kas .subtotal > div { padding: 8px 10px; border: 1px solid #cbd5e1; border-top: 0; background: #f8fafc; font-size: 13px; font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }
             #industry-kas .subtotal .label { color: #475569; }
-            #industry-kas .report-total { display: grid; grid-template-columns: minmax(0, 1fr) 170px 170px; margin: 20px 24px 24px 214px; }
+            #industry-kas .report-total { display: grid; grid-template-columns: minmax(0, 1fr) 170px 170px; margin: 20px 24px 24px 250px; }
             #industry-kas .report-total > div { padding: 10px 12px; border: 1px solid #b8c2d0; border-top: 0; text-align: right; font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; }
             #industry-kas .report-total > div:nth-child(-n+3) { border-top: 1px solid #b8c2d0; }
             #industry-kas .report-total .label { background: #f1f5f9; color: #475569; }
@@ -34,8 +34,8 @@
                 #industry-kas .cashier-section, #industry-kas .report-title { padding-left: 14px; padding-right: 14px; }
                 #industry-kas .ledger-wrap, #industry-kas .totals-wrap { overflow-x: auto; }
                 #industry-kas .ledger { min-width: 760px; }
-                #industry-kas .subtotal { min-width: 570px; margin-left: 190px; }
-                #industry-kas .report-total { min-width: 570px; margin-left: 204px; margin-right: 14px; }
+                #industry-kas .subtotal { min-width: 570px; margin-left: 226px; }
+                #industry-kas .report-total { min-width: 570px; margin-left: 240px; margin-right: 14px; }
             }
             @media print {
                 @page { size: A4 portrait; margin: 12mm 9mm; }
@@ -53,9 +53,9 @@
                 #industry-kas .ledger th, #industry-kas .ledger td { padding: 3px 5px; font-size: 8pt; }
                 #industry-kas .ledger .invoice { width: 24%; }
                 #industry-kas .ledger .money { width: 18%; }
-                #industry-kas .subtotal { grid-template-columns: minmax(0, 1fr) 18% 18%; margin-left: 24%; }
+                #industry-kas .subtotal { grid-template-columns: minmax(0, 1fr) 18% 18%; margin-left: calc(24% + 36px); }
                 #industry-kas .subtotal > div { padding: 3px 5px; font-size: 8pt; }
-                #industry-kas .report-total { grid-template-columns: minmax(0, 1fr) 18% 18%; margin: 10px 0 0 24%; break-inside: avoid; }
+                #industry-kas .report-total { grid-template-columns: minmax(0, 1fr) 18% 18%; margin: 10px 0 0 calc(24% + 36px); break-inside: avoid; }
                 #industry-kas .report-total > div { padding: 4px 5px; font-size: 8pt; }
                 body.print-paper-a5 #industry-kas .report-title h3 { font-size: 10pt; }
                 body.print-paper-a5 #industry-kas .report-title p, body.print-paper-a5 #industry-kas .cashier-name { font-size: 6.5pt; }
@@ -113,7 +113,7 @@
                         <div class="ledger-wrap">
                             <table class="ledger">
                                 <thead>
-                                    <tr>
+                                    <tr><th style="width:36px;">No</th>
                                         <th class="invoice">No. Nota</th>
                                         <th>Keterangan</th>
                                         <th class="money">Debet</th>
@@ -122,7 +122,7 @@
                                 </thead>
                                 <tbody>
                                     @foreach ($group['rows'] as $row)
-                                        <tr>
+                                        <tr><td style="text-align:center;white-space:nowrap;">{{ $loop->iteration }}</td>
                                             <td class="invoice">{{ $row['no_nota'] ?: '' }}</td>
                                             <td>{{ $row['keterangan'] }}</td>
                                             <td class="money">{{ $fmt($row['debet']) }}</td>

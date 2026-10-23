@@ -10,6 +10,11 @@
         .daily-report .number { text-align:right; white-space:nowrap; }
         .daily-report .center { text-align:center; }
         .daily-report .document-number { min-width:108px; white-space:nowrap; }
+        .nota-items summary { cursor:pointer; color:#1d4ed8; white-space:nowrap; }
+        .nota-items ol { margin:3px 0 0; padding-left:16px; list-style:decimal; }
+        .nota-items li { margin-bottom:3px; }
+        .nota-items li span { display:block; color:#475569; }
+        .nota-items .nota-item-calc { white-space:nowrap; }
         @media print {
             @page { size:A4 landscape; margin:8mm; }
             body { background:#fff !important; }
@@ -44,34 +49,34 @@
                 <div class="overflow-x-auto kolom-11 kolom-14">
                     <table>
                         <thead><tr>
-                            <th>Tanggal SO</th><th>No. INV</th><th>Customer</th><th>Status Nota</th><th>Produk</th><th>Keterangan</th>
-                            <th>Pj.</th><th>Leb.</th><th>Qty</th><th>Harga</th><th>Sub Total</th>
-                            <th>Diskon</th><th>Total</th><th>Tunai</th><th>Kredit</th>
+                            <th>No</th><th>Tanggal SO</th><th>No. INV</th><th>Customer</th><th>Status Nota</th><th>Item</th>
+                            <th>Sub Total</th><th>Diskon</th><th>Total</th><th>Tunai</th><th>Kredit</th>
                         </tr></thead>
                         <tbody>
-                        @forelse ($rows as $row)
+                        @forelse ($rows->groupBy('number') as $items)
+                            @php($nota = $items->first())
                             <tr>
-                                <td class="center">{{ \Carbon\Carbon::parse($row->date)->format('d-m-Y') }}</td>
+                                <td class="center">{{ $loop->iteration }}</td>
+                                <td class="center">{{ \Carbon\Carbon::parse($nota->date)->format('d-m-Y') }}</td>
                                 <td class="document-number">
-                                    @foreach ($row->invoices as $number)<div>{{ $number }}</div>@endforeach
-                                    <div style="font-size:.8em;color:#6b7280;">SO {{ $row->number }}</div>
-                                </td><td>{{ $row->customer }}</td><td class="center">{{ $row->note_status }}</td><td>{{ $row->product }}</td><td>{{ $row->description }}</td>
-                                <td class="number">{{ number_format((float) $row->length, 2, ',', '.') }}</td>
-                                <td class="number">{{ number_format((float) $row->width, 2, ',', '.') }}</td>
-                                <td class="number">{{ number_format((float) $row->qty, 0, ',', '.') }}</td>
-                                <td class="number">{{ $row->price !== null ? number_format($row->price, 0, ',', '.') : '-' }}</td>
-                                <td class="number">{{ number_format($row->subtotal, 0, ',', '.') }}</td>
-                                <td class="number">{{ $row->discount > 0 ? number_format($row->discount, 0, ',', '.') : '-' }}</td>
-                                <td class="number">{{ number_format($row->total, 0, ',', '.') }}</td>
-                                <td class="number">{{ $row->cash > 0 ? number_format($row->cash, 0, ',', '.') : '-' }}</td>
-                                <td class="number">{{ $row->credit > 0 ? number_format($row->credit, 0, ',', '.') : '-' }}</td>
+                                    @foreach ($nota->invoices as $number)<div>{{ $number }}</div>@endforeach
+                                    <div style="font-size:.8em;color:#6b7280;">SO {{ $nota->number }}</div>
+                                </td>
+                                <td>{{ $nota->customer }}</td>
+                                <td class="center">{{ $nota->note_status }}</td>
+                                <td>@include('reports.partials.nota-items', ['items' => $items])</td>
+                                <td class="number">{{ number_format($items->sum('subtotal'), 0, ',', '.') }}</td>
+                                <td class="number">{{ $items->sum('discount') > 0 ? number_format($items->sum('discount'), 0, ',', '.') : '-' }}</td>
+                                <td class="number">{{ number_format($items->sum('total'), 0, ',', '.') }}</td>
+                                <td class="number">{{ $items->sum('cash') > 0 ? number_format($items->sum('cash'), 0, ',', '.') : '-' }}</td>
+                                <td class="number">{{ $items->sum('credit') > 0 ? number_format($items->sum('credit'), 0, ',', '.') : '-' }}</td>
                             </tr>
                         @empty
-                            <tr><td colspan="15" class="center" style="padding:28px">{{ ['lunas' => 'Belum ada nota lunas pada tanggal ini.', 'tagihan' => 'Belum ada tagihan customer VIP pada tanggal ini.'][$kind] ?? 'Belum ada nota lunas atau tagihan customer VIP pada tanggal ini.' }}</td></tr>
+                            <tr><td colspan="11" class="center" style="padding:28px">{{ ['lunas' => 'Belum ada nota lunas pada tanggal ini.', 'tagihan' => 'Belum ada tagihan customer VIP pada tanggal ini.'][$kind] ?? 'Belum ada nota lunas atau tagihan customer VIP pada tanggal ini.' }}</td></tr>
                         @endforelse
                         </tbody>
                         <tfoot class="font-bold"><tr>
-                            <td colspan="10" class="number">Grand Total:</td>
+                            <td colspan="6" class="number">Grand Total:</td>
                             <td class="number">{{ number_format($totals->subtotal, 0, ',', '.') }}</td>
                             <td class="number">{{ number_format($totals->discount, 0, ',', '.') }}</td>
                             <td class="number">{{ number_format($totals->total, 0, ',', '.') }}</td>

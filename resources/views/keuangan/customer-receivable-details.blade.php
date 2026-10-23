@@ -235,16 +235,16 @@
                     </div>
                     <div class="overflow-x-auto">
                         <table style="min-width:980px;">
-                            <thead><tr><th>Tanggal</th><th>No. Nota</th><th>Piutang</th><th>Discount</th><th>Bayar</th><th>Sisa Piutang</th></tr></thead>
+                            <thead><tr><th style="width:36px;">No</th><th>Tanggal</th><th>No. Nota</th><th>Piutang</th><th>Discount</th><th>Bayar</th><th>Sisa Piutang</th></tr></thead>
                             <tbody>
                                 @forelse($rows as $row)
-                                    <tr>
+                                    <tr><td style="text-align:center;white-space:nowrap;">{{ $loop->iteration }}</td>
                                         <td style="text-align:center;">{{ \Carbon\Carbon::parse($row->date)->format('d-m-Y') }}</td><td>{{ $row->invoice }}</td>
                                         <td class="number">{{ number_format($row->receivable,0,',','.') }}</td><td class="number">{{ number_format($row->discount,0,',','.') }}</td><td class="number">{{ number_format($row->paid,0,',','.') }}</td><td class="number font-semibold">{{ number_format($row->remaining,0,',','.') }}</td>
                                     </tr>
-                                @empty<tr><td colspan="6" class="py-10 text-center">{{ $selectedCustomer ? 'Customer ini tidak memiliki piutang aktif.' : 'Pilih customer untuk menampilkan seluruh piutang aktif.' }}</td></tr>@endforelse
+                                @empty<tr><td colspan="7" class="py-10 text-center">{{ $selectedCustomer ? 'Customer ini tidak memiliki piutang aktif.' : 'Pilih customer untuk menampilkan seluruh piutang aktif.' }}</td></tr>@endforelse
                             </tbody>
-                            <tfoot><tr><td colspan="2" class="number"><strong>Total Piutang</strong></td><td class="number"><strong>{{ number_format($totals->receivable,0,',','.') }}</strong></td><td class="number"><strong>{{ number_format($totals->discount,0,',','.') }}</strong></td><td class="number"><strong>{{ number_format($totals->paid,0,',','.') }}</strong></td><td class="number"><strong>{{ number_format($totals->remaining,0,',','.') }}</strong></td></tr></tfoot>
+                            <tfoot><tr><td colspan="3" class="number"><strong>Total Piutang</strong></td><td class="number"><strong>{{ number_format($totals->receivable,0,',','.') }}</strong></td><td class="number"><strong>{{ number_format($totals->discount,0,',','.') }}</strong></td><td class="number"><strong>{{ number_format($totals->paid,0,',','.') }}</strong></td><td class="number"><strong>{{ number_format($totals->remaining,0,',','.') }}</strong></td></tr></tfoot>
                         </table>
                     </div>
                 </section>

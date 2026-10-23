@@ -54,10 +54,10 @@
             </div>
             <div class="overflow-x-auto">
                 <table>
-                    <thead><tr><th>Tanggal Order</th><th>Tipe</th><th>Sales Order</th><th>No. Invoice</th><th>Tanggal Invoice</th><th>Status</th><th>Total Nota</th><th>Dibayar</th><th>Sisa Tagihan</th></tr></thead>
+                    <thead><tr><th style="width:36px;">No</th><th>Tanggal Order</th><th>Tipe</th><th>Sales Order</th><th>No. Invoice</th><th>Tanggal Invoice</th><th>Status</th><th>Total Nota</th><th>Dibayar</th><th>Sisa Tagihan</th></tr></thead>
                     <tbody>
                     @forelse ($rows as $row)
-                        <tr>
+                        <tr><td style="text-align:center;white-space:nowrap;">{{ $loop->iteration }}</td>
                             <td class="whitespace-nowrap text-center">{{ \Carbon\Carbon::parse($row->date)->format('d-m-Y') }}</td>
                             <td>{{ $row->type }}</td>
                             <td>{{ $row->order }}</td>
@@ -69,10 +69,10 @@
                             <td class="number {{ $row->remaining > 0 ? 'font-semibold text-red-700' : '' }}">{{ number_format($row->remaining, 0, ',', '.') }}</td>
                         </tr>
                     @empty
-                        <tr><td colspan="9" class="py-8 text-center text-gray-500">{{ $selectedCustomer ? 'Tidak ada order pada periode dan status yang dipilih.' : 'Pilih customer untuk menampilkan laporan.' }}</td></tr>
+                        <tr><td colspan="10" class="py-8 text-center text-gray-500">{{ $selectedCustomer ? 'Tidak ada order pada periode dan status yang dipilih.' : 'Pilih customer untuk menampilkan laporan.' }}</td></tr>
                     @endforelse
                     </tbody>
-                    <tfoot class="font-bold"><tr><td colspan="6" class="number">Grand Total</td><td class="number">{{ number_format($totals->total,0,',','.') }}</td><td class="number">{{ number_format($totals->paid,0,',','.') }}</td><td class="number">{{ number_format($totals->remaining,0,',','.') }}</td></tr></tfoot>
+                    <tfoot class="font-bold"><tr><td colspan="7" class="number">Grand Total</td><td class="number">{{ number_format($totals->total,0,',','.') }}</td><td class="number">{{ number_format($totals->paid,0,',','.') }}</td><td class="number">{{ number_format($totals->remaining,0,',','.') }}</td></tr></tfoot>
                 </table>
             </div>
         </section>

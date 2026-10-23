@@ -39,10 +39,10 @@
                 <p class="text-sm font-semibold">Sampai Tanggal : {{ \Carbon\Carbon::parse($asOf)->translatedFormat('d F Y') }}</p>
             </div>
             <table>
-                <thead><tr><th>Customer</th><th style="width:19%;">Piutang</th><th style="width:15%;">Discount</th><th style="width:17%;">Bayar</th><th style="width:19%;">Sisa Piutang</th></tr></thead>
+                <thead><tr><th style="width:36px;">No</th><th>Customer</th><th style="width:19%;">Piutang</th><th style="width:15%;">Discount</th><th style="width:17%;">Bayar</th><th style="width:19%;">Sisa Piutang</th></tr></thead>
                 <tbody>
                 @forelse ($rows as $row)
-                    <tr>
+                    <tr><td style="text-align:center;white-space:nowrap;">{{ $loop->iteration }}</td>
                         <td>
                             @if ($row['code'] && $row['has_vip'])
                                 <a class="text-indigo-700 hover:underline" href="{{ route('keuangan.customer-receivable-details', ['customer' => $row['code']]) }}">{{ $row['customer'] }}</a>
@@ -56,11 +56,11 @@
                         <td class="number">{{ number_format($row['remaining'], 0, ',', '.') }}</td>
                     </tr>
                 @empty
-                    <tr><td colspan="5" style="padding:28px;text-align:center;">Tidak ada piutang customer sampai tanggal ini.</td></tr>
+                    <tr><td colspan="6" style="padding:28px;text-align:center;">Tidak ada piutang customer sampai tanggal ini.</td></tr>
                 @endforelse
                 </tbody>
                 <tfoot>
-                    <tr><td colspan="4" class="number"><strong>Total Piutang</strong></td><td class="number"><strong>{{ number_format($totals->remaining, 0, ',', '.') }}</strong></td></tr>
+                    <tr><td colspan="5" class="number"><strong>Total Piutang</strong></td><td class="number"><strong>{{ number_format($totals->remaining, 0, ',', '.') }}</strong></td></tr>
                 </tfoot>
             </table>
         </section>

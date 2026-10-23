@@ -72,6 +72,7 @@
             <table class="doc-table">
                 <thead>
                     <tr>
+                        <th style="width:44px;">No</th>
                         <th>Tanggal</th>
                         <th>Customer</th>
                         <th>Status</th>
@@ -87,6 +88,7 @@
                             $soPrintCount = $soPrints[$key] ?? 0;
                         @endphp
                         <tr @class(['is-void' => $isVoid])>
+                            <td style="text-align:center;">{{ $orders->firstItem() + $loop->index }}</td>
                             <td style="white-space:nowrap;">{{ \Carbon\Carbon::parse($order->TglOrder)->format('d/m/Y') }}</td>
                             <td>{{ $order->NmCust ?: ($order->KdCust ?: '-') }}</td>
                             <td style="white-space:nowrap;">
@@ -113,7 +115,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="5" class="muted" style="padding:24px; text-align:center;">Tidak ada transaksi pada filter ini.</td></tr>
+                        <tr><td colspan="6" class="muted" style="padding:24px; text-align:center;">Tidak ada transaksi pada filter ini.</td></tr>
                     @endforelse
                 </tbody>
             </table>

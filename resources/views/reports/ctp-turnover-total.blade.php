@@ -29,11 +29,11 @@
         <section class="bg-white p-5 shadow-sm">
             <div class="mb-4 text-center"><h1 class="text-base font-bold">LAPORAN OMZET CTP TOTAL - SPEKTRUM</h1>
                 <p class="text-sm">Dari Tanggal: {{ \Carbon\Carbon::parse($from)->translatedFormat('d F Y') }} s/d {{ \Carbon\Carbon::parse($to)->translatedFormat('d F Y') }}</p></div>
-            <table><thead><tr><th>NAMA PRODUK</th><th class="number" style="width:22%">JUMLAH ORDER</th></tr></thead>
-                <tbody>@forelse($rows as $row)<tr>
+            <table><thead><tr><th style="width:36px;">No</th><th>NAMA PRODUK</th><th class="number" style="width:22%">JUMLAH ORDER</th></tr></thead>
+                <tbody>@forelse($rows as $row)<tr><td style="text-align:center;white-space:nowrap;">{{ $loop->iteration }}</td>
                     <td>{{ $row->product }}</td><td class="number">{{ number_format($row->orders,0,',','.') }}</td>
-                </tr>@empty<tr><td colspan="2" style="padding:28px;text-align:center">Belum ada order CTP pada periode ini.</td></tr>@endforelse</tbody>
-                <tfoot class="font-bold"><tr><td>TOTAL</td><td class="number">{{ number_format($totalOrders,0,',','.') }}</td></tr></tfoot>
+                </tr>@empty<tr><td colspan="3" style="padding:28px;text-align:center">Belum ada order CTP pada periode ini.</td></tr>@endforelse</tbody>
+                <tfoot class="font-bold"><tr><td colspan="2">TOTAL</td><td class="number">{{ number_format($totalOrders,0,',','.') }}</td></tr></tfoot>
             </table>
             <p class="mt-2 text-xs text-gray-500">Jumlah order = banyaknya nota yang memuat produk tersebut (bukan jumlah plat/lembar). Satu nota bisa terhitung di lebih dari satu produk.</p>
         </section>

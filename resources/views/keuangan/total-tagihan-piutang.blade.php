@@ -26,9 +26,9 @@
         <section class="bg-white p-5 shadow-sm">
             <div class="mb-4"><h1 class="text-base font-bold">TOTAL TAGIHAN CUSTOMER VIP - SPEKTRUM</h1><p class="text-sm font-semibold">Tanggal: {{ \Carbon\Carbon::parse($asOf)->translatedFormat('d F Y') }}</p></div>
             <table>
-                <thead><tr><th>NAMA</th><th style="width:20%;">TANGGAL</th><th style="width:23%;">PIUTANG</th><th style="width:25%;">TELPON</th></tr></thead>
-                <tbody>@forelse($rows as $row)<tr><td>{{ $row['name'] }}</td><td style="text-align:center;">{{ \Carbon\Carbon::parse($row['date'])->translatedFormat('d M Y') }}</td><td class="number">{{ number_format($row['receivable'],0,',','.') }}</td><td>{{ $row['phone'] }}</td></tr>@empty<tr><td colspan="4" style="padding:28px;text-align:center;">Tidak ada tagihan customer VIP sampai tanggal ini.</td></tr>@endforelse</tbody>
-                <tfoot><tr><td colspan="2" class="number"><strong>Total Tagihan VIP</strong></td><td class="number"><strong>{{ number_format($grandTotal,0,',','.') }}</strong></td><td></td></tr></tfoot>
+                <thead><tr><th style="width:36px;">No</th><th>NAMA</th><th style="width:20%;">TANGGAL</th><th style="width:23%;">PIUTANG</th><th style="width:25%;">TELPON</th></tr></thead>
+                <tbody>@forelse($rows as $row)<tr><td style="text-align:center;white-space:nowrap;">{{ $loop->iteration }}</td><td>{{ $row['name'] }}</td><td style="text-align:center;">{{ \Carbon\Carbon::parse($row['date'])->translatedFormat('d M Y') }}</td><td class="number">{{ number_format($row['receivable'],0,',','.') }}</td><td>{{ $row['phone'] }}</td></tr>@empty<tr><td colspan="5" style="padding:28px;text-align:center;">Tidak ada tagihan customer VIP sampai tanggal ini.</td></tr>@endforelse</tbody>
+                <tfoot><tr><td colspan="3" class="number"><strong>Total Tagihan VIP</strong></td><td class="number"><strong>{{ number_format($grandTotal,0,',','.') }}</strong></td><td></td></tr></tfoot>
             </table>
         </section>
     </div></div>

@@ -66,12 +66,12 @@
                 <div class="mt-scroll" style="overflow-x:auto">
                     <table class="mt-table">
                         <colgroup>
-                            <col style="width:5.6%"><col style="width:9.8%"><col style="width:9.6%"><col style="width:12.6%"><col style="width:9.2%">
+                            <col style="width:2.6%"><col style="width:5.6%"><col style="width:9.8%"><col style="width:9.6%"><col style="width:10%"><col style="width:9.2%">
                             <col style="width:4.4%"><col style="width:4.4%"><col style="width:3%"><col style="width:5.5%"><col style="width:7.1%">
                             <col style="width:6.6%"><col style="width:7.3%"><col style="width:7.3%"><col style="width:7.2%">
                         </colgroup>
                         <thead><tr>
-                            <th>Tanggal</th><th>No. Nota</th><th>Customer</th><th>Produk</th><th>Keterangan</th>
+                            <th>No</th><th>Tanggal</th><th>No. Nota</th><th>Customer</th><th>Produk</th><th>Keterangan</th>
                             <th>Pj.</th><th>Leb.</th><th>Qty</th><th>Harga</th><th>Sub Total</th>
                             <th>Diskon</th><th>Total</th><th>Tunai</th><th>Kredit</th>
                         </tr></thead>
@@ -81,6 +81,7 @@
                                 @foreach ($note->lines->isEmpty() ? collect([null]) : $note->lines as $line)
                                     <tr>
                                         @if ($loop->first)
+                                            <td class="center note-cell" rowspan="{{ $span }}">{{ $loop->parent->iteration }}</td>
                                             <td class="center note-cell" rowspan="{{ $span }}">{{ \Carbon\Carbon::parse($note->date)->format('d-m-Y') }}</td>
                                             <td class="doc note-cell" rowspan="{{ $span }}">@foreach ($note->invoices as $number)<div>{{ $number }}</div>@endforeach</td>
                                             <td class="note-cell" rowspan="{{ $span }}">{{ $note->customer }}</td>
@@ -102,10 +103,10 @@
                                 @endforeach
                             </tbody>
                         @empty
-                            <tbody><tr><td colspan="14" class="center" style="padding:28px">Belum ada nota lunas atau tagihan customer VIP pada bulan ini.</td></tr></tbody>
+                            <tbody><tr><td colspan="15" class="center" style="padding:28px">Belum ada nota lunas atau tagihan customer VIP pada bulan ini.</td></tr></tbody>
                         @endforelse
                         <tbody class="grand-total font-bold"><tr>
-                            <td colspan="9" class="number">Grand Total :</td>
+                            <td colspan="10" class="number">Grand Total :</td>
                             <td class="number">{{ $fmt($totals->subtotal) }}</td>
                             <td class="number">{{ $fmt($totals->discount) }}</td>
                             <td class="number">{{ $fmt($totals->total) }}</td>

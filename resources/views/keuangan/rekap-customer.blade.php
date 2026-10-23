@@ -44,13 +44,13 @@
                     <div style="overflow-x: auto;">
                         <table class="table" style="min-width: 900px;">
                             <thead>
-                                <tr>
+                                <tr><th style="width:36px;">No</th>
                                     <th>Customer</th><th>Kode</th><th>Jumlah Order</th><th style="text-align: right;">Total Nilai Order</th><th style="text-align: right;">Total Dibayar</th><th style="text-align: right;">Sisa (Piutang)</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @forelse ($rows as $row)
-                                    <tr>
+                                    <tr><td style="text-align:center;white-space:nowrap;">{{ $loop->iteration }}</td>
                                         <td style="font-family: var(--font-heading); font-weight: 600;">{{ ucwords(mb_strtolower($row['nama'])) }}</td>
                                         <td class="text-muted">
                                             {{ $row['kode'] }}
@@ -62,7 +62,7 @@
                                         <td style="text-align: right; {{ $row['total_piutang'] > 0 ? 'color: #991b1b;' : '' }}">{{ $row['total_piutang'] > 0 ? $fmt($row['total_piutang']) : '-' }}</td>
                                     </tr>
                                 @empty
-                                    <tr><td colspan="6" class="text-muted" style="text-align: center; padding: var(--space-6);">Tidak ada customer dengan nama/kode "{{ $search }}".</td></tr>
+                                    <tr><td colspan="7" class="text-muted" style="text-align: center; padding: var(--space-6);">Tidak ada customer dengan nama/kode "{{ $search }}".</td></tr>
                                 @endforelse
                             </tbody>
                         </table>

@@ -41,15 +41,15 @@
                     <p class="text-sm">Dari Tanggal: {{ \Carbon\Carbon::parse($from)->translatedFormat('d F Y') }} s/d {{ \Carbon\Carbon::parse($to)->translatedFormat('d F Y') }}</p>
                 </div>
                 <table>
-                    <thead><tr><th>NAMA PRODUK</th><th class="number">JUMLAH</th></tr></thead>
+                    <thead><tr><th style="width:36px;">No</th><th>NAMA PRODUK</th><th class="number">JUMLAH</th></tr></thead>
                     <tbody>
                     @forelse ($rows as $row)
-                        <tr><td>{{ $row->product }}</td><td class="number">{{ number_format($row->quantity, 0, ',', '.') }}</td></tr>
+                        <tr><td style="text-align:center;white-space:nowrap;">{{ $loop->iteration }}</td><td>{{ $row->product }}</td><td class="number">{{ number_format($row->quantity, 0, ',', '.') }}</td></tr>
                     @empty
-                        <tr><td colspan="2" class="text-center" style="padding:28px">Belum ada transaksi kertas POD pada periode ini.</td></tr>
+                        <tr><td colspan="3" class="text-center" style="padding:28px">Belum ada transaksi kertas POD pada periode ini.</td></tr>
                     @endforelse
                     </tbody>
-                    <tfoot class="font-bold"><tr><td>TOTAL</td><td class="number">{{ number_format($total, 0, ',', '.') }}</td></tr></tfoot>
+                    <tfoot class="font-bold"><tr><td colspan="2">TOTAL</td><td class="number">{{ number_format($total, 0, ',', '.') }}</td></tr></tfoot>
                 </table>
             </section>
         </div>

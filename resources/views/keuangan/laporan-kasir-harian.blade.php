@@ -92,7 +92,7 @@
                 <div class="ledger-wrap">
                     <table class="ledger">
                         <thead>
-                            <tr>
+                            <tr><th style="width:36px;">No</th>
                                 <th class="time">Tanggal &amp; Jam</th>
                                 <th class="invoice">No. Nota</th>
                                 <th>Keterangan</th>
@@ -102,7 +102,7 @@
                         </thead>
                         <tbody>
                             @foreach ($rows as $row)
-                                <tr>
+                                <tr><td style="text-align:center;white-space:nowrap;">{{ $loop->iteration }}</td>
                                     <td class="time">{{ $row['occurred_at']->format('d/m/Y H:i') }}</td>
                                     <td class="invoice">{{ $row['no_nota'] ?: '' }}</td>
                                     <td>{{ $row['keterangan'] }}</td>
@@ -113,12 +113,12 @@
                         </tbody>
                         <tfoot>
                             <tr class="totals">
-                                <td colspan="3" style="text-align:right;">TOTAL:</td>
+                                <td colspan="4" style="text-align:right;">TOTAL:</td>
                                 <td class="money">{{ $number($totalDebet) }}</td>
                                 <td class="money">{{ $number($totalKredit) }}</td>
                             </tr>
                             <tr class="balance">
-                                <td colspan="4" style="text-align:right;">SALDO KAS:</td>
+                                <td colspan="5" style="text-align:right;">SALDO KAS:</td>
                                 <td class="money">{{ $number($saldoKas) }}</td>
                             </tr>
                         </tfoot>

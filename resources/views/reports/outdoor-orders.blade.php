@@ -61,23 +61,26 @@
                 <h2 class="mb-2 text-sm font-bold uppercase">Laporan Order {{ $group->label }}</h2>
             <div class="overflow-x-auto kolom-11"><table>
                 <colgroup>
-                    <col style="width:7%"><col style="width:10%"><col style="width:10%"><col style="width:7%"><col style="width:9%">
+                    <col style="width:3%"><col style="width:7%"><col style="width:9%"><col style="width:9%"><col style="width:7%"><col style="width:8%">
                     <col style="width:10%"><col style="width:8%"><col style="width:6%"><col style="width:6%"><col style="width:4%">
                     <col style="width:8%"><col style="width:8%"><col style="width:7%">
                 </colgroup>
-                <thead><tr><th>Tanggal</th><th>No. Order</th><th>No. Nota</th><th>Operator</th><th>Customer</th><th>Produk</th><th>Judul</th><th>Pj.</th><th>Lebar</th><th>Qty</th><th>Total</th><th>Uang Muka</th><th>Status</th></tr></thead>
-                <tbody>@forelse($group->rows as $row)<tr>
+                <thead><tr><th>No</th><th>Tanggal</th><th>No. Order</th><th>No. Nota</th><th>Operator</th><th>Customer</th><th>Produk</th><th>Judul</th><th>Pj.</th><th>Lebar</th><th>Qty</th><th>Total</th><th>Uang Muka</th><th>Status</th></tr></thead>
+                {{-- Nomor urut per order (bukan per item), melanjutkan nomor halaman sebelumnya. --}}
+                @php($orderNo = (! $printAll && $group->paginator) ? max(0, ($group->paginator->firstItem() ?? 1) - 1) : 0)
+                <tbody>@forelse($group->rows as $row)@if($row->first)@php($orderNo++)@endif<tr>
+                    <td class="number" style="text-align:center">{{ $row->first ? $orderNo : '' }}</td>
                     <td class="date">{{ $row->first ? \Carbon\Carbon::parse($row->date)->format('d-m-Y') : '' }}</td><td class="code">{{ $row->first ? $row->order : '' }}</td><td class="code">{{ $row->first ? $row->invoice : '' }}</td>
                     <td>{{ $row->first ? $row->operator : '' }}</td><td>{{ $row->first ? $row->customer : '' }}</td><td>{{ $row->product }}</td><td>{{ $row->title }}</td>
                     <td class="number">{{ number_format((float)$row->length,2,',','.') }}</td><td class="number">{{ number_format((float)$row->width,2,',','.') }}</td><td class="number">{{ number_format((float)$row->qty,0,',','.') }}</td>
                     <td class="number">{{ $row->first ? number_format($row->total,0,',','.') : '' }}</td><td class="number">{{ $row->first ? number_format($row->advance,0,',','.') : '' }}</td><td class="status">{{ $row->first ? $row->status : '' }}</td>
-                </tr>@empty<tr><td colspan="13" style="padding:28px;text-align:center">Belum ada order {{ $group->label }} pada periode ini.</td></tr>@endforelse</tbody>
+                </tr>@empty<tr><td colspan="14" style="padding:28px;text-align:center">Belum ada order {{ $group->label }} pada periode ini.</td></tr>@endforelse</tbody>
                 {{-- Total ditaruh di tbody (bukan tfoot) agar tidak tercetak berulang di setiap halaman kertas. --}}
                 <tbody class="font-bold">
                     @if (! $printAll && $group->paginator->lastPage() > 1)
-                        <tr><td colspan="10" class="number">TOTAL HALAMAN {{ $group->paginator->currentPage() }} DARI {{ $group->paginator->lastPage() }}</td><td class="number">{{ number_format($group->grandTotal,0,',','.') }}</td><td class="number">{{ number_format($group->totalAdvance,0,',','.') }}</td><td></td></tr>
+                        <tr><td colspan="11" class="number">TOTAL HALAMAN {{ $group->paginator->currentPage() }} DARI {{ $group->paginator->lastPage() }}</td><td class="number">{{ number_format($group->grandTotal,0,',','.') }}</td><td class="number">{{ number_format($group->totalAdvance,0,',','.') }}</td><td></td></tr>
                     @endif
-                    <tr style="background:#f1ece0"><td colspan="10" class="number">TOTAL PERIODE {{ strtoupper($group->label) }}{{ ' · '.strtoupper($statusOptions[$selectedStatus]) }} ({{ number_format($group->periodCount,0,',','.') }} order)</td><td class="number">{{ number_format($group->periodTotal,0,',','.') }}</td><td class="number">{{ number_format($group->periodPaid,0,',','.') }}</td><td></td></tr>
+                    <tr style="background:#f1ece0"><td colspan="11" class="number">TOTAL PERIODE {{ strtoupper($group->label) }}{{ ' · '.strtoupper($statusOptions[$selectedStatus]) }} ({{ number_format($group->periodCount,0,',','.') }} order)</td><td class="number">{{ number_format($group->periodTotal,0,',','.') }}</td><td class="number">{{ number_format($group->periodPaid,0,',','.') }}</td><td></td></tr>
                 </tbody>
             </table></div>
                 @if ($group->rows->contains('status', 'Batal (sisa)'))

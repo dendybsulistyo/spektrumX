@@ -27,9 +27,9 @@
         <section class="bg-white p-5 shadow-sm">
             <div class="mb-4"><h1 class="text-base font-bold">REKAP POTONGAN PENJUALAN - SPEKTRUM</h1><p class="text-sm font-semibold">Periode: {{ \Carbon\Carbon::parse($from)->translatedFormat('d F Y') }} s/d {{ \Carbon\Carbon::parse($to)->translatedFormat('d F Y') }}</p></div>
             <table>
-                <thead><tr><th>Tanggal</th><th>No. Order</th><th>Customer</th><th>Jenis</th><th>Nilai Awal</th><th>Potongan</th><th>Nilai Akhir</th></tr></thead>
-                <tbody>@forelse($rows as $row)<tr><td style="text-align:center;">{{ \Carbon\Carbon::parse($row->date)->format('d-m-Y') }}</td><td>{{ $row->order }}</td><td>{{ $row->customer }}</td><td>{{ $row->category }}</td><td class="number">{{ number_format($row->initial,0,',','.') }}</td><td class="number">{{ number_format($row->discount,0,',','.') }}</td><td class="number">{{ number_format($row->final,0,',','.') }}</td></tr>@empty<tr><td colspan="7" style="padding:28px;text-align:center;">Tidak ada potongan penjualan pada periode ini.</td></tr>@endforelse</tbody>
-                <tfoot><tr><td colspan="5" class="number"><strong>Total Potongan</strong></td><td class="number"><strong>{{ number_format($totalDiscount,0,',','.') }}</strong></td><td></td></tr></tfoot>
+                <thead><tr><th style="width:36px;">No</th><th>Tanggal</th><th>No. Order</th><th>Customer</th><th>Jenis</th><th>Nilai Awal</th><th>Potongan</th><th>Nilai Akhir</th></tr></thead>
+                <tbody>@forelse($rows as $row)<tr><td style="text-align:center;white-space:nowrap;">{{ $loop->iteration }}</td><td style="text-align:center;">{{ \Carbon\Carbon::parse($row->date)->format('d-m-Y') }}</td><td>{{ $row->order }}</td><td>{{ $row->customer }}</td><td>{{ $row->category }}</td><td class="number">{{ number_format($row->initial,0,',','.') }}</td><td class="number">{{ number_format($row->discount,0,',','.') }}</td><td class="number">{{ number_format($row->final,0,',','.') }}</td></tr>@empty<tr><td colspan="8" style="padding:28px;text-align:center;">Tidak ada potongan penjualan pada periode ini.</td></tr>@endforelse</tbody>
+                <tfoot><tr><td colspan="6" class="number"><strong>Total Potongan</strong></td><td class="number"><strong>{{ number_format($totalDiscount,0,',','.') }}</strong></td><td></td></tr></tfoot>
             </table>
         </section>
     </div></div>
