@@ -25,10 +25,16 @@
         .date-filter { display: flex; gap: 8px; align-items: center; max-width: 297mm; margin: 0 auto 12px; font-size: 12px; }
         .date-filter input, .date-filter select { padding: 6px 8px; border: 1px solid #bbb; border-radius: 4px; }
         button { border: 0; border-radius: 5px; padding: 9px 16px; color: #fff; background: #172033; font-weight: 700; cursor: pointer; }
-        /* Rekap harian Back Office: huruf satu tingkat lebih besar dari cetakan Bungkus. */
-        body.daily-recap { font-size: 11px; }
-        body.daily-recap th { font-size: 10px; }
-        body.daily-recap h1 { font-size: 15px; }
+        /* Rekap harian Back Office: gaya cetakan manual — huruf besar, baris rapat, garis tipis. */
+        body.daily-recap { font-size: 13px; }
+        body.daily-recap h1 { font-size: 17px; }
+        body.daily-recap .heading p { font-size: 13px; }
+        body.daily-recap th, body.daily-recap td { padding: 2px 5px; border-color: #b5b5b5; line-height: 1.25; }
+        body.daily-recap th { font-size: 13px; font-weight: 700; background: #fff; border-bottom: 1.5px solid #555; }
+        body.daily-recap .notes, body.daily-recap .signature { height: auto; }
+        body.daily-recap td.number { text-align: left; }
+        /* Satu baris per item seperti cetakan manual; teks yang terlalu panjang dipotong. */
+        body.daily-recap th, body.daily-recap td { white-space: nowrap; overflow: hidden; text-overflow: clip; overflow-wrap: normal; }
         @media print {
             @page { size: A4 landscape; margin: 8mm; }
             body { padding: 0; background: #fff; font-size: 8.5px; }
@@ -37,8 +43,11 @@
             thead { display: table-header-group; }
             tr { break-inside: avoid; page-break-inside: avoid; }
             th, td { padding: 3px 4px; }
-            body.daily-recap { font-size: 9.5px; }
-            body.daily-recap th { font-size: 8.5px; }
+            body.daily-recap { font-size: 9.5pt; }
+            body.daily-recap th { font-size: 9.5pt; }
+            body.daily-recap h1 { font-size: 13pt; }
+            body.daily-recap .heading p { font-size: 10pt; }
+            body.daily-recap th, body.daily-recap td { padding: 1px 4px; }
         }
     </style>
 </head>
@@ -78,13 +87,13 @@
         <table>
             <colgroup>
                 @if ($isIndoor)
-                    <col style="width: 12%"><col style="width: 15%"><col style="width: 17%"><col style="width: 20%">
-                    <col style="width: 8%"><col style="width: 5%"><col style="width: 10%"><col style="width: 7%"><col style="width: 6%">
+                    <col style="width: 12.5%"><col style="width: 15%"><col style="width: 17%"><col style="width: 21%">
+                    <col style="width: 7.5%"><col style="width: 3.5%"><col style="width: 11.5%"><col style="width: 8%"><col style="width: 4%">
                 @elseif ($isDailyRecap)
                     {{-- Rekap harian: kolom Gabungan sendiri. --}}
-                    <col style="width: 11%"><col style="width: 12%"><col style="width: 15%"><col style="width: 8%">
-                    <col style="width: 4%"><col style="width: 10%"><col style="width: 12%"><col style="width: 12%">
-                    @if ($showNotes)<col style="width: 10%">@endif<col style="width: 6%">
+                    <col style="width: 12%"><col style="width: 13.5%"><col style="width: 17.5%"><col style="width: 6.5%">
+                    <col style="width: 3%"><col style="width: 9.5%"><col style="width: 13%"><col style="width: 14%">
+                    @if ($showNotes)<col style="width: 7%">@endif<col style="width: 4%">
                 @elseif ($showNotes)
                     <col style="width: 12%"><col style="width: 14%"><col style="width: 18%"><col style="width: 9%">
                     <col style="width: 5%"><col style="width: 12%"><col style="width: 14%"><col style="width: 11%"><col style="width: 5%">
@@ -97,7 +106,7 @@
                 @if ($isIndoor)
                 <tr>
                     <th>No. Order</th><th>Customer</th><th>Produk</th><th>Judul</th><th>Ukuran</th>
-                    <th>Qty</th><th>Divisi</th><th>Keterangan</th><th>Paraf / TTD</th>
+                    <th>Qty</th><th>Divisi</th><th>Keterangan</th><th>{{ $isDailyRecap ? 'Paraf' : 'Paraf / TTD' }}</th>
                 </tr>
                 @else
                 <tr>
@@ -105,7 +114,7 @@
                     <th>Qty</th><th>Printer</th><th>Bahan</th>
                     @if ($isDailyRecap)<th>Gabungan</th>@endif
                     @if ($showNotes)<th>Keterangan</th>@endif
-                    <th>Paraf / TTD</th>
+                    <th>{{ $isDailyRecap ? 'Paraf' : 'Paraf / TTD' }}</th>
                 </tr>
                 @endif
             </thead>
