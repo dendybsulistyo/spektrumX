@@ -163,6 +163,11 @@ Route::middleware('auth')->group(function () {
         Route::get('/report/order-customer-piutang', [ReportController::class, 'creditOrdersByCustomer'])->name('report.credit-orders-by-customer');
     });
 
+    // Back Office / QC memantau order tanpa akses menu keuangan.
+    Route::middleware('permission.any:keuangan.view,laporan-order.view')->group(function () {
+        Route::get('/report/order-outdoor', [ReportController::class, 'outdoorOrders'])->name('report.outdoor-orders');
+    });
+
     Route::middleware('permission.any:keuangan.view,kasir.laporan-kasir-harian.view')->group(function () {
         Route::get('/keuangan/laporan-kasir-harian', [KeuanganController::class, 'laporanKasirHarian'])->name('keuangan.laporan-kasir-harian');
         Route::get('/keuangan/laporan-kasir-harian/excel', [KeuanganController::class, 'exportLaporanKasirHarianExcel'])->name('keuangan.laporan-kasir-harian.excel');
@@ -173,7 +178,6 @@ Route::middleware('auth')->group(function () {
         Route::get('/report/omzet-pod', [ReportController::class, 'podTurnover'])->name('report.pod-turnover');
         Route::get('/report/omzet-ctp', [ReportController::class, 'ctpTurnover'])->name('report.ctp-turnover');
         Route::get('/report/omzet-ctp-total', [ReportController::class, 'ctpTurnoverTotal'])->name('report.ctp-turnover-total');
-        Route::get('/report/order-outdoor', [ReportController::class, 'outdoorOrders'])->name('report.outdoor-orders');
         Route::get('/report/order-customer-lunas', [ReportController::class, 'paidOrdersByCustomer'])->name('report.paid-orders-by-customer');
         Route::get('/report/nota-invoice-customer', [ReportController::class, 'allOrdersByCustomer'])->name('report.all-orders-by-customer');
         Route::get('/report/order-belum-invoice', [ReportController::class, 'uninvoicedOrders'])->name('report.uninvoiced-orders');
