@@ -37,15 +37,15 @@
     </style>
 </head>
 @php
-    $showNotes = ! request()->has('keterangan') || request()->boolean('keterangan');
     // $recapDate diisi = rekap harian Back Office (per tanggal order); kosong = antrean Bungkus.
     $isDailyRecap = isset($recapDate);
+    // Rekap harian: Keterangan selalu ada & kosong, untuk dicoret operator saat cek fisik.
+    $showNotes = $isDailyRecap || ! request()->has('keterangan') || request()->boolean('keterangan');
 @endphp
 <body class="{{ $showNotes ? '' : 'compact' }}">
     @if ($isDailyRecap)
         <form method="GET" class="date-filter">
             <label>Tanggal order <input type="date" name="tanggal" value="{{ $recapDate }}"></label>
-            <input type="hidden" name="keterangan" value="{{ $showNotes ? 1 : 0 }}">
             <button type="submit">Tampilkan</button>
         </form>
     @endif
@@ -95,7 +95,7 @@
                         $previousOrderNumber = $orderNumber;
                         $printerCode = $item->printerCode();
                         $materialCode = $item->bahanCode();
-                        $notes = collect([$item->jenis_finishing, $isDailyRecap ? null : $item->gabungan])->filter()->join(' · ');
+                        $notes = $isDailyRecap ? '' : collect([$item->jenis_finishing, $item->gabungan])->filter()->join(' · ');
                     @endphp
                     <tr>
                         <td class="number">{{ $showOrderNumber ? ($orderNumber ?? '-') : '' }}</td>
