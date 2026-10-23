@@ -9,6 +9,7 @@ use App\Models\HargaCetakOutdoor;
 use App\Models\OrderArtwork;
 use App\Models\OrderIndoor;
 use App\Models\OrderOutdoor;
+use App\Models\OrderOutdoorDetail;
 use App\Models\OrderPayment;
 use App\Models\PrinterOutdoor;
 use App\Services\OrderDocumentService;
@@ -309,6 +310,30 @@ class ReportController extends Controller
         return view('reports.ctp-turnover-total', [
             'from' => $from, 'to' => $to, 'rows' => $rows,
             'totalOrders' => (int) $rows->sum('orders'),
+        ]);
+    }
+
+    /**
+     * Rekap Order Outdoor harian untuk Back Office: semua item outdoor menurut
+     * tanggal order (bukan hanya antrean Bungkus), tanpa kolom uang. Memakai
+     * lembar cetak yang sama dengan antrean Bungkus.
+     */
+    public function outdoorOrderRecap(Request $request): View
+    {
+        $date = $request->date('tanggal')?->format('Y-m-d') ?? now()->format('Y-m-d');
+        $items = OrderOutdoorDetail::query()
+            ->with('order.customer')
+            ->whereHas('order', fn ($order) => $order->whereDate('TglOrder', $date)->where('status', '!=', 'batal'))
+            ->get()
+            ->sortBy(fn ($item) => ($item->order?->NoOrder ?? '').'|'.str_pad((string) $item->id, 10, '0', STR_PAD_LEFT))
+            ->values();
+
+        return view('order-bungkus.print-outdoor', [
+            'items' => $items,
+            'printerNames' => PrinterOutdoor::pluck('NmPrn', 'KdPrn'),
+            'materialNames' => BahanCetakOutdoor::pluck('NmBhn', 'NoCetak'),
+            'printedAt' => now(),
+            'recapDate' => $date,
         ]);
     }
 

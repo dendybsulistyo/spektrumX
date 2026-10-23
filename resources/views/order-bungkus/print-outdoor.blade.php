@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Rekap Order Outdoor - {{ $printedAt->format('d-m-Y') }}</title>
+    <title>Rekap Order Outdoor - {{ isset($recapDate) ? \Carbon\Carbon::parse($recapDate)->format('d-m-Y') : $printedAt->format('d-m-Y') }}</title>
     <x-app-favicon />
     <style>
         * { box-sizing: border-box; }
@@ -22,25 +22,42 @@
         .compact .signature { height: 18px; }
         .empty { padding: 28px; text-align: center; color: #666; }
         .actions { max-width: 297mm; margin: 12px auto 0; text-align: right; }
+        .date-filter { display: flex; gap: 8px; align-items: center; max-width: 297mm; margin: 0 auto 12px; font-size: 12px; }
+        .date-filter input { padding: 6px 8px; border: 1px solid #bbb; border-radius: 4px; }
         button { border: 0; border-radius: 5px; padding: 9px 16px; color: #fff; background: #172033; font-weight: 700; cursor: pointer; }
         @media print {
             @page { size: A4 landscape; margin: 8mm; }
             body { padding: 0; background: #fff; font-size: 8.5px; }
             .sheet { max-width: none; min-height: auto; padding: 0; box-shadow: none; }
-            .actions { display: none; }
+            .actions, .date-filter { display: none; }
             thead { display: table-header-group; }
             tr { break-inside: avoid; page-break-inside: avoid; }
             th, td { padding: 3px 4px; }
         }
     </style>
 </head>
-@php $showNotes = ! request()->has('keterangan') || request()->boolean('keterangan'); @endphp
+@php
+    $showNotes = ! request()->has('keterangan') || request()->boolean('keterangan');
+    // $recapDate diisi = rekap harian Back Office (per tanggal order); kosong = antrean Bungkus.
+    $isDailyRecap = isset($recapDate);
+@endphp
 <body class="{{ $showNotes ? '' : 'compact' }}">
+    @if ($isDailyRecap)
+        <form method="GET" class="date-filter">
+            <label>Tanggal order <input type="date" name="tanggal" value="{{ $recapDate }}"></label>
+            <input type="hidden" name="keterangan" value="{{ $showNotes ? 1 : 0 }}">
+            <button type="submit">Tampilkan</button>
+        </form>
+    @endif
     <main class="sheet">
         <div class="heading">
             <div>
                 <h1>Rekap Order Outdoor</h1>
-                <p>Tanggal cetak: {{ $printedAt->format('d-m-Y H:i') }}</p>
+                @if ($isDailyRecap)
+                    <p>Tanggal: {{ \Carbon\Carbon::parse($recapDate)->format('d-m-Y') }}</p>
+                @else
+                    <p>Tanggal cetak: {{ $printedAt->format('d-m-Y H:i') }}</p>
+                @endif
             </div>
             <p>Total: {{ $items->count() }} item</p>
         </div>
@@ -79,14 +96,14 @@
                         <td>{{ $item->order?->customer?->NmCust ? ucwords(mb_strtolower($item->order->customer->NmCust)) : '-' }}</td>
                         <td>{{ $item->NmFile ?: '-' }}</td>
                         <td class="number">{{ rtrim(rtrim(number_format((float) $item->Panjang, 2, ',', '.'), '0'), ',') }} × {{ rtrim(rtrim(number_format((float) $item->Lebar, 2, ',', '.'), '0'), ',') }}</td>
-                        <td class="qty">{{ $item->qtyAt('bungkus') }}</td>
+                        <td class="qty">{{ $isDailyRecap ? $item->Qty : $item->qtyAt('bungkus') }}</td>
                         <td>{{ $printerNames[$printerCode] ?? $printerCode ?? '-' }}</td>
                         <td>{{ $materialNames[$materialCode] ?? $materialCode ?? '-' }}</td>
                         @if ($showNotes)<td class="notes">{{ $notes ?: '' }}</td>@endif
                         <td class="notes signature"></td>
                     </tr>
                 @empty
-                    <tr><td colspan="{{ $showNotes ? 9 : 8 }}" class="empty">Tidak ada order Outdoor dalam antrean Bungkus.</td></tr>
+                    <tr><td colspan="{{ $showNotes ? 9 : 8 }}" class="empty">{{ $isDailyRecap ? 'Tidak ada order Outdoor pada tanggal ini.' : 'Tidak ada order Outdoor dalam antrean Bungkus.' }}</td></tr>
                 @endforelse
             </tbody>
         </table>

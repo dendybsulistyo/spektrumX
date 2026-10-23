@@ -166,6 +166,7 @@ Route::middleware('auth')->group(function () {
     // Back Office / QC memantau order tanpa akses menu keuangan.
     Route::middleware('permission.any:keuangan.view,laporan-order.view')->group(function () {
         Route::get('/report/order-outdoor', [ReportController::class, 'outdoorOrders'])->name('report.outdoor-orders');
+        Route::get('/report/rekap-order-outdoor', [ReportController::class, 'outdoorOrderRecap'])->name('report.outdoor-recap');
     });
 
     Route::middleware('permission.any:keuangan.view,kasir.laporan-kasir-harian.view')->group(function () {
