@@ -8,6 +8,7 @@ use App\Models\FinalSalesDiscount;
 use App\Models\HargaCetakOutdoor;
 use App\Models\OrderArtwork;
 use App\Models\OrderIndoor;
+use App\Models\OrderIndoorDetail;
 use App\Models\OrderOutdoor;
 use App\Models\OrderOutdoorDetail;
 use App\Models\OrderPayment;
@@ -314,15 +315,17 @@ class ReportController extends Controller
     }
 
     /**
-     * Rekap Order Outdoor harian untuk Back Office: semua item outdoor menurut
+     * Rekap Order harian (outdoor/indoor) untuk Back Office: semua item menurut
      * tanggal order (bukan hanya antrean Bungkus), tanpa kolom uang. Memakai
      * lembar cetak yang sama dengan antrean Bungkus.
      */
     public function outdoorOrderRecap(Request $request): View
     {
         $date = $request->date('tanggal')?->format('Y-m-d') ?? now()->format('Y-m-d');
-        $items = OrderOutdoorDetail::query()
-            ->with('order.customer')
+        $type = $request->query('jenis') === 'indoor' ? 'indoor' : 'outdoor';
+        $items = ($type === 'indoor'
+                ? OrderIndoorDetail::query()->with(['order.customer', 'produk.kategori', 'produkArtwork.kategori'])
+                : OrderOutdoorDetail::query()->with('order.customer'))
             ->whereHas('order', fn ($order) => $order->whereDate('TglOrder', $date)->where('status', '!=', 'batal'))
             ->get()
             ->sortBy(fn ($item) => ($item->order?->NoOrder ?? '').'|'.str_pad((string) $item->id, 10, '0', STR_PAD_LEFT))
@@ -334,6 +337,7 @@ class ReportController extends Controller
             'materialNames' => BahanCetakOutdoor::pluck('NmBhn', 'NoCetak'),
             'printedAt' => now(),
             'recapDate' => $date,
+            'recapType' => $type,
         ]);
     }
 

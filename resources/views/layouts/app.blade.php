@@ -473,7 +473,7 @@
                                             @endif
                                             @if (Auth::user()->hasPermission('laporan-order.view') && ! $menuAkun)
                                                 <a href="{{ route('report.outdoor-orders') }}" class="{{ $dropdownLink(request()->routeIs('report.outdoor-orders')) }}">Laporan Order</a>
-                                                <a href="{{ route('report.outdoor-recap') }}" target="_blank" class="{{ $dropdownLink(false) }}">Rekap Order Outdoor (cetak)</a>
+                                                <a href="{{ route('report.outdoor-recap') }}" target="_blank" class="{{ $dropdownLink(false) }}">Rekap Order Harian (cetak)</a>
                                             @endif
                                             @can('customer-service.view')
                                                 <a href="{{ route('customer-service.payment-queue') }}" class="{{ $dropdownLink(request()->routeIs('customer-service.payment-queue')) }}">Customer Service</a>
@@ -785,7 +785,7 @@
                             @endif
                             @if (Auth::user()->hasPermission('laporan-order.view') && ! $menuAkun)
                                 <a href="{{ route('report.outdoor-orders') }}" class="{{ $mobileLink(request()->routeIs('report.outdoor-orders')) }}">Laporan Order</a>
-                                <a href="{{ route('report.outdoor-recap') }}" target="_blank" class="{{ $mobileLink(false) }}">Rekap Order Outdoor (cetak)</a>
+                                <a href="{{ route('report.outdoor-recap') }}" target="_blank" class="{{ $mobileLink(false) }}">Rekap Order Harian (cetak)</a>
                             @endif
                             @can('customer-service.view')
                                 <a href="{{ route('customer-service.payment-queue') }}" class="{{ $mobileLink(request()->routeIs('customer-service.payment-queue')) }}">Customer Service</a>

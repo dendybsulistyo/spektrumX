@@ -48,7 +48,7 @@
                     <a href="{{ request()->fullUrlWithoutQuery(['semua_halaman']) }}" class="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700">&larr; Kembali per halaman</a>
                     <button type="button" onclick="window.print()" class="rounded-md bg-slate-800 px-4 py-2 text-sm font-semibold text-white">Cetak Landscape</button>
                 @else
-                    <a href="{{ route('report.outdoor-recap') }}" target="_blank" rel="noopener" class="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700">Rekap Order Outdoor Harian</a>
+                    <a href="{{ route('report.outdoor-recap') }}" target="_blank" rel="noopener" class="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700">Rekap Order Harian (cetak)</a>
                     <button type="button" onclick="window.print()" class="rounded-md border border-slate-800 bg-white px-4 py-2 text-sm font-semibold text-slate-800">Cetak Halaman Ini</button>
                     <a href="{{ request()->fullUrlWithQuery(['semua_halaman' => 1, 'page' => null]) }}" class="rounded-md bg-slate-800 px-4 py-2 text-sm font-semibold text-white">Cetak Semua Halaman</a>
                 @endif

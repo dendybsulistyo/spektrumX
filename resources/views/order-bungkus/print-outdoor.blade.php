@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Rekap Order Outdoor - {{ isset($recapDate) ? \Carbon\Carbon::parse($recapDate)->format('d-m-Y') : $printedAt->format('d-m-Y') }}</title>
+    <title>Rekap Order {{ ($recapType ?? 'outdoor') === 'indoor' ? 'Indoor' : 'Outdoor' }} - {{ isset($recapDate) ? \Carbon\Carbon::parse($recapDate)->format('d-m-Y') : $printedAt->format('d-m-Y') }}</title>
     <x-app-favicon />
     <style>
         * { box-sizing: border-box; }
@@ -23,7 +23,7 @@
         .empty { padding: 28px; text-align: center; color: #666; }
         .actions { max-width: 297mm; margin: 12px auto 0; text-align: right; }
         .date-filter { display: flex; gap: 8px; align-items: center; max-width: 297mm; margin: 0 auto 12px; font-size: 12px; }
-        .date-filter input { padding: 6px 8px; border: 1px solid #bbb; border-radius: 4px; }
+        .date-filter input, .date-filter select { padding: 6px 8px; border: 1px solid #bbb; border-radius: 4px; }
         button { border: 0; border-radius: 5px; padding: 9px 16px; color: #fff; background: #172033; font-weight: 700; cursor: pointer; }
         @media print {
             @page { size: A4 landscape; margin: 8mm; }
@@ -39,12 +39,19 @@
 @php
     // $recapDate diisi = rekap harian Back Office (per tanggal order); kosong = antrean Bungkus.
     $isDailyRecap = isset($recapDate);
+    $isIndoor = ($recapType ?? 'outdoor') === 'indoor';
     // Rekap harian: Keterangan selalu ada & kosong, untuk dicoret operator saat cek fisik.
     $showNotes = $isDailyRecap || ! request()->has('keterangan') || request()->boolean('keterangan');
 @endphp
 <body class="{{ $showNotes ? '' : 'compact' }}">
     @if ($isDailyRecap)
         <form method="GET" class="date-filter">
+            <label>Jenis
+                <select name="jenis">
+                    <option value="outdoor" @selected(! $isIndoor)>Outdoor</option>
+                    <option value="indoor" @selected($isIndoor)>Indoor</option>
+                </select>
+            </label>
             <label>Tanggal order <input type="date" name="tanggal" value="{{ $recapDate }}"></label>
             <button type="submit">Tampilkan</button>
         </form>
@@ -52,7 +59,7 @@
     <main class="sheet">
         <div class="heading">
             <div>
-                <h1>Rekap Order Outdoor</h1>
+                <h1>Rekap Order {{ $isIndoor ? 'Indoor' : 'Outdoor' }}</h1>
                 @if ($isDailyRecap)
                     <p>Tanggal: {{ \Carbon\Carbon::parse($recapDate)->format('d-m-Y') }}</p>
                 @else
@@ -64,7 +71,10 @@
 
         <table>
             <colgroup>
-                @if ($isDailyRecap)
+                @if ($isIndoor)
+                    <col style="width: 12%"><col style="width: 15%"><col style="width: 17%"><col style="width: 20%">
+                    <col style="width: 8%"><col style="width: 5%"><col style="width: 10%"><col style="width: 7%"><col style="width: 6%">
+                @elseif ($isDailyRecap)
                     {{-- Rekap harian: kolom Gabungan sendiri. --}}
                     <col style="width: 11%"><col style="width: 12%"><col style="width: 15%"><col style="width: 8%">
                     <col style="width: 4%"><col style="width: 10%"><col style="width: 12%"><col style="width: 12%">
@@ -78,6 +88,12 @@
                 @endif
             </colgroup>
             <thead>
+                @if ($isIndoor)
+                <tr>
+                    <th>No. Order</th><th>Customer</th><th>Produk</th><th>Judul</th><th>Ukuran</th>
+                    <th>Qty</th><th>Divisi</th><th>Keterangan</th><th>Paraf / TTD</th>
+                </tr>
+                @else
                 <tr>
                     <th>No. Order</th><th>Customer</th><th>Nama File</th><th>Ukuran</th>
                     <th>Qty</th><th>Printer</th><th>Bahan</th>
@@ -85,6 +101,7 @@
                     @if ($showNotes)<th>Keterangan</th>@endif
                     <th>Paraf / TTD</th>
                 </tr>
+                @endif
             </thead>
             <tbody>
                 @php $previousOrderNumber = null; @endphp
@@ -93,13 +110,22 @@
                         $orderNumber = $item->order?->NoOrder;
                         $showOrderNumber = $orderNumber !== $previousOrderNumber;
                         $previousOrderNumber = $orderNumber;
-                        $printerCode = $item->printerCode();
-                        $materialCode = $item->bahanCode();
+                        $printerCode = $isIndoor ? null : $item->printerCode();
+                        $materialCode = $isIndoor ? null : $item->bahanCode();
                         $notes = $isDailyRecap ? '' : collect([$item->jenis_finishing, $item->gabungan])->filter()->join(' · ');
                     @endphp
                     <tr>
                         <td class="number">{{ $showOrderNumber ? ($orderNumber ?? '-') : '' }}</td>
                         <td>{{ $item->order?->customer?->NmCust ? ucwords(mb_strtolower($item->order->customer->NmCust)) : '-' }}</td>
+                        @if ($isIndoor)
+                        <td>{{ $item->NmProd ?: ($item->produk?->NmProd ?: '-') }}</td>
+                        <td>{{ $item->Judul ?: '-' }}</td>
+                        <td class="number">{{ (float) $item->Panjang > 0 || (float) $item->Lebar > 0 ? rtrim(rtrim(number_format((float) $item->Panjang, 2, ',', '.'), '0'), ',').' × '.rtrim(rtrim(number_format((float) $item->Lebar, 2, ',', '.'), '0'), ',') : '-' }}</td>
+                        <td class="qty">{{ $item->Qty }}</td>
+                        <td>{{ $item->divisionName() ?? '-' }}</td>
+                        <td class="notes"></td>
+                        <td class="notes signature"></td>
+                        @else
                         <td>{{ $item->NmFile ?: '-' }}</td>
                         <td class="number">{{ rtrim(rtrim(number_format((float) $item->Panjang, 2, ',', '.'), '0'), ',') }} × {{ rtrim(rtrim(number_format((float) $item->Lebar, 2, ',', '.'), '0'), ',') }}</td>
                         <td class="qty">{{ $isDailyRecap ? $item->Qty : $item->qtyAt('bungkus') }}</td>
@@ -108,9 +134,10 @@
                         @if ($isDailyRecap)<td>{{ $item->gabungan ?: '' }}</td>@endif
                         @if ($showNotes)<td class="notes">{{ $notes ?: '' }}</td>@endif
                         <td class="notes signature"></td>
+                        @endif
                     </tr>
                 @empty
-                    <tr><td colspan="{{ ($showNotes ? 9 : 8) + ($isDailyRecap ? 1 : 0) }}" class="empty">{{ $isDailyRecap ? 'Tidak ada order Outdoor pada tanggal ini.' : 'Tidak ada order Outdoor dalam antrean Bungkus.' }}</td></tr>
+                    <tr><td colspan="{{ $isIndoor ? 9 : ($showNotes ? 9 : 8) + ($isDailyRecap ? 1 : 0) }}" class="empty">{{ $isDailyRecap ? 'Tidak ada order '.($isIndoor ? 'Indoor' : 'Outdoor').' pada tanggal ini.' : 'Tidak ada order Outdoor dalam antrean Bungkus.' }}</td></tr>
                 @endforelse
             </tbody>
         </table>
