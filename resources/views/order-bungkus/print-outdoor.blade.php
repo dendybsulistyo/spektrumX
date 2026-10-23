@@ -64,7 +64,12 @@
 
         <table>
             <colgroup>
-                @if ($showNotes)
+                @if ($isDailyRecap)
+                    {{-- Rekap harian: kolom Gabungan sendiri. --}}
+                    <col style="width: 11%"><col style="width: 12%"><col style="width: 15%"><col style="width: 8%">
+                    <col style="width: 4%"><col style="width: 10%"><col style="width: 12%"><col style="width: 12%">
+                    @if ($showNotes)<col style="width: 10%">@endif<col style="width: 6%">
+                @elseif ($showNotes)
                     <col style="width: 12%"><col style="width: 14%"><col style="width: 18%"><col style="width: 9%">
                     <col style="width: 5%"><col style="width: 12%"><col style="width: 14%"><col style="width: 11%"><col style="width: 5%">
                 @else
@@ -76,6 +81,7 @@
                 <tr>
                     <th>No. Order</th><th>Customer</th><th>Nama File</th><th>Ukuran</th>
                     <th>Qty</th><th>Printer</th><th>Bahan</th>
+                    @if ($isDailyRecap)<th>Gabungan</th>@endif
                     @if ($showNotes)<th>Keterangan</th>@endif
                     <th>Paraf / TTD</th>
                 </tr>
@@ -89,7 +95,7 @@
                         $previousOrderNumber = $orderNumber;
                         $printerCode = $item->printerCode();
                         $materialCode = $item->bahanCode();
-                        $notes = collect([$item->jenis_finishing, $item->gabungan])->filter()->join(' · ');
+                        $notes = collect([$item->jenis_finishing, $isDailyRecap ? null : $item->gabungan])->filter()->join(' · ');
                     @endphp
                     <tr>
                         <td class="number">{{ $showOrderNumber ? ($orderNumber ?? '-') : '' }}</td>
@@ -99,11 +105,12 @@
                         <td class="qty">{{ $isDailyRecap ? $item->Qty : $item->qtyAt('bungkus') }}</td>
                         <td>{{ $printerNames[$printerCode] ?? $printerCode ?? '-' }}</td>
                         <td>{{ $materialNames[$materialCode] ?? $materialCode ?? '-' }}</td>
+                        @if ($isDailyRecap)<td>{{ $item->gabungan ?: '' }}</td>@endif
                         @if ($showNotes)<td class="notes">{{ $notes ?: '' }}</td>@endif
                         <td class="notes signature"></td>
                     </tr>
                 @empty
-                    <tr><td colspan="{{ $showNotes ? 9 : 8 }}" class="empty">{{ $isDailyRecap ? 'Tidak ada order Outdoor pada tanggal ini.' : 'Tidak ada order Outdoor dalam antrean Bungkus.' }}</td></tr>
+                    <tr><td colspan="{{ ($showNotes ? 9 : 8) + ($isDailyRecap ? 1 : 0) }}" class="empty">{{ $isDailyRecap ? 'Tidak ada order Outdoor pada tanggal ini.' : 'Tidak ada order Outdoor dalam antrean Bungkus.' }}</td></tr>
                 @endforelse
             </tbody>
         </table>
