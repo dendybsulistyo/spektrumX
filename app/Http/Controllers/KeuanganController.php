@@ -290,19 +290,6 @@ class KeuanganController extends Controller
         // bergerak); ditampilkan bersama pembayaran tagihannya.
         $discountRows = collect();
 
-        if (! $seededRows->contains(fn (array $row) => $row['user_id'] === null)) {
-            $openingBalance = $this->openingCashBalance($tanggal);
-            $seededRows->prepend([
-                'user_id' => null,
-                'kasir' => '-',
-                'no_nota' => null,
-                'keterangan' => 'Saldo Awal',
-                'debet' => max(0, $openingBalance),
-                'kredit' => max(0, -$openingBalance),
-                'sort' => '0-opening',
-            ]);
-        }
-
         $rows = $seededRows->concat($paymentRows)->concat($discountRows)
             ->when($kasirId, fn (Collection $rows) => $rows->filter(
                 fn (array $row) => $row['user_id'] === null || (int) $row['user_id'] === $kasirId
@@ -651,65 +638,6 @@ class KeuanganController extends Controller
     }
 
     /**
-     * Membawa saldo penutupan terakhir sebagai saldo awal tanggal berikutnya.
-     * Baris Saldo Awal manual menjadi checkpoint; setelah itu hanya mutasi
-     * tunai yang menambah/mengurangi uang di laci kas.
-     */
-    private function openingCashBalance(string $date): float
-    {
-        $checkpointDate = CashDailyEntry::query()
-            ->whereNull('user_id')
-            ->whereRaw('LOWER(keterangan) = ?', ['saldo awal'])
-            ->whereDate('tanggal', '<', $date)
-            ->max('tanggal');
-
-        if (! $checkpointDate) {
-            return 0.0;
-        }
-
-        $checkpoint = (float) CashDailyEntry::query()
-            ->whereNull('user_id')
-            ->whereRaw('LOWER(keterangan) = ?', ['saldo awal'])
-            ->whereDate('tanggal', $checkpointDate)
-            ->sum(DB::raw('debet - kredit'));
-
-        $manualMovement = (float) CashDailyEntry::query()
-            ->whereDate('tanggal', '>=', $checkpointDate)
-            ->whereDate('tanggal', '<', $date)
-            ->where(fn ($query) => $query->whereNotNull('user_id')
-                ->orWhereRaw('LOWER(keterangan) <> ?', ['saldo awal']))
-            ->sum(DB::raw('debet - kredit'));
-
-        $cashDiscounts = $this->cashDiscountAllocations();
-        $paymentMovement = (float) OrderPayment::query()
-            ->where('created_at', '>=', $checkpointDate.' 00:00:00')
-            ->where('created_at', '<', $date.' 00:00:00')
-            ->get(['id', 'jumlah', 'cara_bayar'])
-            ->sum(function (OrderPayment $payment) use ($cashDiscounts) {
-                // Potongan nota tunai dihitung di pembayaran notanya (lihat bawah).
-                $amount = (float) $payment->jumlah + ($cashDiscounts['refund'][$payment->id] ?? 0.0);
-
-                // Refund keluar dari kas hanya bila tunai; refund via
-                // bank/QRIS/debit tidak menyentuh laci kas.
-                if ($amount < 0) {
-                    return in_array($payment->cara_bayar, self::NON_CASH_METHODS, true) ? 0.0 : $amount;
-                }
-
-                return $payment->cara_bayar === 'tunai' ? $amount : 0.0;
-            });
-
-        $cashDiscountMovement = 0.0;
-        foreach ($cashDiscounts['receipt'] as $id => $portion) {
-            $at = $cashDiscounts['receipt_at'][$id];
-            if ($at >= $checkpointDate.' 00:00:00' && $at < $date.' 00:00:00') {
-                $cashDiscountMovement -= $portion;
-            }
-        }
-
-        return $checkpoint + $manualMovement + $paymentMovement + $cashDiscountMovement;
-    }
-
-    /**
      * Rekap gabungan aktivitas kasir menurut jenis penerimaan. Filter kasir
      * tetap tersedia untuk audit satu operator tanpa mengubah susunan laporan.
      */
@@ -787,18 +715,6 @@ class KeuanganController extends Controller
                     'sort' => '1-'.str_pad((string) $entry->urutan, 10, '0', STR_PAD_LEFT),
                 ];
             });
-
-        if (! $details->contains(fn (array $row) => $row['category'] === 'opening')) {
-            $openingBalance = $this->openingCashBalance($dari);
-            $details->prepend([
-                'category' => 'opening',
-                'description' => 'Saldo Awal',
-                'debit' => max(0, $openingBalance),
-                'credit' => max(0, -$openingBalance),
-                'user_id' => null,
-                'sort' => '0-opening',
-            ]);
-        }
 
         // Potongan Penjualan Akhir tidak ditampilkan di Rekap Kasir: baris
         // penerimaan langsung berisi uang yang benar-benar diterima.
@@ -1081,21 +997,6 @@ class KeuanganController extends Controller
                     'sort' => $occurredAt->format('YmdHis').'-0-'.str_pad((string) $entry->urutan, 10, '0', STR_PAD_LEFT),
                 ];
             });
-
-        if (! $manualRows->contains(fn (array $row) => $row['user_id'] === null && strcasecmp($row['keterangan'], 'Saldo Awal') === 0)) {
-            $opening = $this->openingCashBalance($tanggal);
-            $occurredAt = Carbon::parse($tanggal)->startOfDay();
-            $manualRows->prepend([
-                'occurred_at' => $occurredAt,
-                'no_nota' => null,
-                'keterangan' => 'Saldo Awal',
-                'debet' => max(0, $opening),
-                'kredit' => max(0, -$opening),
-                'kasir' => null,
-                'user_id' => null,
-                'sort' => $occurredAt->format('YmdHis').'-0-0000000000',
-            ]);
-        }
 
         $payments = OrderPayment::with('user')
             ->whereDate('created_at', $tanggal)
