@@ -13,11 +13,9 @@
         .uninvoiced-report table.rekap-table th { white-space:normal; vertical-align:middle; }
         .uninvoiced-report table.rekap-table td { overflow-wrap:anywhere; }
         .uninvoiced-report table.rekap-table td.number, .uninvoiced-report table.rekap-table td.document-number { overflow-wrap:normal; }
-        .nota-items summary { cursor:pointer; color:#1d4ed8; white-space:nowrap; }
-        .nota-items ol { margin:3px 0 0; padding-left:16px; list-style:decimal; }
-        .nota-items li { margin-bottom:3px; }
-        .nota-items li span { display:block; color:#475569; }
-        .nota-items .nota-item-calc { white-space:nowrap; }
+        .uninvoiced-report .nota-group td.nota-cell { background:#fff; }
+        .uninvoiced-report .nota-group { break-inside:avoid; }
+        .uninvoiced-report .nota-group tr + tr td.line { border-top-style:dotted; }
         .uninvoiced-report .filter-panel { margin-bottom:8px; padding:8px; gap:8px; border-radius:4px; }
         .uninvoiced-report .filter-panel form { gap:8px; }
         .uninvoiced-report .filter-panel label { font-size:13px; font-weight:600; }
@@ -50,16 +48,17 @@
                 <p class="text-sm">Bulan: {{ \Carbon\Carbon::parse($from)->translatedFormat('F Y') }}</p>
             </div>
             <div class="rekap-wrap"><table class="rekap-table">
-                <colgroup><col style="width:4%"><col style="width:8%"><col style="width:12%"><col style="width:14%"><col style="width:9%"><col style="width:23%"><col style="width:8%"><col style="width:7%"><col style="width:8%"><col style="width:7%"></colgroup>
-                <thead><tr><th>No</th><th>Tanggal</th><th>No. Sales Order</th><th>Customer</th><th>Penerima</th><th>Item</th><th>Sub Total</th><th>Diskon</th><th>Total</th><th>Uang Muka</th></tr></thead>
-                <tbody>@forelse($rows->groupBy('sales_order') as $items)@php($nota = $items->first())<tr>
-                    <td class="number" style="text-align:center">{{ $loop->iteration }}</td>
-                    <td>{{ \Carbon\Carbon::parse($nota->date)->format('d-m-Y') }}</td><td class="document-number"><div>{{ $nota->sales_order }}</div></td>
-                    <td>{{ $nota->customer }}</td><td>{{ $nota->recipient }}</td>
-                    <td>@include('reports.partials.nota-items', ['items' => $items])</td>
-                    <td class="number">{{ number_format($items->sum('subtotal'),0,',','.') }}</td><td class="number">{{ number_format($items->sum('discount'),0,',','.') }}</td><td class="number">{{ number_format($items->sum('total'),0,',','.') }}</td><td class="number">{{ number_format($items->sum('advance'),0,',','.') }}</td>
-                </tr>@empty<tr><td colspan="10" style="padding:28px;text-align:center">Tidak ada order yang belum di-invoice pada periode ini.</td></tr>@endforelse</tbody>
-                <tfoot class="font-bold"><tr><td colspan="6" class="number">Grand Total:</td><td class="number">{{ number_format($totals->subtotal,0,',','.') }}</td><td class="number">{{ number_format($totals->discount,0,',','.') }}</td><td class="number">{{ number_format($totals->total,0,',','.') }}</td><td class="number">{{ number_format($totals->advance,0,',','.') }}</td></tr></tfoot>
+                <colgroup><col style="width:3%"><col style="width:6%"><col style="width:9.5%"><col style="width:9.5%"><col style="width:6%"><col style="width:10%"><col style="width:9.5%"><col style="width:4.5%"><col style="width:4.5%"><col style="width:3.5%"><col style="width:5.5%"><col style="width:7%"><col style="width:6%"><col style="width:7%"><col style="width:8.5%"></colgroup>
+                <thead><tr><th>No</th><th>Tanggal</th><th>No. Sales Order</th><th>Customer</th><th>Penerima</th><th>Nama Produk</th><th>Keterangan</th><th>Pj.</th><th>Leb.</th><th>Qty</th><th>Harga</th><th>Sub Total</th><th>Diskon</th><th>Total</th><th>Uang Muka</th></tr></thead>
+                {{-- Dikelompokkan per nota: kolom nota & total digabung (rowspan), item tampil per baris. --}}
+                @forelse($rows->groupBy('sales_order') as $items)@php($nota = $items->first())@php($span = $items->count())<tbody class="nota-group">@foreach($items as $item)<tr>
+                    @if($loop->first)<td class="number nota-cell" style="text-align:center" rowspan="{{ $span }}">{{ $loop->parent->iteration }}</td><td class="nota-cell" rowspan="{{ $span }}">{{ \Carbon\Carbon::parse($nota->date)->format('d-m-Y') }}</td><td class="document-number nota-cell" rowspan="{{ $span }}"><div>{{ $nota->sales_order }}</div></td><td class="nota-cell" rowspan="{{ $span }}">{{ $nota->customer }}</td><td class="nota-cell" rowspan="{{ $span }}">{{ $nota->recipient }}</td>@endif
+                    <td class="line">{{ $item->product }}</td><td class="line">{{ $item->description }}</td>
+                    <td class="number line">{{ number_format((float)$item->length,2,',','.') }}</td><td class="number line">{{ number_format((float)$item->width,2,',','.') }}</td><td class="number line">{{ number_format((float)$item->qty,0,',','.') }}</td>
+                    <td class="number line">{{ $item->price !== null ? number_format($item->price,0,',','.') : '-' }}</td><td class="number line">{{ number_format($item->subtotal,0,',','.') }}</td>
+                    @if($loop->first)<td class="number nota-cell" rowspan="{{ $span }}">{{ number_format($items->sum('discount'),0,',','.') }}</td><td class="number nota-cell" rowspan="{{ $span }}">{{ number_format($items->sum('total'),0,',','.') }}</td><td class="number nota-cell" rowspan="{{ $span }}">{{ number_format($items->sum('advance'),0,',','.') }}</td>@endif
+                </tr>@endforeach</tbody>@empty<tbody><tr><td colspan="15" style="padding:28px;text-align:center">Tidak ada order yang belum di-invoice pada periode ini.</td></tr></tbody>@endforelse
+                <tfoot class="font-bold"><tr><td colspan="11" class="number">Grand Total:</td><td class="number">{{ number_format($totals->subtotal,0,',','.') }}</td><td class="number">{{ number_format($totals->discount,0,',','.') }}</td><td class="number">{{ number_format($totals->total,0,',','.') }}</td><td class="number">{{ number_format($totals->advance,0,',','.') }}</td></tr></tfoot>
             </table></div>
         </section>
     </div></div>

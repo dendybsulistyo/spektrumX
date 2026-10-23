@@ -10,11 +10,9 @@
         .daily-report .number { text-align:right; white-space:nowrap; }
         .daily-report .center { text-align:center; }
         .daily-report .document-number { min-width:108px; white-space:nowrap; }
-        .nota-items summary { cursor:pointer; color:#1d4ed8; white-space:nowrap; }
-        .nota-items ol { margin:3px 0 0; padding-left:16px; list-style:decimal; }
-        .nota-items li { margin-bottom:3px; }
-        .nota-items li span { display:block; color:#475569; }
-        .nota-items .nota-item-calc { white-space:nowrap; }
+        .nota-group td.nota-cell { background:#fff; }
+        .nota-group { break-inside:avoid; }
+        .nota-group tr + tr td.line { border-top-style:dotted; }
         @media print {
             @page { size:A4 landscape; margin:8mm; }
             body { background:#fff !important; }
@@ -49,34 +47,47 @@
                 <div class="overflow-x-auto kolom-11 kolom-14">
                     <table>
                         <thead><tr>
-                            <th>No</th><th>Tanggal SO</th><th>No. INV</th><th>Customer</th><th>Status Nota</th><th>Item</th>
-                            <th>Sub Total</th><th>Diskon</th><th>Total</th><th>Tunai</th><th>Kredit</th>
+                            <th>No</th><th>Tanggal SO</th><th>No. INV</th><th>Customer</th><th>Status Nota</th><th>Produk</th><th>Keterangan</th>
+                            <th>Pj.</th><th>Leb.</th><th>Qty</th><th>Harga</th><th>Sub Total</th>
+                            <th>Diskon</th><th>Total</th><th>Tunai</th><th>Kredit</th>
                         </tr></thead>
-                        <tbody>
+                        {{-- Dikelompokkan per nota: kolom nota & total digabung (rowspan), item tampil per baris. --}}
                         @forelse ($rows->groupBy('number') as $items)
                             @php($nota = $items->first())
-                            <tr>
-                                <td class="center">{{ $loop->iteration }}</td>
-                                <td class="center">{{ \Carbon\Carbon::parse($nota->date)->format('d-m-Y') }}</td>
-                                <td class="document-number">
-                                    @foreach ($nota->invoices as $number)<div>{{ $number }}</div>@endforeach
-                                    <div style="font-size:.8em;color:#6b7280;">SO {{ $nota->number }}</div>
-                                </td>
-                                <td>{{ $nota->customer }}</td>
-                                <td class="center">{{ $nota->note_status }}</td>
-                                <td>@include('reports.partials.nota-items', ['items' => $items])</td>
-                                <td class="number">{{ number_format($items->sum('subtotal'), 0, ',', '.') }}</td>
-                                <td class="number">{{ $items->sum('discount') > 0 ? number_format($items->sum('discount'), 0, ',', '.') : '-' }}</td>
-                                <td class="number">{{ number_format($items->sum('total'), 0, ',', '.') }}</td>
-                                <td class="number">{{ $items->sum('cash') > 0 ? number_format($items->sum('cash'), 0, ',', '.') : '-' }}</td>
-                                <td class="number">{{ $items->sum('credit') > 0 ? number_format($items->sum('credit'), 0, ',', '.') : '-' }}</td>
-                            </tr>
+                            @php($span = $items->count())
+                            <tbody class="nota-group">
+                            @foreach ($items as $item)
+                                <tr>
+                                    @if ($loop->first)
+                                        <td class="center nota-cell" rowspan="{{ $span }}">{{ $loop->parent->iteration }}</td>
+                                        <td class="center nota-cell" rowspan="{{ $span }}">{{ \Carbon\Carbon::parse($nota->date)->format('d-m-Y') }}</td>
+                                        <td class="document-number nota-cell" rowspan="{{ $span }}">
+                                            @foreach ($nota->invoices as $number)<div>{{ $number }}</div>@endforeach
+                                            <div style="font-size:.8em;color:#6b7280;">SO {{ $nota->number }}</div>
+                                        </td>
+                                        <td class="nota-cell" rowspan="{{ $span }}">{{ $nota->customer }}</td>
+                                        <td class="center nota-cell" rowspan="{{ $span }}">{{ $nota->note_status }}</td>
+                                    @endif
+                                    <td class="line">{{ $item->product }}</td><td class="line">{{ $item->description }}</td>
+                                    <td class="number line">{{ number_format((float) $item->length, 2, ',', '.') }}</td>
+                                    <td class="number line">{{ number_format((float) $item->width, 2, ',', '.') }}</td>
+                                    <td class="number line">{{ number_format((float) $item->qty, 0, ',', '.') }}</td>
+                                    <td class="number line">{{ $item->price !== null ? number_format($item->price, 0, ',', '.') : '-' }}</td>
+                                    <td class="number line">{{ number_format($item->subtotal, 0, ',', '.') }}</td>
+                                    @if ($loop->first)
+                                        <td class="number nota-cell" rowspan="{{ $span }}">{{ $items->sum('discount') > 0 ? number_format($items->sum('discount'), 0, ',', '.') : '-' }}</td>
+                                        <td class="number nota-cell" rowspan="{{ $span }}">{{ number_format($items->sum('total'), 0, ',', '.') }}</td>
+                                        <td class="number nota-cell" rowspan="{{ $span }}">{{ $items->sum('cash') > 0 ? number_format($items->sum('cash'), 0, ',', '.') : '-' }}</td>
+                                        <td class="number nota-cell" rowspan="{{ $span }}">{{ $items->sum('credit') > 0 ? number_format($items->sum('credit'), 0, ',', '.') : '-' }}</td>
+                                    @endif
+                                </tr>
+                            @endforeach
+                            </tbody>
                         @empty
-                            <tr><td colspan="11" class="center" style="padding:28px">{{ ['lunas' => 'Belum ada nota lunas pada tanggal ini.', 'tagihan' => 'Belum ada tagihan customer VIP pada tanggal ini.'][$kind] ?? 'Belum ada nota lunas atau tagihan customer VIP pada tanggal ini.' }}</td></tr>
+                            <tbody><tr><td colspan="16" class="center" style="padding:28px">{{ ['lunas' => 'Belum ada nota lunas pada tanggal ini.', 'tagihan' => 'Belum ada tagihan customer VIP pada tanggal ini.'][$kind] ?? 'Belum ada nota lunas atau tagihan customer VIP pada tanggal ini.' }}</td></tr></tbody>
                         @endforelse
-                        </tbody>
                         <tfoot class="font-bold"><tr>
-                            <td colspan="6" class="number">Grand Total:</td>
+                            <td colspan="11" class="number">Grand Total:</td>
                             <td class="number">{{ number_format($totals->subtotal, 0, ',', '.') }}</td>
                             <td class="number">{{ number_format($totals->discount, 0, ',', '.') }}</td>
                             <td class="number">{{ number_format($totals->total, 0, ',', '.') }}</td>

@@ -14,11 +14,9 @@
         .customer-paid-report table.rekap-table td { padding:4px 5px; overflow-wrap:anywhere; }
         .customer-paid-report table.rekap-table td.number { overflow-wrap:normal; }
         .customer-paid-report table.rekap-table tfoot td { padding:5px; }
-        .nota-items summary { cursor:pointer; color:#1d4ed8; white-space:nowrap; }
-        .nota-items ol { margin:3px 0 0; padding-left:16px; list-style:decimal; }
-        .nota-items li { margin-bottom:3px; }
-        .nota-items li span { display:block; color:#475569; }
-        .nota-items .nota-item-calc { white-space:nowrap; }
+        .customer-paid-report .nota-group td.nota-cell { background:#fff; }
+        .customer-paid-report .nota-group { break-inside:avoid; }
+        .customer-paid-report .nota-group tr + tr td.line { border-top-style:dotted; }
         @media print {
             @page { size:A4 landscape; margin:7mm; }
             body { background:#fff !important; } header,nav,.no-print { display:none !important; } main { padding:0 !important; }
@@ -81,15 +79,17 @@
                 <p class="text-sm font-semibold">Customer: {{ $selectedCustomer?->NmCust ?? 'Pilih customer terlebih dahulu' }}</p>
                 <p class="text-sm">{{ \Carbon\Carbon::parse($from)->translatedFormat('d F Y') }} s/d {{ \Carbon\Carbon::parse($to)->translatedFormat('d F Y') }}</p></div>
             <div class="rekap-wrap"><table class="rekap-table">
-                <colgroup><col style="width:4%"><col style="width:8%"><col style="width:13%"><col style="width:27%"><col style="width:8%"><col style="width:7%"><col style="width:8%"><col style="width:8.5%"><col style="width:8.5%"><col style="width:8%"></colgroup>
-                <thead><tr><th>No</th><th>Tanggal</th><th>No. INV</th><th>Item</th><th>Sub Total</th><th>Diskon</th><th>Total</th><th>Uang Muka</th><th>Bayar</th><th>Kredit</th></tr></thead>
-                <tbody>@forelse($rows->groupBy('invoice') as $items)@php($nota = $items->first())<tr>
-                    <td class="number" style="text-align:center">{{ $loop->iteration }}</td>
-                    <td>{{ \Carbon\Carbon::parse($nota->date)->format('d-m-Y') }}</td><td>{{ $nota->invoice }}</td>
-                    <td>@include('reports.partials.nota-items', ['items' => $items])</td>
-                    <td class="number">{{ number_format($items->sum('subtotal'),0,',','.') }}</td><td class="number">{{ number_format($items->sum('discount'),0,',','.') }}</td><td class="number">{{ number_format($items->sum('total'),0,',','.') }}</td><td class="number">{{ number_format($items->sum('advance'),0,',','.') }}</td><td class="number">{{ number_format($items->sum('payment'),0,',','.') }}</td><td class="number">{{ number_format($items->sum('credit'),0,',','.') }}</td>
-                </tr>@empty<tr><td colspan="10" style="padding:28px;text-align:center">{{ $selectedCustomer ? 'Tidak ada order ber-invoice pada periode ini.' : 'Pilih customer untuk menampilkan laporan.' }}</td></tr>@endforelse</tbody>
-                <tfoot class="font-bold"><tr><td colspan="4" class="number">Grand Total:</td><td class="number">{{ number_format($totals->subtotal,0,',','.') }}</td><td class="number">{{ number_format($totals->discount,0,',','.') }}</td><td class="number">{{ number_format($totals->total,0,',','.') }}</td><td class="number">{{ number_format($totals->advance,0,',','.') }}</td><td class="number">{{ number_format($totals->payment,0,',','.') }}</td><td class="number">{{ number_format($totals->credit,0,',','.') }}</td></tr></tfoot>
+                <colgroup><col style="width:3%"><col style="width:6.5%"><col style="width:10%"><col style="width:11%"><col style="width:10%"><col style="width:4.5%"><col style="width:4.5%"><col style="width:3.5%"><col style="width:6%"><col style="width:7%"><col style="width:6%"><col style="width:7%"><col style="width:7%"><col style="width:7%"><col style="width:7%"></colgroup>
+                <thead><tr><th>No</th><th>Tanggal</th><th>No. INV</th><th>Nama Produk</th><th>Keterangan</th><th>Pj.</th><th>Leb.</th><th>Qty</th><th>Harga</th><th>Sub Total</th><th>Diskon</th><th>Total</th><th>Uang Muka</th><th>Bayar</th><th>Kredit</th></tr></thead>
+                {{-- Dikelompokkan per nota: kolom nota & total digabung (rowspan), item tampil per baris. --}}
+                @forelse($rows->groupBy('invoice') as $items)@php($nota = $items->first())@php($span = $items->count())<tbody class="nota-group">@foreach($items as $item)<tr>
+                    @if($loop->first)<td class="number nota-cell" style="text-align:center" rowspan="{{ $span }}">{{ $loop->parent->iteration }}</td><td class="nota-cell" rowspan="{{ $span }}">{{ \Carbon\Carbon::parse($nota->date)->format('d-m-Y') }}</td><td class="nota-cell" rowspan="{{ $span }}">{{ $nota->invoice }}</td>@endif
+                    <td class="line">{{ $item->product }}</td><td class="line">{{ $item->description }}</td>
+                    <td class="number line">{{ number_format((float)$item->length,2,',','.') }}</td><td class="number line">{{ number_format((float)$item->width,2,',','.') }}</td><td class="number line">{{ number_format((float)$item->qty,0,',','.') }}</td>
+                    <td class="number line">{{ $item->price !== null ? number_format($item->price,0,',','.') : '-' }}</td><td class="number line">{{ number_format($item->subtotal,0,',','.') }}</td>
+                    @if($loop->first)<td class="number nota-cell" rowspan="{{ $span }}">{{ number_format($items->sum('discount'),0,',','.') }}</td><td class="number nota-cell" rowspan="{{ $span }}">{{ number_format($items->sum('total'),0,',','.') }}</td><td class="number nota-cell" rowspan="{{ $span }}">{{ number_format($items->sum('advance'),0,',','.') }}</td><td class="number nota-cell" rowspan="{{ $span }}">{{ number_format($items->sum('payment'),0,',','.') }}</td><td class="number nota-cell" rowspan="{{ $span }}">{{ number_format($items->sum('credit'),0,',','.') }}</td>@endif
+                </tr>@endforeach</tbody>@empty<tbody><tr><td colspan="15" style="padding:28px;text-align:center">{{ $selectedCustomer ? 'Tidak ada order ber-invoice pada periode ini.' : 'Pilih customer untuk menampilkan laporan.' }}</td></tr></tbody>@endforelse
+                <tfoot class="font-bold"><tr><td colspan="9" class="number">Grand Total:</td><td class="number">{{ number_format($totals->subtotal,0,',','.') }}</td><td class="number">{{ number_format($totals->discount,0,',','.') }}</td><td class="number">{{ number_format($totals->total,0,',','.') }}</td><td class="number">{{ number_format($totals->advance,0,',','.') }}</td><td class="number">{{ number_format($totals->payment,0,',','.') }}</td><td class="number">{{ number_format($totals->credit,0,',','.') }}</td></tr></tfoot>
             </table></div>
         </section>
     </div></div>
