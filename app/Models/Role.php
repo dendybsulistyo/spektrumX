@@ -138,7 +138,7 @@ class Role extends Model
             'monitoring-kinerja.view' => 'Lihat monitoring kinerja staf',
         ],
         'Laporan Order' => [
-            'laporan-order.view' => 'Lihat Laporan Order (indoor/outdoor) tanpa akses keuangan',
+            'laporan-order.view' => 'Cetak Rekap Order Harian indoor/outdoor (tanpa angka uang)',
         ],
         'Rekap Transaksi Bulanan' => [
             'rekap-bulanan.view' => 'Lihat Rekap Transaksi Bulanan (menu Analitik)',

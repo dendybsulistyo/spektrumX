@@ -472,7 +472,6 @@
                                                 <a href="{{ route('keuangan.laporan-kasir-harian') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.laporan-kasir-harian')) }}">Laporan Kasir Harian</a>
                                             @endif
                                             @if (Auth::user()->hasPermission('laporan-order.view') && ! $menuAkun)
-                                                <a href="{{ route('report.outdoor-orders') }}" class="{{ $dropdownLink(request()->routeIs('report.outdoor-orders')) }}">Laporan Order</a>
                                                 <a href="{{ route('report.outdoor-recap') }}" target="_blank" class="{{ $dropdownLink(false) }}">Rekap Order Harian (cetak)</a>
                                             @endif
                                             @can('customer-service.view')
@@ -784,7 +783,6 @@
                                 <a href="{{ route('keuangan.laporan-kasir-harian') }}" class="{{ $mobileLink(request()->routeIs('keuangan.laporan-kasir-harian')) }}">Laporan Kasir Harian</a>
                             @endif
                             @if (Auth::user()->hasPermission('laporan-order.view') && ! $menuAkun)
-                                <a href="{{ route('report.outdoor-orders') }}" class="{{ $mobileLink(request()->routeIs('report.outdoor-orders')) }}">Laporan Order</a>
                                 <a href="{{ route('report.outdoor-recap') }}" target="_blank" class="{{ $mobileLink(false) }}">Rekap Order Harian (cetak)</a>
                             @endif
                             @can('customer-service.view')

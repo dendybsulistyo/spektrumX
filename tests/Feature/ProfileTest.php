@@ -21,44 +21,18 @@ class ProfileTest extends TestCase
         $response->assertOk();
     }
 
-    public function test_profile_information_can_be_updated(): void
+    public function test_user_cannot_change_own_name_or_email(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create(['name' => 'Nama Asli', 'email' => 'asli@example.com']);
 
-        $response = $this
-            ->actingAs($user)
-            ->patch('/profile', [
-                'name' => 'Test User',
-                'email' => 'test@example.com',
-            ]);
-
-        $response
-            ->assertSessionHasNoErrors()
-            ->assertRedirect('/profile');
+        $this->actingAs($user)
+            ->patch('/profile', ['name' => 'Nama Baru', 'email' => 'baru@example.com'])
+            ->assertMethodNotAllowed();
 
         $user->refresh();
 
-        $this->assertSame('Test User', $user->name);
-        $this->assertSame('test@example.com', $user->email);
-        $this->assertNull($user->email_verified_at);
-    }
-
-    public function test_email_verification_status_is_unchanged_when_the_email_address_is_unchanged(): void
-    {
-        $user = User::factory()->create();
-
-        $response = $this
-            ->actingAs($user)
-            ->patch('/profile', [
-                'name' => 'Test User',
-                'email' => $user->email,
-            ]);
-
-        $response
-            ->assertSessionHasNoErrors()
-            ->assertRedirect('/profile');
-
-        $this->assertNotNull($user->refresh()->email_verified_at);
+        $this->assertSame('Nama Asli', $user->getRawOriginal('name'));
+        $this->assertSame('asli@example.com', $user->email);
     }
 
     public function test_user_can_delete_their_account(): void

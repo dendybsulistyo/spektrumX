@@ -108,7 +108,6 @@ Route::middleware('auth')->group(function () {
     Route::post('/status/{status}/balas', [UserStatusController::class, 'reply'])->name('status.reply');
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     // Hapus akun sendiri dinonaktifkan — akun dikelola admin.
 
     Route::middleware('permission.any:customers.view,customer-service.view,order-indoor.manage,order-outdoor.manage,order-artwork.manage')->group(function () {
@@ -163,9 +162,11 @@ Route::middleware('auth')->group(function () {
         Route::get('/report/order-customer-piutang', [ReportController::class, 'creditOrdersByCustomer'])->name('report.credit-orders-by-customer');
     });
 
-    // Back Office / QC memantau order tanpa akses menu keuangan.
-    Route::middleware('permission.any:keuangan.view,laporan-order.view')->group(function () {
+    Route::middleware('permission:keuangan.view')->group(function () {
         Route::get('/report/order-outdoor', [ReportController::class, 'outdoorOrders'])->name('report.outdoor-orders');
+    });
+    // Back Office / QC hanya mencetak Rekap Order Harian (tanpa angka uang).
+    Route::middleware('permission.any:keuangan.view,laporan-order.view')->group(function () {
         Route::get('/report/rekap-order-outdoor', [ReportController::class, 'outdoorOrderRecap'])->name('report.outdoor-recap');
     });
 
