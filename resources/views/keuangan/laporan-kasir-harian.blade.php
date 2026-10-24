@@ -58,7 +58,7 @@
                     <div class="field" style="width:220px;">
                         <label>Nama Kasir</label>
                         <select name="kasir" class="input">
-                            <option value="">Semua Kasir</option>
+                            @unless ($lockedToSelf)<option value="">Semua Kasir</option>@endunless
                             @foreach ($kasirUsers as $kasirUser)
                                 <option value="{{ $kasirUser->id }}" @selected($kasirId === $kasirUser->id)>{{ ucwords(mb_strtolower($kasirUser->name)) }}</option>
                             @endforeach

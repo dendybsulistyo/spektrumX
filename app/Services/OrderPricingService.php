@@ -29,6 +29,26 @@ class OrderPricingService
     /** Produk Indoor custom (DTF UV Sticker) yang harganya diisi manual oleh CS/Kasir. */
     public const INDOOR_CUSTOM_PRICE_CODES = ['1005', '1006'];
 
+    /** Divisi indoor yang seluruh produknya berharga satuan custom (21 = Consumable). */
+    public const INDOOR_CUSTOM_PRICE_DIVISIONS = ['21'];
+
+    private static ?array $indoorCustomPriceCodes = null;
+
+    /**
+     * Kode produk indoor berharga satuan custom: kode tetap + semua produk di
+     * divisi custom (mis. Consumable), sehingga produk Consumable baru ikut otomatis.
+     *
+     * @return array<int, string>
+     */
+    public static function indoorCustomPriceCodes(): array
+    {
+        return self::$indoorCustomPriceCodes ??= array_values(array_unique([
+            ...self::INDOOR_CUSTOM_PRICE_CODES,
+            ...Produk::query()->whereIn('KdDivs', self::INDOOR_CUSTOM_PRICE_DIVISIONS)
+                ->pluck('KdProd')->map(fn ($code) => (string) $code)->all(),
+        ]));
+    }
+
     private array $artworkCache = [];
 
     private array $outdoorSpecialPriceCache = [];
@@ -503,7 +523,7 @@ class OrderPricingService
         }
 
         return (string) $item->KdProd === '2001'
-            || in_array((string) $item->KdProd, self::INDOOR_CUSTOM_PRICE_CODES, true);
+            || in_array((string) $item->KdProd, self::indoorCustomPriceCodes(), true);
     }
 
     /**

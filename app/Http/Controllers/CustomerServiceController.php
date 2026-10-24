@@ -411,6 +411,6 @@ class CustomerServiceController extends Controller
     {
         return $order->items->filter(fn ($item) => ($item->isArtwork()
             && ($item->produkArtwork === null || (float) $item->produkArtwork->HargaStd <= 0))
-            || (! $item->isArtwork() && in_array((string) $item->KdProd, OrderPricingService::INDOOR_CUSTOM_PRICE_CODES, true)));
+            || (! $item->isArtwork() && in_array((string) $item->KdProd, OrderPricingService::indoorCustomPriceCodes(), true)));
     }
 }

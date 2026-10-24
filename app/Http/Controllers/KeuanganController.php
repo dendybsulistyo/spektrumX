@@ -18,6 +18,7 @@ use App\Models\PengaturanKeuangan;
 use App\Models\User;
 use App\Services\OrderDocumentService;
 use App\Services\ReceivableBatchPayment;
+use App\Support\FinanceMenuAccess;
 use App\Support\SimpleXlsx;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -975,6 +976,13 @@ class KeuanganController extends Controller
                     ->orWhereIn('id', $activityUserIds);
             })
             ->orderBy('name')->get(['id', 'name']);
+        // Kasir (akses lewat izin kasir.laporan-kasir-harian.view) hanya melihat aktivitasnya
+        // sendiri; pemegang menu keuangan (mis. Akuntansi) tetap melihat semua kasir.
+        $lockedToSelf = ! FinanceMenuAccess::allows($request->user(), 'keuangan.laporan-kasir-harian');
+        if ($lockedToSelf) {
+            $kasirId = (int) $request->user()->id;
+            $kasirUsers = User::query()->whereKey($kasirId)->get(['id', 'name']);
+        }
         $selectedKasir = $kasirId ? $kasirUsers->firstWhere('id', $kasirId) : null;
 
         $manualRows = CashDailyEntry::with('user')
@@ -1134,6 +1142,7 @@ class KeuanganController extends Controller
             'jumlahTransaksi' => $rows->whereNotNull('user_id')->count(),
             'kasirUsers' => $kasirUsers,
             'kasirId' => $kasirId,
+            'lockedToSelf' => $lockedToSelf,
             'selectedKasir' => $selectedKasir,
         ]);
     }
