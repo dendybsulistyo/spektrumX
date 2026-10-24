@@ -526,6 +526,9 @@
                                             @can('monitoring-kinerja.view')
                                                 <a href="{{ route('monitoring-kinerja.index') }}" class="{{ $dropdownLink(request()->routeIs('monitoring-kinerja.*')) }}">Monitoring Kinerja</a>
                                             @endcan
+                                            @can('roles.manage')
+                                                <a href="{{ route('rework-history.index') }}" class="{{ $dropdownLink(request()->routeIs('rework-history.*')) }}">Riwayat Ulang Proses</a>
+                                            @endcan
                                             @can('monitoring-transaksi.view')
                                                 <a href="{{ route('monitoring-transaksi.index') }}" class="{{ $dropdownLink(request()->routeIs('monitoring-transaksi.*')) }}">Monitoring Transaksi</a>
                                             @endcan
@@ -832,6 +835,9 @@
                             @endcan
                             @can('monitoring-kinerja.view')
                                 <a href="{{ route('monitoring-kinerja.index') }}" class="{{ $mobileLink(request()->routeIs('monitoring-kinerja.*')) }}">Monitoring Kinerja</a>
+                            @endcan
+                            @can('roles.manage')
+                                <a href="{{ route('rework-history.index') }}" class="{{ $mobileLink(request()->routeIs('rework-history.*')) }}">Riwayat Ulang Proses</a>
                             @endcan
                             @can('monitoring-transaksi.view')
                                 <a href="{{ route('monitoring-transaksi.index') }}" class="{{ $mobileLink(request()->routeIs('monitoring-transaksi.*')) }}">Monitoring Transaksi</a>

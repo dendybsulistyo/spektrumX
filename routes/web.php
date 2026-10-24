@@ -68,6 +68,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\QuickSearchController;
 use App\Http\Controllers\RekapPenerimaanController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\ReworkHistoryController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\ServerMonitorController;
 use App\Http\Controllers\SystemStatusController;
@@ -538,6 +539,11 @@ Route::middleware('auth')->group(function () {
     // consolidated view of data each type's routes already protect.
     Route::get('/pembatalan', [PembatalanController::class, 'index'])->name('pembatalan.index');
     Route::post('/order-rework/{type}/{id}', [OrderReworkController::class, 'store'])->name('order-rework.store');
+
+    // Riwayat ulang proses untuk admin.
+    Route::middleware('permission:roles.manage')->group(function () {
+        Route::get('/riwayat-ulang-proses', [ReworkHistoryController::class, 'index'])->name('rework-history.index');
+    });
 
     // Access controlled inside the controller (kasir.approve-diskon).
     Route::get('/approval-diskon', [DiskonApprovalController::class, 'index'])->name('diskon-approval.index');
