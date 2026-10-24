@@ -266,6 +266,7 @@
                                                 <a href="{{ route('akuntansi.hutang-supplier') }}" class="{{ $dropdownLink(request()->routeIs('akuntansi.hutang-supplier')) }}">Laporan Hutang Supplier</a>
                                                 <a href="{{ route('keuangan.piutang') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.piutang')) }}">Piutang</a>
                                                 <a href="{{ route('akuntansi.piutang-customer') }}" class="{{ $dropdownLink(request()->routeIs('akuntansi.piutang-customer')) }}">Buku Piutang Customer</a>
+                                                <a href="{{ route('akuntansi.jurnal-umum') }}" class="{{ $dropdownLink(request()->routeIs('akuntansi.jurnal-umum')) }}">Jurnal Umum</a>
                                                 <a href="{{ route('akuntansi.buku-besar') }}" class="{{ $dropdownLink(request()->routeIs('akuntansi.buku-besar')) }}">Buku Besar</a>
                                             </div>
                                             @endif
@@ -657,6 +658,7 @@
                                 <a href="{{ route('akuntansi.hutang-supplier') }}" class="{{ $mobileLink(request()->routeIs('akuntansi.hutang-supplier')) }}">Laporan Hutang Supplier</a>
                                 <a href="{{ route('keuangan.piutang') }}" class="{{ $mobileLink(request()->routeIs('keuangan.piutang')) }}">Piutang</a>
                                 <a href="{{ route('akuntansi.piutang-customer') }}" class="{{ $mobileLink(request()->routeIs('akuntansi.piutang-customer')) }}">Buku Piutang Customer</a>
+                                <a href="{{ route('akuntansi.jurnal-umum') }}" class="{{ $mobileLink(request()->routeIs('akuntansi.jurnal-umum')) }}">Jurnal Umum</a>
                                 <a href="{{ route('akuntansi.buku-besar') }}" class="{{ $mobileLink(request()->routeIs('akuntansi.buku-besar')) }}">Buku Besar</a>
                             @endif
                             @if ($menuAkun)

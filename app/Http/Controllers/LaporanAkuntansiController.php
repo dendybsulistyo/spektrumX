@@ -46,7 +46,18 @@ class LaporanAkuntansiController extends Controller
 
         $names = Akun::whereIn('NoAkun', $entries->pluck('NoAkun')->unique())->pluck('NmAkun', 'NoAkun');
 
-        return view('akuntansi.jurnal-umum', compact('dari', 'sampai', 'entries', 'names'));
+        // Akun pembantu: kode bantu supplier (accounting_suppliers) atau customer (KdCust).
+        $helperCodes = $entries->pluck('KdBantu')->filter()->unique()->values();
+        $helperNames = AccountingSupplier::whereIn('kode_bantu', $helperCodes)->pluck('nama', 'kode_bantu')
+            ->union(Customer::whereIn('KdCust', $helperCodes)->pluck('NmCust', 'KdCust'));
+
+        // Satu transaksi = baris ber-NoTrans sama; indikator Balance bila total debet = kredit.
+        $transactions = $entries->groupBy('NoTrans')->map(fn ($rows) => (object) [
+            'rows' => $rows->values(),
+            'balanced' => abs((float) $rows->sum('Debet') - (float) $rows->sum('Kredit')) < 0.5,
+        ])->values();
+
+        return view('akuntansi.jurnal-umum', compact('dari', 'sampai', 'entries', 'names', 'helperNames', 'transactions'));
     }
 
     public function bukuBesar(Request $request): View

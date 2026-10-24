@@ -30,6 +30,7 @@ class FinanceMenuAccess
         'order-indoor.request-cancel',
         'order-outdoor.request-cancel',
         'akuntansi.buku-besar',
+        'akuntansi.jurnal-umum',
     ];
 
     /** Semua halaman keuangan.view lainnya termasuk menu Akuntansi. */
