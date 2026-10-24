@@ -65,47 +65,37 @@
             <div class="blueprint" style="padding: var(--space-6);">
                 <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
                 <div style="overflow-x: auto;">
-                    <table class="table" style="min-width: 640px;">
+                    {{-- Format seperti Laporan Laba Rugi Excel: kode, nama, kolom rincian, kolom subtotal. --}}
+                    @php
+                        $amount = fn ($value) => abs((float) $value) < 0.5 ? '-' : ($value < 0 ? '(' : '').number_format(abs((float) $value), 0, ',', '.').($value < 0 ? ')' : '');
+                        $groups = [
+                            ['title' => 'Pendapatan', 'rows' => $pendapatan, 'total' => $totalPendapatan],
+                            ['title' => 'Harga Pokok Penjualan', 'rows' => $hpp, 'total' => $totalHpp, 'after' => ['Laba Kotor', $labaKotor]],
+                            ['title' => 'Biaya Operasional', 'rows' => $biayaUsaha, 'total' => $totalBiayaUsaha, 'after' => ['Laba Usaha', $labaUsaha]],
+                            ['title' => 'Pendapatan & Biaya Lain-lain', 'rows' => $pendapatanLain->concat($biayaLain), 'total' => $pendapatanLain->sum('saldo') - $biayaLain->sum('saldo')],
+                        ];
+                    @endphp
+                    <table class="table lr-sheet" style="min-width: 720px;">
                         <thead>
-                            <tr><th>Akun</th><th style="text-align: right;">Jumlah</th></tr>
+                            <tr><th style="width: 110px;">Kode Akun</th><th>Nama Akun</th><th colspan="2" style="text-align: center;">Jumlah (Rp)</th></tr>
                         </thead>
                         <tbody>
-                            <tr><td colspan="2" class="lr-group-title">Pendapatan</td></tr>
-                            @forelse ($pendapatan as $row)
-                                <tr><td class="text-muted">{{ $row['nama'] }}</td><td style="text-align: right;">{{ $fmt($row['saldo']) }}</td></tr>
-                            @empty
-                                <tr><td colspan="2" class="text-muted">Tidak ada aktivitas.</td></tr>
-                            @endforelse
-                            <tr class="lr-subtotal"><td>Total Pendapatan</td><td style="text-align: right;">{{ $fmt($totalPendapatan) }}</td></tr>
-
-                            <tr><td colspan="2" class="lr-group-title">Harga Pokok Produksi &amp; Penjualan</td></tr>
-                            @forelse ($hpp as $row)
-                                <tr><td class="text-muted">{{ $row['nama'] }}</td><td style="text-align: right;">{{ $fmt($row['saldo']) }}</td></tr>
-                            @empty
-                                <tr><td colspan="2" class="text-muted">Tidak ada aktivitas.</td></tr>
-                            @endforelse
-                            <tr class="lr-subtotal"><td>Total HPP</td><td style="text-align: right;">{{ $fmt($totalHpp) }}</td></tr>
-
-                            <tr class="lr-subtotal"><td>Laba Kotor</td><td style="text-align: right;" class="{{ $labaKotor < 0 ? 'lr-negative' : '' }}">{{ $fmt($labaKotor) }}</td></tr>
-
-                            <tr><td colspan="2" class="lr-group-title">Biaya Usaha</td></tr>
-                            @forelse ($biayaUsaha as $row)
-                                <tr><td class="text-muted">{{ $row['nama'] }}</td><td style="text-align: right;">{{ $fmt($row['saldo']) }}</td></tr>
-                            @empty
-                                <tr><td colspan="2" class="text-muted">Tidak ada aktivitas.</td></tr>
-                            @endforelse
-                            <tr class="lr-subtotal"><td>Total Biaya Usaha</td><td style="text-align: right;">{{ $fmt($totalBiayaUsaha) }}</td></tr>
-
-                            <tr class="lr-subtotal"><td>Laba Usaha</td><td style="text-align: right;" class="{{ $labaUsaha < 0 ? 'lr-negative' : '' }}">{{ $fmt($labaUsaha) }}</td></tr>
-
-                            <tr><td colspan="2" class="lr-group-title">Pendapatan &amp; Biaya Lain-lain</td></tr>
-                            @forelse ($pendapatanLain->concat($biayaLain) as $row)
-                                <tr><td class="text-muted">{{ $row['nama'] }}</td><td style="text-align: right;">{{ $fmt($row['saldo']) }}</td></tr>
-                            @empty
-                                <tr><td colspan="2" class="text-muted">Tidak ada aktivitas.</td></tr>
-                            @endforelse
-
-                            <tr class="lr-subtotal"><td style="font-size: 16px;">Laba Bersih</td><td style="text-align: right; font-size: 16px;" class="{{ $labaBersih < 0 ? 'lr-negative' : '' }}">{{ $fmt($labaBersih) }}</td></tr>
+                            @foreach ($groups as $group)
+                                <tr><td></td><td class="lr-group-title">{{ $group['title'] }}</td><td></td><td></td></tr>
+                                @foreach ($group['rows'] as $row)
+                                    <tr>
+                                        <td class="text-muted" style="font-variant-numeric: tabular-nums;">{{ $row['akun'] }}</td>
+                                        <td style="padding-left: 24px;">{{ $row['nama'] }}</td>
+                                        <td style="text-align: right;" class="{{ $row['saldo'] < 0 ? 'lr-negative' : '' }}">{{ $amount($row['saldo']) }}</td>
+                                        <td></td>
+                                    </tr>
+                                @endforeach
+                                <tr class="lr-subtotal"><td></td><td>Total {{ $group['title'] }}</td><td></td><td style="text-align: right;" class="{{ $group['total'] < 0 ? 'lr-negative' : '' }}">{{ $amount($group['total']) }}</td></tr>
+                                @isset($group['after'])
+                                    <tr class="lr-subtotal"><td></td><td>{{ $group['after'][0] }}</td><td></td><td style="text-align: right;" class="{{ $group['after'][1] < 0 ? 'lr-negative' : '' }}">{{ $amount($group['after'][1]) }}</td></tr>
+                                @endisset
+                            @endforeach
+                            <tr class="lr-subtotal"><td></td><td style="font-size: 16px;">Laba Bersih</td><td></td><td style="text-align: right; font-size: 16px;" class="{{ $labaBersih < 0 ? 'lr-negative' : '' }}">{{ $amount($labaBersih) }}</td></tr>
                         </tbody>
                     </table>
                 </div>

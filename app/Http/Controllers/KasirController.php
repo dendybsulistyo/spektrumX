@@ -37,7 +37,7 @@ class KasirController extends Controller
 
     public function index(Request $request): View
     {
-        $initialTab = in_array($request->query('tab'), ['indoor', 'outdoor', 'replacement', 'lunas'], true)
+        $initialTab = in_array($request->query('tab'), ['indoor', 'outdoor', 'replacement', 'lunas', 'batal'], true)
             ? $request->query('tab')
             : 'indoor';
 
@@ -97,6 +97,22 @@ class KasirController extends Controller
         }
         $lunasOrders = $lunasOrders->sortByDesc('dibayar_at')->values();
 
+        // Order batal yang sudah disetujui (30 hari terakhir) — informasi bagi kasir.
+        $cancelledOrders = collect();
+        foreach (['indoor' => OrderIndoor::class, 'outdoor' => OrderOutdoor::class, 'artwork' => OrderArtwork::class] as $orderType => $model) {
+            $model::query()
+                ->with(['customer', 'cancelRequestedBy', 'cancelApprovedBy'])
+                ->where('status', 'batal')
+                ->whereNotNull('cancel_approved_at')
+                ->where('cancel_approved_at', '>=', now()->subDays(30)->startOfDay())
+                ->get()
+                ->each(function ($order) use (&$cancelledOrders, $orderType) {
+                    $order->order_type = $orderType;
+                    $cancelledOrders->push($order);
+                });
+        }
+        $cancelledOrders = $cancelledOrders->sortByDesc('cancel_approved_at')->values();
+
         // Needed to hide "Batalkan Order" on rows that already have any
         // pending rework request (ulang or batal) — OrderReworkController::
         // store() rejects a second one for the same order regardless of kind.
@@ -134,7 +150,7 @@ class KasirController extends Controller
             }
         }
 
-        return view('kasir.index', compact('indoorOrders', 'outdoorOrders', 'replacementOrders', 'lunasOrders', 'pendingRework', 'initialTab', 'orderComments', 'orderUnread'));
+        return view('kasir.index', compact('indoorOrders', 'outdoorOrders', 'replacementOrders', 'lunasOrders', 'cancelledOrders', 'pendingRework', 'initialTab', 'orderComments', 'orderUnread'));
     }
 
     public function show(string $type, int $id): View

@@ -34,6 +34,10 @@
                     class="px-4 py-2 rounded-md font-medium transition">
                 Sudah Bayar ({{ $lunasOrders->count() }})
             </button>
+            <button @click="setTab('batal')" :class="tab === 'batal' ? 'bg-red-100 text-red-800' : 'text-gray-500 hover:bg-red-50 hover:text-red-700'"
+                    class="px-4 py-2 rounded-md font-medium transition">
+                Batal ( Approved ) ({{ $cancelledOrders->count() }})
+            </button>
         </div>
 
         <div x-show="tab === 'indoor'" class="overflow-x-auto">
@@ -171,6 +175,37 @@
                 </table>
             </div>
         @endcan
+
+        <div x-show="tab === 'batal'" x-cloak class="overflow-x-auto">
+            <p class="px-3 pt-3 text-xs text-gray-500">Order batal yang sudah disetujui dalam 30 hari terakhir.</p>
+            <table class="w-full text-[13px] min-w-[900px]">
+                <thead class="bg-gray-50 text-left text-xs uppercase text-gray-500"><tr>
+                    <th class="px-3 py-2 text-center">No</th><th class="px-3 py-2">Disetujui</th><th class="px-3 py-2">No. Order</th><th class="px-3 py-2">Tipe</th>
+                    <th class="px-3 py-2">Customer</th><th class="px-3 py-2 text-right">Total</th><th class="px-3 py-2 text-right">Sudah Dibayar</th>
+                    <th class="px-3 py-2">Alasan</th><th class="px-3 py-2">Diajukan / Disetujui</th>
+                </tr></thead>
+                <tbody class="divide-y">
+                    @forelse ($cancelledOrders as $order)
+                        <tr>
+                            <td class="px-3 py-2 text-center text-gray-500">{{ $loop->iteration }}</td>
+                            <td class="px-3 py-2 whitespace-nowrap text-gray-600">{{ $order->cancel_approved_at?->format('d-m-Y H:i') }}</td>
+                            <td class="px-3 py-2 whitespace-nowrap"><span class="font-semibold text-gray-900">{{ $order->NoOrder }}</span><span class="ml-2 rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700">Batal</span></td>
+                            <td class="px-3 py-2 text-gray-600">{{ ucfirst($order->order_type) }}</td>
+                            <td class="px-3 py-2 text-gray-600">{{ $order->customer?->NmCust ? ucwords(mb_strtolower($order->customer->NmCust)) : '-' }}</td>
+                            <td class="px-3 py-2 text-right whitespace-nowrap text-gray-900">Rp {{ number_format((float) $order->total, 0, ',', '.') }}</td>
+                            <td class="px-3 py-2 text-right whitespace-nowrap text-gray-900">Rp {{ number_format((float) ($order->jumlah_dibayar ?? 0), 0, ',', '.') }}</td>
+                            <td class="px-3 py-2 text-gray-600">{{ $order->cancel_reason ?: '-' }}</td>
+                            <td class="px-3 py-2 text-xs text-gray-600">
+                                <div>Diajukan: {{ $order->cancelRequestedBy?->name ?? '-' }}</div>
+                                <div>Disetujui: {{ $order->cancelApprovedBy?->name ?? '-' }}</div>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="9" class="px-4 py-6 text-center text-gray-400">Tidak ada order batal yang disetujui dalam 30 hari terakhir.</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
 
         <div x-show="tab === 'lunas'" x-cloak class="overflow-x-auto">
             @php

@@ -34,6 +34,7 @@ class FinanceMenuAccess
         'akuntansi.akun.index',
         'akuntansi.neraca-saldo',
         'akuntansi.neraca',
+        'keuangan.laba-rugi',
     ];
 
     /** Semua halaman keuangan.view lainnya termasuk menu Akuntansi. */

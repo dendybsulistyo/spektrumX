@@ -270,6 +270,7 @@
                                                 <a href="{{ route('akuntansi.buku-besar') }}" class="{{ $dropdownLink(request()->routeIs('akuntansi.buku-besar')) }}">Buku Besar</a>
                                                 <a href="{{ route('akuntansi.neraca-saldo') }}" class="{{ $dropdownLink(request()->routeIs('akuntansi.neraca-saldo')) }}">Neraca Saldo</a>
                                                 <a href="{{ route('akuntansi.neraca') }}" class="{{ $dropdownLink(request()->routeIs('akuntansi.neraca')) }}">Neraca</a>
+                                                <a href="{{ route('keuangan.laba-rugi') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.laba-rugi')) }}">Laba Rugi</a>
                                                 <a href="{{ route('akuntansi.akun.index') }}" class="{{ $dropdownLink(request()->routeIs('akuntansi.akun.index')) }}">Daftar Akun</a>
                                             </div>
                                             @endif
@@ -665,6 +666,7 @@
                                 <a href="{{ route('akuntansi.buku-besar') }}" class="{{ $mobileLink(request()->routeIs('akuntansi.buku-besar')) }}">Buku Besar</a>
                                 <a href="{{ route('akuntansi.neraca-saldo') }}" class="{{ $mobileLink(request()->routeIs('akuntansi.neraca-saldo')) }}">Neraca Saldo</a>
                                 <a href="{{ route('akuntansi.neraca') }}" class="{{ $mobileLink(request()->routeIs('akuntansi.neraca')) }}">Neraca</a>
+                                <a href="{{ route('keuangan.laba-rugi') }}" class="{{ $mobileLink(request()->routeIs('keuangan.laba-rugi')) }}">Laba Rugi</a>
                                 <a href="{{ route('akuntansi.akun.index') }}" class="{{ $mobileLink(request()->routeIs('akuntansi.akun.index')) }}">Daftar Akun</a>
                             @endif
                             @if ($menuAkun)
