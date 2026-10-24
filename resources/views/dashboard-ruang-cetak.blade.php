@@ -124,7 +124,8 @@
             #rc-dashboard .rcd-search { position: relative; }
             #rc-dashboard .rcd-search input { width: 280px; height: 32px; padding: 0 10px 0 30px; font-size: 12.5px; border-radius: 6px; }
             #rc-dashboard .rcd-search svg { position: absolute; left: 9px; top: 50%; width: 14px; height: 14px; transform: translateY(-50%); color: var(--muted); }
-            #rc-dashboard .rcd-table-wrap { overflow-x: auto; max-height: 62vh; overflow-y: auto; }
+            /* Monitoring order dibuat lebih panjang ke bawah (sebelumnya 62vh). */
+            #rc-dashboard .rcd-table-wrap { overflow-x: auto; max-height: calc(100vh - 140px); overflow-y: auto; }
             #rc-dashboard table.rcd-table { width: 100%; min-width: 1240px; border-collapse: separate; border-spacing: 0; font-size: 12.5px; }
             #rc-dashboard .rcd-table thead th {
                 position: sticky; top: 0; z-index: 2; padding: 8px 10px; text-align: left; white-space: nowrap;
