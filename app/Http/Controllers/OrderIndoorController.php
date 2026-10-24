@@ -198,6 +198,10 @@ class OrderIndoorController extends Controller
 
     public function destroy(OrderIndoor $orderIndoor): RedirectResponse
     {
+        if ($reason = $orderIndoor->deleteBlockReason()) {
+            return back()->with('error', 'Order '.$orderIndoor->NoOrder.' tidak dapat dihapus. '.$reason);
+        }
+
         DB::transaction(function () use ($orderIndoor) {
             OrderIndoorDetail::where('BrsOrder', 'like', $orderIndoor->NoOrder.'%')->delete();
             $orderIndoor->delete();

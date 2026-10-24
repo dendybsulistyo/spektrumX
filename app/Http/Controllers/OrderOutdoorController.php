@@ -187,6 +187,10 @@ class OrderOutdoorController extends Controller
 
     public function destroy(OrderOutdoor $orderOutdoor): RedirectResponse
     {
+        if ($reason = $orderOutdoor->deleteBlockReason()) {
+            return back()->with('error', 'Order '.$orderOutdoor->NoOrder.' tidak dapat dihapus. '.$reason);
+        }
+
         $orderOutdoor->delete();
 
         return redirect()->route('order-outdoor.index')->with('status', 'Order outdoor berhasil dihapus.');

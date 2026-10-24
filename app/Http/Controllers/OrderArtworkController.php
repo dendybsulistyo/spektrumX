@@ -155,6 +155,10 @@ class OrderArtworkController extends Controller
 
     public function destroy(OrderArtwork $orderArtwork): RedirectResponse
     {
+        if ($reason = $orderArtwork->deleteBlockReason()) {
+            return back()->with('error', 'Order '.$orderArtwork->NoOrder.' tidak dapat dihapus. '.$reason);
+        }
+
         $orderArtwork->delete();
 
         return redirect()->route('order-artwork.index')->with('status', 'Order artwork berhasil dihapus.');
