@@ -29,6 +29,7 @@ class FinanceMenuAccess
         'keuangan.customer-receivable-details',
         'order-indoor.request-cancel',
         'order-outdoor.request-cancel',
+        'akuntansi.buku-besar',
     ];
 
     /** Semua halaman keuangan.view lainnya termasuk menu Akuntansi. */
