@@ -365,7 +365,8 @@ Route::middleware('auth')->group(function () {
     Route::middleware('permission:order-indoor.manage')->group(function () {
         Route::resource('order-indoor', OrderIndoorController::class)->only(['create', 'store', 'update', 'destroy'])->names('order-indoor');
     });
-    Route::middleware('permission.any:order-desain.manage,keuangan.view')->group(function () {
+    // Kasir (kasir.manage) boleh mengajukan pembatalan dari antrean kasir.
+    Route::middleware('permission.any:order-desain.manage,keuangan.view,kasir.manage')->group(function () {
         Route::post('/order-indoor/{orderIndoor}/request-cancel', [OrderIndoorController::class, 'requestCancel'])->name('order-indoor.request-cancel');
     });
     Route::middleware('permission:order-indoor.approve-cancel')->group(function () {
@@ -379,7 +380,7 @@ Route::middleware('auth')->group(function () {
     Route::middleware('permission:order-artwork.manage')->group(function () {
         Route::resource('order-artwork', OrderArtworkController::class)->only(['create', 'store', 'update', 'destroy'])->names('order-artwork');
     });
-    Route::middleware('permission:order-desain.manage')->group(function () {
+    Route::middleware('permission.any:order-desain.manage,keuangan.view,kasir.manage')->group(function () {
         Route::post('/order-artwork/{orderArtwork}/request-cancel', [OrderArtworkController::class, 'requestCancel'])->name('order-artwork.request-cancel');
     });
     Route::middleware('permission:order-artwork.approve-cancel')->group(function () {
@@ -430,7 +431,7 @@ Route::middleware('auth')->group(function () {
     Route::middleware('permission:order-outdoor.manage')->group(function () {
         Route::resource('order-outdoor', OrderOutdoorController::class)->only(['create', 'store', 'update', 'destroy'])->names('order-outdoor');
     });
-    Route::middleware('permission.any:order-desain.manage,keuangan.view')->group(function () {
+    Route::middleware('permission.any:order-desain.manage,keuangan.view,kasir.manage')->group(function () {
         Route::post('/order-outdoor/{orderOutdoor}/request-cancel', [OrderOutdoorController::class, 'requestCancel'])->name('order-outdoor.request-cancel');
     });
     Route::middleware('permission:order-outdoor.approve-cancel')->group(function () {
