@@ -31,6 +31,9 @@ class FinanceMenuAccess
         'order-outdoor.request-cancel',
         'akuntansi.buku-besar',
         'akuntansi.jurnal-umum',
+        'akuntansi.akun.index',
+        'akuntansi.neraca-saldo',
+        'akuntansi.neraca',
     ];
 
     /** Semua halaman keuangan.view lainnya termasuk menu Akuntansi. */

@@ -24,7 +24,7 @@
             </details>
         @endcan
 
-        <section class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm"><div class="overflow-x-auto"><table class="min-w-full text-sm"><thead class="bg-indigo-50 text-xs uppercase tracking-wide text-indigo-700"><tr><th class="px-5 py-3 text-left">Kode</th><th class="px-5 py-3 text-left">Nama Akun</th><th class="px-5 py-3 text-left">Saldo Normal</th><th class="px-5 py-3 text-left">Laporan</th>@can('akuntansi.master')<th class="px-5 py-3 text-right">Aksi</th>@endcan</tr></thead><tbody class="divide-y divide-gray-100">
+        <section class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm"><div class="overflow-x-auto"><table class="min-w-full text-sm"><thead class="bg-indigo-50 text-xs uppercase tracking-wide text-indigo-700"><tr><th class="px-5 py-3 text-left">Kode</th><th class="px-5 py-3 text-left">Nama Akun</th><th class="px-5 py-3 text-left">Saldo Normal</th><th class="px-5 py-3 text-left">Laporan</th><th class="px-5 py-3 text-right">Saldo Awal Debet</th><th class="px-5 py-3 text-right">Saldo Awal Kredit</th>@can('akuntansi.master')<th class="px-5 py-3 text-right">Aksi</th>@endcan</tr></thead><tbody class="divide-y divide-gray-100">
             @forelse ($accounts as $akun)
                 @php
                     $isHeader = $akun->TipeDK === '-';
@@ -44,6 +44,9 @@
                     <td class="px-5 py-3">
                         {{ $akun->TipeNL === 'N' ? 'Neraca' : ($akun->TipeNL === 'L' ? 'Laba Rugi' : '-') }}
                     </td>
+                    @php($opening = $openingBalances->get($akun->NoAkun))
+                    <td class="px-5 py-3 text-right tabular-nums">{{ $opening && (float) $opening->debet ? number_format($opening->debet, 0, ',', '.') : '' }}</td>
+                    <td class="px-5 py-3 text-right tabular-nums">{{ $opening && (float) $opening->kredit ? number_format($opening->kredit, 0, ',', '.') : '' }}</td>
                     @can('akuntansi.master')
                         <td class="px-5 py-3 text-right">
                             <details class="inline-block text-left">
@@ -76,9 +79,18 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="5" class="px-5 py-8 text-center text-gray-500">Kode akun tidak ditemukan.</td>
+                    <td colspan="7" class="px-5 py-8 text-center text-gray-500">Kode akun tidak ditemukan.</td>
                 </tr>
             @endforelse
-        </tbody></table></div></section>
+        </tbody>
+        @if ($openingBalances->isNotEmpty() && $search === '')
+            <tfoot class="border-t-2 border-gray-300 bg-gray-50 font-semibold"><tr>
+                <td colspan="4" class="px-5 py-3 text-right">Total Saldo Awal{{ $openingPeriod ? ' ('.\Carbon\Carbon::parse($openingPeriod.'-01')->translatedFormat('F Y').')' : '' }}</td>
+                <td class="px-5 py-3 text-right tabular-nums">{{ number_format($openingBalances->sum('debet'), 0, ',', '.') }}</td>
+                <td class="px-5 py-3 text-right tabular-nums">{{ number_format($openingBalances->sum('kredit'), 0, ',', '.') }}</td>
+                @can('akuntansi.master')<td></td>@endcan
+            </tr></tfoot>
+        @endif
+        </table></div></section>
     </div></div>
 </x-app-layout>

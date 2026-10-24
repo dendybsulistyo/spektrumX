@@ -6,6 +6,7 @@ use App\Models\Akun;
 use App\Models\JurnalEntry;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -24,7 +25,15 @@ class AkunController extends Controller
             ->orderBy('NoAkun')
             ->get();
 
-        return view('akuntansi.akun.index', compact('accounts', 'search'));
+        // Saldo awal akun (tanpa akun pembantu) dari periode saldo awal paling awal.
+        $openingPeriod = DB::table('accounting_opening_balances')->where('kode_bantu', '')->min('periode');
+        $openingBalances = $openingPeriod
+            ? DB::table('accounting_opening_balances')->where('kode_bantu', '')->where('periode', $openingPeriod)
+                ->select('NoAkun', DB::raw('SUM(debet) debet'), DB::raw('SUM(kredit) kredit'))
+                ->groupBy('NoAkun')->get()->keyBy('NoAkun')
+            : collect();
+
+        return view('akuntansi.akun.index', compact('accounts', 'search', 'openingPeriod', 'openingBalances'));
     }
 
     public function store(Request $request): RedirectResponse
