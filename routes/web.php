@@ -464,6 +464,7 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware('permission:kasir.view')->group(function () {
         Route::get('/kasir', [KasirController::class, 'index'])->name('kasir.index');
+        Route::get('/kasir/otorisasi/terbaru', [KasirController::class, 'authorizationUpdates'])->name('kasir.authorization-updates');
         Route::get('/kasir/{type}/{id}', [KasirController::class, 'show'])->name('kasir.show');
     });
     Route::middleware('permission:customer-service.view')->group(function () {

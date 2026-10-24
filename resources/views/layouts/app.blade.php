@@ -925,5 +925,8 @@
         </div>
 
         @include('partials.chat-widget')
+        @can('kasir.manage')
+            <x-otorisasi-notifier />
+        @endcan
     </body>
 </html>

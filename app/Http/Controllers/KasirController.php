@@ -21,6 +21,7 @@ use App\Support\ResolvesOrderType;
 use App\Support\Rupiah;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
@@ -115,44 +116,7 @@ class KasirController extends Controller
 
         // Hasil otorisasi 30 hari terakhir: diskon nota (reguler & VIP) dan hutang
         // VIP melebihi plafon — disetujui maupun ditolak.
-        $since = now()->subDays(30)->startOfDay();
-        $authorizations = collect();
-        foreach (['indoor' => OrderIndoor::class, 'outdoor' => OrderOutdoor::class, 'artwork' => OrderArtwork::class] as $orderType => $model) {
-            $model::query()
-                ->with(['customer.limit', 'diskonRequestedBy', 'diskonApprovedBy', 'diskonRejectedBy',
-                    'hutangRequestedBy', 'hutangApprovedBy', 'hutangRejectedBy'])
-                ->where(fn ($query) => $query->whereNotNull('diskon_requested_at')->where(fn ($q) => $q
-                        ->where('diskon_approved_at', '>=', $since)->orWhere('diskon_rejected_at', '>=', $since)))
-                ->orWhere(fn ($query) => $query->whereNotNull('hutang_requested_at')->where(fn ($q) => $q
-                        ->where('hutang_approved_at', '>=', $since)->orWhere('hutang_rejected_at', '>=', $since)))
-                ->get()
-                ->each(function ($order) use (&$authorizations, $orderType, $since) {
-                    $base = ['order' => $order, 'type' => $orderType, 'vip' => (bool) $order->customer?->is_vip];
-                    $diskonAt = $order->diskon_approved_at ?? $order->diskon_rejected_at;
-                    if ($order->diskon_requested_at && $diskonAt && $diskonAt->gte($since)) {
-                        $approved = (bool) $order->diskon_approved_at;
-                        $authorizations->push((object) ($base + [
-                            'kind' => 'Diskon Nota', 'decided_at' => $diskonAt, 'approved' => $approved,
-                            'value' => $approved ? $order->diskonApprovedLabel() : $order->diskonRequestedLabel(),
-                            'note' => $order->diskon_alasan,
-                            'requested_by' => $order->diskonRequestedBy?->name,
-                            'decided_by' => $approved ? $order->diskonApprovedBy?->name : $order->diskonRejectedBy?->name,
-                        ]));
-                    }
-                    $hutangAt = $order->hutang_approved_at ?? $order->hutang_rejected_at;
-                    if ($order->hutang_requested_at && $hutangAt && $hutangAt->gte($since)) {
-                        $approved = (bool) $order->hutang_approved_at;
-                        $authorizations->push((object) ($base + [
-                            'kind' => 'Hutang VIP', 'decided_at' => $hutangAt, 'approved' => $approved,
-                            'value' => 'Rp '.number_format($order->hutangAmount(), 0, ',', '.'),
-                            'note' => $order->hutang_catatan,
-                            'requested_by' => $order->hutangRequestedBy?->name,
-                            'decided_by' => $approved ? $order->hutangApprovedBy?->name : $order->hutangRejectedBy?->name,
-                        ]));
-                    }
-                });
-        }
-        $authorizations = $authorizations->sortByDesc('decided_at')->values();
+        $authorizations = $this->authorizationDecisions(now()->subDays(30)->startOfDay());
 
         // Needed to hide "Batalkan Order" on rows that already have any
         // pending rework request (ulang or batal) — OrderReworkController::
@@ -192,6 +156,83 @@ class KasirController extends Controller
         }
 
         return view('kasir.index', compact('indoorOrders', 'outdoorOrders', 'replacementOrders', 'lunasOrders', 'cancelledOrders', 'authorizations', 'pendingRework', 'initialTab', 'orderComments', 'orderUnread'));
+    }
+
+    /**
+     * Keputusan otorisasi (diskon nota & hutang VIP) yang diambil sejak $since,
+     * terbaru dulu. $requesterId membatasi ke pengajuan milik user tertentu.
+     */
+    private function authorizationDecisions(\Carbon\CarbonInterface $since, ?int $requesterId = null): \Illuminate\Support\Collection
+    {
+        $authorizations = collect();
+        foreach (['indoor' => OrderIndoor::class, 'outdoor' => OrderOutdoor::class, 'artwork' => OrderArtwork::class] as $orderType => $model) {
+            $model::query()
+                ->with(['customer.limit', 'diskonRequestedBy', 'diskonApprovedBy', 'diskonRejectedBy',
+                    'hutangRequestedBy', 'hutangApprovedBy', 'hutangRejectedBy'])
+                ->where(fn ($outer) => $outer
+                    ->where(fn ($query) => $query->whereNotNull('diskon_requested_at')
+                        ->when($requesterId, fn ($q) => $q->where('diskon_requested_by', $requesterId))
+                        ->where(fn ($q) => $q->where('diskon_approved_at', '>', $since)->orWhere('diskon_rejected_at', '>', $since)))
+                    ->orWhere(fn ($query) => $query->whereNotNull('hutang_requested_at')
+                        ->when($requesterId, fn ($q) => $q->where('hutang_requested_by', $requesterId))
+                        ->where(fn ($q) => $q->where('hutang_approved_at', '>', $since)->orWhere('hutang_rejected_at', '>', $since))))
+                ->get()
+                ->each(function ($order) use (&$authorizations, $orderType, $since, $requesterId) {
+                    $base = ['order' => $order, 'type' => $orderType, 'vip' => (bool) $order->customer?->is_vip];
+                    $diskonAt = $order->diskon_approved_at ?? $order->diskon_rejected_at;
+                    if ($order->diskon_requested_at && $diskonAt && $diskonAt->gt($since)
+                        && (! $requesterId || (int) $order->diskon_requested_by === $requesterId)) {
+                        $approved = (bool) $order->diskon_approved_at;
+                        $authorizations->push((object) ($base + [
+                            'kind' => 'Diskon Nota', 'decided_at' => $diskonAt, 'approved' => $approved,
+                            'value' => $approved ? $order->diskonApprovedLabel() : $order->diskonRequestedLabel(),
+                            'note' => $order->diskon_alasan,
+                            'requested_by' => $order->diskonRequestedBy?->name,
+                            'decided_by' => $approved ? $order->diskonApprovedBy?->name : $order->diskonRejectedBy?->name,
+                        ]));
+                    }
+                    $hutangAt = $order->hutang_approved_at ?? $order->hutang_rejected_at;
+                    if ($order->hutang_requested_at && $hutangAt && $hutangAt->gt($since)
+                        && (! $requesterId || (int) $order->hutang_requested_by === $requesterId)) {
+                        $approved = (bool) $order->hutang_approved_at;
+                        $authorizations->push((object) ($base + [
+                            'kind' => 'Hutang VIP', 'decided_at' => $hutangAt, 'approved' => $approved,
+                            'value' => 'Rp '.number_format($order->hutangAmount(), 0, ',', '.'),
+                            'note' => $order->hutang_catatan,
+                            'requested_by' => $order->hutangRequestedBy?->name,
+                            'decided_by' => $approved ? $order->hutangApprovedBy?->name : $order->hutangRejectedBy?->name,
+                        ]));
+                    }
+                });
+        }
+
+        return $authorizations->sortByDesc('decided_at')->values();
+    }
+
+    /**
+     * Dipanggil berkala oleh pop-up kasir: keputusan otorisasi atas pengajuan
+     * kasir yang login sejak ?since (ISO), agar kasir langsung tahu hasilnya.
+     */
+    public function authorizationUpdates(Request $request): JsonResponse
+    {
+        $since = $request->date('since') ?? now()->subMinute();
+        if ($since->lt(now()->subDay())) {
+            $since = now()->subDay();
+        }
+
+        return response()->json([
+            'server_time' => now()->toIso8601String(),
+            'items' => $this->authorizationDecisions($since, (int) $request->user()->id)->map(fn ($auth) => [
+                'key' => $auth->type.'-'.$auth->order->id.'-'.$auth->kind.'-'.$auth->decided_at->timestamp,
+                'order' => $auth->order->NoOrder,
+                'customer' => $auth->order->customer?->NmCust ? ucwords(mb_strtolower($auth->order->customer->NmCust)) : '-',
+                'kind' => $auth->kind,
+                'value' => $auth->value,
+                'approved' => $auth->approved,
+                'decided_by' => $auth->decided_by,
+                'decided_at' => $auth->decided_at->format('H:i'),
+            ])->values(),
+        ]);
     }
 
     public function show(string $type, int $id): View
