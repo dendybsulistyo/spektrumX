@@ -38,6 +38,10 @@
                     class="px-4 py-2 rounded-md font-medium transition">
                 Batal ( Approved ) ({{ $cancelledOrders->count() }})
             </button>
+            <button @click="setTab('otorisasi')" :class="tab === 'otorisasi' ? 'bg-indigo-100 text-indigo-800' : 'text-gray-500 hover:bg-indigo-50 hover:text-indigo-700'"
+                    class="px-4 py-2 rounded-md font-medium transition">
+                Otorisasi ({{ $authorizations->count() }})
+            </button>
         </div>
 
         <div x-show="tab === 'indoor'" class="overflow-x-auto">
@@ -202,6 +206,40 @@
                         </tr>
                     @empty
                         <tr><td colspan="9" class="px-4 py-6 text-center text-gray-400">Tidak ada order batal yang disetujui dalam 30 hari terakhir.</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+
+        <div x-show="tab === 'otorisasi'" x-cloak class="overflow-x-auto">
+            <p class="px-3 pt-3 text-xs text-gray-500">Hasil otorisasi diskon nota dan hutang VIP dalam 30 hari terakhir, disetujui maupun ditolak.</p>
+            <table class="w-full text-[13px] min-w-[1000px]">
+                <thead class="bg-gray-50 text-left text-xs uppercase text-gray-500"><tr>
+                    <th class="px-3 py-2 text-center">No</th><th class="px-3 py-2">Diputuskan</th><th class="px-3 py-2">No. Order</th><th class="px-3 py-2">Customer</th>
+                    <th class="px-3 py-2">Otorisasi</th><th class="px-3 py-2 text-right">Nilai</th><th class="px-3 py-2">Hasil</th>
+                    <th class="px-3 py-2">Catatan</th><th class="px-3 py-2">Diajukan / Diputuskan</th>
+                </tr></thead>
+                <tbody class="divide-y">
+                    @forelse ($authorizations as $auth)
+                        <tr>
+                            <td class="px-3 py-2 text-center text-gray-500">{{ $loop->iteration }}</td>
+                            <td class="px-3 py-2 whitespace-nowrap text-gray-600">{{ $auth->decided_at->format('d-m-Y H:i') }}</td>
+                            <td class="px-3 py-2 whitespace-nowrap"><span class="font-semibold text-gray-900">{{ $auth->order->NoOrder }}</span> <span class="text-xs text-gray-400">{{ ucfirst($auth->type) }}</span></td>
+                            <td class="px-3 py-2 text-gray-600">
+                                {{ $auth->order->customer?->NmCust ? ucwords(mb_strtolower($auth->order->customer->NmCust)) : '-' }}
+                                <span class="ml-1 rounded-full px-2 py-0.5 text-[11px] font-semibold {{ $auth->vip ? 'bg-amber-100 text-amber-800' : 'bg-gray-100 text-gray-600' }}">{{ $auth->vip ? 'VIP' : 'Reguler' }}</span>
+                            </td>
+                            <td class="px-3 py-2 text-gray-700">{{ $auth->kind }}</td>
+                            <td class="px-3 py-2 text-right whitespace-nowrap text-gray-900">{{ $auth->value }}</td>
+                            <td class="px-3 py-2"><span class="rounded-full px-2 py-0.5 text-xs font-semibold {{ $auth->approved ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700' }}">{{ $auth->approved ? 'Disetujui' : 'Ditolak' }}</span></td>
+                            <td class="px-3 py-2 text-gray-600">{{ $auth->note ?: '-' }}</td>
+                            <td class="px-3 py-2 text-xs text-gray-600">
+                                <div>Diajukan: {{ $auth->requested_by ?? '-' }}</div>
+                                <div>{{ $auth->approved ? 'Disetujui' : 'Ditolak' }}: {{ $auth->decided_by ?? '-' }}</div>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="9" class="px-4 py-6 text-center text-gray-400">Belum ada hasil otorisasi dalam 30 hari terakhir.</td></tr>
                     @endforelse
                 </tbody>
             </table>

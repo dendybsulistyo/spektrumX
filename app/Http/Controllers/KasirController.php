@@ -37,7 +37,7 @@ class KasirController extends Controller
 
     public function index(Request $request): View
     {
-        $initialTab = in_array($request->query('tab'), ['indoor', 'outdoor', 'replacement', 'lunas', 'batal'], true)
+        $initialTab = in_array($request->query('tab'), ['indoor', 'outdoor', 'replacement', 'lunas', 'batal', 'otorisasi'], true)
             ? $request->query('tab')
             : 'indoor';
 
@@ -113,6 +113,47 @@ class KasirController extends Controller
         }
         $cancelledOrders = $cancelledOrders->sortByDesc('cancel_approved_at')->values();
 
+        // Hasil otorisasi 30 hari terakhir: diskon nota (reguler & VIP) dan hutang
+        // VIP melebihi plafon — disetujui maupun ditolak.
+        $since = now()->subDays(30)->startOfDay();
+        $authorizations = collect();
+        foreach (['indoor' => OrderIndoor::class, 'outdoor' => OrderOutdoor::class, 'artwork' => OrderArtwork::class] as $orderType => $model) {
+            $model::query()
+                ->with(['customer.limit', 'diskonRequestedBy', 'diskonApprovedBy', 'diskonRejectedBy',
+                    'hutangRequestedBy', 'hutangApprovedBy', 'hutangRejectedBy'])
+                ->where(fn ($query) => $query->whereNotNull('diskon_requested_at')->where(fn ($q) => $q
+                        ->where('diskon_approved_at', '>=', $since)->orWhere('diskon_rejected_at', '>=', $since)))
+                ->orWhere(fn ($query) => $query->whereNotNull('hutang_requested_at')->where(fn ($q) => $q
+                        ->where('hutang_approved_at', '>=', $since)->orWhere('hutang_rejected_at', '>=', $since)))
+                ->get()
+                ->each(function ($order) use (&$authorizations, $orderType, $since) {
+                    $base = ['order' => $order, 'type' => $orderType, 'vip' => (bool) $order->customer?->is_vip];
+                    $diskonAt = $order->diskon_approved_at ?? $order->diskon_rejected_at;
+                    if ($order->diskon_requested_at && $diskonAt && $diskonAt->gte($since)) {
+                        $approved = (bool) $order->diskon_approved_at;
+                        $authorizations->push((object) ($base + [
+                            'kind' => 'Diskon Nota', 'decided_at' => $diskonAt, 'approved' => $approved,
+                            'value' => $approved ? $order->diskonApprovedLabel() : $order->diskonRequestedLabel(),
+                            'note' => $order->diskon_alasan,
+                            'requested_by' => $order->diskonRequestedBy?->name,
+                            'decided_by' => $approved ? $order->diskonApprovedBy?->name : $order->diskonRejectedBy?->name,
+                        ]));
+                    }
+                    $hutangAt = $order->hutang_approved_at ?? $order->hutang_rejected_at;
+                    if ($order->hutang_requested_at && $hutangAt && $hutangAt->gte($since)) {
+                        $approved = (bool) $order->hutang_approved_at;
+                        $authorizations->push((object) ($base + [
+                            'kind' => 'Hutang VIP', 'decided_at' => $hutangAt, 'approved' => $approved,
+                            'value' => 'Rp '.number_format($order->hutangAmount(), 0, ',', '.'),
+                            'note' => $order->hutang_catatan,
+                            'requested_by' => $order->hutangRequestedBy?->name,
+                            'decided_by' => $approved ? $order->hutangApprovedBy?->name : $order->hutangRejectedBy?->name,
+                        ]));
+                    }
+                });
+        }
+        $authorizations = $authorizations->sortByDesc('decided_at')->values();
+
         // Needed to hide "Batalkan Order" on rows that already have any
         // pending rework request (ulang or batal) — OrderReworkController::
         // store() rejects a second one for the same order regardless of kind.
@@ -150,7 +191,7 @@ class KasirController extends Controller
             }
         }
 
-        return view('kasir.index', compact('indoorOrders', 'outdoorOrders', 'replacementOrders', 'lunasOrders', 'cancelledOrders', 'pendingRework', 'initialTab', 'orderComments', 'orderUnread'));
+        return view('kasir.index', compact('indoorOrders', 'outdoorOrders', 'replacementOrders', 'lunasOrders', 'cancelledOrders', 'authorizations', 'pendingRework', 'initialTab', 'orderComments', 'orderUnread'));
     }
 
     public function show(string $type, int $id): View
