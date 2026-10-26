@@ -9,6 +9,9 @@
         .outdoor-report .code,.outdoor-report .date,.outdoor-report .status { white-space:nowrap; overflow-wrap:normal; }
         .outdoor-report .code { font-size:9px; letter-spacing:-.15px; }
         .outdoor-report tbody.font-bold td { border-top:2px solid #334155; }
+        /* Satu order = satu blok: garis tebal di awal order, tanpa garis antar produk dalam order yang sama. */
+        .outdoor-report tr.order-start td { border-top:2px solid #1f2937; }
+        .outdoor-report tr.order-item td { border-top-style:hidden; }
         @media print {
             [x-data^="chatWidget"], [x-data^="statusWa"], [x-data^="cariCepat"] { display:none !important; }
             @page { size:A4 landscape; margin:7mm; }
@@ -69,7 +72,7 @@
                 <thead><tr><th>No</th><th>Tanggal</th><th>No. Order</th><th>No. Nota</th><th>Operator</th><th>Customer</th><th>Produk</th><th>Judul</th><th>Pj.</th><th>Lebar</th><th>Qty</th><th>Total</th><th>Uang Muka</th><th>Status</th></tr></thead>
                 {{-- Nomor urut per order (bukan per item), melanjutkan nomor halaman sebelumnya. --}}
                 @php($orderNo = (! $printAll && $group->paginator) ? max(0, ($group->paginator->firstItem() ?? 1) - 1) : 0)
-                <tbody>@forelse($group->rows as $row)@if($row->first)@php($orderNo++)@endif<tr>
+                <tbody>@forelse($group->rows as $row)@if($row->first)@php($orderNo++)@endif<tr class="{{ $row->first ? 'order-start' : 'order-item' }}">
                     <td class="number" style="text-align:center">{{ $row->first ? $orderNo : '' }}</td>
                     <td class="date">{{ $row->first ? \Carbon\Carbon::parse($row->date)->format('d-m-Y') : '' }}</td><td class="code">{{ $row->first ? $row->order : '' }}</td><td class="code">{{ $row->first ? $row->invoice : '' }}</td>
                     <td>{{ $row->first ? $row->operator : '' }}</td><td>{{ $row->first ? $row->customer : '' }}</td><td>{{ $row->product }}</td><td>{{ $row->title }}</td>
