@@ -93,23 +93,31 @@
 
                         let position;
                         try { position = JSON.parse(raw); } catch (error) { return; }
-                        if (position.path !== window.location.pathname || Date.now() - position.savedAt > 30000) return;
+                        if (position.path !== window.location.pathname || Date.now() - position.savedAt > 60000) return;
 
                         if (position.tab && ['indoor', 'outdoor'].includes(position.tab)) this.tab = position.tab;
 
-                        setTimeout(() => {
+                        // Daftar order bisa belum selesai tersusun saat pertama dimuat (tab, font,
+                        // x-cloak), sehingga scroll terpotong ke atas. Ulangi beberapa kali sampai pas.
+                        const target = Number(position.scrollTop ?? position.scrollY) || 0;
+                        let focused = false;
+                        const apply = () => {
                             const list = this.$refs.orderList;
                             if (!list) return;
                             const anchor = position.anchorId ? document.getElementById(position.anchorId) : null;
                             if (anchor && Number.isFinite(position.anchorTop)) {
                                 list.scrollBy({ top: anchor.getBoundingClientRect().top - position.anchorTop, behavior: 'auto' });
-                                anchor.classList.add('operator-return-focus');
-                                setTimeout(() => anchor.classList.remove('operator-return-focus'), 2500);
+                                if (!focused) {
+                                    focused = true;
+                                    anchor.classList.add('operator-return-focus');
+                                    setTimeout(() => anchor.classList.remove('operator-return-focus'), 2500);
+                                }
                                 return;
                             }
-
-                            list.scrollTo({ top: Number(position.scrollTop ?? position.scrollY) || 0, behavior: 'auto' });
-                        }, 60);
+                            // Item yang dikirim sudah pindah ke Cetak: kembali ke posisi scroll terakhir.
+                            if (Math.abs(list.scrollTop - target) > 2) list.scrollTo({ top: target, behavior: 'auto' });
+                        };
+                        [60, 250, 600, 1200].forEach((delay) => setTimeout(apply, delay));
                     },
                     pollVersion() {
                         // Jangan reload saat operator sedang memilih / mengirim massal:

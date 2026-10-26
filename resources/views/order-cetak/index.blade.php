@@ -49,6 +49,7 @@
             </div>
         </div>
     </div>
+    <x-queue-scroll-memory key="cetak" />
 </x-app-layout>
 
 <!-- wire:ignore -->

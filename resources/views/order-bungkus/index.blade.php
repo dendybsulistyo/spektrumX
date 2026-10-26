@@ -56,4 +56,5 @@
             </div>
         </div>
     </div>
+    <x-queue-scroll-memory key="bungkus" />
 </x-app-layout>

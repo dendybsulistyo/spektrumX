@@ -271,6 +271,7 @@
             </div>
         </div>
     </div>
+    <x-queue-scroll-memory key="pengambilan" />
 </x-app-layout>
 
 <script>

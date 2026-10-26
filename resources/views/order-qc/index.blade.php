@@ -49,4 +49,5 @@
             </div>
         </div>
     </div>
+    <x-queue-scroll-memory key="qc" />
 </x-app-layout>
