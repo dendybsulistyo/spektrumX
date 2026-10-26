@@ -35,6 +35,16 @@
                     class="rounded-md px-4 py-2 font-medium transition">
                 Outdoor ({{ $counts['outdoor'] }})
             </button>
+            {{-- Filter tanggal order; kosongkan untuk menampilkan seluruh antrean. --}}
+            <form method="GET" class="ml-auto flex flex-wrap items-center gap-2 px-2 text-xs text-gray-600">
+                <input type="hidden" name="tab" :value="tab">
+                <label class="flex items-center gap-1">Dari <input type="date" name="dari" value="{{ $dari }}" class="h-8 rounded border-gray-300 px-2 text-xs"></label>
+                <label class="flex items-center gap-1">Sampai <input type="date" name="sampai" value="{{ $sampai }}" class="h-8 rounded border-gray-300 px-2 text-xs"></label>
+                <button class="h-8 rounded bg-slate-800 px-3 font-semibold text-white">Tampilkan</button>
+                @if ($dari || $sampai)
+                    <a href="{{ route('customer-service.payment-queue', ['tab' => $initialTab]) }}" class="flex h-8 items-center rounded border border-gray-300 px-3 font-semibold text-gray-700">Semua</a>
+                @endif
+            </form>
         </div>
         {{-- Area scroll sendiri agar judul kolom & judul tanggal tetap menempel di atas saat di-scroll. --}}
         <div class="cs-scroll overflow-auto"

@@ -177,10 +177,17 @@ class CustomerServiceController extends Controller
     {
         // Dipisah tab Indoor / Outdoor seperti halaman Kasir.
         $initialTab = in_array($request->query('tab'), ['indoor', 'outdoor'], true) ? $request->query('tab') : 'indoor';
+        // Filter tanggal order opsional; kosong = seluruh antrean (antrean tidak boleh terlewat).
+        $dari = $request->date('dari')?->format('Y-m-d');
+        $sampai = $request->date('sampai')?->format('Y-m-d');
+        $byDate = fn ($query) => $query
+            ->when($dari, fn ($q) => $q->whereDate('TglOrder', '>=', $dari))
+            ->when($sampai, fn ($q) => $q->whereDate('TglOrder', '<=', $sampai));
 
         $indoor = OrderIndoor::with(['customer.limit', 'items.produkArtwork'])
             ->where('payment_queue', 'cs')
             ->where('status_bayar', 'belum_bayar')
+            ->tap($byDate)
             ->get()
             ->each(function (OrderIndoor $order): void {
                 $order->setAttribute('order_type', 'indoor');
@@ -191,6 +198,7 @@ class CustomerServiceController extends Controller
         $outdoor = OrderOutdoor::with('customer.limit')
             ->where('payment_queue', 'cs')
             ->where('status_bayar', 'belum_bayar')
+            ->tap($byDate)
             ->get()
             ->each->setAttribute('order_type', 'outdoor');
 
@@ -200,7 +208,7 @@ class CustomerServiceController extends Controller
 
         $counts = ['indoor' => $indoor->count(), 'outdoor' => $outdoor->count()];
 
-        return view('customer-service.payment-queue', compact('orders', 'initialTab', 'counts'));
+        return view('customer-service.payment-queue', compact('orders', 'initialTab', 'counts', 'dari', 'sampai'));
     }
 
     public function storeJobSheet(Request $request): RedirectResponse
