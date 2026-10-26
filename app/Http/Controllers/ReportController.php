@@ -326,7 +326,10 @@ class ReportController extends Controller
         $items = ($type === 'indoor'
                 ? OrderIndoorDetail::query()->with(['order.customer', 'produk.kategori', 'produkArtwork.kategori'])
                 : OrderOutdoorDetail::query()->with('order.customer'))
-            ->whereHas('order', fn ($order) => $order->whereDate('TglOrder', $date)->where('status', '!=', 'batal'))
+            ->whereHas('order', fn ($order) => $order->whereDate('TglOrder', $date)->where('status', '!=', 'batal')
+                // Hanya order yang sudah lunas, sudah DP, atau hutang customer VIP ber-plafon.
+                ->where(fn ($paid) => $paid->whereIn('status_bayar', ['lunas', 'dp'])
+                    ->orWhere(fn ($vip) => $vip->where('status_bayar', 'hutang')->whereHas('customer.limit'))))
             ->get()
             ->sortBy(fn ($item) => ($item->order?->NoOrder ?? '').'|'.str_pad((string) $item->id, 10, '0', STR_PAD_LEFT))
             ->values();
