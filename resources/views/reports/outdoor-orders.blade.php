@@ -9,9 +9,10 @@
         .outdoor-report .code,.outdoor-report .date,.outdoor-report .status { white-space:nowrap; overflow-wrap:normal; }
         .outdoor-report .code { font-size:9px; letter-spacing:-.15px; }
         .outdoor-report tbody.font-bold td { border-top:2px solid #334155; }
-        /* Satu order = satu blok: garis tebal di awal order, tanpa garis antar produk dalam order yang sama. */
+        /* Seperti Rekap Transaksi Harian: kolom milik order menyatu satu kotak per order,
+           kolom produk (Produk, Judul, Pj, Lebar, Qty) tetap bergaris antar produk. */
         .outdoor-report tr.order-start td { border-top:2px solid #1f2937; }
-        .outdoor-report tr.order-item td { border-top-style:hidden; }
+        .outdoor-report tr.order-item td.oc { border-top-style:hidden; }
         @media print {
             [x-data^="chatWidget"], [x-data^="statusWa"], [x-data^="cariCepat"] { display:none !important; }
             @page { size:A4 landscape; margin:7mm; }
@@ -73,11 +74,11 @@
                 {{-- Nomor urut per order (bukan per item), melanjutkan nomor halaman sebelumnya. --}}
                 @php($orderNo = (! $printAll && $group->paginator) ? max(0, ($group->paginator->firstItem() ?? 1) - 1) : 0)
                 <tbody>@forelse($group->rows as $row)@if($row->first)@php($orderNo++)@endif<tr class="{{ $row->first ? 'order-start' : 'order-item' }}">
-                    <td class="number" style="text-align:center">{{ $row->first ? $orderNo : '' }}</td>
-                    <td class="date">{{ $row->first ? \Carbon\Carbon::parse($row->date)->format('d-m-Y') : '' }}</td><td class="code">{{ $row->first ? $row->order : '' }}</td><td class="code">{{ $row->first ? $row->invoice : '' }}</td>
-                    <td>{{ $row->first ? $row->operator : '' }}</td><td>{{ $row->first ? $row->customer : '' }}</td><td>{{ $row->product }}</td><td>{{ $row->title }}</td>
+                    <td class="oc number" style="text-align:center">{{ $row->first ? $orderNo : '' }}</td>
+                    <td class="oc date">{{ $row->first ? \Carbon\Carbon::parse($row->date)->format('d-m-Y') : '' }}</td><td class="oc code">{{ $row->first ? $row->order : '' }}</td><td class="oc code">{{ $row->first ? $row->invoice : '' }}</td>
+                    <td class="oc">{{ $row->first ? $row->operator : '' }}</td><td class="oc">{{ $row->first ? $row->customer : '' }}</td><td>{{ $row->product }}</td><td>{{ $row->title }}</td>
                     <td class="number">{{ number_format((float)$row->length,2,',','.') }}</td><td class="number">{{ number_format((float)$row->width,2,',','.') }}</td><td class="number">{{ number_format((float)$row->qty,0,',','.') }}</td>
-                    <td class="number">{{ $row->first ? number_format($row->total,0,',','.') : '' }}</td><td class="number">{{ $row->first ? number_format($row->advance,0,',','.') : '' }}</td><td class="status">{{ $row->first ? $row->status : '' }}</td>
+                    <td class="oc number">{{ $row->first ? number_format($row->total,0,',','.') : '' }}</td><td class="oc number">{{ $row->first ? number_format($row->advance,0,',','.') : '' }}</td><td class="oc status">{{ $row->first ? $row->status : '' }}</td>
                 </tr>@empty<tr><td colspan="14" style="padding:28px;text-align:center">Belum ada order {{ $group->label }} pada periode ini.</td></tr>@endforelse</tbody>
                 {{-- Total ditaruh di tbody (bukan tfoot) agar tidak tercetak berulang di setiap halaman kertas. --}}
                 <tbody class="font-bold">
