@@ -17,7 +17,9 @@
         }
     </style>
     <div class="receivable-recap py-6"><div class="mx-auto max-w-5xl px-4 sm:px-6">
-        <div class="no-print mb-4 flex flex-wrap items-end justify-between gap-3 rounded-lg border bg-white p-4 shadow-sm">
+        <div class="no-print mb-4 flex flex-wrap items-end justify-end gap-3 rounded-lg border bg-white p-4 shadow-sm">
+            {{-- DISEMBUNYIKAN SEMENTARA (26 Okt 2026, permintaan Yovita): filter tanggal & jenis customer.
+                 Laporan memakai default: posisi hari ini, semua customer. Controller tetap menerima ?tanggal & ?jenis.
             <form method="GET" class="flex flex-wrap items-end gap-3">
                 <label class="text-sm text-gray-700">Sampai tanggal
                     <input type="date" name="tanggal" value="{{ $asOf }}" class="mt-1 block rounded-md border-gray-300">
@@ -31,6 +33,7 @@
                 </label>
                 <button class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white">Tampilkan</button>
             </form>
+            --}}
             <button type="button" onclick="window.print()" class="rounded-md bg-slate-800 px-4 py-2 text-sm font-semibold text-white">Cetak</button>
         </div>
         <section class="bg-white p-5 shadow-sm">
