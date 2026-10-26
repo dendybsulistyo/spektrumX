@@ -84,8 +84,8 @@ class DashboardStatsService
         $outdoor = $loadRecentAndCancelled($outdoorQuery);
         $artwork = $loadRecentAndCancelled($artworkQuery);
 
-        $indoor->load('customer', 'createdBy', 'kasir', 'desainBy', 'cetakBy', 'finishingBy', 'qcBy', 'bungkusBy', 'pengambilanBy', 'items');
-        $outdoor->load('customer', 'createdBy', 'kasir', 'desainBy', 'cetakBy', 'finishingBy', 'qcBy', 'bungkusBy', 'pengambilanBy', 'items');
+        $indoor->load('customer', 'createdBy', 'kasir', 'desainBy', 'cetakBy', 'finishingBy', 'qcBy', 'bungkusBy', 'pengambilanBy', 'items', 'customerServiceJobSheet');
+        $outdoor->load('customer', 'createdBy', 'kasir', 'desainBy', 'cetakBy', 'finishingBy', 'qcBy', 'bungkusBy', 'pengambilanBy', 'items', 'customerServiceJobSheet');
         $artwork->load('customer', 'createdBy', 'kasir', 'desainBy', 'cetakBy', 'finishingBy', 'qcBy', 'bungkusBy', 'pengambilanBy', 'items');
 
         $mapped = $indoor->map(fn ($o) => $this->toRow($o, 'Indoor'))
@@ -208,6 +208,12 @@ class DashboardStatsService
             'status_bayar' => $order->status_bayar,
             'jumlah_piutang' => $order->jumlah_piutang,
             'durasi' => $durasi,
+            // Estimasi pengerjaan seperti di antrean operator; hanya untuk order yang sedang diproduksi.
+            'estimate_deadline' => method_exists($order, 'operatorEstimateEndsAt')
+                && $order->status_bayar !== 'belum_bayar'
+                && ! in_array($order->status, ['baru', 'siap_diambil', 'selesai', 'batal'], true)
+                    ? $order->operatorEstimateEndsAt()?->toIso8601String()
+                    : null,
             'operator_file' => $order->createdBy?->name,
             'kasir' => $order->kasir?->name,
             'desain_by' => $order->desainBy?->name,
