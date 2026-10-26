@@ -80,6 +80,16 @@
             #rc-dashboard button.rcd-kpi.alert { width: 100%; text-align: left; border-top: 0; border-right: 0; border-bottom: 0; cursor: pointer; font-family: inherit; }
             #rc-dashboard button.rcd-kpi.alert:hover { background: var(--ink-soft); }
             #rc-dashboard button.rcd-kpi.alert:focus-visible { outline: 3px solid var(--cyan); outline-offset: -3px; }
+            /* Ada order telat: kartu berkedip agar langsung terlihat. */
+            #rc-dashboard .rcd-kpi.alert.flashing { animation: rcd-late-flash 1s ease-in-out infinite; }
+            #rc-dashboard .rcd-kpi.alert.flashing::before { animation: rcd-late-stripe 1s ease-in-out infinite; }
+            #rc-dashboard .rcd-kpi.alert.flashing .rcd-kpi-value { animation: rcd-late-value 1s ease-in-out infinite; }
+            @keyframes rcd-late-flash { 0%, 100% { background: var(--ink); } 50% { background: #7f1d1d; box-shadow: inset 0 0 0 2px #f87171; } }
+            @keyframes rcd-late-stripe { 0%, 100% { background: var(--magenta); } 50% { background: #fb923c; } }
+            @keyframes rcd-late-value { 0%, 100% { color: #fff; } 50% { color: #fecaca; } }
+            @media (prefers-reduced-motion: reduce) {
+                #rc-dashboard .rcd-kpi.alert.flashing, #rc-dashboard .rcd-kpi.alert.flashing::before, #rc-dashboard .rcd-kpi.alert.flashing .rcd-kpi-value { animation: none; }
+            }
 
             /* ---------- Alur produksi ---------- */
             #rc-dashboard .rcd-flow { padding: 14px 16px 16px; }
@@ -365,7 +375,7 @@
                         @endif
                     </div>
                 @endforeach
-                <button type="button" @click="openOverdue()" @class(['rcd-kpi alert', 'calm' => (int) $stats['telat'] === 0])
+                <button type="button" @click="openOverdue()" @class(['rcd-kpi alert', 'calm' => (int) $stats['telat'] === 0, 'flashing' => (int) $stats['telat'] > 0])
                         title="Buka resume semua order telat">
                     <div class="rcd-kpi-label">Telat &gt; 3&times;24 jam</div>
                     <div class="rcd-kpi-value">{{ number_format($stats['telat'], 0, ',', '.') }}</div>
