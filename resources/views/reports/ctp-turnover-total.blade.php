@@ -33,7 +33,6 @@
                 <tbody>@forelse($rows as $row)<tr><td style="text-align:center;white-space:nowrap;">{{ $loop->iteration }}</td>
                     <td>{{ $row->product }}</td><td class="number">{{ number_format($row->orders,0,',','.') }}</td>
                 </tr>@empty<tr><td colspan="3" style="padding:28px;text-align:center">Belum ada order CTP pada periode ini.</td></tr>@endforelse</tbody>
-                <tfoot class="font-bold"><tr><td colspan="2">TOTAL</td><td class="number">{{ number_format($totalOrders,0,',','.') }}</td></tr></tfoot>
             </table>
             <p class="mt-2 text-xs text-gray-500">Jumlah order = banyaknya nota yang memuat produk tersebut (bukan jumlah plat/lembar). Satu nota bisa terhitung di lebih dari satu produk.</p>
         </section>

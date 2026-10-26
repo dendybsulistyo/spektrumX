@@ -34,7 +34,6 @@
                     <td>{{ \Carbon\Carbon::parse($row->date)->format('d-m-Y') }}</td><td>{{ $row->product }}</td>
                     <td class="number">{{ number_format($row->orders,0,',','.') }}</td><td class="number">{{ number_format($row->plates,0,',','.') }}</td>
                 </tr>@empty<tr><td colspan="5" style="padding:28px;text-align:center">Belum ada order produk dengan keterangan jumlah warna pada periode ini.</td></tr>@endforelse</tbody>
-                <tfoot class="font-bold"><tr><td colspan="3">TOTAL</td><td class="number">{{ number_format($totalOrders,0,',','.') }}</td><td class="number">{{ number_format($totalPlates,0,',','.') }}</td></tr></tfoot>
             </table>
         </section>
     </div></div>
