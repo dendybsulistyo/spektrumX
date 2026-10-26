@@ -17,7 +17,7 @@
 
     <div class="space-y-6">
         {{-- Filter bar --}}
-        <div class="bg-white rounded-lg border border-gray-200 p-4">
+        <div class="no-print bg-white rounded-lg border border-gray-200 p-4">
             <form method="GET" class="flex flex-wrap items-end gap-3">
                 <div>
                     <label class="block text-xs text-gray-500 mb-1">Dari Tanggal</label>
@@ -27,9 +27,25 @@
                     <label class="block text-xs text-gray-500 mb-1">Sampai Tanggal</label>
                     <input type="date" name="to" value="{{ $to }}" class="rounded-md border-gray-300 text-sm">
                 </div>
+                <input type="hidden" name="tampilan" value="{{ $view }}">
                 <button type="submit" class="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-md hover:bg-gray-700">Terapkan</button>
+                @if ($view === 'rekap')
+                    <button type="button" onclick="window.print()" class="px-4 py-2 border border-gray-300 text-sm font-medium rounded-md hover:bg-gray-50">Cetak</button>
+                @endif
             </form>
         </div>
+
+        {{-- Pilihan tampilan --}}
+        <div class="flex gap-1 text-sm no-print">
+            <a href="{{ request()->fullUrlWithQuery(['tampilan' => 'rekap']) }}"
+               class="px-4 py-2 rounded-md font-medium {{ $view === 'rekap' ? 'bg-gray-900 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50' }}">Rekap Operator Indoor</a>
+            <a href="{{ request()->fullUrlWithQuery(['tampilan' => 'tahap']) }}"
+               class="px-4 py-2 rounded-md font-medium {{ $view === 'tahap' ? 'bg-gray-900 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50' }}">Per Tahap</a>
+        </div>
+
+        @if ($view === 'rekap')
+            @include('monitoring-kinerja._rekap-operator-indoor')
+        @else
 
         {{-- Ringkasan per tahap --}}
         <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
@@ -75,5 +91,6 @@
                 </table>
             </div>
         </div>
+        @endif
     </div>
 </x-app-layout>

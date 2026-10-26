@@ -7,6 +7,7 @@ use App\Models\OrderIndoor;
 use App\Models\OrderOutdoor;
 use App\Models\OrderStatusNote;
 use App\Models\User;
+use App\Services\OrderPricingService;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
@@ -35,9 +36,12 @@ class MonitoringKinerjaController extends Controller
      * order_status_notes, which is common to Indoor/Outdoor/Artwork and every
      * stage (desain/cetak/finishing/qc/kasir/pengambilan/pembatalan).
      */
+    public function __construct(private readonly OrderPricingService $pricing) {}
+
     public function index(Request $request): View
     {
         [$from, $to] = $this->dateRange($request);
+        $view = $request->query('tampilan') === 'tahap' ? 'tahap' : 'rekap';
 
         $noteCounts = OrderStatusNote::query()
             ->whereBetween('created_at', ["{$from} 00:00:00", "{$to} 23:59:59"])
@@ -60,7 +64,68 @@ class MonitoringKinerjaController extends Controller
             'to' => $to,
             'stages' => self::STAGES,
             'staffRows' => $staffRows,
+            'view' => $view,
+            'operatorRecap' => $view === 'rekap' ? $this->operatorIndoorRecap($from, $to) : collect(),
         ]);
+    }
+
+    /**
+     * Rekap Operator Indoor (mirip aplikasi lama): per operator penerima order
+     * (created_by), per produk — jumlah nota, subtotal, diskon, total. Hanya order
+     * indoor yang sudah menjadi transaksi (bukan belum bayar / batal).
+     */
+    private function operatorIndoorRecap(string $from, string $to): Collection
+    {
+        $orders = OrderIndoor::query()
+            ->with(['createdBy:id,name', 'items.produk.kategori', 'items.produkArtwork.kategori'])
+            ->whereBetween('TglOrder', [$from, $to])
+            ->where('status', '!=', 'batal')
+            ->where('status_bayar', '!=', 'belum_bayar')
+            ->get();
+
+        $products = [];
+        foreach ($orders as $order) {
+            $lines = $this->pricing->detailedLineItems('indoor', $order, $order->items)->values();
+            $raw = $order->items->keyBy('id');
+            $gross = (float) $lines->sum('subtotal');
+            $net = $order->diskonStatus() === 'approved' ? $order->totalSetelahDiskon() : (float) $order->total;
+            $discount = max(0, $gross - $net);
+            $allocated = 0.0;
+
+            foreach ($lines as $index => $line) {
+                $last = $index === $lines->count() - 1;
+                $lineDiscount = $last ? $discount - $allocated : round($gross > 0 ? $discount * (float) $line->subtotal / $gross : 0);
+                $allocated += $lineDiscount;
+
+                $item = $raw->get($line->detail_id);
+                $label = trim(($item?->divisionName() ?? '').' '.($item?->NmProd ?: $line->name)) ?: '-';
+                $operatorId = (int) $order->created_by;
+                $row = &$products[$operatorId][$label];
+                $row ??= ['nota' => [], 'subtotal' => 0.0, 'discount' => 0.0];
+                $row['nota'][$order->id] = true;
+                $row['subtotal'] += (float) $line->subtotal;
+                $row['discount'] += $lineDiscount;
+                unset($row);
+            }
+        }
+
+        $names = $orders->pluck('createdBy.name', 'created_by');
+
+        return collect($products)->map(function (array $items, int $operatorId) use ($names) {
+            $rows = collect($items)->map(fn (array $row, string $label) => (object) [
+                'product' => $label,
+                'nota' => count($row['nota']),
+                'subtotal' => $row['subtotal'],
+                'discount' => $row['discount'],
+                'total' => $row['subtotal'] - $row['discount'],
+            ])->sortBy('product', SORT_NATURAL | SORT_FLAG_CASE)->values();
+
+            return (object) [
+                'name' => $names[$operatorId] ?? 'Tidak diketahui',
+                'rows' => $rows,
+                'grandTotal' => (float) $rows->sum('total'),
+            ];
+        })->sortBy('name', SORT_NATURAL | SORT_FLAG_CASE)->values();
     }
 
     public function show(Request $request, User $staff): View
