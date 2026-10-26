@@ -1,5 +1,5 @@
 <x-app-layout>
-    <x-slot name="header"><h2 class="font-semibold text-xl text-gray-800">Total Tagihan Customer VIP</h2></x-slot>
+    <x-slot name="header"><h2 class="font-semibold text-xl text-gray-800">Total Tagihan Customer</h2></x-slot>
     <style>
         .receivable-total { color:#111827; }
         .receivable-total table { width:100%; border-collapse:collapse; font-size:12px; }
@@ -16,19 +16,15 @@
         }
     </style>
     <div class="receivable-total py-6"><div class="mx-auto max-w-5xl px-4 sm:px-6">
-        <div class="no-print mb-4 flex flex-wrap items-end justify-between gap-3 rounded-lg border bg-white p-4 shadow-sm">
-            <form method="GET" class="flex items-end gap-3">
-                <label class="text-sm text-gray-700">Posisi per tanggal<input type="date" name="tanggal" value="{{ $asOf }}" class="mt-1 block rounded-md border-gray-300"></label>
-                <button class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white">Tampilkan</button>
-            </form>
+        <div class="no-print mb-4 flex flex-wrap items-end justify-end gap-3 rounded-lg border bg-white p-4 shadow-sm">
             <button type="button" onclick="window.print()" class="rounded-md bg-slate-800 px-4 py-2 text-sm font-semibold text-white">Cetak</button>
         </div>
         <section class="bg-white p-5 shadow-sm">
-            <div class="mb-4"><h1 class="text-base font-bold">TOTAL TAGIHAN CUSTOMER VIP - SPEKTRUM</h1><p class="text-sm font-semibold">Tanggal: {{ \Carbon\Carbon::parse($asOf)->translatedFormat('d F Y') }}</p></div>
+            <div class="mb-4"><h1 class="text-base font-bold">TOTAL TAGIHAN CUSTOMER - SPEKTRUM</h1><p class="text-sm font-semibold">Tanggal: {{ \Carbon\Carbon::parse($asOf)->translatedFormat('d F Y') }}</p></div>
             <table>
                 <thead><tr><th style="width:36px;">No</th><th>NAMA</th><th style="width:20%;">TANGGAL</th><th style="width:23%;">PIUTANG</th><th style="width:25%;">TELPON</th></tr></thead>
-                <tbody>@forelse($rows as $row)<tr><td style="text-align:center;white-space:nowrap;">{{ $loop->iteration }}</td><td>{{ $row['name'] }}</td><td style="text-align:center;">{{ \Carbon\Carbon::parse($row['date'])->translatedFormat('d M Y') }}</td><td class="number">{{ number_format($row['receivable'],0,',','.') }}</td><td>{{ $row['phone'] }}</td></tr>@empty<tr><td colspan="5" style="padding:28px;text-align:center;">Tidak ada tagihan customer VIP sampai tanggal ini.</td></tr>@endforelse</tbody>
-                <tfoot><tr><td colspan="3" class="number"><strong>Total Tagihan VIP</strong></td><td class="number"><strong>{{ number_format($grandTotal,0,',','.') }}</strong></td><td></td></tr></tfoot>
+                <tbody>@forelse($rows as $row)<tr><td style="text-align:center;white-space:nowrap;">{{ $loop->iteration }}</td><td>{{ $row['name'] }}</td><td style="text-align:center;">{{ \Carbon\Carbon::parse($row['date'])->translatedFormat('d M Y') }}</td><td class="number">{{ number_format($row['receivable'],0,',','.') }}</td><td>{{ $row['phone'] }}</td></tr>@empty<tr><td colspan="5" style="padding:28px;text-align:center;">Tidak ada tagihan customer sampai tanggal ini.</td></tr>@endforelse</tbody>
+                <tfoot><tr><td colspan="3" class="number"><strong>Total Tagihan</strong></td><td class="number"><strong>{{ number_format($grandTotal,0,',','.') }}</strong></td><td></td></tr></tfoot>
             </table>
         </section>
     </div></div>
