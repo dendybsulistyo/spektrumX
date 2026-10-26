@@ -469,7 +469,7 @@
                                     <td style="white-space: nowrap;">
                                         <button type="button" class="rcd-order" @click="openHistory('{{ $row['type_slug'] }}', {{ $row['id'] }})"
                                                 title="Lihat riwayat proses">{{ $row['no_order'] }}</button>
-                                        <x-estimate-badge :deadline="$row['estimate_deadline'] ?? null" />
+                                        <x-estimate-badge :deadline="$row['estimate_deadline'] ?? null" compact />
                                     </td>
                                     <td>
                                         <div class="rcd-customer">{{ $row['customer'] ? ucwords(mb_strtolower($row['customer'])) : '-' }}</div>
