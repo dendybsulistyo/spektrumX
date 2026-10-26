@@ -33,13 +33,13 @@
                 <label>Cari
                     <input name="search" value="{{ $search }}" placeholder="No. SO / DO / Invoice / customer">
                 </label>
-                {{-- DISEMBUNYIKAN SEMENTARA (23 Okt 2026, permintaan Yovita: cukup pencarian). Controller tetap menerima dari/sampai/status/dokumen.
                 <label>Dari tanggal
-                    <input type="date" name="dari" value="{{ $dari }}">
+                    <input type="date" name="dari" value="{{ request('dari') }}">
                 </label>
                 <label>Sampai tanggal
-                    <input type="date" name="sampai" value="{{ $sampai }}">
+                    <input type="date" name="sampai" value="{{ request('sampai') }}">
                 </label>
+                {{-- DISEMBUNYIKAN SEMENTARA (23 Okt 2026, permintaan Yovita): filter status & dokumen. Controller tetap menerimanya.
                 <label>Status bayar
                     <select name="status">
                         <option value="">Semua</option>
@@ -61,7 +61,7 @@
                 <a href="{{ route('order-documents.index') }}" class="filter-btn secondary">Reset</a>
             </form>
             <p class="filter-note">
-                Tanpa pencarian, tampil transaksi bulan ini. Pencarian mencakup semua tanggal.
+                Tanpa pencarian, default transaksi bulan ini. Kosongkan tanggal untuk mencari di semua tanggal.
                 @if ($canReprint)
                     Anda dapat mencetak ulang dokumen dari halaman masing-masing.
                 @else
