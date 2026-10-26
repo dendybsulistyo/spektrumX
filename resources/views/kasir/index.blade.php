@@ -6,6 +6,7 @@
     <div class="bg-white rounded-lg border border-gray-200 overflow-hidden"
          x-data="{
             tab: '{{ $initialTab }}',
+            onlyCs: false,
             cancelModalOpen: false, cancelType: '', cancelId: null, cancelNoOrder: '',
             batalOrderModalOpen: false, batalOrderType: '', batalOrderId: null, batalOrderNoOrder: '',
             setTab(key) {
@@ -42,6 +43,12 @@
                     class="px-4 py-2 rounded-md font-medium transition">
                 Otorisasi ({{ $authorizations->count() }})
             </button>
+            {{-- Saring order Indoor/Outdoor yang diteruskan dari Customer Service. --}}
+            <label x-show="tab === 'indoor' || tab === 'outdoor'" class="ml-auto inline-flex items-center gap-2 px-3 text-sm text-gray-600 cursor-pointer select-none">
+                <input type="checkbox" x-model="onlyCs" class="rounded border-gray-300 text-violet-600 focus:ring-violet-500">
+                Hanya <span class="rounded bg-violet-100 px-2 py-0.5 text-[11px] font-semibold text-violet-700">Dari CS</span>
+                ({{ $indoorOrders->whereNotNull('cs_processed_at')->count() + $outdoorOrders->whereNotNull('cs_processed_at')->count() }})
+            </label>
         </div>
 
         <div x-show="tab === 'indoor'" class="overflow-x-auto">
@@ -58,7 +65,7 @@
                 </thead>
                 <tbody class="divide-y">
                     @forelse ($indoorOrders as $order)
-                        <tr>
+                        <tr x-show="!onlyCs || {{ $order->cs_processed_at ? 'true' : 'false' }}">
                             <td class="px-3 py-2 text-gray-400">{{ $loop->iteration }}</td>
                             <td class="px-3 py-2 font-semibold text-gray-900">
                                 {{ $order->NoOrder }}
@@ -112,7 +119,7 @@
                 </thead>
                 <tbody class="divide-y">
                     @forelse ($outdoorOrders as $order)
-                        <tr>
+                        <tr x-show="!onlyCs || {{ $order->cs_processed_at ? 'true' : 'false' }}">
                             <td class="px-3 py-2 text-gray-400">{{ $loop->iteration }}</td>
                             <td class="px-3 py-2 font-semibold text-gray-900">
                                 {{ $order->NoOrder }}
