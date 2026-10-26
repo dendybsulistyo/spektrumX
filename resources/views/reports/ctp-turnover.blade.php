@@ -29,12 +29,12 @@
         <section class="bg-white p-5 shadow-sm">
             <div class="mb-4 text-center"><h1 class="text-base font-bold">LAPORAN OMZET CTP PER TGL - SPEKTRUM</h1>
                 <p class="text-sm">Dari Tanggal: {{ \Carbon\Carbon::parse($from)->translatedFormat('d F Y') }} s/d {{ \Carbon\Carbon::parse($to)->translatedFormat('d F Y') }}</p></div>
-            <table><thead><tr><th style="width:36px;">No</th><th>TANGGAL</th><th>NAMA PRODUK</th><th class="number">JUMLAH ORDER</th><th class="number">WARNA</th><th class="number">PLAT</th></tr></thead>
+            <table><thead><tr><th style="width:36px;">No</th><th>TANGGAL</th><th>NAMA PRODUK</th><th class="number">JUMLAH ORDER</th><th class="number">PLAT</th></tr></thead>
                 <tbody>@forelse($rows as $row)<tr><td style="text-align:center;white-space:nowrap;">{{ $loop->iteration }}</td>
                     <td>{{ \Carbon\Carbon::parse($row->date)->format('d-m-Y') }}</td><td>{{ $row->product }}</td>
-                    <td class="number">{{ number_format($row->orders,0,',','.') }}</td><td class="number">{{ $row->colors }}</td><td class="number">{{ number_format($row->plates,0,',','.') }}</td>
-                </tr>@empty<tr><td colspan="6" style="padding:28px;text-align:center">Belum ada order produk dengan keterangan jumlah warna pada periode ini.</td></tr>@endforelse</tbody>
-                <tfoot class="font-bold"><tr><td colspan="3">TOTAL</td><td class="number">{{ number_format($totalOrders,0,',','.') }}</td><td></td><td class="number">{{ number_format($totalPlates,0,',','.') }}</td></tr></tfoot>
+                    <td class="number">{{ number_format($row->orders,0,',','.') }}</td><td class="number">{{ number_format($row->plates,0,',','.') }}</td>
+                </tr>@empty<tr><td colspan="5" style="padding:28px;text-align:center">Belum ada order produk dengan keterangan jumlah warna pada periode ini.</td></tr>@endforelse</tbody>
+                <tfoot class="font-bold"><tr><td colspan="3">TOTAL</td><td class="number">{{ number_format($totalOrders,0,',','.') }}</td><td class="number">{{ number_format($totalPlates,0,',','.') }}</td></tr></tfoot>
             </table>
         </section>
     </div></div>
