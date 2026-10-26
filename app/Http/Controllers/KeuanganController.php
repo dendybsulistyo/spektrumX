@@ -1614,7 +1614,10 @@ class KeuanganController extends Controller
     {
         // Piutang tidak dibatasi periode: tampilkan seluruh nota yang belum lunas.
         $customerSearch = $request->string('customer')->trim()->toString();
-        $customers = Customer::query()->orderBy('NmCust')->get(['KdCust', 'NmCust']);
+        // Laporan Piutang per Customer: pilihan hanya customer VIP (ber-plafon), karena hanya mereka yang berpiutang.
+        $customers = Customer::query()
+            ->when($request->input('mode') === 'report', fn ($query) => $query->whereHas('limit'))
+            ->orderBy('NmCust')->get(['KdCust', 'NmCust']);
         $needle = mb_strtolower($customerSearch);
         $selectedCustomer = $customerSearch !== ''
             ? ($customers->firstWhere('KdCust', $customerSearch)
