@@ -109,6 +109,12 @@ class OrderIndoorDetail extends Model
      */
     public function divisionName(): ?string
     {
+        // Sticker DTF adalah pekerjaan DTF UV Sticker, bukan DTF tekstil.
+        // Cek penanda ini lebih dulu karena teksnya juga mengandung "DTF".
+        if (preg_match('/\b(?:sticker\s+dtf|dtf\s+(?:uv\s+)?sticker|uv\s+dtf|dtf\s+uv)\b/iu', (string) $this->Judul)) {
+            return 'DTF UV Sticker';
+        }
+
         // Print Only untuk teknik DTF juga menyimpan penanda teknik pada
         // Judul (contoh: "BAGAS & SALSA (DTF)"), bukan pada master produk.
         if (preg_match('/\bdtf\b/iu', (string) $this->Judul)) {

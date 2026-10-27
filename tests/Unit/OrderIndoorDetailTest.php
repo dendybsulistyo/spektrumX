@@ -41,4 +41,22 @@ class OrderIndoorDetailTest extends TestCase
             'case insensitive' => ['print dtf'],
         ];
     }
+
+    #[DataProvider('dtfUvStickerDescriptions')]
+    public function test_sticker_dtf_description_is_routed_to_dtf_uv_sticker(string $description): void
+    {
+        $item = new OrderIndoorDetail(['Judul' => $description]);
+
+        $this->assertSame('DTF UV Sticker', $item->divisionName());
+    }
+
+    public static function dtfUvStickerDescriptions(): array
+    {
+        return [
+            'order shown in queue' => ['YASKI 260 (Sticker DTF)'],
+            'DTF Sticker' => ['Print DTF Sticker'],
+            'DTF UV' => ['Print DTF UV'],
+            'UV DTF' => ['Print UV DTF'],
+        ];
+    }
 }
