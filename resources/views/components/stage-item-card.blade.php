@@ -40,7 +40,7 @@
             <div class="order-identity">
                 <x-order-number
                     :number="$order->NoOrder"
-                    :estimate-deadline="in_array($stage, ['desain', 'cetak', 'finishing', 'qc'], true)
+                    :estimate-deadline="in_array($stage, ['desain', 'cetak', 'finishing', 'qc', 'bungkus'], true)
                         ? $order->operatorEstimateEndsAt()?->toIso8601String()
                         : null"
                 />

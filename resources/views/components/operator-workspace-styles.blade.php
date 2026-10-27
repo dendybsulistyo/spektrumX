@@ -456,6 +456,17 @@
             justify-content: flex-end;
         }
     }
+
+    /* Lewat estimasi (24 jam sejak masuk, atau Progress Hari form CS): header kartu berkedip
+       putih ↔ merah tanpa gradasi; saat merah semua teks putih. */
+    .order-card .order-card-head:has(.estimate-overdue-flash) { animation: order-head-late 1s step-end infinite !important; }
+    .order-card .order-card-head:has(.estimate-overdue-flash) * { animation: order-head-late-text 1s step-end infinite !important; }
+    @keyframes order-head-late { 50% { background: #dc2626; color: #fff; } }
+    @keyframes order-head-late-text { 50% { color: #fff; border-color: #fff; background-color: transparent; } }
+    @media (prefers-reduced-motion: reduce) {
+        .order-card .order-card-head:has(.estimate-overdue-flash),
+        .order-card .order-card-head:has(.estimate-overdue-flash) * { animation: none !important; }
+    }
 </style>
 {{-- Tema "Ruang Cetak" untuk semua antrean operator; hapus baris ini untuk kembali ke tampilan lama. --}}
 <x-tema-ruang-cetak />
