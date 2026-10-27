@@ -487,10 +487,11 @@
                                 <tr x-show="matches('{{ strtolower($row['tipe']) }}', '{{ $row['status'] }}', @js($searchText))"
                                     @class(['is-cancelled' => $row['status'] === 'batal', 'is-late' => $row['telat'] && $row['status'] !== 'batal'])
                                     @if (! empty($row['estimate_deadline']) && $row['status'] !== 'batal')
-                                        {{-- Lewat estimasi ≥ 24 jam → baris ikut berkedip (di bawah itu cukup titik merah). --}}
+                                        {{-- Lewat batas → baris berkedip. Batas = 24 jam sejak order masuk,
+                                             atau Progress Hari dari form CS bila sudah ditentukan. --}}
                                         x-data="{ deadline: @js($row['estimate_deadline']), now: Date.now() }"
                                         x-init="setInterval(() => now = Date.now(), 60000)"
-                                        :class="now - new Date(deadline).getTime() >= 86400000 && 'is-late'"
+                                        :class="now > new Date(deadline).getTime() && 'is-late'"
                                     @endif>
                                     <td class="mono" style="color: var(--muted);">{{ $loop->iteration }}</td>
                                     <td style="white-space: nowrap;">
