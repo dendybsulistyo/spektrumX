@@ -1,5 +1,6 @@
 {{-- Rekap Operator Indoor: format seperti "Rekap Operator" aplikasi lama,
-     kolom Jumlah diganti Qty Order (jumlah nota) per produk. --}}
+     kolom Jumlah diganti Qty Order (jumlah nota) per produk. Jumlah Produk =
+     banyaknya baris produk pada SO (dasar kinerja Operator File). --}}
 <style>
     .operator-recap { color:#111827; }
     .operator-recap h3 { margin:0 0 2px; font-size:15px; font-weight:700; }
@@ -29,20 +30,22 @@
         <div class="operator-block">
             <p class="operator-name">Operator : <strong>{{ $operator->name }}</strong></p>
             <table>
-                <colgroup><col><col style="width:110px"><col style="width:130px"><col style="width:110px"><col style="width:130px"></colgroup>
-                <thead><tr><th>Produk</th><th>Qty Order (Nota)</th><th>Subtotal</th><th>Diskon</th><th>Total</th></tr></thead>
+                <colgroup><col style="width:40px"><col><col style="width:110px"><col style="width:100px"><col style="width:130px"><col style="width:110px"><col style="width:130px"></colgroup>
+                <thead><tr><th>No</th><th>Produk</th><th>Qty Order (Nota)</th><th>Jumlah Produk</th><th>Subtotal</th><th>Diskon</th><th>Total</th></tr></thead>
                 <tbody>
                     @foreach ($operator->rows as $row)
                         <tr>
+                            <td class="num">{{ $loop->iteration }}</td>
                             <td>{{ $row->product }}</td>
                             <td class="num">{{ number_format($row->nota, 0, ',', '.') }} nota</td>
+                            <td class="num">{{ number_format($row->items, 0, ',', '.') }}</td>
                             <td class="num">{{ number_format($row->subtotal, 0, ',', '.') }}</td>
                             <td class="num">{{ number_format($row->discount, 0, ',', '.') }}</td>
                             <td class="num">{{ number_format($row->total, 0, ',', '.') }}</td>
                         </tr>
                     @endforeach
                 </tbody>
-                <tfoot><tr><td colspan="3" style="border-left-color:transparent;border-bottom-color:transparent;"></td><td class="num">Grand Total</td><td class="num">{{ number_format($operator->grandTotal, 0, ',', '.') }}</td></tr></tfoot>
+                <tfoot><tr><td colspan="2" class="num">Total</td><td class="num">{{ number_format($operator->totalNota, 0, ',', '.') }} nota</td><td class="num">{{ number_format($operator->totalItems, 0, ',', '.') }}</td><td colspan="2" class="num">Grand Total</td><td class="num">{{ number_format($operator->grandTotal, 0, ',', '.') }}</td></tr></tfoot>
             </table>
         </div>
     @empty

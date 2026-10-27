@@ -71,7 +71,7 @@ class MonitoringKinerjaController extends Controller
 
     /**
      * Rekap Operator Indoor (mirip aplikasi lama): per operator penerima order
-     * (created_by), per produk — jumlah nota, subtotal, diskon, total. Hanya order
+     * (created_by), per produk — jumlah nota, jumlah produk (baris item SO), subtotal, diskon, total. Hanya order
      * indoor yang sudah menjadi transaksi (bukan belum bayar / batal).
      */
     private function operatorIndoorRecap(string $from, string $to): Collection
@@ -101,8 +101,9 @@ class MonitoringKinerjaController extends Controller
                 $label = trim(($item?->divisionName() ?? '').' '.($item?->NmProd ?: $line->name)) ?: '-';
                 $operatorId = (int) $order->created_by;
                 $row = &$products[$operatorId][$label];
-                $row ??= ['nota' => [], 'subtotal' => 0.0, 'discount' => 0.0];
+                $row ??= ['nota' => [], 'items' => [], 'subtotal' => 0.0, 'discount' => 0.0];
                 $row['nota'][$order->id] = true;
+                $row['items'][$line->detail_id] = true;
                 $row['subtotal'] += (float) $line->subtotal;
                 $row['discount'] += $lineDiscount;
                 unset($row);
@@ -115,6 +116,7 @@ class MonitoringKinerjaController extends Controller
             $rows = collect($items)->map(fn (array $row, string $label) => (object) [
                 'product' => $label,
                 'nota' => count($row['nota']),
+                'items' => count($row['items']),
                 'subtotal' => $row['subtotal'],
                 'discount' => $row['discount'],
                 'total' => $row['subtotal'] - $row['discount'],
@@ -123,6 +125,8 @@ class MonitoringKinerjaController extends Controller
             return (object) [
                 'name' => $names[$operatorId] ?? 'Tidak diketahui',
                 'rows' => $rows,
+                'totalItems' => (int) $rows->sum('items'),
+                'totalNota' => collect($items)->flatMap(fn (array $row) => array_keys($row['nota']))->unique()->count(),
                 'grandTotal' => (float) $rows->sum('total'),
             ];
         })->sortBy('name', SORT_NATURAL | SORT_FLAG_CASE)->values();
