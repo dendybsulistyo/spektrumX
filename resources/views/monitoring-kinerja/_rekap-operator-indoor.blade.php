@@ -1,5 +1,5 @@
 {{-- Rekap Operator Indoor: format seperti "Rekap Operator" aplikasi lama,
-     kolom Jumlah diganti Qty Order (jumlah nota) per produk. Jumlah Produk =
+     kolom Jumlah diganti Qty Order (jumlah nota) per produk. Jumlah File =
      banyaknya baris produk pada SO (dasar kinerja Operator File). --}}
 <style>
     .operator-recap { color:#111827; }
@@ -31,7 +31,7 @@
             <p class="operator-name">Operator : <strong>{{ $operator->name }}</strong></p>
             <table>
                 <colgroup><col style="width:40px"><col><col style="width:100px"><col style="width:130px"><col style="width:110px"><col style="width:130px"></colgroup>
-                <thead><tr><th>No</th><th>Produk</th><th>Jumlah Produk</th><th>Subtotal</th><th>Diskon</th><th>Total</th></tr></thead>
+                <thead><tr><th>No</th><th>Produk</th><th>Jumlah File</th><th>Subtotal</th><th>Diskon</th><th>Total</th></tr></thead>
                 <tbody>
                     @foreach ($operator->rows as $row)
                         <tr>
