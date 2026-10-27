@@ -70,25 +70,26 @@
             #rc-dashboard .rcd-kpi-meta .mono { color: var(--ink); font-weight: 600; }
             #rc-dashboard .rcd-kpi-bar { margin-top: 10px; height: 4px; border-radius: 2px; background: #efe9db; overflow: hidden; }
             #rc-dashboard .rcd-kpi-bar > i { display: block; height: 100%; background: var(--cyan); }
-            #rc-dashboard .rcd-kpi.alert { background: var(--ink); color: #fff; border-left: 0; position: relative; }
+            #rc-dashboard .rcd-kpi.alert { background: #fff; color: var(--ink); border-left: 1px dashed var(--rule-strong); position: relative; }
             #rc-dashboard .rcd-kpi.alert::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 6px; background: var(--magenta); }
-            #rc-dashboard .rcd-kpi.alert .rcd-kpi-label { color: #f3a9c9; }
-            #rc-dashboard .rcd-kpi.alert .rcd-kpi-value { color: #fff; }
-            #rc-dashboard .rcd-kpi.alert .rcd-kpi-meta { color: #c4c9d8; }
+            #rc-dashboard .rcd-kpi.alert .rcd-kpi-label { color: var(--muted); }
+            #rc-dashboard .rcd-kpi.alert .rcd-kpi-value { color: var(--ink); }
+            #rc-dashboard .rcd-kpi.alert .rcd-kpi-meta { color: var(--muted); }
             #rc-dashboard .rcd-kpi.alert.calm::before { background: var(--green); }
-            #rc-dashboard .rcd-kpi.alert.calm .rcd-kpi-label { color: #a7dcbc; }
             #rc-dashboard button.rcd-kpi.alert { width: 100%; text-align: left; border-top: 0; border-right: 0; border-bottom: 0; cursor: pointer; font-family: inherit; }
-            #rc-dashboard button.rcd-kpi.alert:hover { background: var(--ink-soft); }
+            #rc-dashboard button.rcd-kpi.alert:hover { background: #faf7f0; }
             #rc-dashboard button.rcd-kpi.alert:focus-visible { outline: 3px solid var(--cyan); outline-offset: -3px; }
-            /* Ada order telat: kartu berkedip agar langsung terlihat. */
-            #rc-dashboard .rcd-kpi.alert.flashing { animation: rcd-late-flash 1s ease-in-out infinite; }
-            #rc-dashboard .rcd-kpi.alert.flashing::before { animation: rcd-late-stripe 1s ease-in-out infinite; }
-            #rc-dashboard .rcd-kpi.alert.flashing .rcd-kpi-value { animation: rcd-late-value 1s ease-in-out infinite; }
-            @keyframes rcd-late-flash { 0%, 100% { background: var(--ink); } 50% { background: #7f1d1d; box-shadow: inset 0 0 0 2px #f87171; } }
-            @keyframes rcd-late-stripe { 0%, 100% { background: var(--magenta); } 50% { background: #fb923c; } }
-            @keyframes rcd-late-value { 0%, 100% { color: #fff; } 50% { color: #fecaca; } }
+            /* Ada order telat: kartu berkedip putih ↔ merah primer (tanpa gradasi); saat merah semua teks putih. */
+            #rc-dashboard .rcd-kpi.alert.flashing { animation: rcd-late-flash 1s step-end infinite; }
+            #rc-dashboard .rcd-kpi.alert.flashing::before { background: #dc2626; }
+            #rc-dashboard .rcd-kpi.alert.flashing .rcd-kpi-label,
+            #rc-dashboard .rcd-kpi.alert.flashing .rcd-kpi-meta { animation: rcd-late-muted 1s step-end infinite; }
+            #rc-dashboard .rcd-kpi.alert.flashing .rcd-kpi-value { animation: rcd-late-ink 1s step-end infinite; }
+            @keyframes rcd-late-flash { 0% { background: #fff; } 50% { background: #dc2626; } }
+            @keyframes rcd-late-muted { 0% { color: var(--muted); } 50% { color: #fff; } }
+            @keyframes rcd-late-ink { 0% { color: var(--ink); } 50% { color: #fff; } }
             @media (prefers-reduced-motion: reduce) {
-                #rc-dashboard .rcd-kpi.alert.flashing, #rc-dashboard .rcd-kpi.alert.flashing::before, #rc-dashboard .rcd-kpi.alert.flashing .rcd-kpi-value { animation: none; }
+                #rc-dashboard .rcd-kpi.alert.flashing, #rc-dashboard .rcd-kpi.alert.flashing .rcd-kpi-label, #rc-dashboard .rcd-kpi.alert.flashing .rcd-kpi-value, #rc-dashboard .rcd-kpi.alert.flashing .rcd-kpi-meta { animation: none; }
             }
 
             /* ---------- Alur produksi ---------- */
