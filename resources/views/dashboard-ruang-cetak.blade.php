@@ -148,11 +148,11 @@
             #rc-dashboard .rcd-table tbody tr:hover td { background: #faf6ec; }
             #rc-dashboard .rcd-table tbody tr.is-cancelled td { background: #fff1f2; }
             #rc-dashboard .rcd-table tbody tr.is-cancelled:hover td { background: #ffe4e6; }
-            /* Order telat: satu baris berkedip putih ↔ merah (tanpa gradasi); saat merah semua teks putih. */
+            /* Order telat / lewat estimasi: satu baris berkedip putih ↔ merah (tanpa gradasi); saat merah semua teks putih. */
             #rc-dashboard .rcd-table tbody tr.is-late td { animation: rcd-row-late 1s step-end infinite; }
             #rc-dashboard .rcd-table tbody tr.is-late td * { animation: rcd-row-late-text 1s step-end infinite; }
             @keyframes rcd-row-late { 50% { background: #dc2626; color: #fff; } }
-            #rc-dashboard .rcd-table tbody tr.is-late .rcd-meter > i { animation-name: rcd-row-late-meter; }
+            #rc-dashboard .rcd-table tbody tr.is-late .rcd-meter > i, #rc-dashboard .rcd-table tbody tr.is-late .estimate-dot { animation-name: rcd-row-late-meter; }
             @keyframes rcd-row-late-meter { 50% { background: #fff; } }
             @keyframes rcd-row-late-text { 50% { color: #fff; background-color: transparent; border-color: #fff; } }
             @media (prefers-reduced-motion: reduce) {
@@ -485,7 +485,13 @@
                                     $statusColor = $stageColors[$row['status']] ?? '#77736a';
                                 @endphp
                                 <tr x-show="matches('{{ strtolower($row['tipe']) }}', '{{ $row['status'] }}', @js($searchText))"
-                                    @class(['is-cancelled' => $row['status'] === 'batal', 'is-late' => $row['telat'] && $row['status'] !== 'batal'])>
+                                    @class(['is-cancelled' => $row['status'] === 'batal', 'is-late' => $row['telat'] && $row['status'] !== 'batal'])
+                                    @if (! empty($row['estimate_deadline']) && $row['status'] !== 'batal')
+                                        {{-- Lewat estimasi ≥ 24 jam → baris ikut berkedip (di bawah itu cukup titik merah). --}}
+                                        x-data="{ deadline: @js($row['estimate_deadline']), now: Date.now() }"
+                                        x-init="setInterval(() => now = Date.now(), 60000)"
+                                        :class="now - new Date(deadline).getTime() >= 86400000 && 'is-late'"
+                                    @endif>
                                     <td class="mono" style="color: var(--muted);">{{ $loop->iteration }}</td>
                                     <td style="white-space: nowrap;">
                                         <button type="button" class="rcd-order" @click="openHistory('{{ $row['type_slug'] }}', {{ $row['id'] }})"
