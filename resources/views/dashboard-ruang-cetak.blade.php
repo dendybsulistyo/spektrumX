@@ -148,6 +148,16 @@
             #rc-dashboard .rcd-table tbody tr:hover td { background: #faf6ec; }
             #rc-dashboard .rcd-table tbody tr.is-cancelled td { background: #fff1f2; }
             #rc-dashboard .rcd-table tbody tr.is-cancelled:hover td { background: #ffe4e6; }
+            /* Order telat: satu baris berkedip putih ↔ merah (tanpa gradasi); saat merah semua teks putih. */
+            #rc-dashboard .rcd-table tbody tr.is-late td { animation: rcd-row-late 1s step-end infinite; }
+            #rc-dashboard .rcd-table tbody tr.is-late td * { animation: rcd-row-late-text 1s step-end infinite; }
+            @keyframes rcd-row-late { 50% { background: #dc2626; color: #fff; } }
+            #rc-dashboard .rcd-table tbody tr.is-late .rcd-meter > i { animation-name: rcd-row-late-meter; }
+            @keyframes rcd-row-late-meter { 50% { background: #fff; } }
+            @keyframes rcd-row-late-text { 50% { color: #fff; background-color: transparent; border-color: #fff; } }
+            @media (prefers-reduced-motion: reduce) {
+                #rc-dashboard .rcd-table tbody tr.is-late td, #rc-dashboard .rcd-table tbody tr.is-late td * { animation: none; }
+            }
             #rc-dashboard .rcd-order { padding: 0; border: 0; background: none; font: inherit; font-family: var(--mono); font-weight: 600; color: var(--ink); cursor: pointer; border-bottom: 1px dashed var(--rule-strong); }
             #rc-dashboard .rcd-order:hover { color: var(--cyan); border-bottom-color: var(--cyan); }
             #rc-dashboard .rcd-tipe { display: inline-block; margin-left: 6px; padding: 0 5px; font-size: 9.5px; font-weight: 700; letter-spacing: .06em; border-radius: 3px; color: var(--muted); border: 1px solid var(--rule-strong); vertical-align: 1px; }
@@ -475,7 +485,7 @@
                                     $statusColor = $stageColors[$row['status']] ?? '#77736a';
                                 @endphp
                                 <tr x-show="matches('{{ strtolower($row['tipe']) }}', '{{ $row['status'] }}', @js($searchText))"
-                                    @class(['is-cancelled' => $row['status'] === 'batal'])>
+                                    @class(['is-cancelled' => $row['status'] === 'batal', 'is-late' => $row['telat'] && $row['status'] !== 'batal'])>
                                     <td class="mono" style="color: var(--muted);">{{ $loop->iteration }}</td>
                                     <td style="white-space: nowrap;">
                                         <button type="button" class="rcd-order" @click="openHistory('{{ $row['type_slug'] }}', {{ $row['id'] }})"
