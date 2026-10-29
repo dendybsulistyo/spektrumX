@@ -72,6 +72,7 @@ class OrderFinancialAdjustmentController extends Controller
                         ->whereColumn('order_payments.order_id', $query->getModel()->getTable().'.id')
                         ->where('order_payments.order_type', $type)
                         ->where('order_payments.jumlah', '>', 0)
+                        ->where('order_payments.cara_bayar', 'tunai')
                         ->whereDate('order_payments.created_at', $date)))
                     ->latest('TglOrder')
                     ->limit(100)
@@ -86,6 +87,8 @@ class OrderFinancialAdjustmentController extends Controller
                 $payments = OrderPayment::query()
                     ->where('order_type', $type)->whereIn('order_id', $orders->pluck('id'))
                     ->where('jumlah', '>', 0)
+                    // Hanya penerimaan tunai yang bisa dikoreksi metodenya.
+                    ->where('cara_bayar', 'tunai')
                     ->when($date, fn ($query) => $query->whereDate('created_at', $date))
                     ->oldest('created_at')->oldest('id')->get();
 
