@@ -18,14 +18,13 @@
     <div class="sales-discount-report py-6"><div class="mx-auto max-w-5xl px-4 sm:px-6">
         <div class="no-print mb-4 flex flex-wrap items-end justify-between gap-3 rounded-lg border bg-white p-4 shadow-sm">
             <form method="GET" class="flex flex-wrap items-end gap-3">
-                <label class="text-sm text-gray-700">Dari tanggal<input type="date" name="dari" value="{{ $from }}" class="mt-1 block rounded-md border-gray-300"></label>
-                <label class="text-sm text-gray-700">Sampai tanggal<input type="date" name="sampai" value="{{ $to }}" class="mt-1 block rounded-md border-gray-300"></label>
+                <label class="text-sm text-gray-700">Bulan<input type="month" name="bulan" value="{{ $periode }}" max="{{ now()->format('Y-m') }}" class="mt-1 block rounded-md border-gray-300"></label>
                 <button class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white">Tampilkan</button>
             </form>
             <button type="button" onclick="window.print()" class="rounded-md bg-slate-800 px-4 py-2 text-sm font-semibold text-white">Cetak</button>
         </div>
         <section class="bg-white p-5 shadow-sm">
-            <div class="mb-4"><h1 class="text-base font-bold">REKAP POTONGAN PENJUALAN - SPEKTRUM</h1><p class="text-sm font-semibold">Periode: {{ \Carbon\Carbon::parse($from)->translatedFormat('d F Y') }} s/d {{ \Carbon\Carbon::parse($to)->translatedFormat('d F Y') }}</p></div>
+            <div class="mb-4"><h1 class="text-base font-bold">REKAP POTONGAN PENJUALAN - SPEKTRUM</h1><p class="text-sm font-semibold">Periode: {{ $month->translatedFormat('F Y') }}</p></div>
             <table>
                 <thead><tr><th style="width:36px;">No</th><th>Tanggal</th><th>No. Order</th><th>Customer</th><th>Jenis</th><th>Nilai Awal</th><th>Potongan</th><th>Nilai Akhir</th></tr></thead>
                 <tbody>@forelse($rows as $row)<tr><td style="text-align:center;white-space:nowrap;">{{ $loop->iteration }}</td><td style="text-align:center;">{{ \Carbon\Carbon::parse($row->date)->format('d-m-Y') }}</td><td>{{ $row->order }}</td><td>{{ $row->customer }}</td><td>{{ $row->category }}</td><td class="number">{{ number_format($row->initial,0,',','.') }}</td><td class="number">{{ number_format($row->discount,0,',','.') }}</td><td class="number">{{ number_format($row->final,0,',','.') }}</td></tr>@empty<tr><td colspan="8" style="padding:28px;text-align:center;">Tidak ada potongan penjualan pada periode ini.</td></tr>@endforelse</tbody>

@@ -16,6 +16,7 @@ use App\Models\PrinterOutdoor;
 use App\Services\OrderDocumentService;
 use App\Services\OrderPricingService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
@@ -749,11 +750,11 @@ class ReportController extends Controller
 
     public function salesDiscounts(Request $request): View
     {
-        $from = $request->date('dari')?->format('Y-m-d') ?? now()->startOfMonth()->format('Y-m-d');
-        $to = $request->date('sampai')?->format('Y-m-d') ?? now()->format('Y-m-d');
-        if ($from > $to) {
-            [$from, $to] = [$to, $from];
-        }
+        // Periode per bulan (input type=month, format Y-m).
+        $periode = preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', (string) $request->input('bulan')) ? $request->input('bulan') : now()->format('Y-m');
+        $month = Carbon::createFromFormat('Y-m-d', $periode.'-01');
+        $from = $month->copy()->startOfMonth()->format('Y-m-d');
+        $to = $month->copy()->endOfMonth()->format('Y-m-d');
 
         $rows = collect();
         foreach ([OrderIndoor::class, OrderOutdoor::class, OrderArtwork::class] as $model) {
@@ -800,7 +801,7 @@ class ReportController extends Controller
         $rows = $rows->sortBy(fn ($row) => $row->date.'|'.$row->order)->values();
 
         return view('reports.sales-discounts', [
-            'from' => $from, 'to' => $to, 'rows' => $rows,
+            'periode' => $periode, 'month' => $month, 'rows' => $rows,
             'totalDiscount' => (float) $rows->sum('discount'),
         ]);
     }
