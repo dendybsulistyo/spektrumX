@@ -435,7 +435,7 @@
                     </div>
                 @endforeach
                 <div class="card" style="background: #dc2626; color: #fff; border-color: #dc2626;">
-                    <div class="card-kicker" style="color: #fecaca; font-weight: 700; font-size: 12px;">Telat &gt; 3&times;24 jam</div>
+                    <div class="card-kicker" style="color: #fecaca; font-weight: 700; font-size: 12px;">Telat &gt; 1&times;24 jam</div>
                     <div style="font-family: var(--font-heading); font-weight: 700; font-size: 40px; line-height: 1.1; color: #fff;">{{ $stats['telat'] }}</div>
                     <div class="card-meta" style="color: #fecaca;">Belum siap diambil</div>
                 </div>

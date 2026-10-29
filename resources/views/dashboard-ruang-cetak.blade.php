@@ -152,6 +152,10 @@
             #rc-dashboard .rcd-table tbody tr.is-late td { animation: rcd-row-late 1s step-end infinite; }
             #rc-dashboard .rcd-table tbody tr.is-late td * { animation: rcd-row-late-text 1s step-end infinite; }
             @keyframes rcd-row-late { 50% { background: #dc2626; color: #fff; } }
+            /* Resume order telat: No. Order berkedip, tempo & jeda tiap baris berbeda (lihat :style). */
+            .rcd-order-blink { animation: rcd-order-blink 1.6s ease-in-out infinite; border-radius: 4px; padding: 1px 6px; }
+            @keyframes rcd-order-blink { 0%, 100% { background: transparent; color: inherit; } 50% { background: #dc2626; color: #fff; } }
+            @media (prefers-reduced-motion: reduce) { .rcd-order-blink { animation: none; } }
             #rc-dashboard .rcd-table tbody tr.is-late .rcd-meter > i, #rc-dashboard .rcd-table tbody tr.is-late .estimate-dot { animation-name: rcd-row-late-meter; }
             @keyframes rcd-row-late-meter { 50% { background: #fff; } }
             @keyframes rcd-row-late-text { 50% { color: #fff; background-color: transparent; border-color: #fff; } }
@@ -388,7 +392,7 @@
                 @endforeach
                 <button type="button" @click="openOverdue()" @class(['rcd-kpi alert', 'calm' => (int) $stats['telat'] === 0, 'flashing' => (int) $stats['telat'] > 0])
                         title="Buka resume semua order telat">
-                    <div class="rcd-kpi-label">Telat &gt; 3&times;24 jam</div>
+                    <div class="rcd-kpi-label">Telat &gt; 1&times;24 jam</div>
                     <div class="rcd-kpi-value">{{ number_format($stats['telat'], 0, ',', '.') }}</div>
                     <div class="rcd-kpi-meta">{{ (int) $stats['telat'] === 0 ? 'Semua order sesuai jadwal' : 'Order belum siap diambil' }}</div>
                 </button>
@@ -552,7 +556,7 @@
             <div class="sheet rcd-modal is-wide">
                 <div class="rcd-modal-head">
                     <div>
-                        <h4>Resume order telat &gt; 3×24 jam</h4>
+                        <h4>Resume order telat &gt; 1×24 jam</h4>
                         <div x-text="overdueMeta.total + ' order belum siap diambil'"></div>
                     </div>
                     <button type="button" @click="overdueOpen = false">Tutup</button>
@@ -581,7 +585,8 @@
                         <tbody>
                             <template x-for="row in overdueRows" :key="row.type_slug + '-' + row.id">
                                 <tr>
-                                    <td><button type="button" class="rcd-order" @click="openHistory(row.type_slug, row.id)" x-text="row.no_order"></button></td>
+                                    <td><button type="button" class="rcd-order rcd-order-blink" @click="openHistory(row.type_slug, row.id)" x-text="row.no_order"
+                                                :style="`animation-duration:${1.2 + (row.id * 7919 % 13) / 10}s;animation-delay:-${(row.id * 104729 % 2000) / 1000}s`"></button></td>
                                     <td><span class="rcd-tipe" style="margin-left:0" x-text="row.type"></span></td>
                                     <td class="rcd-customer" x-text="row.customer || '-'"></td>
                                     <td class="rcd-date" x-text="row.created_at"></td>

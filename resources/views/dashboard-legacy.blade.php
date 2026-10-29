@@ -16,7 +16,7 @@
             ['label' => 'Proses Bungkus', 'value' => $stats['bungkus'], 'color' => 'text-indigo-600'],
             ['label' => 'Siap Diambil', 'value' => $stats['siap_diambil'], 'color' => 'text-blue-600'],
             ['label' => 'Selesai', 'value' => $stats['selesai'], 'color' => 'text-green-700'],
-            ['label' => 'Telat > 3x24 Jam', 'value' => $stats['telat'], 'color' => 'text-red-600', 'border' => 'border-red-400', 'sub' => 'Belum siap diambil'],
+            ['label' => 'Telat > 1x24 Jam', 'value' => $stats['telat'], 'color' => 'text-red-600', 'border' => 'border-red-400', 'sub' => 'Belum siap diambil'],
         ];
 
         $statusBadge = fn (?string $status) => match ($status) {

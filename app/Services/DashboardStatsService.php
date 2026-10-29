@@ -38,7 +38,7 @@ class DashboardStatsService
                 .'SUM(CASE WHEN status = "batal" THEN 1 ELSE 0 END) as batal, '
                 .'SUM(CASE WHEN status NOT IN ("siap_diambil", "selesai", "batal") '
                 .'AND created_at IS NOT NULL AND created_at < ? THEN 1 ELSE 0 END) as telat',
-                [now()->subHours(72)]
+                [now()->subHours(24)]
             )->first());
 
         $sum = fn (string $key): int => (int) $totals->sum(fn ($row) => $row->{$key} ?? 0);
@@ -114,7 +114,7 @@ class DashboardStatsService
         ?string $from = null,
         ?string $to = null,
     ): LengthAwarePaginator {
-        $cutoff = now()->subHours(72);
+        $cutoff = now()->subHours(24);
         $union = null;
 
         foreach (['indoor' => 'order_indoor', 'outdoor' => 'order_outdoor', 'artwork' => 'order_artwork'] as $slug => $table) {
@@ -271,6 +271,6 @@ class DashboardStatsService
     {
         return ! in_array($order->status, ['siap_diambil', 'selesai', 'batal'], true)
             && $order->created_at
-            && $order->created_at->lt(now()->subHours(72));
+            && $order->created_at->lt(now()->subHours(24));
     }
 }

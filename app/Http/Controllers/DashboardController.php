@@ -80,7 +80,7 @@ class DashboardController extends Controller
     }
 
     /**
-     * Resume order yang belum siap setelah 72 jam. Endpoint ini dipanggil
+     * Resume order yang belum siap setelah 24 jam. Endpoint ini dipanggil
      * hanya saat kartu telat dibuka dan selalu mengembalikan data paginasi.
      */
     public function overdueOrders(Request $request): JsonResponse
