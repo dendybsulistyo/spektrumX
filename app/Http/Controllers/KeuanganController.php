@@ -1637,11 +1637,7 @@ class KeuanganController extends Controller
                     ->where('status', '!=', 'batal')
                     ->where('status_bayar', 'hutang')
                     ->where('jumlah_piutang', '>', 0)
-                    // Hanya nota yang sudah punya DO/Invoice (VIP maupun reguler).
-                    ->whereExists(fn ($query) => $query->from('order_documents')
-                        ->whereColumn('order_documents.order_id', $model::query()->getModel()->getTable().'.id')
-                        ->where('order_documents.order_type', $type)
-                        ->whereIn('order_documents.kind', ['do', 'inv']))
+                    // Hutang boleh dibayar walau barang belum diambil (belum ber-DO/INV).
                     ->when($dari, fn ($query) => $query->whereDate('TglOrder', '>=', $dari))
                     ->when($sampai, fn ($query) => $query->whereDate('TglOrder', '<=', $sampai))
                     ->orderBy('TglOrder')->orderBy('NoOrder')->get();

@@ -57,12 +57,8 @@ class ReceivableBatchPayment
                         throw ValidationException::withMessages(['pembayaran' => 'Nota tidak ditemukan untuk customer ini. Muat ulang halaman.']);
                     }
 
+                    // Boleh dibayar walau belum ber-DO/INV (barang belum diambil).
                     $isDp = $order->status_bayar === 'dp';
-                    $hasDocument = DB::table('order_documents')->where('order_type', $line['type'])
-                        ->where('order_id', $order->id)->whereIn('kind', ['do', 'inv'])->exists();
-                    if (! $isDp && ! $hasDocument) {
-                        throw ValidationException::withMessages(['pembayaran' => 'Nota '.$order->NoOrder.' belum memiliki DO/Invoice.']);
-                    }
 
                     $this->workflow->run($order, $isDp ? 'dp' : 'hutang', function (Model $locked) use ($isDp, $line, $method, $reference, $note, $batchId, &$result) {
                         $settled = $isDp
