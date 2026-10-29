@@ -1,6 +1,14 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800">Data Bahan Indoor</h2>
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <h2 class="font-semibold text-xl text-gray-800">Data Bahan Indoor</h2>
+            @can('produk.manage')
+                <a href="{{ route('produk.create') }}"
+                   class="inline-flex items-center px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-md hover:bg-gray-700">
+                    + Tambah Produk
+                </a>
+            @endcan
+        </div>
     </x-slot>
 
     <div class="bg-white rounded-lg border border-gray-200 overflow-hidden"

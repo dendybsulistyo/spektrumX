@@ -43,7 +43,7 @@ class ProdukController extends Controller
     {
         Produk::create($request->validated());
 
-        return redirect()->route('produk.index')->with('status', 'Produk berhasil ditambahkan.');
+        return redirect()->route('detail-indoor.index')->with('status', 'Produk berhasil ditambahkan.');
     }
 
     public function edit(Produk $produk): View
