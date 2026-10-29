@@ -1708,7 +1708,8 @@ class KeuanganController extends Controller
             }
         }
 
-        $rows = $rows->sortBy(fn ($row) => $row->date.'|'.$row->invoice)->values();
+        // SO DP di atas, lalu nota hutang; masing-masing urut Tgl. Order terlama.
+        $rows = $rows->sortBy(fn ($row) => ($row->is_dp ? '0' : '1').'|'.$row->date.'|'.$row->invoice)->values();
         $totals = (object) collect(['receivable', 'discount', 'paid', 'remaining'])
             ->mapWithKeys(fn ($column) => [$column => (float) $rows->sum($column)])->all();
 
