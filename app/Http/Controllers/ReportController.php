@@ -373,12 +373,12 @@ class ReportController extends Controller
         // dikembalikan (sisa pembatalan = pendapatan di jurnal). Nilainya
         // = jumlah_dibayar yang tersisa. Nota yang dihanguskan untuk nota
         // pengganti tidak ikut karena uangnya pindah ke nota pengganti.
-        // Di tab Batal semua order batal/hangus tampil dengan nilai nota dan uang yang pernah diterima.
+        // Di tab Batal semua order batal/hangus tampil dengan rupiah 0 agar tidak menambah nominal.
         $showCancelled = $selectedStatus === 'batal';
         $isRetainedCancel = fn ($order) => ! $showCancelled && $order->status === 'batal';
-        $orderTotal = fn ($order) => $isRetainedCancel($order)
+        $orderTotal = fn ($order) => $showCancelled ? 0.0 : ($isRetainedCancel($order)
             ? max(0, (float) $order->jumlah_dibayar)
-            : ($order->diskonStatus() === 'approved' ? $order->totalSetelahDiskon() : (float) $order->total);
+            : ($order->diskonStatus() === 'approved' ? $order->totalSetelahDiskon() : (float) $order->total));
         $orderPaid = fn ($order) => min($orderTotal($order), max(0, (float) $order->jumlah_dibayar));
 
         foreach ([$selectedType => $selectedType === 'indoor' ? OrderIndoor::class : OrderOutdoor::class] as $type => $model) {
