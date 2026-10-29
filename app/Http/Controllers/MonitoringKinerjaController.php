@@ -25,6 +25,13 @@ class MonitoringKinerjaController extends Controller
         'artwork' => OrderArtwork::class,
     ];
 
+    /**
+     * Produk yang bukan prestasi operator, tidak dihitung di Rekap Operator Indoor:
+     * Outdoor Laminat, Floor Laminat, Ongkos Kirim, Biaya Edit, Lobang Mata Ayam,
+     * Universal Laser Cutting A3 (artwork).
+     */
+    private const EXCLUDED_RECAP_PRODUCTS = ['1101', '1102', '2001', '2002', '2017', '1612'];
+
     private const ORDER_TYPE_LABELS = [
         'indoor' => 'Indoor',
         'outdoor' => 'Outdoor',
@@ -98,6 +105,9 @@ class MonitoringKinerjaController extends Controller
                 $allocated += $lineDiscount;
 
                 $item = $raw->get($line->detail_id);
+                if (in_array((string) $item?->KdProd, self::EXCLUDED_RECAP_PRODUCTS, true)) {
+                    continue;
+                }
                 $label = trim(($item?->divisionName() ?? '').' '.($item?->NmProd ?: $line->name)) ?: '-';
                 $operatorId = (int) $order->created_by;
                 $row = &$products[$operatorId][$label];
