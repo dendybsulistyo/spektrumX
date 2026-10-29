@@ -559,10 +559,13 @@ class ReportController extends Controller
                 $hasDocument = fn (string $kind) => fn ($q) => $q->selectRaw('1')->from('order_documents')
                     ->whereColumn('order_documents.order_id', $orderTable.'.id')
                     ->where('order_documents.order_type', $type)->where('order_documents.kind', $kind);
+                // SO batal selalu ikut tampil (bertanda BATAL), tetapi tidak dihitung di Grand Total.
                 $orders = $model::query()->with($relations)->where('KdCust', $customerCode)
-                    ->where('status', '!=', 'batal')->whereBetween('TglOrder', [$from, $to])
-                    ->whereExists($hasDocument('inv'))
-                    ->when($isVip, fn ($q) => $q->whereExists($hasDocument('do')), fn ($q) => $q->where('status_bayar', 'lunas'))
+                    ->whereBetween('TglOrder', [$from, $to])
+                    ->where(fn ($q) => $q->where('status', 'batal')
+                        ->orWhere(fn ($active) => $active->where('status', '!=', 'batal')
+                            ->whereExists($hasDocument('inv'))
+                            ->when($isVip, fn ($q) => $q->whereExists($hasDocument('do')), fn ($q) => $q->where('status_bayar', 'lunas'))))
                     ->orderBy('TglOrder')->orderBy('NoOrder')->get();
                 $invoiceNumbers = DB::table('order_documents')->where('kind', 'inv')->where('order_type', $type)
                     ->whereIn('order_id', $orders->pluck('id'))->orderByDesc('sequence')
@@ -584,6 +587,11 @@ class ReportController extends Controller
                         $advance = $net;
                     }
                     $credit = $order->status_bayar === 'lunas' ? 0.0 : max(0, (float) $order->jumlah_piutang);
+                    $cancelled = $order->status === 'batal';
+                    if ($cancelled) {
+                        // Uang Muka = uang yang tidak dikembalikan (umumnya 0).
+                        [$advance, $settlement, $credit] = [max(0, (float) $order->jumlah_dibayar), 0.0, 0.0];
+                    }
 
                     $allocated = ['discount' => 0.0, 'advance' => 0.0, 'settlement' => 0.0, 'credit' => 0.0];
                     foreach ($items->values() as $index => $item) {
@@ -601,6 +609,7 @@ class ReportController extends Controller
                             'qty' => $item->qty, 'price' => $item->harga_satuan, 'subtotal' => (float) $item->subtotal,
                             'discount' => $part['discount'], 'total' => (float) $item->subtotal - $part['discount'],
                             'advance' => $part['advance'], 'payment' => $part['settlement'], 'credit' => $part['credit'],
+                            'cancelled' => $cancelled,
                         ]);
                     }
                 }
@@ -608,8 +617,9 @@ class ReportController extends Controller
         }
 
         $rows = $rows->sortBy(fn ($row) => $row->date.'|'.$row->invoice.'|'.$row->description)->values();
+        $activeRows = $rows->reject(fn ($row) => $row->cancelled);
         $totals = (object) collect(['subtotal', 'discount', 'total', 'advance', 'payment', 'credit'])
-            ->mapWithKeys(fn ($column) => [$column => (float) $rows->sum($column)])->all();
+            ->mapWithKeys(fn ($column) => [$column => (float) $activeRows->sum($column)])->all();
 
         return view('reports.paid-orders-by-customer', compact(
             'from', 'to', 'selectedCustomer', 'customerCode', 'rows', 'totals'
