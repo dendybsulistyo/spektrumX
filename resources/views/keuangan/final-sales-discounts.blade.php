@@ -33,7 +33,7 @@
 
             <section class="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
                 <div class="flex items-center justify-between border-b border-slate-200 px-5 py-4">
-                    <div><h3 class="text-base font-semibold text-slate-900">Daftar transaksi</h3><p class="mt-1 text-xs text-slate-500">{{ $orders->count() }} SO ditemukan: Reguler wajib lunas; VIP boleh lunas atau hutang dalam plafon. Semua SO wajib sudah ber-DO dan ber-INV. Status DP tidak ditampilkan.</p></div>
+                    <div><h3 class="text-base font-semibold text-slate-900">Daftar transaksi</h3><p class="mt-1 text-xs text-slate-500">{{ $orders->count() }} SO ditemukan: SO DP boleh dipotong maksimal sebesar sisa tagihan. Selain DP wajib sudah ber-DO dan ber-INV: Reguler lunas, VIP lunas atau hutang dalam plafon.</p></div>
                     <a href="{{ route('report.sales-discounts') }}" class="rounded-md border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-700">Lihat Rekap Potongan Penjualan</a>
                 </div>
                 <div class="overflow-x-auto">
@@ -45,7 +45,7 @@
                         @forelse ($orders as $order)
                             <tr class="align-top hover:bg-slate-50/70">
                                 <td class="px-4 py-3"><p class="font-semibold text-slate-900">{{ $order->number }}</p><p class="mt-0.5 text-xs text-slate-500">{{ $order->customer }} · {{ $order->type_label }} · {{ $order->paid_at?->format('d-m-Y H:i') }}</p>@if ($order->invoice_number)<p class="mt-0.5 font-mono text-xs text-slate-600">{{ $order->invoice_number }}</p>@endif</td>
-                                <td class="px-4 py-3">@if ($order->payment_status === 'hutang')<span class="inline-flex rounded border border-amber-200 bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-800">TAGIHAN VIP</span><p class="mt-1 text-xs text-amber-800">Sisa piutang Rp {{ number_format($order->receivable_amount, 0, ',', '.') }}</p>@else<span class="inline-flex rounded border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-semibold text-slate-700">{{ strtoupper($order->payment_status) }}</span>@endif</td>
+                                <td class="px-4 py-3">@if ($order->payment_status === 'hutang')<span class="inline-flex rounded border border-amber-200 bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-800">TAGIHAN VIP</span><p class="mt-1 text-xs text-amber-800">Sisa piutang Rp {{ number_format($order->receivable_amount, 0, ',', '.') }}</p>@elseif ($order->payment_status === 'dp')<span class="inline-flex rounded border border-sky-200 bg-sky-50 px-2 py-1 text-xs font-semibold text-sky-800">DP</span><p class="mt-1 text-xs text-sky-800">Sisa tagihan Rp {{ number_format($order->receivable_amount, 0, ',', '.') }}</p>@else<span class="inline-flex rounded border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-semibold text-slate-700">{{ strtoupper($order->payment_status) }}</span>@endif</td>
                                 <td class="px-4 py-3 text-right tabular-nums">Rp {{ number_format($order->initial_amount, 0, ',', '.') }}</td>
                                 <td class="px-4 py-3 text-right tabular-nums text-red-700">Rp {{ number_format($order->discount_amount, 0, ',', '.') }}</td>
                                 <td class="px-4 py-3 text-right font-semibold tabular-nums">Rp {{ number_format($order->final_amount, 0, ',', '.') }}</td>
@@ -95,7 +95,7 @@
                                 </tr>
                             @endcan
                         @empty
-                            <tr><td colspan="7" class="px-5 py-12 text-center text-slate-500">Tidak ada SO yang memenuhi syarat pada filter ini. Pastikan DO dan INV sudah terbit; SO Reguler sudah lunas atau SO VIP masih dalam plafon.</td></tr>
+                            <tr><td colspan="7" class="px-5 py-12 text-center text-slate-500">Tidak ada SO yang memenuhi syarat pada filter ini. SO DP harus masih bersisa; selain DP pastikan DO dan INV sudah terbit, SO Reguler sudah lunas atau SO VIP masih dalam plafon.</td></tr>
                         @endforelse
                         </tbody>
                     </table>

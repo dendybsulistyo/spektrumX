@@ -7,6 +7,7 @@ use App\Models\OrderIndoor;
 use App\Models\OrderOutdoor;
 use App\Models\OrderPayment;
 use App\Models\OrderStatusNote;
+use App\Support\Rupiah;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -56,14 +57,17 @@ class ReceivableBatchPayment
                         throw ValidationException::withMessages(['pembayaran' => 'Nota tidak ditemukan untuk customer ini. Muat ulang halaman.']);
                     }
 
+                    $isDp = $order->status_bayar === 'dp';
                     $hasDocument = DB::table('order_documents')->where('order_type', $line['type'])
                         ->where('order_id', $order->id)->whereIn('kind', ['do', 'inv'])->exists();
-                    if (! $hasDocument) {
+                    if (! $isDp && ! $hasDocument) {
                         throw ValidationException::withMessages(['pembayaran' => 'Nota '.$order->NoOrder.' belum memiliki DO/Invoice.']);
                     }
 
-                    $this->workflow->run($order, 'hutang', function (Model $locked) use ($line, $method, $reference, $note, $batchId, &$result) {
-                        $settled = $this->payOne($locked, $line['type'], (float) $line['amount'], $method, $reference, $note, $batchId);
+                    $this->workflow->run($order, $isDp ? 'dp' : 'hutang', function (Model $locked) use ($isDp, $line, $method, $reference, $note, $batchId, &$result) {
+                        $settled = $isDp
+                            ? $this->payDp($locked, $line['type'], (float) $line['amount'], $method, $reference, $note, $batchId)
+                            : $this->payOne($locked, $line['type'], (float) $line['amount'], $method, $reference, $note, $batchId);
                         $result['count']++;
                         $result['total'] += (float) $line['amount'];
                         $result['settled'] += $settled ? 1 : 0;
@@ -75,6 +79,70 @@ class ReceivableBatchPayment
         }
 
         return $result;
+    }
+
+    /**
+     * SO DP wajib dilunasi penuh: sama dengan KasirController pelunasan DP
+     * (D Kas/Bank + D Uang Muka, K Penjualan & PPN). Plafon tidak tersentuh.
+     */
+    private function payDp(Model $order, string $type, float $amount, string $method, ?string $reference, ?string $note, string $batchId): bool
+    {
+        $totalFinal = Rupiah::bulatkan($order->hutangAmount());
+        $dpDiterima = (float) $order->jumlah_dibayar;
+        $remaining = max($totalFinal - $dpDiterima, 0);
+
+        if ($remaining <= 0 || abs($amount - $remaining) > 0.5) {
+            throw ValidationException::withMessages([
+                'pembayaran' => 'SO DP '.$order->NoOrder.' harus dilunasi penuh sebesar sisa tagihan Rp '
+                    .number_format($remaining, 0, ',', '.').'. Muat ulang halaman bila tagihan sudah berubah.',
+            ]);
+        }
+
+        $kdBantu = AccountingService::kodeBantuCustomer($order->customer?->KdCust);
+        $label = self::METHODS[$method].($reference ? " (Ref: {$reference})" : '');
+
+        $order->update([
+            'status_bayar' => 'lunas',
+            'dibayar_at' => now(),
+            'kasir_user_id' => auth()->id(),
+            'cara_bayar' => $method,
+            'no_referensi' => $reference,
+            'jumlah_dibayar' => $totalFinal,
+            'jumlah_piutang' => 0,
+        ]);
+
+        OrderStatusNote::create([
+            'order_type' => $type,
+            'order_id' => $order->id,
+            'stage' => 'kasir',
+            'action' => 'selesai',
+            'catatan' => 'Pelunasan sisa DP — '.$label.' · Pembayaran Piutang per Customer'.($note ? ' · '.$note : ''),
+            'user_id' => auth()->id(),
+            'created_at' => now(),
+        ]);
+
+        OrderPayment::create([
+            'batch_id' => $batchId,
+            'order_type' => $type,
+            'order_id' => $order->id,
+            'jenis' => 'pelunasan_dp',
+            'jumlah' => $remaining,
+            'cara_bayar' => $method,
+            'no_referensi' => $reference,
+            'user_id' => auth()->id(),
+            'created_at' => now(),
+        ]);
+
+        $this->accounting->post(
+            now()->format('Y-m-d'), $order->NoOrder, 'Pelunasan DP '.$order->NoOrder,
+            [
+                ['akun' => AccountingService::akunKasFor($method), 'debet' => $remaining, 'kd_bantu' => $kdBantu],
+                ['akun' => AccountingService::AKUN_UANG_MUKA_PENJUALAN, 'debet' => $dpDiterima, 'kd_bantu' => $kdBantu],
+                ...$this->accounting->salesCreditLines($totalFinal),
+            ]
+        );
+
+        return true;
     }
 
     /** @return bool true bila nota menjadi lunas. */

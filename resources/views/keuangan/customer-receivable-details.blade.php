@@ -101,7 +101,7 @@
             @if ($payMode)
                 {{-- Pembayaran Piutang: isi nominal per nota, satu cara bayar, lalu Proses. --}}
                 <form method="POST" action="{{ route('keuangan.customer-receivable-payments') }}"
-                      x-data="receivablePayment(@js($rows->map(fn ($row) => ['key' => $row->type.'-'.$row->id, 'label' => $row->invoice_number ?? $row->order_number, 'remaining' => (float) $row->remaining])->values()), @js(old('bayar', [])), @js(old('cara_bayar', 'tunai')))"
+                      x-data="receivablePayment(@js($rows->map(fn ($row) => ['key' => $row->type.'-'.$row->id, 'label' => $row->invoice_number ?? $row->order_number, 'remaining' => (float) $row->remaining, 'full' => $row->is_dp])->values()), @js(old('bayar', [])), @js(old('cara_bayar', 'tunai')))"
                       @submit="confirmSubmit($event)"
                       class="print-sheet bg-white p-5 shadow-sm">
                     @csrf
@@ -127,7 +127,7 @@
                                 @forelse($rows as $row)
                                     @php($key = $row->type.'-'.$row->id)
                                     <tr :class="amount('{{ $key }}') > 0 && 'is-paying'">
-                                        <td>{{ $row->order_number }}</td>
+                                        <td>{{ $row->order_number }}@if($row->is_dp) <span class="ml-1 rounded border border-sky-200 bg-sky-50 px-1.5 py-0.5 text-[11px] font-semibold text-sky-800">DP</span>@endif</td>
                                         <td>{{ $row->invoice_number ?? '-' }}</td>
                                         <td style="text-align:center;">{{ \Carbon\Carbon::parse($row->date)->format('d-m-Y') }}</td>
                                         <td class="number">{{ $rp($row->received + $row->remaining) }}</td>
@@ -136,7 +136,7 @@
                                         <td>
                                             <div style="display:flex; gap:6px;">
                                                 <input type="text" inputmode="numeric" name="bayar[{{ $key }}]" class="pay-input" placeholder="0"
-                                                       :class="amount('{{ $key }}') > {{ (float) $row->remaining }} && 'is-over'"
+                                                       :class="(amount('{{ $key }}') > {{ (float) $row->remaining }} || partialDp(rows.find((r) => r.key === '{{ $key }}'))) && 'is-over'"
                                                        :value="display('{{ $key }}')" @input="setAmount('{{ $key }}', $event.target.value)"
                                                        @keydown.enter.prevent title="Tekan Tab untuk lanjut ke nota berikutnya">
                                                 <button type="button" class="pay-fill" @click="fill('{{ $key }}')" title="Isi otomatis sebesar sisa piutang">Auto</button>
@@ -187,8 +187,9 @@
                                         </div>
                                     </template>
                                 </div>
+                                <p x-show="hasPartialDp()" x-cloak class="text-sm font-semibold" style="color:#c8246c;">SO DP harus dilunasi penuh sebesar sisa tagihan.</p>
                                 <p x-show="hasOver()" x-cloak class="text-sm font-semibold" style="color:#c8246c;">Ada nominal yang melebihi sisa piutang nota.</p>
-                                <button type="submit" :disabled="total() <= 0 || hasOver()"
+                                <button type="submit" :disabled="total() <= 0 || hasOver() || hasPartialDp()"
                                         class="w-full rounded-md px-4 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
                                         style="background:#1b2236;">Proses Pembayaran</button>
                             </div>
@@ -213,6 +214,9 @@
                             countPaying() { return this.rows.filter((row) => this.amount(row.key) > 0).length; },
                             selectedRows() { return this.rows.filter((row) => this.amount(row.key) > 0); },
                             hasOver() { return this.rows.some((row) => this.amount(row.key) > row.remaining); },
+                            // SO DP wajib dilunasi penuh (tidak boleh dicicil).
+                            partialDp(row) { return row.full && this.amount(row.key) > 0 && this.amount(row.key) < Math.round(row.remaining); },
+                            hasPartialDp() { return this.rows.some((row) => this.partialDp(row)); },
                             rupiah(value) { return Math.round(value).toLocaleString('id-ID'); },
                             confirmSubmit(event) {
                                 const label = { tunai: 'Tunai', qris: 'QRIS', transfer: 'Transfer' }[this.method];

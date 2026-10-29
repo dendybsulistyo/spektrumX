@@ -1645,6 +1645,16 @@ class KeuanganController extends Controller
                     ->when($dari, fn ($query) => $query->whereDate('TglOrder', '>=', $dari))
                     ->when($sampai, fn ($query) => $query->whereDate('TglOrder', '<=', $sampai))
                     ->orderBy('TglOrder')->orderBy('NoOrder')->get();
+                // Menu Pembayaran Piutang juga menampilkan SO DP yang masih bersisa
+                // (belum tentu ber-DO); laporan Piutang per Customer tetap hutang saja.
+                if (! $reportMode) {
+                    $orders = $orders->concat($model::query()->where('KdCust', $customerCode)
+                        ->where('status', '!=', 'batal')
+                        ->whereNull('invoice_voided_at')
+                        ->where('status_bayar', 'dp')
+                        ->where('jumlah_piutang', '>', 0)
+                        ->get());
+                }
                 $finalDiscountsByOrder = FinalSalesDiscount::query()
                     ->where('order_type', $type)->whereIn('order_id', $orders->pluck('id'))
                     ->selectRaw('order_id, SUM(discount_amount) AS total_discount')
@@ -1658,6 +1668,24 @@ class KeuanganController extends Controller
                     ->selectRaw('order_id, SUM(jumlah) AS total')->groupBy('order_id')->pluck('total', 'order_id');
 
                 foreach ($orders as $order) {
+                    if ($order->status_bayar === 'dp') {
+                        // Sisa DP dihitung dari total berjalan − DP diterima, sama dengan kasir.
+                        $paid = (float) $order->jumlah_dibayar;
+                        $rows->push((object) [
+                            'type' => $type,
+                            'id' => $order->id,
+                            'date' => $order->TglOrder,
+                            'order_number' => $order->NoOrder,
+                            'invoice_number' => null,
+                            'is_dp' => true,
+                            'received' => $paid,
+                            'invoice' => $order->NoOrder,
+                            'receivable' => (float) $order->total, 'discount' => $order->diskonStatus() === 'approved' ? $order->diskonNominal() : 0.0,
+                            'paid' => $paid, 'remaining' => max(0, $order->hutangAmount() - $paid),
+                        ]);
+
+                        continue;
+                    }
                     $gross = (float) $order->total;
                     $initialDiscount = $order->diskon_approved_at ? $order->diskonAwalNominal() : 0.0;
                     $discount = $initialDiscount + (float) ($finalDiscountsByOrder[$order->id] ?? 0);
@@ -1670,6 +1698,7 @@ class KeuanganController extends Controller
                         'date' => $order->TglOrder,
                         'order_number' => $order->NoOrder,
                         'invoice_number' => $invoiceNumbers[$order->id] ?? null,
+                        'is_dp' => false,
                         'received' => (float) ($receivedByOrder[$order->id] ?? 0),
                         'invoice' => $invoiceNumbers[$order->id] ?? $order->NoOrder,
                         'receivable' => $gross, 'discount' => $discount,
