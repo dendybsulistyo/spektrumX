@@ -359,8 +359,9 @@ class ReportController extends Controller
         // - preorder: belum dibayar di kasir dan belum ada nomor Invoice
         // - order   : sudah diproses kasir (lunas/DP/hutang), belum ada nomor Invoice
         // - invoice : sudah punya nomor Invoice
+        // - batal   : SO batal atau DO/INV dihanguskan (nota pengganti), di luar tiga status di atas
         // Pilihan "Semua" sengaja tidak disediakan; bawaan Pre Order.
-        $statusOptions = ['preorder' => 'Pre Order', 'order' => 'Order', 'invoice' => 'Invoice'];
+        $statusOptions = ['preorder' => 'Pre Order', 'order' => 'Order', 'invoice' => 'Invoice', 'batal' => 'Batal'];
         $selectedStatus = array_key_exists((string) $request->query('status'), $statusOptions)
             ? (string) $request->query('status')
             : 'preorder';
@@ -372,7 +373,9 @@ class ReportController extends Controller
         // dikembalikan (sisa pembatalan = pendapatan di jurnal). Nilainya
         // = jumlah_dibayar yang tersisa. Nota yang dihanguskan untuk nota
         // pengganti tidak ikut karena uangnya pindah ke nota pengganti.
-        $isRetainedCancel = fn ($order) => $order->status === 'batal';
+        // Di tab Batal semua order batal/hangus tampil dengan nilai nota dan uang yang pernah diterima.
+        $showCancelled = $selectedStatus === 'batal';
+        $isRetainedCancel = fn ($order) => ! $showCancelled && $order->status === 'batal';
         $orderTotal = fn ($order) => $isRetainedCancel($order)
             ? max(0, (float) $order->jumlah_dibayar)
             : ($order->diskonStatus() === 'approved' ? $order->totalSetelahDiskon() : (float) $order->total);
@@ -388,10 +391,12 @@ class ReportController extends Controller
                 ->whereColumn('order_id', $table.'.id');
             $baseQuery = $model::query()
                 ->whereBetween('TglOrder', [$from, $to])
-                ->where(fn ($query) => $query->where('status', '!=', 'batal')
+                ->when($showCancelled, fn ($query) => $query->where(fn ($cancelled) => $cancelled
+                    ->where('status', 'batal')->orWhereNotNull('invoice_voided_at')))
+                ->when(! $showCancelled, fn ($query) => $query->where(fn ($query) => $query->where('status', '!=', 'batal')
                     ->orWhere(fn ($cancelled) => $cancelled->where('status', 'batal')
                         ->whereNull('invoice_voided_at')
-                        ->where('jumlah_dibayar', '>', 0)))
+                        ->where('jumlah_dibayar', '>', 0))))
                 ->when($selectedStatus === 'invoice', fn ($query) => $query->whereExists($hasInvoice))
                 ->when($selectedStatus === 'order', fn ($query) => $query->whereNotExists($hasInvoice)->where('status_bayar', '!=', 'belum_bayar'))
                 ->when($selectedStatus === 'preorder', fn ($query) => $query->whereNotExists($hasInvoice)->where('status_bayar', 'belum_bayar'));
@@ -412,7 +417,10 @@ class ReportController extends Controller
                 }
                 $total = $orderTotal($order);
                 $advance = $orderPaid($order);
-                $status = $isRetainedCancel($order) ? 'Batal (sisa)' : match ($order->status_bayar) {
+                $status = $showCancelled
+                    ? ($order->invoice_voided_at ? 'Hangus (nota pengganti)' : 'Batal')
+                    : ($isRetainedCancel($order) ? 'Batal (sisa)' : null);
+                $status ??= match ($order->status_bayar) {
                     'lunas' => 'Lunas', 'dp' => 'DP', 'hutang' => 'Hutang', default => 'Pre Order',
                 };
 
@@ -434,7 +442,7 @@ class ReportController extends Controller
             $periodPaid = 0.0;
             $periodCount = 0;
             (clone $baseQuery)
-                ->select(['id', 'status', 'total', 'jumlah_dibayar', 'diskon_tipe', 'diskon_persen', 'diskon_nominal_tetap', 'diskon_akhir_nominal',
+                ->select(['id', 'status', 'invoice_voided_at', 'total', 'jumlah_dibayar', 'diskon_tipe', 'diskon_persen', 'diskon_nominal_tetap', 'diskon_akhir_nominal',
                     'diskon_approved_at', 'diskon_rejected_at', 'diskon_requested_at'])
                 ->lazyById(1000)
                 ->each(function ($order) use (&$periodTotal, &$periodPaid, &$periodCount, $orderTotal, $orderPaid) {
