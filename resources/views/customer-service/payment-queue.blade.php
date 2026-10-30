@@ -52,14 +52,14 @@
             <table class="w-full min-w-[980px] text-sm">
                 <thead class="border-b border-slate-200 bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
                     <tr>
-                        <th class="px-4 py-3">Tanggal</th>
-                        <th class="px-4 py-3">Nomor Order</th>
-                        <th class="px-4 py-3">Jenis</th>
-                        <th class="px-4 py-3">Customer</th>
-                        <th class="px-4 py-3 text-right">Total Order</th>
-                        <th class="px-4 py-3">Nominal Transfer</th>
-                        <th class="px-4 py-3">Status</th>
-                        <th class="px-4 py-3 text-right">Aksi</th>
+                        <th class="px-3 py-2">Tanggal</th>
+                        <th class="px-3 py-2">Nomor Order</th>
+                        <th class="px-3 py-2">Jenis</th>
+                        <th class="px-3 py-2">Customer</th>
+                        <th class="px-3 py-2 text-right">Total Order</th>
+                        <th class="px-3 py-2">Nominal Transfer</th>
+                        <th class="px-3 py-2">Status</th>
+                        <th class="px-3 py-2 text-right">Aksi</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100">
@@ -82,15 +82,15 @@
                         @endif
                         <tr x-show="tab === @js($order->order_type)" @if ($order->order_type !== $initialTab) x-cloak @endif class="align-middle hover:bg-slate-50/70"
                             x-data="{ mode: 'payment', raw: '', display: '', total: {{ (float) $order->total }}, minimum: {{ (float) $minimumTransfer }}, customArtwork: @js((bool) $order->is_custom_artwork), format(event) { this.raw = event.target.value.replace(/\D/g, ''); this.display = this.raw ? 'Rp ' + Number(this.raw).toLocaleString('id-ID') : ''; }, auto() { this.raw = String(Math.round(this.total / 100) * 100); this.display = 'Rp ' + Number(this.raw).toLocaleString('id-ID'); } }">
-                            <td class="whitespace-nowrap px-4 py-4 text-slate-600">{{ $order->TglOrder?->format('d/m/Y') ?? $order->TglOrder }}</td>
-                            <td class="px-4 py-4 font-semibold text-slate-900">{{ $order->NoOrder }}</td>
-                            <td class="px-4 py-4"><span class="rounded bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600">{{ ucfirst($order->order_type) }}</span></td>
-                            <td class="px-4 py-4 text-slate-700">{{ $order->customer?->NmCust ? ucwords(mb_strtolower($order->customer->NmCust)) : '-' }}</td>
-                            <td class="whitespace-nowrap px-4 py-4 text-right font-medium text-slate-900">Rp {{ number_format($order->total ?? 0, 0, ',', '.') }}</td>
-                            <td class="w-56 px-4 py-3">
+                            <td class="whitespace-nowrap px-3 py-1.5 text-slate-600">{{ $order->TglOrder?->format('d/m/Y') ?? $order->TglOrder }}</td>
+                            <td class="whitespace-nowrap px-3 py-1.5 font-semibold text-slate-900">{{ $order->NoOrder }}</td>
+                            <td class="px-3 py-1.5"><span class="rounded bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">{{ ucfirst($order->order_type) }}</span></td>
+                            <td class="px-3 py-1.5 text-slate-700">{{ $order->customer?->NmCust ? ucwords(mb_strtolower($order->customer->NmCust)) : '-' }}</td>
+                            <td class="whitespace-nowrap px-3 py-1.5 text-right font-medium text-slate-900">Rp {{ number_format($order->total ?? 0, 0, ',', '.') }}</td>
+                            <td class="px-3 py-1.5">
 
                                 @if ($order->is_custom_artwork)
-                                    <div class="mb-3 space-y-2 rounded border border-violet-200 bg-violet-50 p-2">
+                                    <div class="mb-1.5 space-y-1 rounded border border-violet-200 bg-violet-50 p-1.5">
                                         <p class="text-[11px] font-semibold text-violet-800">Harga Custom / unit</p>
                                         @foreach ($order->items->filter(fn ($item) => $item->requires_custom_price) as $item)
                                             <label class="block text-[11px] text-violet-700">
@@ -106,59 +106,63 @@
                                     </div>
                                 @endif
 
-                                <select x-model="mode" class="mb-2 w-52 rounded border-slate-300 py-1.5 text-xs focus:border-blue-500 focus:ring-blue-500">
+                                {{-- Jenis bayar + nominal + Auto sejajar satu baris. --}}
+                                <div class="flex items-center gap-1">
+                                <select x-model="mode" class="cs-ctl h-8 w-36 shrink-0 rounded border-slate-300 py-0 pl-2 pr-7 text-xs focus:border-blue-500 focus:ring-blue-500">
                                     <option value="payment">DP / Pelunasan</option>
                                     <option value="debt" @disabled(! $order->customer?->isVip)>Hutang{{ $order->customer?->isVip ? '' : ' — khusus VIP' }}</option>
                                 </select>
 
-                                <div x-show="mode === 'payment'" class="flex w-52 gap-1">
+                                <div x-show="mode === 'payment'" class="flex gap-1">
                                     <input type="text" inputmode="numeric" x-model="display" @input="format($event)" placeholder="Rp 0"
                                            form="cs-payment-{{ $order->order_type }}-{{ $order->id }}"
-                                           class="min-w-0 flex-1 rounded border-slate-300 text-sm focus:border-blue-500 focus:ring-blue-500">
+                                           class="cs-ctl h-8 w-32 rounded border-slate-300 py-0 text-sm focus:border-blue-500 focus:ring-blue-500">
                                     {{-- Auto = isi total order (pelunasan). Harga artwork custom belum final → tidak ada Auto. --}}
                                     @unless ($order->is_custom_artwork)
                                         <button type="button" @click="auto()" title="Isi total order (pelunasan penuh)"
-                                                class="shrink-0 rounded border border-slate-300 bg-white px-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50">Auto</button>
+                                                class="cs-ctl h-8 shrink-0 rounded border border-slate-300 bg-white px-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50">Auto</button>
                                     @endunless
+                                </div>
+                                <span x-show="mode === 'payment'" class="whitespace-nowrap pl-1 text-[11px] leading-tight text-slate-400">Min. 50%:<br>Rp {{ number_format($minimumTransfer, 0, ',', '.') }}</span>
+                                <span x-show="mode === 'debt'" x-cloak class="pl-1 text-[11px] leading-tight text-amber-600">Nilai penuh diajukan<br>sebagai piutang.</span>
                                 </div>
                                 <input type="hidden" name="cs_transfer_amount" :value="raw" form="cs-payment-{{ $order->order_type }}-{{ $order->id }}">
                                 <input type="hidden" name="cs_payment_type" :value="mode === 'debt' ? 'hutang' : ''" form="cs-payment-{{ $order->order_type }}-{{ $order->id }}">
-                                <p x-show="mode === 'payment'" class="mt-1 text-[11px] text-slate-400">Minimal 50%: Rp {{ number_format($minimumTransfer, 0, ',', '.') }}{{ $order->is_custom_artwork ? ' · Harga Artwork custom' : '' }}</p>
-                                <p x-show="mode === 'debt'" x-cloak class="mt-1 text-[11px] text-amber-600">Nilai penuh akan diajukan sebagai piutang.</p>
+                                @if ($order->is_custom_artwork)<p class="mt-0.5 text-[11px] leading-tight text-violet-600">Harga Artwork custom</p>@endif
                             </td>
-                            <td class="w-36 px-4 py-3">
+                            <td class="whitespace-nowrap px-3 py-1.5">
                                 <span x-show="mode === 'payment' && !raw" class="text-xs text-slate-400">Otomatis</span>
                                 <span x-show="mode === 'payment' && raw" x-text="Number(raw) < minimum ? 'Di bawah minimum' : (customArtwork && Number(raw) > total ? 'Harga Custom' : (Number(raw) < total ? 'DP' : (Number(raw) === total ? 'Pelunasan' : 'Melebihi total')))"
                                       :class="Number(raw) < minimum || (!customArtwork && Number(raw) > total) ? 'bg-red-100 text-red-700' : (customArtwork && Number(raw) > total ? 'bg-violet-100 text-violet-700' : (Number(raw) < total ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'))"
-                                      class="rounded px-2.5 py-1 text-xs font-semibold"></span>
+                                      class="rounded px-2 py-0.5 text-xs font-semibold"></span>
                                 <span x-show="mode === 'debt'" x-cloak class="rounded bg-orange-100 px-2.5 py-1 text-xs font-semibold text-orange-700">Hutang</span>
                             </td>
-                            <td class="whitespace-nowrap px-4 py-3 text-right">
+                            <td class="whitespace-nowrap px-3 py-1.5 text-right">
                                 @if ($order->is_custom_artwork)
                                     <button type="submit" form="cs-payment-{{ $order->order_type }}-{{ $order->id }}"
                                             formaction="{{ route('customer-service.artwork-prices.save', $order->id) }}" formtarget="_blank"
-                                            class="mr-2 inline-flex rounded border border-violet-300 bg-violet-50 px-3 py-1.5 text-xs font-semibold text-violet-700 hover:bg-violet-100">
+                                            class="mr-1 inline-flex h-8 items-center rounded border border-violet-300 bg-violet-50 px-2.5 text-xs font-semibold text-violet-700 hover:bg-violet-100">
                                         Simpan Harga &amp; Draft SO
                                     </button>
                                 @else
                                     <a href="{{ route('invoice.show', ['type' => $order->order_type, 'id' => $order->id, 'source' => 'cs', 'draft' => 1]) }}"
                                        target="_blank" rel="noopener"
-                                       class="mr-2 inline-flex rounded border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50">
+                                       class="mr-1 inline-flex h-8 items-center rounded border border-slate-300 bg-white px-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50">
                                         Draft SO
                                     </a>
                                 @endif
-                                <form id="cs-payment-{{ $order->order_type }}-{{ $order->id }}" method="POST"
+                                <form id="cs-payment-{{ $order->order_type }}-{{ $order->id }}" method="POST" class="hidden"
                                       action="{{ route('customer-service.forward', ['type' => $order->order_type, 'id' => $order->id]) }}">
                                     @csrf
                                 </form>
                                 <button type="submit" form="cs-payment-{{ $order->order_type }}-{{ $order->id }}"
-                                        class="rounded bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700">
+                                        class="h-8 rounded bg-blue-600 px-2.5 text-xs font-semibold text-white hover:bg-blue-700">
                                     Kirim Kasir
                                 </button>
                                 {{-- Customer datang & bayar langsung: teruskan ke Kasir tanpa nominal transfer. --}}
                                 <button type="submit" form="cs-payment-{{ $order->order_type }}-{{ $order->id }}" name="direct_kasir" value="1"
                                         onclick="return confirm('Teruskan {{ $order->NoOrder }} ke Kasir untuk dibayar langsung di Kasir (tanpa nominal transfer)?')"
-                                        class="ml-2 rounded bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-700">
+                                        class="ml-1 h-8 rounded bg-red-600 px-2.5 text-xs font-semibold text-white hover:bg-red-700">
                                     Proses di Kasir
                                 </button>
                             </td>
@@ -177,11 +181,13 @@
     </div>
     <style>
         .cs-scroll { max-height: calc(100vh - 230px); }
+        /* Kontrol baris dipaksa 32px (tema global memberi input/select tinggi 42px). */
+        html body.font-sans .cs-scroll .cs-ctl, .cs-scroll .cs-ctl { height: 32px !important; min-height: 32px !important; padding-top: 0 !important; padding-bottom: 0 !important; line-height: 30px !important; font-size: 12.5px !important; }
         .cs-scroll thead th { position: sticky; top: 0; z-index: 20; background: #f1ece0; box-shadow: inset 0 -1px 0 #cfc7b5; }
-        .cs-scroll td.cs-date { position: sticky; top: var(--cs-head-h, 46px); z-index: 10; padding: 9px 16px 9px 20px; box-shadow: inset 5px 0 0 var(--cs-accent), 0 1px 0 rgba(27, 34, 54, .12), 0 3px 6px -4px rgba(27, 34, 54, .35); }
+        .cs-scroll td.cs-date { position: sticky; top: var(--cs-head-h, 46px); z-index: 10; padding: 5px 12px 5px 16px; box-shadow: inset 5px 0 0 var(--cs-accent), 0 1px 0 rgba(27, 34, 54, .12), 0 3px 6px -4px rgba(27, 34, 54, .35); }
         .cs-scroll td.cs-date-indoor { --cs-accent: #d97706; background: #fde9b8; color: #78350f; }
         .cs-scroll td.cs-date-outdoor { --cs-accent: #0d9488; background: #c9efe8; color: #134e4a; }
-        .cs-scroll .cs-date-label { font-size: 14px; font-weight: 700; letter-spacing: .02em; }
+        .cs-scroll .cs-date-label { font-size: 13px; font-weight: 700; letter-spacing: .02em; }
         .cs-scroll .cs-date-count { margin-left: 10px; padding: 2px 8px; font-size: 11.5px; font-weight: 600; background: rgba(255, 255, 255, .7); border-radius: 999px; }
     </style>
 </x-app-layout>
