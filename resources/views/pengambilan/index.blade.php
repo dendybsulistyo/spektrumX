@@ -24,6 +24,8 @@
         <link rel="stylesheet" href="{{ asset('_ds/industry-8c70c3bf-fa3d-4d54-8c9e-e44ac24ed178/styles.css') }}">
         <style>
             .pengambilan-modal-root { font-family: var(--font-body); color: var(--color-text); }
+            /* display:flex lewat class, bukan style inline: x-show Alpine menghapus display inline saat popup dibuka (popup jadi menempel kiri-atas). */
+            .pengambilan-overlay { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; padding: var(--space-4); }
             #industry-pengambilan { font-family: var(--font-body); color: var(--color-text); background: var(--color-bg); margin: calc(var(--space-8) * -1); padding: var(--space-8); }
             :is(#industry-pengambilan, .pengambilan-modal-root) .seg-tab { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; font-family: var(--font-heading); font-weight: 600; font-size: 14px; letter-spacing: 0.02em; cursor: pointer; border: 1px solid var(--color-divider); border-right: none; background: transparent; color: var(--color-text); }
             :is(#industry-pengambilan, .pengambilan-modal-root) .seg-tab:last-child { border-right: 1px solid var(--color-divider); }
@@ -184,8 +186,7 @@
                     </div>
                 </div>
 
-                <div x-show="paymentOpen" x-cloak @keydown.escape.window="paymentOpen = false"
-                 style="position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; padding: var(--space-4);">
+                <div x-show="paymentOpen" x-cloak @keydown.escape.window="paymentOpen = false" class="pengambilan-overlay">
                 <div @click="paymentOpen = false" style="position: absolute; inset: 0; background: rgba(17,24,39,0.5);"></div>
                 <div class="blueprint" style="position: relative; background: var(--color-bg); width: 100%; max-width: 420px; padding: var(--space-6);">
                     <h4 style="margin: 0 0 var(--space-2);">Pelunasan <span x-text="paymentMode.toUpperCase()"></span></h4>
@@ -215,8 +216,7 @@
                 {{-- Dipindah ke <body> agar popup selalu di tengah layar, tidak terikat elemen induk. --}}
                 <template x-teleport="body">
                 <div class="pengambilan-modal-root">
-                <div x-show="penerimaOpen" x-cloak @keydown.escape.window="penerimaOpen = false"
-                 style="position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; padding: var(--space-4);">
+                <div x-show="penerimaOpen" x-cloak @keydown.escape.window="penerimaOpen = false" class="pengambilan-overlay">
                 <div @click="penerimaOpen = false" style="position: absolute; inset: 0; background: rgba(17,24,39,0.5);"></div>
                 <div class="blueprint" style="position: relative; background: var(--color-bg); width: 100%; max-width: 420px; padding: var(--space-6);">
                     <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
