@@ -11,10 +11,10 @@ use RuntimeException;
 class OrderNumberService
 {
     /**
-     * Nomor urut harian 3 digit mulai tanggal order ini (go-live); sebelumnya 5 digit.
+     * Nomor urut harian 3 digit mulai tanggal order ini (uji sebelum go-live); sebelumnya 5 digit.
      * Dipisah per tanggal agar satu hari tidak berisi nomor dengan panjang berbeda.
      */
-    private const THREE_DIGIT_FROM = '2026-11-01';
+    private const THREE_DIGIT_FROM = '2026-10-30';
 
     /**
      * Ambil nomor berikutnya di dalam transaksi pemanggil. Baris sequence
