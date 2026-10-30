@@ -23,29 +23,30 @@
     @push('styles')
         <link rel="stylesheet" href="{{ asset('_ds/industry-8c70c3bf-fa3d-4d54-8c9e-e44ac24ed178/styles.css') }}">
         <style>
+            .pengambilan-modal-root { font-family: var(--font-body); color: var(--color-text); }
             #industry-pengambilan { font-family: var(--font-body); color: var(--color-text); background: var(--color-bg); margin: calc(var(--space-8) * -1); padding: var(--space-8); }
-            #industry-pengambilan .seg-tab { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; font-family: var(--font-heading); font-weight: 600; font-size: 14px; letter-spacing: 0.02em; cursor: pointer; border: 1px solid var(--color-divider); border-right: none; background: transparent; color: var(--color-text); }
-            #industry-pengambilan .seg-tab:last-child { border-right: 1px solid var(--color-divider); }
-            #industry-pengambilan .seg-tab.active { background: var(--color-accent); color: var(--color-bg); border-color: var(--color-accent); }
-            #industry-pengambilan .in-input { width: 70px; min-height: 28px; padding: 4px 6px; font: inherit; font-size: 13px; color: var(--color-text); background: var(--color-surface); border: 1px solid var(--color-divider); }
-            #industry-pengambilan .in-btn { display: inline-flex; align-items: center; gap: 4px; font-family: var(--font-heading); font-weight: 600; font-size: 13px; padding: 5px 10px; background: var(--color-accent); color: var(--color-bg); border: 1px solid var(--color-accent); cursor: pointer; white-space: nowrap; }
-            #industry-pengambilan .in-btn:hover { background: var(--color-accent-600); }
-            #industry-pengambilan .order-card { border: 1px solid var(--color-divider); margin-bottom: var(--space-4); }
-            #industry-pengambilan .order-card-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-3) var(--space-4); background: color-mix(in srgb, var(--color-accent) 5%, transparent); border-bottom: 1px solid var(--color-divider); flex-wrap: wrap; }
-            #industry-pengambilan .item-row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--color-divider); flex-wrap: wrap; }
-            #industry-pengambilan .item-row:last-child { border-bottom: none; }
-            #industry-pengambilan .progress-tag { font-family: var(--font-heading); font-weight: 600; font-size: 13px; color: var(--color-text-muted, #666); }
-            #industry-pengambilan .signature-pad { display:block; width:100%; height:160px; border:1px dashed var(--color-divider); background:#fff; touch-action:none; cursor:crosshair; }
+            :is(#industry-pengambilan, .pengambilan-modal-root) .seg-tab { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; font-family: var(--font-heading); font-weight: 600; font-size: 14px; letter-spacing: 0.02em; cursor: pointer; border: 1px solid var(--color-divider); border-right: none; background: transparent; color: var(--color-text); }
+            :is(#industry-pengambilan, .pengambilan-modal-root) .seg-tab:last-child { border-right: 1px solid var(--color-divider); }
+            :is(#industry-pengambilan, .pengambilan-modal-root) .seg-tab.active { background: var(--color-accent); color: var(--color-bg); border-color: var(--color-accent); }
+            :is(#industry-pengambilan, .pengambilan-modal-root) .in-input { width: 70px; min-height: 28px; padding: 4px 6px; font: inherit; font-size: 13px; color: var(--color-text); background: var(--color-surface); border: 1px solid var(--color-divider); }
+            :is(#industry-pengambilan, .pengambilan-modal-root) .in-btn { display: inline-flex; align-items: center; gap: 4px; font-family: var(--font-heading); font-weight: 600; font-size: 13px; padding: 5px 10px; background: var(--color-accent); color: var(--color-bg); border: 1px solid var(--color-accent); cursor: pointer; white-space: nowrap; }
+            :is(#industry-pengambilan, .pengambilan-modal-root) .in-btn:hover { background: var(--color-accent-600); }
+            :is(#industry-pengambilan, .pengambilan-modal-root) .order-card { border: 1px solid var(--color-divider); margin-bottom: var(--space-4); }
+            :is(#industry-pengambilan, .pengambilan-modal-root) .order-card-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-3) var(--space-4); background: color-mix(in srgb, var(--color-accent) 5%, transparent); border-bottom: 1px solid var(--color-divider); flex-wrap: wrap; }
+            :is(#industry-pengambilan, .pengambilan-modal-root) .item-row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--color-divider); flex-wrap: wrap; }
+            :is(#industry-pengambilan, .pengambilan-modal-root) .item-row:last-child { border-bottom: none; }
+            :is(#industry-pengambilan, .pengambilan-modal-root) .progress-tag { font-family: var(--font-heading); font-weight: 600; font-size: 13px; color: var(--color-text-muted, #666); }
+            :is(#industry-pengambilan, .pengambilan-modal-root) .signature-pad { display:block; width:100%; height:160px; border:1px dashed var(--color-divider); background:#fff; touch-action:none; cursor:crosshair; }
             /* Mode tanda tangan di tengah layar (pen tablet seperti Huion memetakan seluruh layar ke area tablet). */
-            #industry-pengambilan .signature-stage-tools { display:none; }
-            #industry-pengambilan .signature-stage.is-centered { position:fixed; inset:0; z-index:60; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; background:rgba(17,24,39,.6); padding:16px; }
-            #industry-pengambilan .signature-stage.is-centered .signature-pad { width:min(900px, 92vw); height:auto; aspect-ratio:600 / 220; border:2px dashed #94a3b8; border-radius:6px; }
-            #industry-pengambilan .signature-stage.is-centered .signature-stage-tools { display:flex; gap:8px; }
-            #industry-pengambilan .signature-stage.is-centered .signature-stage-title { display:block; color:#fff; font-weight:600; }
-            #industry-pengambilan .signature-stage-title { display:none; }
-            #industry-pengambilan .sales-table { width: 100%; border-collapse: collapse; background: var(--color-bg); }
-            #industry-pengambilan .sales-table th { padding: 10px 12px; border-bottom: 2px solid var(--color-divider); color: var(--color-text-muted); font-family: var(--font-heading); font-size: 12px; letter-spacing: .04em; text-align: left; text-transform: uppercase; }
-            #industry-pengambilan .sales-table td { padding: 11px 12px; border-bottom: 1px solid var(--color-divider); font-size: 13px; }
+            :is(#industry-pengambilan, .pengambilan-modal-root) .signature-stage-tools { display:none; }
+            :is(#industry-pengambilan, .pengambilan-modal-root) .signature-stage.is-centered { position:fixed; inset:0; z-index:60; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; background:rgba(17,24,39,.6); padding:16px; }
+            :is(#industry-pengambilan, .pengambilan-modal-root) .signature-stage.is-centered .signature-pad { width:min(900px, 92vw); height:auto; aspect-ratio:600 / 220; border:2px dashed #94a3b8; border-radius:6px; }
+            :is(#industry-pengambilan, .pengambilan-modal-root) .signature-stage.is-centered .signature-stage-tools { display:flex; gap:8px; }
+            :is(#industry-pengambilan, .pengambilan-modal-root) .signature-stage.is-centered .signature-stage-title { display:block; color:#fff; font-weight:600; }
+            :is(#industry-pengambilan, .pengambilan-modal-root) .signature-stage-title { display:none; }
+            :is(#industry-pengambilan, .pengambilan-modal-root) .sales-table { width: 100%; border-collapse: collapse; background: var(--color-bg); }
+            :is(#industry-pengambilan, .pengambilan-modal-root) .sales-table th { padding: 10px 12px; border-bottom: 2px solid var(--color-divider); color: var(--color-text-muted); font-family: var(--font-heading); font-size: 12px; letter-spacing: .04em; text-align: left; text-transform: uppercase; }
+            :is(#industry-pengambilan, .pengambilan-modal-root) .sales-table td { padding: 11px 12px; border-bottom: 1px solid var(--color-divider); font-size: 13px; }
         </style>
         <x-operator-workspace-styles />
     @endpush
@@ -211,6 +212,9 @@
                 </div>
                 </div>
 
+                {{-- Dipindah ke <body> agar popup selalu di tengah layar, tidak terikat elemen induk. --}}
+                <template x-teleport="body">
+                <div class="pengambilan-modal-root">
                 <div x-show="penerimaOpen" x-cloak @keydown.escape.window="penerimaOpen = false"
                  style="position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; padding: var(--space-4);">
                 <div @click="penerimaOpen = false" style="position: absolute; inset: 0; background: rgba(17,24,39,0.5);"></div>
@@ -285,6 +289,8 @@
                     </form>
                 </div>
                 </div>
+                </div>
+                </template>
             </div>
         </div>
     </div>

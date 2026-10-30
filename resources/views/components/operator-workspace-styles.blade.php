@@ -1,5 +1,5 @@
 <style>
-    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) {
+    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan, .pengambilan-modal-root) {
         --operator-navy: #172033;
         --operator-blue: #3156d3;
         --operator-border: #d9e1eb;
@@ -127,11 +127,11 @@
         opacity: .8;
     }
 
-    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) > div {
+    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan, .pengambilan-modal-root) > div {
         gap: 14px !important;
     }
 
-    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .seg-tab {
+    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan, .pengambilan-modal-root) .seg-tab {
         min-height: 34px;
         padding: 7px 13px;
         background: #ffffff;
@@ -143,18 +143,18 @@
         transition: background-color .15s ease, border-color .15s ease, color .15s ease;
     }
 
-    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .seg-tab:hover {
+    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan, .pengambilan-modal-root) .seg-tab:hover {
         background: #f8fafc;
         color: var(--operator-navy);
     }
 
-    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .seg-tab.active {
+    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan, .pengambilan-modal-root) .seg-tab.active {
         background: var(--operator-navy);
         color: #ffffff;
         border-color: var(--operator-navy);
     }
 
-    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .order-card {
+    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan, .pengambilan-modal-root) .order-card {
         position: relative;
         overflow: hidden;
         background: #ffffff !important;
@@ -165,7 +165,7 @@
         box-shadow: 0 7px 20px rgba(23, 32, 51, .045);
     }
 
-    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .order-date-rail {
+    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan, .pengambilan-modal-root) .order-date-rail {
         position: absolute;
         inset: 0 auto 0 0;
         width: 58px;
@@ -181,15 +181,15 @@
         line-height: 1;
     }
 
-    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .order-date-rail strong {
+    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan, .pengambilan-modal-root) .order-date-rail strong {
         color: var(--operator-navy);
         font-size: 19px;
         font-weight: 800;
         letter-spacing: -.04em;
     }
 
-    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .order-date-rail span,
-    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .order-date-rail small {
+    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan, .pengambilan-modal-root) .order-date-rail span,
+    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan, .pengambilan-modal-root) .order-date-rail small {
         margin-top: 3px;
         color: #738096;
         font-size: 9px;
@@ -197,7 +197,7 @@
         letter-spacing: .08em;
     }
 
-    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .order-card-head {
+    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan, .pengambilan-modal-root) .order-card-head {
         margin-left: 58px;
         min-height: 38px;
         padding: 5px 12px;
@@ -206,14 +206,14 @@
         color: var(--operator-navy);
     }
 
-    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .order-summary {
+    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan, .pengambilan-modal-root) .order-summary {
         display: flex;
         min-width: 0;
         flex-direction: column;
         gap: 5px;
     }
 
-    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .order-identity {
+    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan, .pengambilan-modal-root) .order-identity {
         display: inline-flex;
         align-items: center;
         flex-wrap: wrap;
@@ -224,38 +224,38 @@
         letter-spacing: -.005em !important;
     }
 
-    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .order-customer-line {
+    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan, .pengambilan-modal-root) .order-customer-line {
         display: inline-flex;
         min-width: 0;
         align-items: center;
         gap: 7px;
     }
 
-    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .order-meta-date,
-    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .order-meta-customer,
-    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .order-meta-operator {
+    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan, .pengambilan-modal-root) .order-meta-date,
+    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan, .pengambilan-modal-root) .order-meta-customer,
+    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan, .pengambilan-modal-root) .order-meta-operator {
         font-size: 13px !important;
         line-height: 1.45 !important;
     }
 
-    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .order-meta-date {
+    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan, .pengambilan-modal-root) .order-meta-date {
         color: #617087;
         font-weight: 500;
         font-variant-numeric: tabular-nums;
     }
 
-    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .order-meta-customer {
+    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan, .pengambilan-modal-root) .order-meta-customer {
         color: #415168;
         font-weight: 600;
     }
 
-    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .order-meta-operator {
+    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan, .pengambilan-modal-root) .order-meta-operator {
         color: #6b7890;
         font-weight: 500;
     }
 
-    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .order-meta-divider,
-    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .item-meta-divider {
+    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan, .pengambilan-modal-root) .order-meta-divider,
+    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan, .pengambilan-modal-root) .item-meta-divider {
         display: inline-block;
         width: 1px;
         height: 14px;
@@ -263,19 +263,19 @@
         background: #c7d1de;
     }
 
-    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .item-meta-divider {
+    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan, .pengambilan-modal-root) .item-meta-divider {
         height: 18px;
         margin: 0 7px;
         vertical-align: middle;
         background: #d2dae5;
     }
 
-    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .item-meta-divider-small {
+    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan, .pengambilan-modal-root) .item-meta-divider-small {
         height: 13px;
         margin: 0 6px;
     }
 
-    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .item-row {
+    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan, .pengambilan-modal-root) .item-row {
         margin-left: 58px;
         min-height: 36px;
         padding: 4px 12px;
@@ -285,20 +285,20 @@
         transition: background-color .15s ease;
     }
 
-    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .item-row:hover {
+    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan, .pengambilan-modal-root) .item-row:hover {
         background: #f8fafc;
     }
 
-    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .item-row > div:first-child span[style*="font-size: 14px"] {
+    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan, .pengambilan-modal-root) .item-row > div:first-child span[style*="font-size: 14px"] {
         font-size: 12px !important;
         color: #607087 !important;
     }
 
-    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .item-row > div:last-child {
+    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan, .pengambilan-modal-root) .item-row > div:last-child {
         gap: 8px !important;
     }
 
-    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .progress-tag {
+    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan, .pengambilan-modal-root) .progress-tag {
         display: inline-flex;
         align-items: center;
         min-height: 28px;
@@ -311,7 +311,7 @@
         font-weight: 700;
     }
 
-    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .in-input {
+    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan, .pengambilan-modal-root) .in-input {
         height: 28px !important;
         min-height: 28px !important;
         padding: 0 7px !important;
@@ -325,12 +325,12 @@
         outline: none;
     }
 
-    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .in-input:focus {
+    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan, .pengambilan-modal-root) .in-input:focus {
         border-color: var(--operator-blue);
         box-shadow: 0 0 0 2px rgba(37, 99, 235, .12);
     }
 
-    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .in-input:disabled {
+    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan, .pengambilan-modal-root) .in-input:disabled {
         background: #edf1f5;
         color: #69768a;
         border-color: #d6dee8;
@@ -338,7 +338,7 @@
         opacity: 1;
     }
 
-    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .in-btn {
+    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan, .pengambilan-modal-root) .in-btn {
         min-height: 28px;
         padding: 4px 9px;
         background: var(--operator-blue);
@@ -351,53 +351,53 @@
         transition: background-color .15s ease, border-color .15s ease, box-shadow .15s ease;
     }
 
-    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .in-btn:hover {
+    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan, .pengambilan-modal-root) .in-btn:hover {
         background: #2748b8;
         border-color: #2748b8;
         box-shadow: 0 4px 10px rgba(49, 86, 211, .2);
     }
 
-    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .in-btn-ghost {
+    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan, .pengambilan-modal-root) .in-btn-ghost {
         background: #ffffff;
         color: #334155;
         border-color: #cbd5e1;
         box-shadow: none;
     }
 
-    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .in-btn-ghost:hover {
+    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan, .pengambilan-modal-root) .in-btn-ghost:hover {
         background: #f8fafc;
         color: #0f172a;
         border-color: #94a3b8;
     }
 
-    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .in-btn-danger {
+    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan, .pengambilan-modal-root) .in-btn-danger {
         background: #ffffff;
         color: #b42318;
         border-color: #f3b7b2;
         box-shadow: none;
     }
 
-    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .in-btn-danger:hover {
+    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan, .pengambilan-modal-root) .in-btn-danger:hover {
         background: #fff5f4;
         color: #912018;
         border-color: #e98d86;
     }
 
-    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .blueprint {
+    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan, .pengambilan-modal-root) .blueprint {
         background-color: #ffffff;
         border-color: var(--operator-border);
         border-radius: 8px;
         box-shadow: 0 6px 18px rgba(23, 32, 51, .04);
     }
 
-    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .tag {
+    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan, .pengambilan-modal-root) .tag {
         border: 1px solid #d6dee9;
         border-radius: 5px;
         font-size: 10px;
         font-weight: 700;
     }
 
-    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .tag-outline {
+    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan, .pengambilan-modal-root) .tag-outline {
         border-color: #bdcae2;
         background: #f5f7fb;
         color: #415168;
@@ -411,7 +411,7 @@
         box-sizing: border-box;
     }
 
-    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) input[type="checkbox"] {
+    :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan, .pengambilan-modal-root) input[type="checkbox"] {
         width: 16px;
         height: 16px;
         border-color: #aeb9c8;
@@ -432,26 +432,26 @@
             border-left: 0;
         }
 
-        :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) {
+        :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan, .pengambilan-modal-root) {
             margin: -16px;
             padding: 14px !important;
         }
 
-        :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .order-card-head,
-        :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .item-row {
+        :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan, .pengambilan-modal-root) .order-card-head,
+        :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan, .pengambilan-modal-root) .item-row {
             padding: 5px 9px;
         }
 
-        :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .order-date-rail {
+        :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan, .pengambilan-modal-root) .order-date-rail {
             width: 50px;
         }
 
-        :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .order-card-head,
-        :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .item-row {
+        :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan, .pengambilan-modal-root) .order-card-head,
+        :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan, .pengambilan-modal-root) .item-row {
             margin-left: 50px;
         }
 
-        :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan) .item-row > div:last-child {
+        :is(#industry-desain, #industry-cetak, #industry-finishing, #industry-qc, #industry-bungkus, #industry-pengambilan, .pengambilan-modal-root) .item-row > div:last-child {
             width: 100%;
             justify-content: flex-end;
         }
