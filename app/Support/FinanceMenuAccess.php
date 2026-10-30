@@ -27,6 +27,7 @@ class FinanceMenuAccess
     private const KEDUANYA = [
         'order-documents',
         'keuangan.customer-receivable-details',
+        'report.paid-orders-by-customer',
         'order-indoor.request-cancel',
         'order-outdoor.request-cancel',
         'akuntansi.buku-besar',
