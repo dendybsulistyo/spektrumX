@@ -32,9 +32,14 @@ return new class extends Migration
 
     private function rename(string $from, string $to): void
     {
+        // Dibandingkan di PHP, bukan CONCAT di SQL: kolom am berkolasi latin1 di server
+        // sehingga CONCAT dengan teks utf8mb4 ditolak MySQL ("Illegal mix of collations").
         // Hanya jurnal order: keterangan persis "<awalan><No. Order>" dengan Bukti = No. Order.
-        DB::table('am')->where('KetMT', 'like', $from.'%')->whereRaw('KetMT = CONCAT(?, Bukti)', [$from])->update([
-            'KetMT' => DB::raw('CONCAT('.DB::getPdo()->quote($to).', SUBSTRING(KetMT, '.(mb_strlen($from) + 1).'))'),
-        ]);
+        DB::table('am')->where('KetMT', 'like', $from.'%')
+            ->select('KetMT', 'Bukti')->distinct()->get()
+            ->filter(fn ($row) => $row->KetMT === $from.$row->Bukti)
+            ->each(fn ($row) => DB::table('am')
+                ->where('KetMT', $row->KetMT)->where('Bukti', $row->Bukti)
+                ->update(['KetMT' => $to.$row->Bukti]));
     }
 };
