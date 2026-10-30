@@ -653,7 +653,7 @@ class KasirController extends Controller
             ]);
 
             $this->accounting->post(
-                now()->format('Y-m-d'), $order->NoOrder, 'Penjualan hutang '.$order->NoOrder,
+                now()->format('Y-m-d'), $order->NoOrder, 'Penjualan piutang '.$order->NoOrder,
                 [
                     ['akun' => AccountingService::AKUN_PIUTANG_DAGANG, 'debet' => $total, 'kd_bantu' => AccountingService::kodeBantuCustomer($order->customer?->KdCust)],
                     ...$this->accounting->salesCreditLines($total),
@@ -868,7 +868,7 @@ class KasirController extends Controller
 
             $this->createPaymentRows($type, $order->id, 'pelunasan_hutang', [$payment]);
             $this->accounting->post(
-                now()->format('Y-m-d'), $order->NoOrder, 'Cicilan hutang '.$order->NoOrder,
+                now()->format('Y-m-d'), $order->NoOrder, 'Cicilan piutang '.$order->NoOrder,
                 [
                     ...$this->kasLines([$payment], AccountingService::kodeBantuCustomer($order->customer?->KdCust)),
                     ['akun' => AccountingService::AKUN_PIUTANG_DAGANG, 'kredit' => $amount, 'kd_bantu' => AccountingService::kodeBantuCustomer($order->customer?->KdCust)],
@@ -941,7 +941,7 @@ class KasirController extends Controller
             $this->createPaymentRows($type, $order->id, 'pelunasan_hutang', $rincian);
 
             $this->accounting->post(
-                now()->format('Y-m-d'), $order->NoOrder, 'Pelunasan hutang '.$order->NoOrder,
+                now()->format('Y-m-d'), $order->NoOrder, 'Pelunasan piutang '.$order->NoOrder,
                 [
                     ...$this->kasLines($rincian, AccountingService::kodeBantuCustomer($order->customer?->KdCust)),
                     ['akun' => AccountingService::AKUN_PIUTANG_DAGANG, 'kredit' => $sisaPiutang, 'kd_bantu' => AccountingService::kodeBantuCustomer($order->customer?->KdCust)],

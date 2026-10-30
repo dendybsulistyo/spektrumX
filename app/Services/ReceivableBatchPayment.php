@@ -204,7 +204,7 @@ class ReceivableBatchPayment
         ]);
 
         $this->accounting->post(
-            now()->format('Y-m-d'), $order->NoOrder, ($settled ? 'Pelunasan hutang ' : 'Cicilan hutang ').$order->NoOrder,
+            now()->format('Y-m-d'), $order->NoOrder, ($settled ? 'Pelunasan piutang ' : 'Cicilan piutang ').$order->NoOrder,
             [
                 ['akun' => AccountingService::akunKasFor($method), 'debet' => $amount, 'kd_bantu' => $kdBantu],
                 ['akun' => AccountingService::AKUN_PIUTANG_DAGANG, 'kredit' => $amount, 'kd_bantu' => $kdBantu],

@@ -36,6 +36,13 @@
             #industry-pengambilan .item-row:last-child { border-bottom: none; }
             #industry-pengambilan .progress-tag { font-family: var(--font-heading); font-weight: 600; font-size: 13px; color: var(--color-text-muted, #666); }
             #industry-pengambilan .signature-pad { display:block; width:100%; height:160px; border:1px dashed var(--color-divider); background:#fff; touch-action:none; cursor:crosshair; }
+            /* Mode tanda tangan di tengah layar (pen tablet seperti Huion memetakan seluruh layar ke area tablet). */
+            #industry-pengambilan .signature-stage-tools { display:none; }
+            #industry-pengambilan .signature-stage.is-centered { position:fixed; inset:0; z-index:60; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; background:rgba(17,24,39,.6); padding:16px; }
+            #industry-pengambilan .signature-stage.is-centered .signature-pad { width:min(900px, 92vw); height:auto; aspect-ratio:600 / 220; border:2px dashed #94a3b8; border-radius:6px; }
+            #industry-pengambilan .signature-stage.is-centered .signature-stage-tools { display:flex; gap:8px; }
+            #industry-pengambilan .signature-stage.is-centered .signature-stage-title { display:block; color:#fff; font-weight:600; }
+            #industry-pengambilan .signature-stage-title { display:none; }
             #industry-pengambilan .sales-table { width: 100%; border-collapse: collapse; background: var(--color-bg); }
             #industry-pengambilan .sales-table th { padding: 10px 12px; border-bottom: 2px solid var(--color-divider); color: var(--color-text-muted); font-family: var(--font-heading); font-size: 12px; letter-spacing: .04em; text-align: left; text-transform: uppercase; }
             #industry-pengambilan .sales-table td { padding: 11px 12px; border-bottom: 1px solid var(--color-divider); font-size: 13px; }
@@ -252,9 +259,19 @@
                                 <label class="label">Tanda Tangan Penerima</label>
                                 <button type="button" id="clear-signature" class="btn btn-secondary" style="height:28px;padding:0 9px;font-size:12px;">Hapus</button>
                             </div>
-                            <canvas id="pickup-signature-pad" class="signature-pad" width="600" height="220" aria-label="Area tanda tangan penerima"></canvas>
+                            <div class="signature-stage" id="signature-stage">
+                                <span class="signature-stage-title">Tanda tangan penerima</span>
+                                <canvas id="pickup-signature-pad" class="signature-pad" width="600" height="220" aria-label="Area tanda tangan penerima"></canvas>
+                                <div class="signature-stage-tools">
+                                    <button type="button" id="clear-signature-centered" class="btn btn-secondary" style="height:32px;padding:0 12px;">Hapus</button>
+                                    <button type="button" id="close-signature-centered" class="in-btn">Selesai</button>
+                                </div>
+                            </div>
                             <input type="hidden" name="signature_strokes" id="signature-strokes">
-                            <p class="text-muted" style="margin:4px 0 0;font-size:11px;">Minta penerima membubuhkan tanda tangan menggunakan jari atau stylus.</p>
+                            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:4px;">
+                                <p class="text-muted" style="margin:0;font-size:11px;">Minta penerima membubuhkan tanda tangan menggunakan jari atau stylus.</p>
+                                <button type="button" id="open-signature-centered" class="btn btn-secondary" style="height:28px;padding:0 9px;font-size:12px;white-space:nowrap;">TTD di tengah layar</button>
+                            </div>
                         </div>
 
                         <div class="text-muted" style="font-size: 12px;">
@@ -295,7 +312,14 @@ document.addEventListener('DOMContentLoaded', () => {
     canvas.addEventListener('pointerup', () => drawing = false);
     canvas.addEventListener('pointercancel', () => drawing = false);
     clear.addEventListener('click', reset);
-    window.addEventListener('open-penerima-modal', reset);
+    // Mode tengah layar: kanvas yang sama diperbesar di tengah, coretan tetap tersimpan.
+    const stage = document.getElementById('signature-stage');
+    const setCentered = (on) => stage.classList.toggle('is-centered', on);
+    document.getElementById('open-signature-centered').addEventListener('click', () => setCentered(true));
+    document.getElementById('close-signature-centered').addEventListener('click', () => setCentered(false));
+    document.getElementById('clear-signature-centered').addEventListener('click', reset);
+    stage.addEventListener('keydown', event => { if (event.key === 'Escape') { event.stopPropagation(); setCentered(false); } });
+    window.addEventListener('open-penerima-modal', () => { reset(); setCentered(false); });
     form.addEventListener('submit', event => { if (!strokes.some(stroke => stroke.length > 1)) { event.preventDefault(); alert('Tanda tangan penerima wajib diisi.'); return; } field.value = JSON.stringify(strokes); });
 });
 </script>

@@ -257,6 +257,7 @@
                                                 <a href="{{ route('order-documents.index') }}" class="{{ $dropdownLink(request()->routeIs('order-documents.*')) }}">Dokumen SO / DO / Invoice</a>
                                                 <a href="{{ route('akuntansi.gunggungan') }}" class="{{ $dropdownLink(request()->routeIs('akuntansi.gunggungan')) }}">Gunggungan</a>
                                                 <a href="{{ route('report.credit-orders-by-customer') }}" class="{{ $dropdownLink(request()->routeIs('report.credit-orders-by-customer')) }}">Rekap Order Customer (Piutang)</a>
+                                                <a href="{{ route('report.paid-orders-by-customer') }}" class="{{ $dropdownLink(request()->routeIs('report.paid-orders-by-customer')) }}">Rekap Order per Customer</a>
                                                 <a href="{{ route('keuangan.laporan-ppn') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.laporan-ppn')) }}">Rekap PPN</a>
                                                 <div class="mx-2 my-2 border-t border-slate-200"></div>
                                                 <a href="{{ route('keuangan.global-customer-receivables') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.global-customer-receivables')) }}">Rekap Piutang Customer Global</a>
@@ -656,6 +657,7 @@
                                 <a href="{{ route('order-documents.index') }}" class="{{ $mobileLink(request()->routeIs('order-documents.*')) }}">Dokumen SO / DO / Invoice</a>
                                 <a href="{{ route('akuntansi.gunggungan') }}" class="{{ $mobileLink(request()->routeIs('akuntansi.gunggungan')) }}">Gunggungan</a>
                                 <a href="{{ route('report.credit-orders-by-customer') }}" class="{{ $mobileLink(request()->routeIs('report.credit-orders-by-customer')) }}">Rekap Order Customer (Piutang)</a>
+                                <a href="{{ route('report.paid-orders-by-customer') }}" class="{{ $mobileLink(request()->routeIs('report.paid-orders-by-customer')) }}">Rekap Order per Customer</a>
                                 <a href="{{ route('keuangan.laporan-ppn') }}" class="{{ $mobileLink(request()->routeIs('keuangan.laporan-ppn')) }}">Rekap PPN</a>
                                 <div class="mx-2 my-2 border-t border-slate-200"></div>
                                 <a href="{{ route('keuangan.global-customer-receivables') }}" class="{{ $mobileLink(request()->routeIs('keuangan.global-customer-receivables')) }}">Rekap Piutang Customer Global</a>
