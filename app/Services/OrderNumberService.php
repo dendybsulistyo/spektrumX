@@ -11,6 +11,12 @@ use RuntimeException;
 class OrderNumberService
 {
     /**
+     * Nomor urut harian 3 digit mulai tanggal order ini (go-live); sebelumnya 5 digit.
+     * Dipisah per tanggal agar satu hari tidak berisi nomor dengan panjang berbeda.
+     */
+    private const THREE_DIGIT_FROM = '2026-11-01';
+
+    /**
      * Ambil nomor berikutnya di dalam transaksi pemanggil. Baris sequence
      * dikunci agar dua CS tidak memperoleh nomor SO yang sama.
      */
@@ -41,13 +47,14 @@ class OrderNumberService
             ->lockForUpdate()
             ->first();
 
+        $digits = date('Y-m-d', strtotime($date)) >= self::THREE_DIGIT_FROM ? 3 : 5;
         $lastSequence = (int) $sequence->last_sequence;
         if ($lastSequence === 0) {
             $lastNumber = $model::query()
                 ->where('NoOrder', 'like', $prefix.'%')
                 ->orderByDesc('NoOrder')
                 ->value('NoOrder');
-            $lastSequence = $lastNumber ? (int) substr($lastNumber, strlen($prefix), 5) : 0;
+            $lastSequence = $lastNumber ? (int) substr($lastNumber, strlen($prefix)) : 0;
         }
 
         $next = $lastSequence + 1;
@@ -56,6 +63,7 @@ class OrderNumberService
             ->where('order_date', $date)
             ->update(['last_sequence' => $next, 'updated_at' => now()]);
 
-        return $prefix.str_pad((string) $next, 5, '0', STR_PAD_LEFT);
+        // Lewat 999 order sehari nomor otomatis menjadi 4 digit (tidak terpotong).
+        return $prefix.str_pad((string) $next, $digits, '0', STR_PAD_LEFT);
     }
 }
