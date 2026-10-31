@@ -25,6 +25,7 @@
                 'Satuan' => $p->Satuan,
                 'isPjLb' => $p->isPjLb,
                 'isHPilih' => $p->isHPilih,
+                'diproses' => $p->diproses !== false,
             ])),
             kategoriList: @js($kategoriList->map(fn ($k) => ['KdDivs' => $k->KdDivs, 'NmDivs' => $k->NmDivs])),
             pjLbLabels: @js(\App\Models\Produk::PJLB_LABELS),
@@ -80,7 +81,7 @@
                     this.rows[idx] = {
                         id: p.id, KdProd: p.KdProd, KdDivs: p.KdDivs, NmDivs: p.kategori?.NmDivs,
                         NmProd: p.NmProd, NoUrut: p.NoUrut, HargaStd: p.HargaStd, HargaMin: p.HargaMin,
-                        Satuan: p.Satuan, isPjLb: p.isPjLb, isHPilih: p.isHPilih,
+                        Satuan: p.Satuan, isPjLb: p.isPjLb, isHPilih: p.isHPilih, diproses: p.diproses !== false,
                     };
                     if (this.form.KdProd !== p.KdProd) {
                         delete this.bertingkat[this.form.KdProd];
@@ -120,13 +121,14 @@
                     <th class="px-3 py-2 text-left">Satuan</th>
                     <th class="px-3 py-2 text-center">Pj x Lebar</th>
                     <th class="px-3 py-2 text-center">Pil Harga</th>
+                    <th class="px-3 py-2 text-center" title="Diproses operator Layout s/d Pengambilan">Proses</th>
                     <th class="px-3 py-2 text-right">Aksi</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-200">
                 <template x-if="rows.length === 0">
                     <tr>
-                        <td colspan="10" class="px-4 py-6 text-center text-gray-400">Belum ada data produk.</td>
+                        <td colspan="11" class="px-4 py-6 text-center text-gray-400">Belum ada data produk.</td>
                     </tr>
                 </template>
                 <template x-for="(row, idx) in rows" :key="row.id">
@@ -144,6 +146,10 @@
                                   :title="pjLbLabels[row.isPjLb]" x-text="pjLbBadgeText[row.isPjLb] || row.isPjLb"></span>
                         </td>
                         <td class="px-3 py-2 text-center text-gray-600" x-text="row.isHPilih === 1 ? 'Ya' : 'Tidak'"></td>
+                        <td class="px-3 py-2 text-center">
+                            <span x-show="row.diproses" class="text-gray-600">Ya</span>
+                            <span x-show="!row.diproses" class="rounded bg-amber-100 px-1.5 py-0.5 text-xs font-semibold text-amber-800" title="Tidak diproses operator: langsung selesai saat SO dibuat">Tanpa proses</span>
+                        </td>
                         <td class="px-3 py-2 text-right">
                             @can('produk.manage')
                                 <button type="button" @click="openEdit(row)" class="text-blue-600 hover:text-blue-800 hover:underline font-medium">
@@ -247,6 +253,12 @@
                             <input type="checkbox" :checked="form.isHPilih === 1" @change="form.isHPilih = $event.target.checked ? 1 : 2"
                                    class="rounded border-gray-300 text-gray-900 focus:ring-gray-900">
                             <span class="text-sm text-gray-700">Pakai harga bertingkat sesuai jumlah qty</span>
+                        </label>
+                        <label class="flex items-start gap-2">
+                            <input type="checkbox" x-model="form.diproses" class="mt-0.5 rounded border-gray-300 text-gray-900 focus:ring-gray-900">
+                            <span class="text-sm text-gray-700">Diproses operator
+                                <span class="block text-xs text-gray-500">Hilangkan centang untuk komponen harga (mis. kresek, CTcP): langsung selesai saat SO dibuat dan ikut tercantum di DO.</span>
+                            </span>
                         </label>
                     </div>
 

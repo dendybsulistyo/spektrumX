@@ -39,6 +39,8 @@ class OrderPaymentWorkflow
 
             $result = $action($locked);
             app(OrderDocumentService::class)->issueInvoice($locked->fresh());
+            // Order yang seluruh item-nya tanpa proses operator: langsung Selesai + DO otomatis.
+            app(TanpaProsesService::class)->afterPayment($locked->fresh());
 
             return $result;
         });

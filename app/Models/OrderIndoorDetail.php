@@ -42,11 +42,13 @@ class OrderIndoorDetail extends Model
         'PisauTurun',
         'JumlahKertas',
         'TebalKertas',
+        'tanpa_proses',
     ];
 
     protected function casts(): array
     {
         return [
+            'tanpa_proses' => 'boolean',
             'Panjang' => 'float',
             'Lebar' => 'float',
             'harga_satuan_kasir' => 'float',

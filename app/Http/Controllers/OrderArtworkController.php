@@ -270,24 +270,29 @@ class OrderArtworkController extends Controller
      */
     private function saveItems(OrderArtwork $order, array $items): void
     {
-        $productNames = HargaArtwork::query()
+        $products = HargaArtwork::query()
             ->whereIn('KdProd', collect($items)->pluck('KdProd')->unique())
-            ->pluck('NmProd', 'KdProd');
+            ->get(['KdProd', 'NmProd', 'diproses'])->keyBy('KdProd');
 
         foreach ($items as $index => $item) {
             $seq = str_pad((string) ($index + 1), 2, '0', STR_PAD_LEFT);
             $brsOrder = $order->NoOrder.$seq;
 
+            // Produk tidak diproses operator: langsung selesai sejak SO dibuat.
+            $tanpaProses = $products->get($item['KdProd'])?->diproses === false;
+
             OrderArtworkDetail::create([
                 'order_artwork_id' => $order->id,
                 'BrsOrder' => $brsOrder,
                 'KdProd' => $item['KdProd'],
-                'NmProd' => $productNames->get($item['KdProd'], ''),
+                'NmProd' => $products->get($item['KdProd'])?->NmProd ?? '',
                 'Judul' => $item['Judul'],
                 'Panjang' => $item['Panjang'],
                 'Lebar' => $item['Lebar'],
                 'Qty' => $item['Qty'],
-                'qty_desain' => $item['Qty'],
+                'qty_desain' => $tanpaProses ? 0 : $item['Qty'],
+                'qty_selesai' => $tanpaProses ? $item['Qty'] : 0,
+                'tanpa_proses' => $tanpaProses,
                 'PisauTurun' => $item['PisauTurun'] ?? null,
                 'JumlahKertas' => $item['JumlahKertas'] ?? null,
                 'TebalKertas' => $item['TebalKertas'] ?? null,

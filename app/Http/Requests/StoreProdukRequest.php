@@ -25,6 +25,8 @@ class StoreProdukRequest extends FormRequest
     {
         $this->merge([
             'isHPilih' => $this->boolean('isHPilih') ? 1 : 2,
+            // Form mengirim hidden 0 + checkbox 1; permintaan lama tanpa field ini = tetap diproses.
+            'diproses' => $this->has('diproses') ? $this->boolean('diproses') : true,
         ]);
     }
 
@@ -50,6 +52,7 @@ class StoreProdukRequest extends FormRequest
             'Satuan' => ['required', 'string', 'max:8'],
             'isPjLb' => ['required', 'integer', 'in:1,2,3,4'],
             'isHPilih' => ['required', 'integer', 'in:1,2'],
+            'diproses' => ['required', 'boolean'],
             'bertingkat' => ['nullable', 'array'],
             'bertingkat.*.BatasA' => ['required', 'integer', 'min:0'],
             'bertingkat.*.BatasZ' => ['nullable', 'integer', 'min:0'],

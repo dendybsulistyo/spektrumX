@@ -49,6 +49,12 @@ class DeliveryOrderService
                 $lines[] = ['id' => $detail->id, 'description' => $detail->Judul ?: ($detail->NmFile ?: $detail->NmProd),
                     'qty' => $qty, 'length' => $detail->Panjang, 'width' => $detail->Lebar];
             }
+            // Item tanpa proses operator (kresek, CTcP, dsb.) ikut tercantum di DO pertama.
+            $listedIds = array_column($lines, 'id');
+            $tanpaProses = app(TanpaProsesService::class);
+            $lines = array_merge($lines, $tanpaProses->lines(
+                $tanpaProses->pendingItems($order, $type)->reject(fn ($detail) => in_array($detail->id, $listedIds, true))
+            ));
             $sequence = 1 + (int) OrderDocument::where('kind', 'do')->where('order_type', $type)->where('order_id', $order->id)->max('sequence');
             $documents = app(OrderDocumentService::class);
             $snapshot = $documents->snapshot($order);

@@ -105,7 +105,7 @@ class MonitoringKinerjaController extends Controller
                 $allocated += $lineDiscount;
 
                 $item = $raw->get($line->detail_id);
-                if (in_array((string) $item?->KdProd, self::EXCLUDED_RECAP_PRODUCTS, true)) {
+                if ($item?->tanpa_proses || in_array((string) $item?->KdProd, self::EXCLUDED_RECAP_PRODUCTS, true)) {
                     continue;
                 }
                 $label = trim(($item?->divisionName() ?? '').' '.($item?->NmProd ?: $line->name)) ?: '-';

@@ -74,4 +74,12 @@
                class="rounded border-gray-300 text-gray-900 focus:ring-gray-900">
         <span class="text-sm text-gray-700">Pakai harga bertingkat sesuai jumlah qty</span>
     </label>
+    <label class="flex items-start gap-2">
+        <input type="hidden" name="diproses" value="0">
+        <input type="checkbox" name="diproses" value="1" {{ old('diproses', $hargaArtwork?->diproses ?? true) ? 'checked' : '' }}
+               class="mt-0.5 rounded border-gray-300 text-gray-900 focus:ring-gray-900">
+        <span class="text-sm text-gray-700">Diproses operator
+            <span class="block text-xs text-gray-500">Hilangkan centang untuk komponen harga (mis. kresek, CTcP): item langsung selesai saat SO dibuat, tidak masuk antrean Layout s/d Pengambilan, dan ikut tercantum di DO.</span>
+        </span>
+    </label>
 </div>

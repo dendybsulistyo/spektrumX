@@ -44,6 +44,7 @@ class HargaArtwork extends Model
         'Satuan',
         'isPjLb',
         'isHPilih',
+        'diproses',
     ];
 
     /**
@@ -57,6 +58,7 @@ class HargaArtwork extends Model
             'HargaMin' => 'float',
             'isPjLb' => 'integer',
             'isHPilih' => 'integer',
+            'diproses' => 'boolean',
         ];
     }
 

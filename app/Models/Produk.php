@@ -67,6 +67,7 @@ class Produk extends Model
         'Satuan',
         'isPjLb',
         'isHPilih',
+        'diproses',
     ];
 
     /**
@@ -82,6 +83,7 @@ class Produk extends Model
             'HargaMin' => 'float',
             'isPjLb' => 'integer',
             'isHPilih' => 'integer',
+            'diproses' => 'boolean',
         ];
     }
 

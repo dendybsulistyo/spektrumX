@@ -323,21 +323,24 @@ class OrderIndoorController extends Controller
     private function saveItems(OrderIndoor $order, array $items): void
     {
         $itemsByType = collect($items)->groupBy(fn (array $item) => $item['jenis_produk'] ?? 'indoor');
-        $indoorNames = Produk::query()
+        $indoorProducts = Produk::query()
             ->whereIn('KdProd', $itemsByType->get('indoor', collect())->pluck('KdProd')->unique())
-            ->pluck('NmProd', 'KdProd');
-        $artworkNames = HargaArtwork::query()
+            ->get(['KdProd', 'NmProd', 'diproses'])->keyBy('KdProd');
+        $artworkProducts = HargaArtwork::query()
             ->whereIn('KdProd', $itemsByType->get('artwork', collect())->pluck('KdProd')->unique())
-            ->pluck('NmProd', 'KdProd');
+            ->get(['KdProd', 'NmProd', 'diproses'])->keyBy('KdProd');
 
         foreach ($items as $index => $item) {
             $seq = str_pad((string) ($index + 1), 2, '0', STR_PAD_LEFT);
             $brsOrder = $order->NoOrder.$seq;
 
             $jenisProduk = $item['jenis_produk'] ?? 'indoor';
-            $nmProd = $jenisProduk === 'artwork'
-                ? $artworkNames->get($item['KdProd'])
-                : $indoorNames->get($item['KdProd']);
+            $product = $jenisProduk === 'artwork'
+                ? $artworkProducts->get($item['KdProd'])
+                : $indoorProducts->get($item['KdProd']);
+            $nmProd = $product?->NmProd;
+            // Produk tidak diproses operator: langsung selesai sejak SO dibuat.
+            $tanpaProses = $product?->diproses === false;
 
             OrderIndoorDetail::create([
                 'order_indoor_id' => $order->id,
@@ -349,7 +352,9 @@ class OrderIndoorController extends Controller
                 'Panjang' => $item['Panjang'],
                 'Lebar' => $item['Lebar'],
                 'Qty' => $item['Qty'],
-                'qty_desain' => $item['Qty'],
+                'qty_desain' => $tanpaProses ? 0 : $item['Qty'],
+                'qty_selesai' => $tanpaProses ? $item['Qty'] : 0,
+                'tanpa_proses' => $tanpaProses,
                 'KdStat' => 0,
                 'PisauTurun' => $item['PisauTurun'] ?? null,
                 'JumlahKertas' => $item['JumlahKertas'] ?? null,

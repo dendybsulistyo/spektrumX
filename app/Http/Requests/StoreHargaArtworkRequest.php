@@ -28,6 +28,8 @@ class StoreHargaArtworkRequest extends FormRequest
     {
         $this->merge([
             'isHPilih' => $this->boolean('isHPilih') ? 1 : 2,
+            // Form mengirim hidden 0 + checkbox 1; permintaan lama tanpa field ini = tetap diproses.
+            'diproses' => $this->has('diproses') ? $this->boolean('diproses') : true,
         ]);
     }
 
@@ -53,6 +55,7 @@ class StoreHargaArtworkRequest extends FormRequest
             'Satuan' => ['required', 'string', 'max:8'],
             'isPjLb' => ['required', Rule::in(array_keys(HargaArtwork::PJLB_LABELS))],
             'isHPilih' => ['required', 'integer', 'in:1,2'],
+            'diproses' => ['required', 'boolean'],
         ];
     }
 

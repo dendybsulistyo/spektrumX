@@ -332,6 +332,7 @@ class FinalSalesDiscountController extends Controller
             // SO DP yang lunas karena potongan mendapat invoice seperti pelunasan biasa.
             if (($wasHutang || $wasDp) && $newReceivable <= 0) {
                 app(OrderDocumentService::class)->issueInvoice($order->fresh(), $data['transaction_date']);
+                app(\App\Services\TanpaProsesService::class)->afterPayment($order->fresh());
             }
 
             OrderStatusNote::create([
