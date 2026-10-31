@@ -71,10 +71,34 @@ class DashboardController extends Controller
                 'catatan' => $note->catatan,
             ]);
 
+        // Semua operator yang mengirim qty per tahap (bukan hanya yang terakhir), urut tahap produksi.
+        $team = OrderStatusNote::forOrder($type, $id)
+            ->with('user:id,name')
+            ->whereIn('stage', array_keys(self::STAGE_LABELS))
+            ->whereIn('action', ['progress', 'selesai'])
+            ->whereNotNull('user_id')
+            ->get()
+            ->groupBy('stage')
+            ->sortBy(fn ($notes, $stage) => array_search($stage, array_keys(self::STAGE_LABELS), true))
+            ->map(fn ($notes, $stage) => [
+                'stage' => self::STAGE_LABELS[$stage],
+                'members' => $notes->groupBy('user_id')
+                    ->map(fn ($rows) => [
+                        'name' => $rows->first()->user?->name ?? '-',
+                        'qty' => (int) $rows->sum('qty'),
+                        'last' => $rows->max('created_at'),
+                    ])
+                    ->sortByDesc('last')
+                    ->map(fn ($member) => ['name' => $member['name'], 'qty' => $member['qty']])
+                    ->values(),
+            ])
+            ->values();
+
         return response()->json([
             'no_order' => $order->NoOrder,
             'customer' => $order->customer?->NmCust,
             'items' => $items,
+            'team' => $team,
             'history' => $history,
         ]);
     }

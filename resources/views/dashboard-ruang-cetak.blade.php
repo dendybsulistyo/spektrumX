@@ -210,6 +210,11 @@
             #rc-dashboard .rcd-overdue-pager div { display: flex; gap: 6px; }
             #rc-dashboard .rcd-overdue-pager button { padding: 5px 10px; border: 1px solid var(--rule-strong); border-radius: 5px; background: #fff; color: var(--ink); cursor: pointer; }
             #rc-dashboard .rcd-overdue-pager button:disabled { opacity: .4; cursor: default; }
+            #rc-dashboard .rcd-team-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 8px; }
+            #rc-dashboard .rcd-team-card { border: 1px solid var(--rule-strong); border-radius: 6px; padding: 7px 9px; background: #fff; }
+            #rc-dashboard .rcd-team-stage { margin-bottom: 3px; font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--ink); }
+            #rc-dashboard .rcd-team-line { display: flex; justify-content: space-between; gap: 10px; font-size: 12.5px; color: var(--ink); }
+            #rc-dashboard .rcd-team-line .mono { font-size: 11.5px; color: var(--muted); }
             #rc-dashboard .rcd-label { margin-bottom: 8px; font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
             #rc-dashboard .rcd-item { padding: 8px 10px; margin-bottom: 6px; border: 1px solid var(--rule); border-radius: 8px; background: #fff; }
             #rc-dashboard .rcd-item-name { font-weight: 600; color: var(--ink); margin-bottom: 4px; }
@@ -650,6 +655,19 @@
                     </template>
                     <template x-if="!historyLoading && historyData">
                         <div style="display: flex; flex-direction: column; gap: 18px;">
+                            <div x-show="historyData.team && historyData.team.length">
+                                <div class="rcd-label">Operator per tahap</div>
+                                <div class="rcd-team-grid">
+                                    <template x-for="group in historyData.team" :key="group.stage">
+                                        <div class="rcd-team-card">
+                                            <div class="rcd-team-stage" x-text="group.stage + (group.members.length > 1 ? ' · ' + group.members.length + ' operator' : '')"></div>
+                                            <template x-for="member in group.members" :key="member.name">
+                                                <div class="rcd-team-line"><span x-text="member.name"></span><span class="mono" x-text="member.qty + ' qty'"></span></div>
+                                            </template>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
                             <div>
                                 <div class="rcd-label">Item &amp; posisi qty saat ini</div>
                                 <template x-for="item in historyData.items" :key="item.id">
