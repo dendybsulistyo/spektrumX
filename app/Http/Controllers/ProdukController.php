@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreProdukRequest;
 use App\Models\HargaBertingkat;
 use App\Models\Kategori;
+use App\Models\OrderIndoorDetail;
 use App\Models\Produk;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -90,8 +91,21 @@ class ProdukController extends Controller
 
     public function destroy(Produk $produk): RedirectResponse
     {
-        $produk->delete();
+        // Item SO merujuk ke KdProd (nama & hitung harga); produk yang pernah dipakai tidak boleh dihapus.
+        $used = OrderIndoorDetail::query()
+            ->where('KdProd', $produk->KdProd)
+            ->where(fn ($q) => $q->where('jenis_produk', 'indoor')->orWhereNull('jenis_produk'))
+            ->count();
+        if ($used > 0) {
+            return back()->with('error', "Produk {$produk->KdProd} {$produk->NmProd} sudah dipakai di {$used} item order, jadi tidak bisa dihapus. Ubah nama/harganya saja bila perlu.");
+        }
 
-        return redirect()->route('produk.index')->with('status', 'Produk berhasil dihapus.');
+        DB::transaction(function () use ($produk) {
+            HargaBertingkat::where('KdProd', $produk->KdProd)->delete();
+            $produk->delete();
+        });
+
+        return redirect()->route('detail-indoor.index', request()->only('search', 'page'))
+            ->with('status', "Produk {$produk->KdProd} {$produk->NmProd} berhasil dihapus.");
     }
 }

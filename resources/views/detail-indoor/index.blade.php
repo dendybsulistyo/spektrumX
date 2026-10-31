@@ -155,6 +155,14 @@
                                 <button type="button" @click="openEdit(row)" class="text-blue-600 hover:text-blue-800 hover:underline font-medium">
                                     Edit Harga
                                 </button>
+                                <form method="POST" :action="`/produk/${row.id}`" class="inline"
+                                      @submit="if (! confirm(`Hapus produk ${row.KdProd} ${row.NmProd}? Produk yang sudah pernah dipakai di order tidak bisa dihapus.`)) $event.preventDefault()">
+                                    @csrf
+                                    @method('DELETE')
+                                    <input type="hidden" name="search" value="{{ request('search') }}">
+                                    <input type="hidden" name="page" value="{{ request('page') }}">
+                                    <button type="submit" class="ml-2 text-red-600 hover:text-red-800 hover:underline font-medium">Hapus</button>
+                                </form>
                             @endcan
                         </td>
                     </tr>
