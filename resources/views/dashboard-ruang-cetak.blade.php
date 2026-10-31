@@ -182,6 +182,14 @@
             #rc-dashboard .rcd-cell-stage .mono.is-full { color: var(--green); }
             #rc-dashboard .rcd-cell-stage .mono.is-zero { color: var(--rule-strong); font-weight: 500; }
             #rc-dashboard .rcd-cell-stage small { display: block; margin-top: 1px; font-size: 10.5px; color: var(--muted); max-width: 90px; overflow: hidden; text-overflow: ellipsis; margin-inline: auto; }
+            #rc-dashboard .rcd-cell-stage { position: relative; }
+            #rc-dashboard .rcd-cell-stage small.rcd-team { overflow: visible; max-width: none; cursor: help; text-decoration: underline dotted; text-underline-offset: 2px; }
+            #rc-dashboard .rcd-team b { font-weight: 700; color: var(--ink); }
+            #rc-dashboard .rcd-team-pop { display: none; position: absolute; z-index: 30; left: 50%; bottom: calc(100% - 4px); transform: translateX(-50%); min-width: 180px; padding: 8px 10px; text-align: left; white-space: nowrap; background: #1b2236; color: #fff; border-radius: 6px; box-shadow: 0 10px 24px -8px rgba(0,0,0,.45); font-size: 12px; }
+            #rc-dashboard .rcd-team:hover .rcd-team-pop, #rc-dashboard .rcd-team:focus .rcd-team-pop, #rc-dashboard .rcd-team:focus-within .rcd-team-pop { display: block; }
+            #rc-dashboard .rcd-team-head { display: block; margin-bottom: 4px; font-size: 10.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: #9fb0d6; }
+            #rc-dashboard .rcd-team-row { display: flex; justify-content: space-between; gap: 14px; padding: 2px 0; }
+            #rc-dashboard .rcd-team-row .mono { color: #c9d3ea; font-weight: 500; }
             #rc-dashboard .rcd-meter { width: 56px; height: 3px; margin: 3px auto 0; border-radius: 2px; background: #efe9db; overflow: hidden; }
             #rc-dashboard .rcd-meter > i { display: block; height: 100%; background: var(--cyan); }
             #rc-dashboard .rcd-meter > i.is-full { background: var(--green); }
@@ -534,7 +542,21 @@
                                             @else
                                                 <span class="mono is-zero">–</span>
                                             @endif
-                                            @if ($by && $by !== '-')
+                                            @php $team = $row[$key.'_team'] ?? []; @endphp
+                                            @if (count($team) > 1)
+                                                {{-- Beberapa operator di tahap ini: nama terakhir +N, daftar lengkap saat disorot / diketuk. --}}
+                                                <small class="rcd-team" tabindex="0" title="{{ collect($team)->map(fn ($m) => $m['name'].' ('.$m['qty'].')')->implode(', ') }}">
+                                                    {{ $team[0]['name'] }} <b>+{{ count($team) - 1 }}</b>
+                                                    <span class="rcd-team-pop" role="tooltip">
+                                                        <span class="rcd-team-head">{{ $stageCols[$key] }} · {{ count($team) }} operator</span>
+                                                        @foreach ($team as $member)
+                                                            <span class="rcd-team-row"><span>{{ $member['name'] }}</span><span class="mono">{{ $member['qty'] }} qty</span></span>
+                                                        @endforeach
+                                                    </span>
+                                                </small>
+                                            @elseif (count($team) === 1)
+                                                <small title="{{ $team[0]['name'] }}">{{ $team[0]['name'] }}</small>
+                                            @elseif ($by && $by !== '-')
                                                 <small title="{{ $by }}">{{ $by }}</small>
                                             @endif
                                         </td>

@@ -5,6 +5,8 @@ namespace App\Services;
 use App\Models\OrderArtwork;
 use App\Models\OrderIndoor;
 use App\Models\OrderOutdoor;
+use App\Models\OrderStatusNote;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
@@ -97,7 +99,46 @@ class DashboardStatsService
         $cancelled = $mapped->where('status', 'batal');
         $active = $mapped->where('status', '!=', 'batal')->sortByDesc('created_at')->take($limit);
 
-        return $cancelled->concat($active)->sortByDesc('created_at')->values();
+        return $this->withStageTeams($cancelled->concat($active)->sortByDesc('created_at')->values());
+    }
+
+    /** Kolom tahap dashboard → stage di order_status_notes. */
+    private const TEAM_STAGES = [
+        'desain' => 'desain', 'cetak' => 'cetak', 'finishing' => 'finishing',
+        'qc' => 'qc', 'bungkus' => 'bungkus', 'pengambilan' => 'siap_diambil',
+    ];
+
+    /**
+     * Semua operator yang pernah mengirim qty di tiap tahap (bukan hanya yang
+     * terakhir), urut dari yang terakhir mengirim: "<tahap>_team" = [[name, qty], ...].
+     */
+    private function withStageTeams(Collection $rows): Collection
+    {
+        $notes = collect();
+        foreach ($rows->groupBy('type_slug') as $type => $typeRows) {
+            $notes = $notes->concat(OrderStatusNote::query()
+                ->where('order_type', $type)
+                ->whereIn('order_id', $typeRows->pluck('id'))
+                ->whereIn('stage', array_values(self::TEAM_STAGES))
+                ->whereIn('action', ['progress', 'selesai'])
+                ->whereNotNull('user_id')
+                ->selectRaw('order_type, order_id, stage, user_id, SUM(COALESCE(qty, 0)) AS qty, MAX(created_at) AS last_at')
+                ->groupBy('order_type', 'order_id', 'stage', 'user_id')
+                ->get());
+        }
+        $names = User::query()->whereIn('id', $notes->pluck('user_id')->unique())->pluck('name', 'id');
+        $byKey = $notes->groupBy(fn ($note) => $note->order_type.'|'.$note->order_id.'|'.$note->stage);
+
+        return $rows->map(function (array $row) use ($byKey, $names) {
+            foreach (self::TEAM_STAGES as $column => $stage) {
+                $row[$column.'_team'] = ($byKey[$row['type_slug'].'|'.$row['id'].'|'.$stage] ?? collect())
+                    ->sortByDesc('last_at')
+                    ->map(fn ($note) => ['name' => $names[$note->user_id] ?? 'Tidak diketahui', 'qty' => (int) $note->qty])
+                    ->values()->all();
+            }
+
+            return $row;
+        });
     }
 
     /**
