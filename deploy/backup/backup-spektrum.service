@@ -1,0 +1,10 @@
+[Unit]
+Description=Backup harian spektrumX (database + file) ke hardisk, USB, dan Cloudflare R2
+After=mysql.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/backup-spektrum.sh
+Nice=10
+IOSchedulingClass=idle

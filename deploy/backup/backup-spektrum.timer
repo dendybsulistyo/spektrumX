@@ -1,0 +1,12 @@
+[Unit]
+Description=Jadwal backup spektrumX: 12:30 dan 22:00 WIB
+
+[Timer]
+# Jam server UTC: 05:30 UTC = 12:30 WIB, 15:00 UTC = 22:00 WIB.
+OnCalendar=*-*-* 05:30:00
+OnCalendar=*-*-* 15:00:00
+Persistent=true
+RandomizedDelaySec=2min
+
+[Install]
+WantedBy=timers.target
