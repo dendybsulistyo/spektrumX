@@ -10,6 +10,16 @@
     </x-slot>
 
     <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
+        <div class="flex flex-wrap items-center gap-2 border-b border-gray-200 px-3 py-2 text-xs">
+            <span class="font-semibold uppercase tracking-wide text-gray-500">Urutkan</span>
+            <div class="inline-flex overflow-hidden rounded border border-gray-300">
+                @foreach ($sorts as $key => $label)
+                    <a href="{{ route('users.index', ['urut' => $key]) }}"
+                       @class(['px-3 py-1.5 font-semibold', 'border-l border-gray-300' => ! $loop->first,
+                               'bg-gray-900 text-white' => $sort === $key, 'bg-white text-gray-700 hover:bg-gray-50' => $sort !== $key])>{{ $label }}</a>
+                @endforeach
+            </div>
+        </div>
         <div class="overflow-x-auto">
         <table class="w-full text-[13px] min-w-[640px]">
             <thead class="bg-gray-50 text-left text-xs uppercase text-gray-500">

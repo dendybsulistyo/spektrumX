@@ -7,6 +7,7 @@ use App\Models\Role;
 use App\Models\User;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -14,11 +15,26 @@ use Illuminate\View\View;
 
 class UserController extends Controller
 {
-    public function index(): View
-    {
-        $users = User::with('role')->orderBy('name')->paginate(15);
+    /** Pilihan urutan daftar user: nama (A–Z), role (lalu nama), nomor urut (urutan dibuat). */
+    private const SORTS = ['nama' => 'Nama (A–Z)', 'role' => 'Role', 'nomor' => 'Nomor Urut'];
 
-        return view('users.index', compact('users'));
+    public function index(Request $request): View
+    {
+        $sort = array_key_exists((string) $request->query('urut'), self::SORTS) ? (string) $request->query('urut') : 'nama';
+
+        $users = User::query()->with('role')
+            ->when($sort === 'role', fn ($query) => $query
+                ->leftJoin('roles', 'roles.id', '=', 'users.role_id')
+                ->select('users.*')
+                // User tanpa role di paling bawah.
+                ->orderByRaw('roles.label IS NULL')
+                ->orderBy('roles.label')
+                ->orderBy('users.name'))
+            ->when($sort === 'nomor', fn ($query) => $query->orderBy('users.id'))
+            ->when($sort === 'nama', fn ($query) => $query->orderBy('users.name'))
+            ->paginate(15)->withQueryString();
+
+        return view('users.index', ['users' => $users, 'sort' => $sort, 'sorts' => self::SORTS]);
     }
 
     public function create(): View
