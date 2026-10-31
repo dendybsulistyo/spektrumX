@@ -15,6 +15,7 @@
     'emptyMessage',
     'capturePenerima' => false,
     'showInvoiceLink' => false,
+    'bulkSelect' => false,
 ])
 
 @php
@@ -42,7 +43,7 @@
                                    :pending-rework="$pendingRework" :can-approve-rework="$canApproveRework"
                                    :printer-names="$printerNames" :outdoor-comments="$outdoorComments" :outdoor-unread="$outdoorUnread"
                                    :manage-ability="$manageAbility" :capture-penerima="$capturePenerima"
-                                   :show-invoice-link="$showInvoiceLink" :indoor-group-by="$groupBy" />
+                                   :show-invoice-link="$showInvoiceLink" :indoor-group-by="$groupBy" :bulk-select="$bulkSelect" />
             @endforeach
         </section>
     @endforeach
@@ -53,6 +54,6 @@
                            :pending-rework="$pendingRework" :can-approve-rework="$canApproveRework"
                            :printer-names="$printerNames" :outdoor-comments="$outdoorComments" :outdoor-unread="$outdoorUnread"
                            :manage-ability="$manageAbility" :capture-penerima="$capturePenerima"
-                           :show-invoice-link="$showInvoiceLink" :indoor-group-by="$groupBy" />
+                           :show-invoice-link="$showInvoiceLink" :indoor-group-by="$groupBy" :bulk-select="$bulkSelect" />
     @endforeach
 @endif

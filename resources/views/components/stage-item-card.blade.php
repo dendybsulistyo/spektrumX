@@ -15,6 +15,8 @@
     'capturePenerima' => false,
     'showInvoiceLink' => false,
     'indoorGroupBy' => 'order',
+    // Checkbox kirim massal (halaman induk menyediakan toggle() & tombol Kirim Terpilih).
+    'bulkSelect' => false,
 ])
 
 @php
@@ -158,7 +160,11 @@
                              dan server sama-sama memakai sisa Qty di tahap ini. --}}
                         <form method="POST" action="{{ route($routeName, [$type, $item->id]) }}" style="display: flex; align-items: center; gap: 4px;">
                             @csrf
-                            <input type="number" name="qty" min="1" max="{{ $item->qtyAt($stage) }}" value="{{ $item->qtyAt($stage) }}" required
+                            @if ($bulkSelect)
+                                <input type="checkbox" @change="toggle('{{ $type }}', {{ $item->id }}, $event.target.checked)"
+                                       title="Pilih untuk kirim massal" aria-label="Pilih item untuk kirim massal" style="width:16px;height:16px;cursor:pointer;">
+                            @endif
+                            <input type="number" name="qty" id="bulk-qty-{{ $type }}-{{ $item->id }}" min="1" max="{{ $item->qtyAt($stage) }}" value="{{ $item->qtyAt($stage) }}" required
                                    oninput="this.setCustomValidity('')"
                                    oninvalid="this.setCustomValidity(this.validity.valueMissing ? 'Isi jumlah Qty dulu.' : (this.validity.rangeOverflow ? 'Maksimal {{ $item->qtyAt($stage) }} sesuai sisa Qty di {{ $stageLabel }}.' : (this.validity.rangeUnderflow ? 'Qty minimal 1.' : 'Qty tidak valid.')))"
                                    class="in-input no-spinner" style="width: 70px;">
