@@ -169,9 +169,11 @@
             $pendingDiskonCount = $canApproveDiskon ? \App\Http\Controllers\DiskonApprovalController::pendingCount() : 0;
             $canApproveHutang = Auth::user()->hasPermission('kasir.approve-hutang');
             $pendingHutangCount = $canApproveHutang ? \App\Http\Controllers\HutangApprovalController::pendingCount() : 0;
-            $approvalActive = request()->routeIs('pembatalan.*', 'diskon-approval.*', 'hutang-approval.*');
-            $pendingApprovalTotal = $pendingApprovalCount + $pendingDiskonCount + $pendingHutangCount;
-            $showApproval = $canApproveCancel || $canApproveDiskon || $canApproveHutang;
+            $canApproveReprint = \App\Services\ReprintGate::canApprove(Auth::user());
+            $pendingReprintCount = $canApproveReprint ? \App\Services\ReprintGate::pendingCount() : 0;
+            $approvalActive = request()->routeIs('pembatalan.*', 'diskon-approval.*', 'hutang-approval.*', 'reprint-approval.*');
+            $pendingApprovalTotal = $pendingApprovalCount + $pendingDiskonCount + $pendingHutangCount + $pendingReprintCount;
+            $showApproval = $canApproveCancel || $canApproveDiskon || $canApproveHutang || $canApproveReprint;
             // Menu Pajak & Akuntansi dipisah per hak akses; role dengan keduanya melihat semua kolom.
             $menuPajak = Auth::user()->hasPermission('keuangan.view') && Auth::user()->hasPermission('menu.perpajakan');
             $menuAkun = Auth::user()->hasPermission('keuangan.view') && Auth::user()->hasPermission('menu.akuntansi');
@@ -368,6 +370,7 @@
                                             @if ($canApproveCancel)<a href="{{ route('pembatalan.index') }}" class="{{ $dropdownLink(request()->routeIs('pembatalan.*')) }} flex items-center justify-between">Pembatalan Order @if($pendingApprovalCount>0)<span class="rounded-full bg-red-600 px-1.5 py-0.5 text-[10px] text-white">{{ $pendingApprovalCount }}</span>@endif</a>@endif
                                             @if ($canApproveDiskon)<a href="{{ route('diskon-approval.index') }}" class="{{ $dropdownLink(request()->routeIs('diskon-approval.*')) }} flex items-center justify-between">Diskon @if($pendingDiskonCount>0)<span class="rounded-full bg-red-600 px-1.5 py-0.5 text-[10px] text-white">{{ $pendingDiskonCount }}</span>@endif</a>@endif
                                             @if ($canApproveHutang)<a href="{{ route('hutang-approval.index') }}" class="{{ $dropdownLink(request()->routeIs('hutang-approval.*')) }} flex items-center justify-between">Hutang VIP @if($pendingHutangCount>0)<span class="rounded-full bg-red-600 px-1.5 py-0.5 text-[10px] text-white">{{ $pendingHutangCount }}</span>@endif</a>@endif
+                                            @if ($canApproveReprint)<a href="{{ route('reprint-approval.index') }}" class="{{ $dropdownLink(request()->routeIs('reprint-approval.*')) }} flex items-center justify-between">Cetak Ulang @if($pendingReprintCount>0)<span class="rounded-full bg-red-600 px-1.5 py-0.5 text-[10px] text-white">{{ $pendingReprintCount }}</span>@endif</a>@endif
                                         </div>
                                     </div>
                                 @endif
@@ -648,6 +651,7 @@
                             @if ($canApproveCancel)<a href="{{ route('pembatalan.index') }}" class="{{ $mobileLink(request()->routeIs('pembatalan.*')) }} flex items-center justify-between">Pembatalan Order @if($pendingApprovalCount>0)<span class="rounded-full bg-red-600 px-1.5 py-0.5 text-[10px] text-white">{{ $pendingApprovalCount }}</span>@endif</a>@endif
                             @if ($canApproveDiskon)<a href="{{ route('diskon-approval.index') }}" class="{{ $mobileLink(request()->routeIs('diskon-approval.*')) }} flex items-center justify-between">Diskon @if($pendingDiskonCount>0)<span class="rounded-full bg-red-600 px-1.5 py-0.5 text-[10px] text-white">{{ $pendingDiskonCount }}</span>@endif</a>@endif
                             @if ($canApproveHutang)<a href="{{ route('hutang-approval.index') }}" class="{{ $mobileLink(request()->routeIs('hutang-approval.*')) }} flex items-center justify-between">Hutang VIP @if($pendingHutangCount>0)<span class="rounded-full bg-red-600 px-1.5 py-0.5 text-[10px] text-white">{{ $pendingHutangCount }}</span>@endif</a>@endif
+                            @if ($canApproveReprint)<a href="{{ route('reprint-approval.index') }}" class="{{ $mobileLink(request()->routeIs('reprint-approval.*')) }} flex items-center justify-between">Cetak Ulang @if($pendingReprintCount>0)<span class="rounded-full bg-red-600 px-1.5 py-0.5 text-[10px] text-white">{{ $pendingReprintCount }}</span>@endif</a>@endif
                         @endif
 
                         @if ($showKeuangan)

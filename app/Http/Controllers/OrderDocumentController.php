@@ -8,6 +8,7 @@ use App\Models\OrderPickupSignature;
 use App\Models\PengaturanKeuangan;
 use App\Models\SalesOrderPrint;
 use App\Services\OrderDocumentService;
+use App\Services\ReprintGate;
 use App\Support\CetakUlang;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -163,8 +164,8 @@ class OrderDocumentController extends Controller
 
         return view('order-documents.show', [
             'document' => $document,
-            'printRecord' => OrderDocumentPrint::query()->where('order_document_id', $document->id)->first(),
-            'canReprint' => CetakUlang::boleh(auth()->user()),
+            'printRecord' => $printRecord = OrderDocumentPrint::query()->where('order_document_id', $document->id)->first(),
+            'reprintState' => app(ReprintGate::class)->state($printRecord, $document->kind, $document->order_type, (int) $document->order_id, $document->id),
             'void' => $void,
             'signature' => $signature,
             'pengaturan' => PengaturanKeuangan::current(),
@@ -210,8 +211,16 @@ class OrderDocumentController extends Controller
             OrderDocument::query()->lockForUpdate()->findOrFail($document->id);
             $record = OrderDocumentPrint::query()->where('order_document_id', $document->id)->lockForUpdate()->first();
 
-            if ($record && ! CetakUlang::boleh(auth()->user())) {
-                return ['allowed' => false, 'record' => $record];
+            $stamp = null;
+            if ($record) {
+                $check = app(ReprintGate::class)->authorizeReprint(
+                    $record, $document->kind, $document->order_type, (int) $document->order_id, $document->id,
+                    $document->number, request()->input('reason'),
+                );
+                if (! $check['allowed']) {
+                    return ['allowed' => false, 'check' => $check];
+                }
+                $stamp = $check['stamp'];
             }
 
             if (! $record) {
@@ -231,20 +240,17 @@ class OrderDocumentController extends Controller
                 ]);
             }
 
-            return ['allowed' => true, 'record' => $record];
+            return ['allowed' => true, 'record' => $record, 'stamp' => $stamp];
         });
 
-        $jenis = $document->kind === 'inv' ? 'Invoice' : 'Delivery Order';
-
         if (! $result['allowed']) {
-            return response()->json([
-                'message' => "{$jenis} sudah pernah dicetak. Cetak ulang hanya dapat dilakukan oleh ".CetakUlang::LABEL.'.',
-            ], 409);
+            return response()->json($result['check'], $result['check']['code'] === 'reason_required' ? 422 : 409);
         }
 
         return response()->json([
             'message' => $result['record']->print_count > 1 ? 'Cetak ulang diizinkan.' : 'Cetak pertama dicatat.',
             'print_count' => $result['record']->print_count,
+            'stamp' => $result['stamp'],
         ]);
     }
 }

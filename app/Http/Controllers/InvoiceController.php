@@ -7,6 +7,7 @@ use App\Models\PengaturanKeuangan;
 use App\Models\SalesOrderPrint;
 use App\Services\OrderDocumentService;
 use App\Services\OrderPricingService;
+use App\Services\ReprintGate;
 use App\Support\ResolvesOrderType;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
@@ -49,7 +50,6 @@ class InvoiceController extends Controller
             : null;
         $invoicePrinted = $invoiceDocument
             && \App\Models\OrderDocumentPrint::query()->where('order_document_id', $invoiceDocument->id)->exists();
-        $canReprint = $this->canReprint();
 
         // DP and hutang orders are paid in more than one visit. The nota
         // lists every receipt so the customer can see how the balance was
@@ -77,10 +77,13 @@ class InvoiceController extends Controller
             'paymentHistory' => $paymentHistory,
             'pengaturan' => PengaturanKeuangan::query()->first(),
             'printRecord' => $printRecord,
-            'canPrintSalesOrder' => ! $printRecord || $canReprint,
-            'canReprintSalesOrder' => $canReprint,
+            // Cetak ulang: bebas dalam batas waktu, selebihnya lewat Approval (lihat ReprintGate).
+            'soReprintState' => app(ReprintGate::class)->state($printRecord, 'so', $type, $id),
             'invoiceDocument' => $invoiceDocument,
-            'invoicePrintBlocked' => $invoicePrinted && ! $canReprint,
+            'invoiceReprintState' => $invoiceDocument
+                ? app(ReprintGate::class)->state(\App\Models\OrderDocumentPrint::query()->where('order_document_id', $invoiceDocument->id)->first(), 'inv', $type, $id, $invoiceDocument->id)
+                : 'first',
+            'invoicePrinted' => (bool) $invoicePrinted,
             // QR tracking customer hanya di Sales Order (bukan pratinjau invoice pembayaran).
             'trackingQr' => config('tracking.qr.aktif') && ! request()->boolean('payment_preview') && ($url = $this->tracking->url($order))
                 ? $this->tracking->qrSvg($url)
@@ -105,8 +108,17 @@ class InvoiceController extends Controller
                 ->lockForUpdate()
                 ->first();
 
-            if ($record && ! $this->canReprint()) {
-                return ['allowed' => false, 'record' => $record];
+            $stamp = null;
+            if ($record) {
+                $check = app(ReprintGate::class)->authorizeReprint(
+                    $record, 'so', $type, $id, null,
+                    app(OrderDocumentService::class)->number($model::query()->findOrFail($id), 'so'),
+                    request()->input('reason'),
+                );
+                if (! $check['allowed']) {
+                    return ['allowed' => false, 'check' => $check];
+                }
+                $stamp = $check['stamp'];
             }
 
             if (! $record) {
@@ -127,18 +139,17 @@ class InvoiceController extends Controller
                 ]);
             }
 
-            return ['allowed' => true, 'record' => $record];
+            return ['allowed' => true, 'record' => $record, 'stamp' => $stamp];
         });
 
         if (! $result['allowed']) {
-            return response()->json([
-                'message' => 'Sales Order sudah pernah dicetak. Cetak ulang hanya dapat dilakukan oleh '.\App\Support\CetakUlang::LABEL.'.',
-            ], 409);
+            return response()->json($result['check'], $result['check']['code'] === 'reason_required' ? 422 : 409);
         }
 
         return response()->json([
             'message' => $result['record']->print_count > 1 ? 'Cetak ulang diizinkan.' : 'Cetak pertama dicatat.',
             'print_count' => $result['record']->print_count,
+            'stamp' => $result['stamp'],
         ]);
     }
 
@@ -151,10 +162,5 @@ class InvoiceController extends Controller
                 || auth()->user()->hasPermission('keuangan.view'),
             403
         );
-    }
-
-    private function canReprint(): bool
-    {
-        return \App\Support\CetakUlang::boleh(auth()->user());
     }
 }

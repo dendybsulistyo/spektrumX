@@ -77,6 +77,8 @@
             body:not(.print-authorized)::after { content:'Pencetakan dokumen harus dilakukan melalui tombol Cetak.'; display:block; padding:24px; font:700 14pt Arial,sans-serif; }
         }
         .print-warning { color:#9a3412; font-size:13px; font-weight:700; }
+        .print-note { color:#475569; font-size:12px; }
+        .reprint-stamp { margin-left:8px; font-size:8pt; }
     </style>
 </head>
 <body>
@@ -119,10 +121,13 @@
             @if ($document->kind === 'inv' && ! $invoiceBelumLunas && auth()->user()->hasPermission('keuangan.view'))
                 <a class="button" href="{{ route('order-documents.receipt', $document) }}">Kwitansi</a>
             @endif
-            @if ($printRecord && ! $canReprint)
-                <span class="print-warning">Sudah dicetak {{ $printRecord->first_printed_at->format('d-m-Y H:i') }}. Cetak ulang hanya melalui {{ \App\Support\CetakUlang::LABEL }}.</span>
+            @if ($reprintState === 'pending')
+                <span class="print-warning">Permintaan cetak ulang menunggu approval Admin Kasir.</span>
             @else
-                <button type="button" onclick="requestDocumentPrint()">{{ $printRecord ? 'Cetak Ulang' : 'Cetak / Simpan PDF' }}</button>
+                @if ($reprintState === 'free')
+                    <span class="print-note">Cetak ulang bebas s/d {{ app(\App\Services\ReprintGate::class)->freeUntil($printRecord)->format('H:i') }}</span>
+                @endif
+                <button type="button" onclick="requestDocumentPrint()">{{ ! $printRecord ? 'Cetak / Simpan PDF' : ($reprintState === 'needs_approval' ? 'Minta Cetak Ulang' : 'Cetak Ulang') }}</button>
             @endif
         </div>
     </div>
@@ -234,12 +239,13 @@
         @endif
 
         <footer class="footer">
-            <div>Kasir: {{ \App\Support\TeksTampil::bersih($snapshot['issued_by_name'] ?? $document->issuedBy?->name) ?? '-' }}</div>
+            <div>Kasir: {{ \App\Support\TeksTampil::bersih($snapshot['issued_by_name'] ?? $document->issuedBy?->name) ?? '-' }}<span class="reprint-stamp"></span></div>
             <div style="text-align:right">Terima kasih telah mempercayakan kebutuhan cetak Anda kepada kami.</div>
         </footer>
     </main>
     @endforeach
 
+    @include('partials.reprint-print')
     <script>
         let documentPrintPending = false;
 
@@ -247,15 +253,12 @@
             if (documentPrintPending) return;
             documentPrintPending = true;
             try {
-                const response = await fetch(@json(route('order-documents.register-print', $document)), {
-                    method: 'POST',
-                    headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': @json(csrf_token()) },
+                const allowed = await window.reprintPrint({
+                    registerUrl: @json(route('order-documents.register-print', $document)),
+                    isReprint: @json((bool) $printRecord),
+                    request: { kind: @json($document->kind), order_type: @json($document->order_type), order_id: {{ (int) $document->order_id }}, order_document_id: {{ $document->id }} },
                 });
-                const payload = await response.json();
-                if (! response.ok) {
-                    alert(payload.message || 'Dokumen tidak dapat dicetak.');
-                    return;
-                }
+                if (! allowed) return;
                 document.body.classList.add('print-authorized');
                 window.focus();
                 window.print();

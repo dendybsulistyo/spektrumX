@@ -68,6 +68,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\QuickSearchController;
 use App\Http\Controllers\RekapPenerimaanController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\ReprintApprovalController;
 use App\Http\Controllers\ReworkHistoryController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\ServerMonitorController;
@@ -550,6 +551,11 @@ Route::middleware('auth')->group(function () {
 
     // Access controlled inside the controller (kasir.approve-hutang).
     Route::get('/approval-hutang', [HutangApprovalController::class, 'index'])->name('hutang-approval.index');
+
+    // Cetak ulang SO/DO/Invoice (akses dicek di controller, lihat ReprintGate).
+    Route::post('/cetak-ulang/permintaan', [ReprintApprovalController::class, 'store'])->name('reprint-requests.store');
+    Route::get('/approval-cetak-ulang', [ReprintApprovalController::class, 'index'])->name('reprint-approval.index');
+    Route::post('/approval-cetak-ulang/{reprintRequest}', [ReprintApprovalController::class, 'decide'])->name('reprint-approval.decide');
 
     Route::middleware('permission:order-finishing.view')->group(function () {
         Route::get('/order-finishing', [OrderFinishingController::class, 'index'])->name('order-finishing.index');

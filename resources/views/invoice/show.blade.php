@@ -50,6 +50,8 @@
         .dp-breakdown .balance { border-top:1px solid var(--line); margin-top:.05cm; padding-top:.1cm; }
         /* QR tracking customer. Posisi & ukuran dari config/tracking.php (kalibrasi CForm). */
         .sheet { position:relative; }
+        .reprint-stamp { position:absolute; right:.9cm; bottom:.25cm; font-size:8pt; color:#000; }
+        .reprint-stamp:empty { display:none; }
         .tracking-qr { position:absolute; left:{{ config('tracking.qr.kiri_cm') }}cm; top:{{ config('tracking.qr.atas_cm') }}cm; display:flex; align-items:center; gap:.15cm; }
         .tracking-qr svg { display:block; flex:none; width:{{ config('tracking.qr.ukuran_cm') }}cm; height:{{ config('tracking.qr.ukuran_cm') }}cm; }
         /* Keterangan di samping QR (bukan di bawah) agar tidak memakan tinggi sebelum kepala tabel. */
@@ -216,6 +218,8 @@
                 </div>
             @endif
         </section>
+        {{-- Diisi saat cetak ulang: "31/10 14:05 · Nama-2" (ReprintGate::stamp). --}}
+        <div class="reprint-stamp"></div>
         @if ($trackingQr && $pageIndex === 0)
             <div class="tracking-qr">{!! $trackingQr !!}<span>Scan<br>cek<br>status</span></div>
         @endif
@@ -226,10 +230,10 @@
         @if (request()->boolean('payment_preview') && request('source') === 'pengambilan')
             <a href="{{ route('pengambilan.index', ['tab' => 'transaksi']) }}" class="link-back">← Kembali ke Pengambilan</a>
             <div style="display:flex;align-items:center;gap:10px;">
-                @if ($invoicePrintBlocked)
-                    <span class="print-warning" style="flex:none;margin:0">Invoice sudah dicetak. Cetak ulang hanya melalui {{ \App\Support\CetakUlang::LABEL }}.</span>
+                @if ($invoiceReprintState === 'pending')
+                    <span class="print-warning" style="flex:none;margin:0">Permintaan cetak ulang Invoice menunggu approval Admin Kasir.</span>
                 @else
-                    <button class="btn" type="button" id="paymentPrintButton" onclick="printPaymentInvoice()">Cetak Invoice</button>
+                    <button class="btn" type="button" id="paymentPrintButton" onclick="printPaymentInvoice()">{{ ! $invoicePrinted ? 'Cetak Invoice' : ($invoiceReprintState === 'needs_approval' ? 'Minta Cetak Ulang Invoice' : 'Cetak Ulang Invoice') }}</button>
                 @endif
                 <form method="POST" action="{{ route('pengambilan.transaksi.archive', ['type' => $type, 'id' => $order->id]) }}" style="margin:0;">
                     @csrf
@@ -241,15 +245,16 @@
         @else
             <a href="#" id="backLink" class="link-back">← Kembali</a>
         @endif
-        @if (! request()->boolean('payment_preview') && request('source') !== 'pengambilan' && ! request()->boolean('draft') && $printRecord && ! $canReprintSalesOrder)
-            <p class="print-warning">SO sudah dicetak {{ $printRecord->first_printed_at->format('d-m-Y H:i') }}. Cetak ulang hanya melalui {{ \App\Support\CetakUlang::LABEL }}.</p>
+        @if (! request()->boolean('payment_preview') && request('source') !== 'pengambilan' && ! request()->boolean('draft') && $soReprintState === 'pending')
+            <p class="print-warning">Permintaan cetak ulang SO menunggu approval Admin Kasir.</p>
         @endif
         @if (! request()->boolean('payment_preview') && request('source') !== 'pengambilan')
-            @if (request()->boolean('draft') || $canPrintSalesOrder)
-                <button class="btn" type="button" onclick="requestSalesOrderPrint()">{{ request()->boolean('draft') ? 'Cetak Draft SO' : ($printRecord ? 'Cetak Ulang Surat Pesanan' : 'Cetak Surat Pesanan') }}</button>
+            @if (request()->boolean('draft') || $soReprintState !== 'pending')
+                <button class="btn" type="button" onclick="requestSalesOrderPrint()">{{ request()->boolean('draft') ? 'Cetak Draft SO' : (! $printRecord ? 'Cetak Surat Pesanan' : ($soReprintState === 'needs_approval' ? 'Minta Cetak Ulang SO' : 'Cetak Ulang Surat Pesanan')) }}</button>
             @endif
         @endif
     </div>
+    @include('partials.reprint-print')
     <script>
         let salesOrderPrintPending = false;
 
@@ -262,13 +267,12 @@
                 if (paymentPrintPending) return;
                 paymentPrintPending = true;
                 try {
-                    const response = await fetch(@json(route('order-documents.register-print', $invoiceDocument)), {
-                        method: 'POST',
-                        headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': @json(csrf_token()) },
+                    const allowed = await window.reprintPrint({
+                        registerUrl: @json(route('order-documents.register-print', $invoiceDocument)),
+                        isReprint: @json($invoicePrinted),
+                        request: { kind: 'inv', order_type: @json($type), order_id: {{ $order->id }}, order_document_id: {{ $invoiceDocument->id }} },
                     });
-                    const payload = await response.json();
-                    if (! response.ok) {
-                        alert(payload.message || 'Invoice tidak dapat dicetak.');
+                    if (! allowed) {
                         enablePaymentSave();
                         return;
                     }
@@ -304,18 +308,14 @@
             @else
                 salesOrderPrintPending = true;
                 try {
-                    const response = await fetch(@json(route('invoice.register-print', ['type' => $type, 'id' => $order->id])), {
-                        method: 'POST',
-                        headers: {
-                            'Accept': 'application/json',
-                            'X-CSRF-TOKEN': @json(csrf_token()),
-                        },
+                    // Iframe kasir tidak dimuat ulang setelah cetak pertama: bila server
+                    // menjawab "alasan wajib", reprintPrint mengulang sebagai cetak ulang.
+                    const allowed = await window.reprintPrint({
+                        registerUrl: @json(route('invoice.register-print', ['type' => $type, 'id' => $order->id])),
+                        isReprint: @json((bool) $printRecord),
+                        request: { kind: 'so', order_type: @json($type), order_id: {{ $order->id }}, order_document_id: null },
                     });
-                    const payload = await response.json();
-                    if (! response.ok) {
-                        alert(payload.message || 'Sales Order tidak dapat dicetak.');
-                        return false;
-                    }
+                    if (! allowed) return false;
 
                     document.body.classList.add('print-authorized');
                     window.focus();
@@ -332,11 +332,11 @@
 
         window.requestSalesOrderPrint = requestSalesOrderPrint;
         window.printPaymentInvoice = printPaymentInvoice;
-        @if (request()->boolean('payment_preview') && session('status') && ! $invoicePrintBlocked)
+        @if (request()->boolean('payment_preview') && session('status') && ! $invoicePrinted)
             // Just paid from Pengambilan: open the print dialog right away.
             window.addEventListener('load', () => { if (window.self === window.top) printPaymentInvoice(); });
         @endif
-        @if ($invoicePrintBlocked)
+        @if ($invoicePrinted)
             // Invoice sudah tercetak sebelumnya: jangan kunci tombol Simpan.
             window.addEventListener('load', enablePaymentSave);
         @endif
