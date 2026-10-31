@@ -34,7 +34,7 @@ class StoreOrderOutdoorRequest extends FormRequest
             'items.*.Panjang' => ['required', 'numeric', 'min:0'],
             'items.*.Lebar' => ['required', 'numeric', 'min:0'],
             'items.*.Qty' => ['required', 'integer', 'min:1'],
-            'items.*.KdCtk' => ['nullable', 'string', 'exists:harga_cetak_outdoor,KdCtk'],
+            'items.*.KdCtk' => ['required', 'string', 'exists:harga_cetak_outdoor,KdCtk'],
             'items.*.ada_finishing' => ['nullable', 'in:ya,tidak'],
             'items.*.jenis_finishing' => ['nullable', 'string', 'max:50'],
         ];
@@ -68,6 +68,7 @@ class StoreOrderOutdoorRequest extends FormRequest
     public function messages(): array
     {
         return [
+            'items.*.KdCtk.required' => 'Pilih printer dan bahan cetak untuk setiap item sebelum menyimpan order.',
             'items.*.KdCtk.exists' => 'Kombinasi printer & bahan cetak yang dipilih belum punya harga — atur dulu di Standar Harga, atau pilih kombinasi lain.',
         ];
     }

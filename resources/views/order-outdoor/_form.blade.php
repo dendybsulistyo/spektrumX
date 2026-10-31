@@ -378,7 +378,7 @@
                         </template>
                     </div>
                 </div>
-                <div class="col-span-2 sm:col-span-2">
+                <div class="relative col-span-2 sm:col-span-2">
                     <label class="block text-xs text-gray-500 mb-1">Bahan Cetak (Harga)</label>
                     <select :name="`items[${index}][NoCetak]`" x-model="item.NoCetak" @change="syncKdCtk(item)"
                             x-init="$nextTick(() => { $el.value = item.NoCetak; })"
@@ -392,7 +392,10 @@
                     <p class="text-xs text-gray-400 mt-1" x-show="item.KdPrn && bahanFor(item.KdPrn).length === 0">
                         Belum ada bahan dengan harga untuk printer ini.
                     </p>
-                    <input type="hidden" :name="`items[${index}][KdCtk]`" :value="item.KdCtk">
+                    {{-- Bukan type=hidden agar ikut validasi browser: Simpan ditolak sebelum printer & bahan dipilih. --}}
+                    <input type="text" :name="`items[${index}][KdCtk]`" :value="item.KdCtk" tabindex="-1" aria-hidden="true"
+                           x-effect="$el.setCustomValidity(item.KdCtk ? '' : 'Pilih printer dan bahan cetak dulu.')"
+                           style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;">
                     <template x-if="item.KdPrn && item.NoCetak">
                         <p class="text-xs mt-1" :class="hargaFor(item) ? 'text-green-700' : 'text-red-600'">
                             <span x-show="hargaFor(item)" x-text="'Rp ' + (hargaFor(item)?.std ?? 0).toLocaleString('id-ID')"></span>

@@ -438,7 +438,10 @@
                             </svg>
                         </button>
                     </div>
-                    <input type="hidden" :name="`items[${index}][KdProd]`" :value="item.KdProd" required>
+                    {{-- Bukan type=hidden agar ikut validasi browser: Simpan ditolak sebelum produk dipilih. --}}
+                    <input type="text" :name="`items[${index}][KdProd]`" :value="item.KdProd" tabindex="-1" aria-hidden="true"
+                           x-effect="$el.setCustomValidity(item.KdProd ? '' : 'Pilih produk dulu.')"
+                           style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;">
                     <input type="hidden" :name="`items[${index}][jenis_produk]`" :value="item.jenis_produk || 'indoor'">
 
                     <div x-show="open && results.length > 0" x-cloak :id="'prod-search-list-' + index"
