@@ -62,13 +62,19 @@ fi
 ( cd "$WORK" && sha256sum ./* > SHA256SUMS )
 
 # --- 3. Rotasi hardisk server ----------------------------------------------
-find "$LOCAL_DIR" -mindepth 1 -maxdepth 1 -type d -mtime +"$KEEP_LOCAL" -exec rm -rf {} + 2>>"$LOG"
+# Prinsip: simpan & verifikasi dulu, baru hapus yang lama. Backup baru gagal → tidak ada yang dihapus.
+BACKUP_OK=$STATUS
+if [ "$BACKUP_OK" -eq 0 ]; then
+    find "$LOCAL_DIR" -mindepth 1 -maxdepth 1 -type d -mtime +"$KEEP_LOCAL" -exec rm -rf {} + 2>>"$LOG"
+else
+    log "Rotasi hardisk dilewati karena backup hari ini gagal"
+fi
 
 # --- 4. Flashdisk USB ------------------------------------------------------
 if mountpoint -q "$USB_MOUNT"; then
     mkdir -p "$USB_DIR"
     # FAT/exFAT: tanpa atribut pemilik/izin Linux.
-    if cp -r "$WORK" "$USB_DIR/" && ( cd "$USB_DIR/$STAMP" && sha256sum -c --quiet SHA256SUMS ); then
+    if [ "$BACKUP_OK" -eq 0 ] && cp -r "$WORK" "$USB_DIR/" && ( cd "$USB_DIR/$STAMP" && sha256sum -c --quiet SHA256SUMS ); then
         log "USB ok"
         find "$USB_DIR" -mindepth 1 -maxdepth 1 -type d -mtime +"$KEEP_USB" -exec rm -rf {} + 2>>"$LOG"
     else
@@ -81,7 +87,7 @@ fi
 
 # --- 5. Cloudflare R2 (terenkripsi oleh rclone crypt) ----------------------
 if [ -n "$R2_REMOTE" ] && command -v rclone >/dev/null && rclone listremotes 2>/dev/null | grep -qx "${R2_REMOTE}"; then
-    if rclone copy "$WORK" "${R2_REMOTE}spektrum/$STAMP" --log-file "$LOG" --log-level NOTICE; then
+    if [ "$BACKUP_OK" -eq 0 ] && rclone copy "$WORK" "${R2_REMOTE}spektrum/$STAMP" --log-file "$LOG" --log-level NOTICE; then
         log "R2 ok"
         rclone delete "${R2_REMOTE}spektrum" --min-age "${KEEP_R2}d" --log-file "$LOG" --log-level NOTICE
         rclone rmdirs "${R2_REMOTE}spektrum" --leave-root --log-file "$LOG" --log-level NOTICE
