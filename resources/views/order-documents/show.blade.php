@@ -49,7 +49,8 @@
         .page-spacer { flex:1; }
         .footer { display:grid; grid-template-columns:1fr 1fr; gap:10mm; margin-top:auto; padding-top:3mm; color:var(--muted); font-size:10px; }
         .signature { display:block; max-width:48mm; max-height:18mm; margin-top:2px; object-fit:contain; }
-        @media (max-width:760px) {
+        /* Hanya layar: saat cetak di kertas sempit aturan HP ini membuat header pindah ke kiri (menabrak logo form). */
+        @media screen and (max-width:760px) {
             body { padding:0; background:#fff; }
             .toolbar { padding:12px; }
             .sheet { width:100%; min-height:0; padding:18px; box-shadow:none; }
@@ -72,6 +73,18 @@
             .party { margin-top:3mm; }
             .items { margin-top:3mm; }
             .items th,.items td { padding:3px 4px; }
+            /* Form kontinu sudah tercetak logo & alamat perusahaan (dan judul INVOICE):
+               bagian hitam hanya mengisi blok kanan, tidak menimpa cetakan hijau. */
+            .header { grid-template-columns:1fr 1fr; border-bottom:0; }
+            .header > section:first-child { visibility:hidden; }
+            .document-head { text-align:left; padding-left:6mm; }
+            .meta { margin-left:0; }
+            .document-title.is-preprinted { visibility:hidden; }
+            /* Huruf kecil & abu-abu pucat di printer dot-matrix: tebalkan & hitamkan. */
+            .notes,.footer,.company,.items td,.party p,.summary td { color:#000 !important; }
+            .notes,.footer { font-size:11px; font-weight:700; }
+            .items th { font-size:11px; font-weight:700; }
+            .items td,.description,.summary td { font-size:12px; font-weight:700; }
             /* Cetak hanya lewat tombol (tercatat); Ctrl+P biasa tidak mencetak dokumen. */
             body:not(.print-authorized) .sheet { display:none !important; }
             body:not(.print-authorized)::after { content:'Pencetakan dokumen harus dilakukan melalui tombol Cetak.'; display:block; padding:24px; font:700 14pt Arial,sans-serif; }
@@ -151,7 +164,7 @@
             </section>
 
             <section class="document-head">
-                <h1 class="document-title">{{ $isInvoice ? 'Invoice' : 'Delivery Order' }}</h1>
+                <h1 @class(['document-title', 'is-preprinted' => $isInvoice])>{{ $isInvoice ? 'Invoice' : 'Delivery Order' }}</h1>
                 <table class="meta">
                     <tr><th>No.</th><td>{{ $document->number }}</td></tr>
                     <tr><th>Tanggal</th><td>{{ $document->issued_at->translatedFormat('d F Y') }}</td></tr>
