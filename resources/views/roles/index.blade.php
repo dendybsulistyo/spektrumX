@@ -31,6 +31,7 @@
                         <td class="px-3 py-2 text-gray-600">{{ $role->users_count }}</td>
                         <td class="px-3 py-2 text-gray-600">{{ count($role->permissions ?? []) }} permission</td>
                         <td class="px-3 py-2 text-right">
+                            <a href="{{ route('roles.create', ['dari' => $role->id]) }}" class="mr-2 inline-flex items-center rounded border border-gray-300 px-2 py-0.5 text-xs font-semibold text-gray-700 hover:bg-gray-50" title="Duplikat role ini">Duplikat</a>
                             <a href="{{ route('roles.edit', $role) }}" class="inline-flex items-center text-blue-600 hover:text-blue-800" title="Edit"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125" /></svg></a>
                             <form method="POST" action="{{ route('roles.destroy', $role) }}" class="inline"
                                   onsubmit="return confirm('Hapus role {{ $role->label }}?')">

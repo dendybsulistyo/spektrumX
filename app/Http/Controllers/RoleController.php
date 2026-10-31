@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreRoleRequest;
 use App\Models\Role;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class RoleController extends Controller
@@ -16,9 +17,29 @@ class RoleController extends Controller
         return view('roles.index', compact('roles'));
     }
 
-    public function create(): View
+    public function create(Request $request): View
     {
-        return view('roles.create', ['permissionGroups' => Role::PERMISSION_GROUPS]);
+        // Duplikat role: form Tambah Role terisi permission role sumber; kode & nama diubah dulu sebelum disimpan.
+        $source = $request->filled('dari') ? Role::query()->find($request->integer('dari')) : null;
+        $role = $source ? new Role([
+            'name' => $this->copyName($source->name),
+            'label' => mb_substr($source->label.' (salinan)', 0, 50),
+            'permissions' => $source->permissions ?? [],
+        ]) : null;
+
+        return view('roles.create', ['permissionGroups' => Role::PERMISSION_GROUPS, 'role' => $role, 'source' => $source]);
+    }
+
+    /** Kode unik untuk salinan: "kasir-salinan", "kasir-salinan-2", dst. */
+    private function copyName(string $name): string
+    {
+        $base = mb_substr($name.'-salinan', 0, 45);
+        $candidate = $base;
+        for ($n = 2; Role::query()->where('name', $candidate)->exists(); $n++) {
+            $candidate = $base.'-'.$n;
+        }
+
+        return $candidate;
     }
 
     public function store(StoreRoleRequest $request): RedirectResponse
