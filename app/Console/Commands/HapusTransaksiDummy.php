@@ -6,11 +6,13 @@ use Illuminate\Console\Command;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * Pengosongan transaksi uji coba sebelum go-live (keputusan user 31 Okt 2026:
  * semua transaksi spektrumX adalah dummy, tanpa backup). Data master
  * (customer, produk, harga, akun, supplier, user/role, pengaturan) tidak disentuh.
+ * Tahap "sesudah" juga mengosongkan chat & status operator.
  *
  *   php artisan spektrum:hapus-transaksi januari              → hanya hitung
  *   php artisan spektrum:hapus-transaksi januari --jalankan   → hapus s/d 31 Jan 2026
@@ -46,6 +48,7 @@ class HapusTransaksiDummy extends Command
         'pengeluaran' => ['tanggal', 'date'],
         'slip_gaji' => ['periode', 'month'],
         'accounting_inventory_counts' => ['tanggal', 'date'],
+        'accounting_fixed_assets' => ['tanggal_perolehan', 'date'],
         'accounting_opening_balances' => ['periode', 'month'],
         'laporan_ppn_final' => ['periode', 'month'],
         'periode_tutup_buku' => ['periode', 'month'],
@@ -99,12 +102,27 @@ class HapusTransaksiDummy extends Command
                 foreach (self::ORDERS as [, $detailTable]) {
                     $this->apply($detailTable, fn (Builder $q) => $q);
                 }
+                // Cadangan sementara perbaikan data uji 9 Okt 2026 (berisi nomor order dummy).
+                $this->apply('order_item_print_only_fix_20261009', fn (Builder $q) => $q);
+                // Percakapan & status operator selama uji coba (keputusan user 31 Okt 2026).
+                foreach (['user_status_responses', 'user_status_views', 'user_statuses', 'chat_messages'] as $table) {
+                    $this->apply($table, fn (Builder $q) => $q);
+                }
                 $this->counts['customer_limits (plafon terpakai → 0)'] = DB::table('customer_limits')->where('Total', '!=', 0)->count();
                 if ($this->run) {
                     DB::table('customer_limits')->where('Total', '!=', 0)->update(['Total' => 0]);
                 }
             }
         });
+
+        // File tanda tangan penerima (storage/app/private/pickup-signatures) milik DO yang sudah dihapus.
+        if (! $januari) {
+            $files = count(Storage::disk('local')->allFiles('pickup-signatures'));
+            $this->counts['file tanda tangan penerima'] = $files;
+            if ($this->run && $files > 0) {
+                Storage::disk('local')->deleteDirectory('pickup-signatures');
+            }
+        }
 
         $this->table(['Tabel', $this->run ? 'Dihapus' : 'Akan dihapus'],
             collect($this->counts)->filter()->map(fn ($n, $t) => [$t, number_format($n, 0, ',', '.')])->values()->all());
