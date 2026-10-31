@@ -17,10 +17,12 @@ use Illuminate\Support\Facades\Storage;
  *   php artisan spektrum:hapus-transaksi januari              → hanya hitung
  *   php artisan spektrum:hapus-transaksi januari --jalankan   → hapus s/d 31 Jan 2026
  *   php artisan spektrum:hapus-transaksi sesudah --jalankan   → hapus SEMUA sisanya + reset plafon & nomor urut
+ *   php artisan spektrum:hapus-transaksi lama --jalankan      → kosongkan data penjualan aplikasi lama
+ *                                                              (sumber Data Warehouse & Laporan Operator Indoor)
  */
 class HapusTransaksiDummy extends Command
 {
-    protected $signature = 'spektrum:hapus-transaksi {tahap : januari | sesudah} {--jalankan : benar-benar menghapus (tanpa ini hanya menghitung)}';
+    protected $signature = 'spektrum:hapus-transaksi {tahap : januari | sesudah | lama} {--jalankan : benar-benar menghapus (tanpa ini hanya menghitung)}';
 
     protected $description = 'Hapus transaksi dummy spektrumX bertahap (januari, lalu sesudah januari)';
 
@@ -57,6 +59,15 @@ class HapusTransaksiDummy extends Command
         'order_number_sequences' => ['order_date', 'date'],
     ];
 
+    /** Tabel transaksi peninggalan aplikasi lama (keputusan user 31 Okt 2026: ikut dikosongkan). */
+    private const LEGACY = [
+        'notam', 'notad_transaksi_INDOOR_CEK', 'notam_backup_20260718_053221', 'notad_transaksi_INDOOR_CEK_backup_20260718_053221',
+        'bayar_', 'harian_', 'indstat', 'piutang_', 'orderm_pembayaran', 'orderd_Pembayaran_InDoor_Lengkap_CEK', 'diskon',
+        'ctcp01_', 'ctcp02_Orderan_dan_NamaProduk', 'ctcp03_', 'ctcp04', 'ctcp05', 'ctcp06',
+        'ordopr01_ada_nama_customer', 'ordopr02_transaksi_OUTDOOR_CEK', 'ordopr03', 'ordopr04_',
+        'z_otorder', 'z_outd_perlu_konfirmasi', 'z_transaksi_sampai_kasir',
+    ];
+
     private bool $run = false;
 
     /** @var array<string, int> */
@@ -65,10 +76,13 @@ class HapusTransaksiDummy extends Command
     public function handle(): int
     {
         $tahap = $this->argument('tahap');
-        if (! in_array($tahap, ['januari', 'sesudah'], true)) {
-            $this->error('Tahap harus "januari" atau "sesudah".');
+        if (! in_array($tahap, ['januari', 'sesudah', 'lama'], true)) {
+            $this->error('Tahap harus "januari", "sesudah", atau "lama".');
 
             return self::INVALID;
+        }
+        if ($tahap === 'lama') {
+            return $this->legacy();
         }
         $januari = $tahap === 'januari';
         $this->run = (bool) $this->option('jalankan');
@@ -116,17 +130,45 @@ class HapusTransaksiDummy extends Command
         });
 
         // File tanda tangan penerima (storage/app/private/pickup-signatures) milik DO yang sudah dihapus.
+        // Folder milik www-data: bila dijalankan user lain, cukup beri peringatan (database sudah tersimpan).
         if (! $januari) {
-            $files = count(Storage::disk('local')->allFiles('pickup-signatures'));
-            $this->counts['file tanda tangan penerima'] = $files;
-            if ($this->run && $files > 0) {
-                Storage::disk('local')->deleteDirectory('pickup-signatures');
+            try {
+                $files = count(Storage::disk('local')->allFiles('pickup-signatures'));
+                $this->counts['file tanda tangan penerima'] = $files;
+                if ($this->run && $files > 0) {
+                    Storage::disk('local')->deleteDirectory('pickup-signatures');
+                }
+            } catch (\Throwable) {
+                $this->warn('File tanda tangan tidak bisa diakses (izin folder). Hapus manual: sudo rm -rf '.Storage::disk('local')->path('pickup-signatures'));
             }
         }
 
         $this->table(['Tabel', $this->run ? 'Dihapus' : 'Akan dihapus'],
             collect($this->counts)->filter()->map(fn ($n, $t) => [$t, number_format($n, 0, ',', '.')])->values()->all());
         $this->info($this->run ? 'Selesai.' : 'Belum ada yang dihapus. Tambahkan --jalankan untuk menghapus.');
+
+        return self::SUCCESS;
+    }
+
+    /** TRUNCATE (cepat untuk ratusan ribu baris; tabel lama tanpa foreign key). Tidak bisa dibatalkan. */
+    private function legacy(): int
+    {
+        $tables = collect(self::LEGACY)->filter(fn ($table) => Schema::hasTable($table));
+        $rows = $tables->mapWithKeys(fn ($table) => [$table => DB::table($table)->count()]);
+        $this->table(['Tabel aplikasi lama', 'Baris'], $rows->map(fn ($n, $t) => [$t, number_format($n, 0, ',', '.')])->values()->all());
+        if (! $this->option('jalankan')) {
+            $this->info('Belum ada yang dihapus. Tambahkan --jalankan untuk mengosongkan.');
+
+            return self::SUCCESS;
+        }
+        $this->warn('Akan MENGOSONGKAN '.$tables->count().' tabel aplikasi lama ('.number_format($rows->sum(), 0, ',', '.').' baris). Data Warehouse & Laporan Operator Indoor akan kosong.');
+        if ($this->ask('Ketik HAPUS untuk melanjutkan') !== 'HAPUS') {
+            $this->info('Dibatalkan.');
+
+            return self::SUCCESS;
+        }
+        $tables->each(fn ($table) => DB::table($table)->truncate());
+        $this->info('Selesai: '.$tables->count().' tabel dikosongkan.');
 
         return self::SUCCESS;
     }
