@@ -18,12 +18,14 @@ class DetailIndoorController extends Controller
             ->get();
 
         $produk = Produk::query()
-            ->join('kategori_produk_indoor', 'kategori_produk_indoor.KdDivs', '=', 'produk_indoor.KdDivs')
+            // leftJoin: produk tanpa divisi tetap tampil (di akhir daftar) agar bisa dicari & dilengkapi.
+            ->leftJoin('kategori_produk_indoor', 'kategori_produk_indoor.KdDivs', '=', 'produk_indoor.KdDivs')
             ->when($request->filled('search'), function ($q) use ($request) {
                 $search = $request->string('search');
-                $q->where('NmProd', 'like', "%{$search}%")
-                    ->orWhere('produk_indoor.KdProd', 'like', "%{$search}%");
+                $q->where(fn ($q) => $q->where('NmProd', 'like', "%{$search}%")
+                    ->orWhere('produk_indoor.KdProd', 'like', "%{$search}%"));
             })
+            ->orderByRaw('kategori_produk_indoor.NoUrut IS NULL')
             ->orderBy('kategori_produk_indoor.NoUrut')
             ->orderBy('produk_indoor.NoUrut')
             ->select('produk_indoor.*')
