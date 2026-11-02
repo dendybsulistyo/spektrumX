@@ -57,7 +57,12 @@
                                     <td class="text-muted">{{ $customer->Telp }}</td>
                                     <td>
                                         @if ($customer->is_vip)
+                                            @php $sisaPlafon = (float) $customer->limit->Batas - (float) $customer->limit->Total; @endphp
                                             <span class="tag tag-amber">VIP &middot; Rp {{ number_format($customer->limit->Batas, 0, ',', '.') }}</span>
+                                            <div class="text-muted" style="font-size: 11.5px; margin-top: 3px; white-space: nowrap;">
+                                                Terpakai Rp {{ number_format($customer->limit->Total, 0, ',', '.') }}
+                                                &middot; <span style="font-weight: 600; color: {{ $sisaPlafon <= 0 ? '#b91c1c' : '#15803d' }};">Sisa Rp {{ number_format($sisaPlafon, 0, ',', '.') }}</span>
+                                            </div>
                                         @else
                                             <span class="tag tag-neutral">Reguler</span>
                                         @endif

@@ -90,7 +90,11 @@
             value="{{ old('Batas', $customer?->limit?->Batas) }}" />
         <x-input-error :messages="$errors->get('Batas')" class="mt-1" />
         @if ($customer?->limit)
-            <p class="text-xs text-gray-500 mt-1">Piutang berjalan saat ini: Rp {{ number_format($customer->limit->Total, 0, ',', '.') }}</p>
+            @php $sisaPlafon = (float) $customer->limit->Batas - (float) $customer->limit->Total; @endphp
+            <p class="text-xs text-gray-500 mt-1">
+                Piutang berjalan saat ini: Rp {{ number_format($customer->limit->Total, 0, ',', '.') }}
+                &middot; <span class="font-semibold {{ $sisaPlafon <= 0 ? 'text-red-700' : 'text-green-700' }}">Sisa plafon Rp {{ number_format($sisaPlafon, 0, ',', '.') }}</span>
+            </p>
         @endif
     </div>
 </div>
