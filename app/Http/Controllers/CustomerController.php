@@ -240,8 +240,11 @@ class CustomerController extends Controller
 
     public function destroy(Customer $customer): RedirectResponse
     {
-        CustomerLimit::where('KdCust', $customer->KdCust)->delete();
-        $customer->delete();
+        if ($reason = $customer->deleteBlockReason()) {
+            return back()->with('error', 'Customer '.$customer->NmCust.' tidak dapat dihapus. '.$reason);
+        }
+
+        $customer->deleteWithSettings();
 
         return redirect()->route('customers.index')->with('status', 'Customer berhasil dihapus.');
     }
