@@ -17,7 +17,7 @@
             </form>
         </div>
 
-        @php $canDelete = auth()->user()->hasPermission('customers.manage'); @endphp
+        @php $canDelete = auth()->user()->hasPermission('customers.delete'); @endphp
         <div x-data="{ selected: [] }">
         @if ($canDelete)
             <form id="bulk-delete-customers" method="POST" action="{{ route('customers.bulk-destroy') }}"

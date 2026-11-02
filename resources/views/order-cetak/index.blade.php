@@ -76,6 +76,8 @@
              }">
             <div class="operator-queue-workspace">
                 <x-operator-queue-toolbar :tabs="$tabs" route-name="order-cetak.index" :group-by="$groupBy">
+                    <a href="{{ route('order-cetak.saran-gabung') }}" x-show="tab === 'outdoor'" x-cloak class="in-btn"
+                       style="background: var(--color-surface); color: var(--color-text); border-color: var(--color-divider);">Saran Gabung</a>
                     @can('order-cetak.manage')
                         <button type="button" class="in-btn" :disabled="selectedCount === 0 || sending" @click="bulkSend()"
                                 :style="(selectedCount === 0 || sending) ? 'opacity:0.5; cursor:not-allowed;' : ''">

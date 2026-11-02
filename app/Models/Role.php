@@ -19,7 +19,8 @@ class Role extends Model
         ],
         'Customer' => [
             'customers.view' => 'Lihat data customer',
-            'customers.manage' => 'Tambah/ubah/hapus customer',
+            'customers.manage' => 'Tambah/ubah customer',
+            'customers.delete' => 'Hapus customer (hanya yang belum pernah bertransaksi)',
         ],
         'Produk' => [
             'produk.view' => 'Lihat data produk',

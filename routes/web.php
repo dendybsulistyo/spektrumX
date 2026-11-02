@@ -43,6 +43,7 @@ use App\Http\Controllers\OperatorController;
 use App\Http\Controllers\OrderArtworkController;
 use App\Http\Controllers\OrderBungkusController;
 use App\Http\Controllers\OrderCetakController;
+use App\Http\Controllers\OutdoorNestingController;
 use App\Http\Controllers\OrderCommentController;
 use App\Http\Controllers\OrderDesainController;
 use App\Http\Controllers\OrderDocumentController;
@@ -307,8 +308,11 @@ Route::middleware('auth')->group(function () {
         Route::get('/customers/{customer:KdCust}', [CustomerController::class, 'show'])->name('customers.show');
     });
     Route::middleware('permission:customers.manage')->group(function () {
-        Route::resource('customers', CustomerController::class)->only(['store', 'update', 'destroy'])->names('customers');
+        Route::resource('customers', CustomerController::class)->only(['store', 'update'])->names('customers');
         Route::get('/customers-suggest-code', [CustomerController::class, 'suggestCode'])->name('customers.suggest-code');
+    });
+    Route::middleware('permission:customers.delete')->group(function () {
+        Route::resource('customers', CustomerController::class)->only(['destroy'])->names('customers');
         Route::post('/customers-bulk-delete', [CustomerController::class, 'bulkDestroy'])->name('customers.bulk-destroy');
     });
 
@@ -525,6 +529,7 @@ Route::middleware('auth')->group(function () {
     });
     Route::middleware('permission:order-cetak.view')->group(function () {
         Route::get('/order-cetak', [OrderCetakController::class, 'index'])->name('order-cetak.index');
+        Route::get('/order-cetak/saran-gabung', [OutdoorNestingController::class, 'index'])->name('order-cetak.saran-gabung');
     });
     Route::middleware('permission:order-cetak.manage')->group(function () {
         Route::post('/order-cetak/{type}/{id}', [OrderCetakController::class, 'updateItem'])->name('order-cetak.update');
