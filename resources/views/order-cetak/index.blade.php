@@ -77,7 +77,7 @@
             <div class="operator-queue-workspace">
                 <x-operator-queue-toolbar :tabs="$tabs" route-name="order-cetak.index" :group-by="$groupBy">
                     @can('order-cetak.manage')
-                        <button type="button" x-show="tab === 'indoor'" class="in-btn" :disabled="selectedCount === 0 || sending" @click="bulkSend()"
+                        <button type="button" class="in-btn" :disabled="selectedCount === 0 || sending" @click="bulkSend()"
                                 :style="(selectedCount === 0 || sending) ? 'opacity:0.5; cursor:not-allowed;' : ''">
                             <span x-text="sending ? 'Mengirim...' : 'Kirim Terpilih (' + selectedCount + ') ke Finishing'"></span>
                         </button>
@@ -91,7 +91,7 @@
                                                  :pending-rework="$pendingRework" :can-approve-rework="$canApproveRework"
                                                  :printer-names="$printerNames" :outdoor-comments="$outdoorComments" :outdoor-unread="$outdoorUnread"
                                                  manage-ability="order-cetak.manage" empty-message="Tidak ada order di antrian cetak."
-                                                 :bulk-select="$tabKey === 'indoor'" />
+                                                 :bulk-select="true" />
                         </div>
                     @endforeach
                 </div>

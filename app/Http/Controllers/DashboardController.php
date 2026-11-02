@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\BahanCetakOutdoor;
 use App\Models\OrderArtwork;
 use App\Models\OrderIndoor;
 use App\Models\OrderOutdoor;
 use App\Models\OrderStatusNote;
+use App\Models\PrinterOutdoor;
 use App\Services\DashboardStatsService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -46,11 +48,32 @@ class DashboardController extends Controller
             default => abort(404),
         };
 
+        $printerNames = $type === 'outdoor' ? PrinterOutdoor::pluck('NmPrn', 'KdPrn') : collect();
+        $materialNames = $type === 'outdoor' ? BahanCetakOutdoor::pluck('NmBhn', 'NoCetak') : collect();
+        $number = fn ($value) => rtrim(rtrim(number_format((float) $value, 2, ',', '.'), '0'), ',');
+
         $items = $order->items->map(fn ($item) => [
             'id' => $item->id,
-            'name' => $type === 'outdoor' ? ($item->gabungan ?: '-') : $item->Judul,
-            'file' => $type === 'outdoor' ? ($item->NmFile ?: null) : null,
+            'name' => $type === 'outdoor' ? ($item->NmFile ?: ($item->gabungan ?: '-')) : ($item->Judul ?: $item->NmProd),
+            'file' => null,
             'qty_total' => $item->Qty,
+            // Spesifikasi kerja untuk operator: hanya baris yang terisi yang dikirim.
+            'specs' => collect($type === 'outdoor' ? [
+                'Printer' => $printerNames[$item->printerCode()] ?? $item->printerCode(),
+                'Bahan' => $materialNames[$item->bahanCode()] ?? $item->bahanCode(),
+                'Ukuran (P × L)' => (float) $item->Panjang > 0 || (float) $item->Lebar > 0 ? $number($item->Panjang).' × '.$number($item->Lebar) : null,
+                'Finishing' => $item->jenis_finishing,
+                'Gabungan' => $item->gabungan,
+            ] : [
+                'Produk' => trim($item->KdProd.' · '.$item->NmProd, ' ·'),
+                'Ukuran (P × L)' => (float) $item->Panjang > 0 || (float) $item->Lebar > 0 ? $number($item->Panjang).' × '.$number($item->Lebar) : null,
+                'Pisau turun' => $item->PisauTurun,
+                'Jumlah kertas' => $item->JumlahKertas,
+                'Tebal kertas' => $item->TebalKertas,
+                'Tanpa proses operator' => $item->tanpa_proses ? 'Ya' : null,
+            ])->filter(fn ($value) => filled($value) && $value !== '-')
+                ->map(fn ($value, $label) => ['label' => $label, 'value' => (string) $value])
+                ->values(),
             'stages' => collect(self::STAGE_LABELS)->mapWithKeys(
                 fn ($label, $stage) => [$stage => ['label' => $label, 'qty' => (int) $item->{"qty_{$stage}"}]]
             )->values(),

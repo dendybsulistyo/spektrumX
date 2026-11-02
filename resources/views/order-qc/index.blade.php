@@ -32,9 +32,57 @@
 
     <div id="industry-qc" class="operator-queue-viewport">
         <div class="operator-queue-shell" style="max-width:1480px;margin:0 auto;"
-             x-data="{ tab: '{{ $initialTab }}', setTab(key) { this.tab = key; this.$nextTick(() => this.$refs.orderList?.scrollTo({ top: 0 })); const url = new URL(window.location.href); url.searchParams.set('tab', key); window.history.replaceState({}, '', url); } }">
+             x-data="{
+                tab: '{{ $initialTab }}',
+                selected: {},
+                sending: false,
+                get selectedCount() { return Object.keys(this.selected).length; },
+                setTab(key) {
+                    this.tab = key;
+                    this.selected = {};
+                    document.querySelectorAll('#industry-qc input[type=checkbox]').forEach((el) => { el.checked = false; });
+                    this.$nextTick(() => this.$refs.orderList?.scrollTo({ top: 0 }));
+                    const url = new URL(window.location.href); url.searchParams.set('tab', key); window.history.replaceState({}, '', url);
+                },
+                toggle(type, id, checked) {
+                    const key = type + '-' + id;
+                    if (checked) { this.selected[key] = { type, id }; } else { delete this.selected[key]; }
+                },
+                // Kirim massal ke Bungkus, sama seperti Finishing → Back Office.
+                async bulkSend() {
+                    const entries = Object.values(this.selected);
+                    if (entries.length === 0) return;
+                    for (const e of entries) {
+                        const el = document.getElementById('bulk-qty-' + e.type + '-' + e.id);
+                        if (!el.value || Number(el.value) < 1 || Number(el.value) > Number(el.max)) {
+                            alert('Qty item yang dicentang harus 1 sampai sisa Qty di Back Office.');
+                            el.focus();
+                            return;
+                        }
+                    }
+                    if (!confirm(`Kirim ${entries.length} item terpilih ke Bungkus?`)) return;
+                    this.sending = true;
+                    try {
+                        for (const e of entries) {
+                            const el = document.getElementById('bulk-qty-' + e.type + '-' + e.id);
+                            await axios.post(`/order-qc/${e.type}/${e.id}`, { qty: el.value });
+                        }
+                        window.location.reload();
+                    } catch (err) {
+                        alert('Gagal mengirim sebagian item. Muat ulang halaman lalu cek lagi.');
+                        this.sending = false;
+                    }
+                },
+             }">
             <div class="operator-queue-workspace">
-                <x-operator-queue-toolbar :tabs="$tabs" route-name="order-qc.index" :group-by="$groupBy" />
+                <x-operator-queue-toolbar :tabs="$tabs" route-name="order-qc.index" :group-by="$groupBy">
+                    @can('order-qc.manage')
+                        <button type="button" class="in-btn" :disabled="selectedCount === 0 || sending" @click="bulkSend()"
+                                :style="(selectedCount === 0 || sending) ? 'opacity:0.5; cursor:not-allowed;' : ''">
+                            <span x-text="sending ? 'Mengirim...' : 'Kirim Terpilih (' + selectedCount + ') ke Bungkus'"></span>
+                        </button>
+                    @endcan
+                </x-operator-queue-toolbar>
                 <div x-ref="orderList" class="operator-order-list">
                     @foreach (['indoor' => $indoorItems, 'outdoor' => $outdoorItems] as $tabKey => $itemGroups)
                         <div x-show="tab === '{{ $tabKey }}'" @if($tabKey!=='indoor') x-cloak @endif>
@@ -42,7 +90,8 @@
                                                  stage="qc" stage-label="Back Office" route-name="order-qc.update" next-label="Bungkus"
                                                  :pending-rework="$pendingRework" :can-approve-rework="$canApproveRework"
                                                  :printer-names="$printerNames" :outdoor-comments="$outdoorComments" :outdoor-unread="$outdoorUnread"
-                                                 manage-ability="order-qc.manage" empty-message="Tidak ada order di antrian QC." />
+                                                 manage-ability="order-qc.manage" empty-message="Tidak ada order di antrian QC."
+                                                 :bulk-select="true" />
                         </div>
                     @endforeach
                 </div>

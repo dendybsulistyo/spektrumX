@@ -120,8 +120,12 @@ class OrderArtworkController extends Controller
             ->with('status', $replacement ? 'Nota pengganti berhasil dibuat dan siap diproses kasir.' : 'Order artwork berhasil dibuat.');
     }
 
-    public function edit(OrderArtwork $orderArtwork): View
+    public function edit(OrderArtwork $orderArtwork): View|RedirectResponse
     {
+        if ($reason = $orderArtwork->editBlockReason()) {
+            return redirect()->route('order-artwork.index')->with('error', 'Order '.$orderArtwork->NoOrder.' tidak dapat diubah. '.$reason);
+        }
+
         return view('order-artwork.edit', [
             'order' => $orderArtwork,
             'items' => $orderArtwork->items,
@@ -134,6 +138,10 @@ class OrderArtworkController extends Controller
 
     public function update(StoreOrderArtworkRequest $request, OrderArtwork $orderArtwork): RedirectResponse
     {
+        if ($reason = $orderArtwork->editBlockReason()) {
+            return redirect()->route('order-artwork.index')->with('error', 'Order '.$orderArtwork->NoOrder.' tidak dapat diubah. '.$reason);
+        }
+
         $data = $request->validated();
 
         DB::transaction(function () use ($data, $orderArtwork) {

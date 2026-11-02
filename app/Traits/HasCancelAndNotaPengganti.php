@@ -55,10 +55,23 @@ trait HasCancelAndNotaPengganti
         if (OrderPayment::where('order_type', $type)->where('order_id', $this->id)->exists()) {
             return 'Order sudah memiliki catatan pembayaran. Gunakan pengajuan pembatalan.';
         }
-        if (DB::table('order_documents')->where('order_type', $type)->where('order_id', $this->id)->exists()) {
+        if (DB::table('order_documents')->where('order_type', $type)->where('order_id', $this->id)->exists()
+            || DB::table('sales_order_prints')->where('order_type', $type)->where('order_id', $this->id)->exists()) {
             return 'Order sudah memiliki dokumen SO/DO/Invoice. Gunakan pengajuan pembatalan.';
         }
 
         return null;
+    }
+
+    /** Order hanya boleh diubah selama belum diproses, belum dibayar, dan SO belum dicetak (syarat sama dengan hapus). */
+    public function editBlockReason(): ?string
+    {
+        return $this->deleteBlockReason();
+    }
+
+    /** Pemeriksaan cepat untuk tombol di daftar (tanpa query); kunci penuh ada di editBlockReason(). */
+    public function looksEditable(): bool
+    {
+        return $this->status === 'baru' && ($this->status_bayar ?? 'belum_bayar') === 'belum_bayar';
     }
 }

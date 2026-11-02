@@ -224,6 +224,9 @@
             #rc-dashboard .rcd-item { padding: 8px 10px; margin-bottom: 6px; border: 1px solid var(--rule); border-radius: 8px; background: #fff; }
             #rc-dashboard .rcd-item-name { font-weight: 600; color: var(--ink); margin-bottom: 4px; }
             #rc-dashboard .rcd-item-name span { font-weight: 400; color: var(--muted); }
+            #rc-dashboard .rcd-specs { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 4px 14px; margin: 2px 0 8px; padding: 6px 8px; background: #faf7f0; border-radius: 6px; }
+            #rc-dashboard .rcd-specs dt { font-size: 10.5px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+            #rc-dashboard .rcd-specs dd { margin: 0; font-size: 13px; color: var(--ink); overflow-wrap: anywhere; }
 
             @media (max-width: 1100px) {
                 #rc-dashboard .rcd-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -684,6 +687,13 @@
                                             <template x-if="item.file"><span x-text="' · ' + item.file"></span></template>
                                             <span class="mono" x-text="' · Qty ' + item.qty_total"></span>
                                         </div>
+                                        <template x-if="item.specs && item.specs.length">
+                                            <dl class="rcd-specs">
+                                                <template x-for="spec in item.specs" :key="spec.label">
+                                                    <div><dt x-text="spec.label"></dt><dd x-text="spec.value"></dd></div>
+                                                </template>
+                                            </dl>
+                                        </template>
                                         <div style="display: flex; flex-wrap: wrap; gap: 6px;">
                                             <template x-for="stage in item.stages.filter(s => s.qty > 0)" :key="stage.label">
                                                 <span class="pill pill-count no-dot" x-text="stage.qty + ' di ' + stage.label"></span>

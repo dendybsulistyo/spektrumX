@@ -159,8 +159,12 @@ class OrderIndoorController extends Controller
                 : (($data['payment_queue'] ?? 'kasir') === 'cs' ? 'Order berhasil dikirim ke Customer Service.' : 'Order berhasil dikirim ke Kasir.'));
     }
 
-    public function edit(OrderIndoor $orderIndoor): View
+    public function edit(OrderIndoor $orderIndoor): View|RedirectResponse
     {
+        if ($reason = $orderIndoor->editBlockReason()) {
+            return redirect()->route('order-indoor.index')->with('error', 'Order '.$orderIndoor->NoOrder.' tidak dapat diubah. '.$reason);
+        }
+
         $items = OrderIndoorDetail::where('BrsOrder', 'like', $orderIndoor->NoOrder.'%')->get();
 
         return view('order-indoor.edit', [
@@ -177,6 +181,10 @@ class OrderIndoorController extends Controller
 
     public function update(StoreOrderIndoorRequest $request, OrderIndoor $orderIndoor): RedirectResponse
     {
+        if ($reason = $orderIndoor->editBlockReason()) {
+            return redirect()->route('order-indoor.index')->with('error', 'Order '.$orderIndoor->NoOrder.' tidak dapat diubah. '.$reason);
+        }
+
         $data = $request->validated();
 
         DB::transaction(function () use ($data, $orderIndoor) {

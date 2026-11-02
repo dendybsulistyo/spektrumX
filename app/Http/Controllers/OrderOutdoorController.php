@@ -152,8 +152,12 @@ class OrderOutdoorController extends Controller
                 : (($data['payment_queue'] ?? 'kasir') === 'cs' ? 'Order outdoor berhasil dikirim ke Customer Service.' : 'Order outdoor berhasil dikirim ke Kasir.'));
     }
 
-    public function edit(OrderOutdoor $orderOutdoor): View
+    public function edit(OrderOutdoor $orderOutdoor): View|RedirectResponse
     {
+        if ($reason = $orderOutdoor->editBlockReason()) {
+            return redirect()->route('order-outdoor.index')->with('error', 'Order '.$orderOutdoor->NoOrder.' tidak dapat diubah. '.$reason);
+        }
+
         return view('order-outdoor.edit', [
             'order' => $orderOutdoor,
             'items' => $orderOutdoor->items,
@@ -166,6 +170,10 @@ class OrderOutdoorController extends Controller
 
     public function update(StoreOrderOutdoorRequest $request, OrderOutdoor $orderOutdoor): RedirectResponse
     {
+        if ($reason = $orderOutdoor->editBlockReason()) {
+            return redirect()->route('order-outdoor.index')->with('error', 'Order '.$orderOutdoor->NoOrder.' tidak dapat diubah. '.$reason);
+        }
+
         $data = $request->validated();
 
         DB::transaction(function () use ($data, $orderOutdoor) {
