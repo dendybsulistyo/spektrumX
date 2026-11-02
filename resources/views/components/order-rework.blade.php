@@ -27,8 +27,8 @@
         : collect();
 @endphp
 
-{{-- Dari Pengambilan Barang, ulang sampai Layout wajib konfirmasi Ya/Tidak (mencegah salah pilih). --}}
-@php $confirmLayout = $currentStage === 'siap_diambil'; @endphp
+{{-- Dari Finishing, Back Office, Bungkus & Pengambilan Barang, ulang sampai Layout wajib konfirmasi Ya/Tidak (mencegah salah pilih). --}}
+@php $confirmLayout = in_array($currentStage, ['finishing', 'qc', 'bungkus', 'siap_diambil'], true); @endphp
 <div x-data="{ open: false, selectedFiles: [], target: @js($stageOptions->keys()->first()), confirming: false }" class="inline-block mr-1">
     @if ($pending)
         <span class="relative inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md border border-amber-300 bg-amber-50 text-amber-700 text-xs font-semibold">
