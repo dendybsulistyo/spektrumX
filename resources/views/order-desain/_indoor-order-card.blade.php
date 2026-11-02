@@ -40,7 +40,7 @@
     @foreach ($items as $item)
         {{-- Divisi 01 "Print Dokumen" diberi latar pink di semua antrean operator. --}}
         <div id="layout-item-indoor-{{ $item->id }}" class="item-row"
-             @if (($item->jenis_produk ?? 'indoor') !== 'artwork' && $item->produk?->KdDivs === '01') style="background: #fce7f3;" title="Print Dokumen" @endif>
+             @if (($item->jenis_produk ?? 'indoor') !== 'artwork' && $item->produk?->KdDivs === '01') style="background: #fbcfe8;" title="Print Dokumen" @endif>
             <div>
                 @if ($groupBy !== 'product')
                     <strong>{{ $item->NmProd ?: ($item->produk?->NmProd ?? 'Produk tanpa nama') }}</strong>
