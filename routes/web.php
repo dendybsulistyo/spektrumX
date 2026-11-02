@@ -309,6 +309,7 @@ Route::middleware('auth')->group(function () {
     Route::middleware('permission:customers.manage')->group(function () {
         Route::resource('customers', CustomerController::class)->only(['store', 'update', 'destroy'])->names('customers');
         Route::get('/customers-suggest-code', [CustomerController::class, 'suggestCode'])->name('customers.suggest-code');
+        Route::post('/customers-bulk-delete', [CustomerController::class, 'bulkDestroy'])->name('customers.bulk-destroy');
     });
 
     Route::middleware('permission:produk.view')->group(function () {

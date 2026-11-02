@@ -249,6 +249,37 @@ class CustomerController extends Controller
         return redirect()->route('customers.index')->with('status', 'Customer berhasil dihapus.');
     }
 
+    /** Hapus banyak customer dari Customer Aktif; yang masih punya transaksi dilewati dengan kunci yang sama. */
+    public function bulkDestroy(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'kd_cust' => ['required', 'array', 'min:1', 'max:200'],
+            'kd_cust.*' => ['string'],
+        ]);
+
+        $deleted = [];
+        $skipped = [];
+        foreach (Customer::whereIn('KdCust', $data['kd_cust'])->get() as $customer) {
+            if ($reason = $customer->deleteBlockReason()) {
+                $skipped[] = $customer->NmCust.' ('.$reason.')';
+
+                continue;
+            }
+            $customer->deleteWithSettings();
+            $deleted[] = $customer->NmCust;
+        }
+
+        $redirect = back();
+        if ($deleted) {
+            $redirect->with('status', count($deleted).' customer berhasil dihapus.');
+        }
+        if ($skipped) {
+            $redirect->with('error', count($skipped).' customer tidak dapat dihapus: '.implode('; ', array_slice($skipped, 0, 5)).(count($skipped) > 5 ? '; …' : ''));
+        }
+
+        return $redirect;
+    }
+
     /**
      * @param  array<string, mixed>  $data
      * @return array<string, mixed>

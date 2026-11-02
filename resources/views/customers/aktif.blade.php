@@ -17,10 +17,26 @@
             </form>
         </div>
 
+        @php $canDelete = auth()->user()->hasPermission('customers.manage'); @endphp
+        <div x-data="{ selected: [] }">
+        @if ($canDelete)
+            <form id="bulk-delete-customers" method="POST" action="{{ route('customers.bulk-destroy') }}"
+                  @submit="if (! confirm(`Hapus ${selected.length} customer terpilih? Customer yang sudah punya transaksi akan dilewati.`)) $event.preventDefault()"
+                  class="px-4 py-2 border-b flex items-center gap-3 text-sm">
+                @csrf
+                <template x-for="kd in selected" :key="kd"><input type="hidden" name="kd_cust[]" :value="kd"></template>
+                <button type="submit" :disabled="selected.length === 0"
+                        class="px-3 py-1.5 rounded-md bg-red-700 text-white font-medium disabled:opacity-40 disabled:cursor-not-allowed">
+                    <span x-text="'Hapus Terpilih (' + selected.length + ')'"></span>
+                </button>
+                <span class="text-xs text-gray-500">Centang hanya tersedia untuk customer yang belum pernah order.</span>
+            </form>
+        @endif
         <div class="overflow-x-auto">
         <table class="w-full text-[13px] min-w-[640px]">
             <thead class="bg-gray-50 text-left text-xs uppercase text-gray-500">
                 <tr>
+                    @if ($canDelete)<th class="px-3 py-2 w-8"></th>@endif
                     <th class="px-3 py-2 w-12">No</th>
                     <th class="px-3 py-2">Kode</th>
                     <th class="px-3 py-2">Nama Customer</th>
@@ -33,6 +49,14 @@
             <tbody class="divide-y">
                 @forelse ($customers as $customer)
                     <tr>
+                        @if ($canDelete)
+                            <td class="px-3 py-2">
+                                @unless ($customer->tanggal_transaksi)
+                                    <input type="checkbox" value="{{ $customer->KdCust }}" x-model="selected"
+                                           class="rounded border-gray-300" aria-label="Pilih {{ $customer->NmCust }}">
+                                @endunless
+                            </td>
+                        @endif
                         <td class="px-3 py-2 text-gray-400">{{ $customers->firstItem() + $loop->index }}</td>
                         <td class="px-3 py-2">{{ $customer->KdCust }}</td>
                         <td class="px-3 py-2 font-semibold text-gray-900">{{ $customer->NmCust }}</td>
@@ -59,11 +83,12 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="7" class="px-4 py-6 text-center text-gray-400">Belum ada data customer.</td>
+                        <td colspan="{{ $canDelete ? 8 : 7 }}" class="px-4 py-6 text-center text-gray-400">Belum ada data customer.</td>
                     </tr>
                 @endforelse
             </tbody>
         </table>
+        </div>
         </div>
 
         <div class="p-4">
