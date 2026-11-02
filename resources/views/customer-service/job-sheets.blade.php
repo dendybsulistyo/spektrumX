@@ -42,6 +42,46 @@
         <a href="{{ route('customer-service.index') }}" class="rounded bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700">+ Lembar Kerja Baru</a>
     </div>
 
+    @php($canDeleteStuck = auth()->user()->hasPermission('customer-service.manage') || auth()->user()->hasPermission('roles.manage'))
+    @if ($stuckSheets->isNotEmpty())
+        <div class="mb-4 rounded-lg border border-red-200 bg-red-50 p-4">
+            <p class="text-sm font-bold text-red-800">Diambil tapi belum jadi order ({{ $stuckSheets->count() }})</p>
+            <p class="mt-0.5 text-xs text-red-700">Form order belum tersimpan. Lanjutkan untuk membuka lagi form ordernya, atau kembalikan ke antrean bila salah ambil.</p>
+            <div class="mt-3 divide-y divide-slate-200 rounded border border-red-200 bg-white">
+                @foreach ($stuckSheets as $stuck)
+                    <div class="flex flex-wrap items-center justify-between gap-3 px-3 py-2 text-sm">
+                        <div>
+                            <span class="font-semibold text-slate-800">{{ $stuck->customer_name ?: '-' }}</span>
+                            <span class="text-slate-500">· {{ ucfirst($stuck->claimed_order_type) }} · {{ $stuck->folder_file ?: '-' }}</span>
+                            <p class="text-xs text-slate-500">Diambil {{ $stuck->claimant?->name ? ucwords(mb_strtolower($stuck->claimant->name)) : '-' }} · {{ $stuck->claimed_at->format('d/m/Y H:i') }}</p>
+                        </div>
+                        <div class="flex gap-2">
+                        @if ($stuck->canBeHandledBy(auth()->user()))
+                                <form method="POST" target="_blank" action="{{ route('customer-service.job-sheets.resume', $stuck) }}">
+                                    @csrf
+                                    <button type="submit" class="rounded bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700">Lanjutkan</button>
+                                </form>
+                                <form method="POST" action="{{ route('customer-service.job-sheets.release', $stuck) }}"
+                                      onsubmit="return confirm('Kembalikan lembar kerja ini ke antrean Belum Diambil?')">
+                                    @csrf
+                                    <button type="submit" class="rounded border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100">Kembalikan ke antrean</button>
+                                </form>
+                        @endif
+                        @if ($canDeleteStuck)
+                                <form method="POST" action="{{ route('customer-service.job-sheets.destroy', $stuck) }}"
+                                      onsubmit="return confirm('Hapus lembar kerja {{ $stuck->customer_name }} yang belum jadi order?')">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="rounded border border-red-300 bg-white px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50">Hapus</button>
+                                </form>
+                        @endif
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+    @endif
+
     <div class="mb-4 flex gap-1 border-b border-slate-200">
         <a href="{{ route('customer-service.job-sheets.index', ['tab' => 'pending']) }}"
            class="border-b-2 px-4 py-2.5 text-sm font-semibold {{ $tab === 'pending' ? 'border-blue-600 text-blue-700' : 'border-transparent text-slate-500 hover:text-slate-800' }}">
@@ -149,6 +189,11 @@
                                 @if ($sheet->claimed_at)
                                     <p class="font-medium text-slate-800">{{ $sheet->claimant?->name ? ucwords(mb_strtolower($sheet->claimant->name)) : '-' }}</p>
                                     <p class="mt-0.5 text-xs text-slate-400">{{ ucfirst($sheet->claimed_order_type) }} · {{ $sheet->claimed_at->format('d/m/Y H:i') }}</p>
+                                    @if ($sheet->isStuck())
+                                        <span class="mt-1 inline-block rounded bg-red-100 px-1.5 py-0.5 text-xs font-semibold text-red-700">Belum jadi order</span>
+                                    @elseif ($sheet->order_number)
+                                        <p class="mt-0.5 text-xs text-slate-500">{{ $sheet->order_number }}</p>
+                                    @endif
                                 @else
                                     -
                                 @endif

@@ -102,7 +102,17 @@ class CustomerServiceController extends Controller
                 ->count();
         $totalClaimedCount = CustomerServiceJobSheet::whereNotNull('claimed_at')->count();
 
+        // Lembar yang diambil tapi belum jadi order.
+        $stuckSheets = CustomerServiceJobSheet::stuck()
+            ->with('claimant:id,name')
+            // CS & admin melihat semua (untuk dihapus); operator hanya miliknya.
+            ->when(! auth()->user()->hasPermission('roles.manage') && ! auth()->user()->hasPermission('customer-service.manage'),
+                fn ($query) => $query->where('claimed_by', auth()->id()))
+            ->oldest('claimed_at')
+            ->get();
+
         return view('customer-service.job-sheets', compact(
+            'stuckSheets',
             'jobSheets',
             'tab',
             'pendingCount',
@@ -152,12 +162,47 @@ class CustomerServiceController extends Controller
         ]);
     }
 
+    /** Buka lagi form order dari lembar yang sudah diambil tetapi ordernya belum tersimpan. */
+    public function resumeJobSheet(CustomerServiceJobSheet $jobSheet): RedirectResponse
+    {
+        if (! $jobSheet->isStuck()) {
+            return to_route('customer-service.job-sheets.index', ['tab' => 'claimed'])
+                ->with('error', 'Lembar kerja ini sudah menjadi order '.($jobSheet->order_number ?: '').' atau belum diambil.');
+        }
+        abort_unless($jobSheet->canBeHandledBy(auth()->user()), 403, 'Lembar kerja ini diambil operator lain.');
+
+        return redirect()->route($jobSheet->claimed_order_type === 'outdoor' ? 'order-outdoor.create' : 'order-indoor.create', [
+            'job_sheet' => $jobSheet->id,
+        ]);
+    }
+
+    /** Kembalikan lembar yang tersangkut ke antrean agar bisa diambil lagi (oleh siapa pun). */
+    public function releaseJobSheet(CustomerServiceJobSheet $jobSheet): RedirectResponse
+    {
+        abort_unless($jobSheet->canBeHandledBy(auth()->user()), 403, 'Lembar kerja ini diambil operator lain.');
+
+        $released = DB::transaction(function () use ($jobSheet): bool {
+            $locked = CustomerServiceJobSheet::lockForUpdate()->findOrFail($jobSheet->id);
+            if (! $locked->isStuck()) {
+                return false;
+            }
+
+            return $locked->update(['claimed_by' => null, 'claimed_at' => null, 'claimed_order_type' => null]);
+        });
+
+        return to_route('customer-service.job-sheets.index', ['tab' => 'pending'])->with(
+            $released ? 'status' : 'error',
+            $released ? 'Lembar kerja dikembalikan ke antrean.' : 'Lembar kerja sudah menjadi order sehingga tidak dapat dikembalikan.'
+        );
+    }
+
     public function destroyJobSheet(CustomerServiceJobSheet $jobSheet): RedirectResponse
     {
         $deleted = DB::transaction(function () use ($jobSheet): bool {
             $lockedSheet = CustomerServiceJobSheet::query()->lockForUpdate()->findOrFail($jobSheet->id);
 
-            if ($lockedSheet->claimed_at) {
+            // Boleh dihapus selama belum diambil, atau sudah diambil tetapi tidak pernah jadi order (tersangkut).
+            if ($lockedSheet->claimed_at && ! $lockedSheet->isStuck()) {
                 return false;
             }
 
@@ -166,11 +211,11 @@ class CustomerServiceController extends Controller
 
         if (! $deleted) {
             return to_route('customer-service.job-sheets.index', ['tab' => 'pending'])
-                ->with('error', 'Lembar kerja sudah diambil operator sehingga tidak dapat dihapus.');
+                ->with('error', 'Lembar kerja sudah menjadi order sehingga tidak dapat dihapus.');
         }
 
         return to_route('customer-service.job-sheets.index', ['tab' => 'pending'])
-            ->with('status', 'Lembar kerja yang belum diambil berhasil dihapus.');
+            ->with('status', 'Lembar kerja berhasil dihapus.');
     }
 
     public function paymentQueue(Request $request): View

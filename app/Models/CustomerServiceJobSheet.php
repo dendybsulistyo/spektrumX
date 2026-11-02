@@ -76,4 +76,27 @@ class CustomerServiceJobSheet extends Model
 
         return $this->created_at->copy()->addDays($this->progress_hari);
     }
+
+    /** Tautan order ke lembar kerja baru tercatat sejak tanggal ini; lembar yang lebih lama tidak bisa dinilai. */
+    public const ORDER_LINK_SINCE = '2026-10-12';
+
+    /** Sudah diambil operator tetapi ordernya belum tersimpan (tab tertutup, refresh, error, dsb.). */
+    public function scopeStuck($query)
+    {
+        return $query->whereNotNull('claimed_at')
+            ->whereNull('order_id')
+            ->where('claimed_at', '>=', self::ORDER_LINK_SINCE);
+    }
+
+    public function isStuck(): bool
+    {
+        return $this->claimed_at !== null && $this->order_id === null
+            && $this->claimed_at->gte(self::ORDER_LINK_SINCE);
+    }
+
+    /** Operator pengambil, atau admin (roles.manage), boleh melanjutkan/mengembalikan lembar yang tersangkut. */
+    public function canBeHandledBy(\App\Models\User $user): bool
+    {
+        return (int) $this->claimed_by === (int) $user->id || $user->hasPermission('roles.manage');
+    }
 }

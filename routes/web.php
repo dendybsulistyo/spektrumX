@@ -446,6 +446,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/file', [FileMonitorController::class, 'index'])->name('file.index');
         Route::get('/file/live-queue-stats', [FileMonitorController::class, 'liveQueueStats'])->name('file.live-queue-stats');
         Route::post('/customer-service/job-sheets/{jobSheet}/claim', [CustomerServiceController::class, 'claimJobSheet'])->name('customer-service.job-sheets.claim');
+        Route::post('/customer-service/job-sheets/{jobSheet}/resume', [CustomerServiceController::class, 'resumeJobSheet'])->name('customer-service.job-sheets.resume');
+        Route::post('/customer-service/job-sheets/{jobSheet}/release', [CustomerServiceController::class, 'releaseJobSheet'])->name('customer-service.job-sheets.release');
     });
 
     Route::middleware('permission:keuangan.view')->group(function () {
