@@ -41,7 +41,8 @@
                 #daily-cashier-ledger .ledger .time { width:16%; }
                 #daily-cashier-ledger .ledger .invoice { width:22%; }
                 #daily-cashier-ledger .ledger .money { width:15%; }
-                #daily-cashier-ledger .ledger tfoot { break-inside:avoid; }
+                /* Total cukup sekali di akhir laporan, tidak diulang di tiap halaman cetak. */
+                #daily-cashier-ledger .ledger tfoot { display:table-row-group; break-inside:avoid; }
             }
         </style>
     @endpush
