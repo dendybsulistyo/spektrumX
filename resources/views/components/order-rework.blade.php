@@ -27,7 +27,9 @@
         : collect();
 @endphp
 
-<div x-data="{ open: false, selectedFiles: [] }" class="inline-block mr-1">
+{{-- Dari Pengambilan Barang, ulang sampai Layout wajib konfirmasi Ya/Tidak (mencegah salah pilih). --}}
+@php $confirmLayout = $currentStage === 'siap_diambil'; @endphp
+<div x-data="{ open: false, selectedFiles: [], target: @js($stageOptions->keys()->first()), confirming: false }" class="inline-block mr-1">
     @if ($pending)
         <span class="relative inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md border border-amber-300 bg-amber-50 text-amber-700 text-xs font-semibold">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-3.5 h-3.5">
@@ -76,7 +78,7 @@
             </div>
         @endif
     @elseif ($stageOptions->isNotEmpty())
-        <button type="button" @click="open = true" title="Ulang Proses"
+        <button type="button" @click="open = true; confirming = false" title="Ulang Proses"
                 class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md border border-red-300 text-red-600 text-xs font-semibold hover:bg-red-50">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-3.5 h-3.5">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3" />
@@ -98,14 +100,15 @@
                     </button>
                 </div>
 
-                <form method="POST" action="{{ route('order-rework.store', [$type, $orderId]) }}" class="p-5 space-y-4">
+                <form method="POST" action="{{ route('order-rework.store', [$type, $orderId]) }}" class="p-5 space-y-4"
+                      @if ($confirmLayout) @submit="if (target === 'desain' && ! confirming) { $event.preventDefault(); confirming = true; }" @endif>
                     @csrf
                     <input type="hidden" name="action" value="ulang">
                     <input type="hidden" name="from_stage" value="{{ $currentStage }}">
 
                     <div>
                         <label class="block text-xs font-medium text-gray-600 mb-1">Ulang dari tahap</label>
-                        <select name="target_stage" class="w-full rounded-md border-gray-300 text-sm">
+                        <select name="target_stage" x-model="target" @change="confirming = false" class="w-full rounded-md border-gray-300 text-sm">
                             @foreach ($stageOptions as $stage => $label)
                                 <option value="{{ $stage }}">{{ $label }}</option>
                             @endforeach
@@ -156,7 +159,18 @@
 
                     <p class="text-xs text-gray-400">Pengajuan ini perlu disetujui sebelum order berubah tahap.</p>
 
-                    <div class="flex justify-end gap-2 pt-1">
+                    @if ($confirmLayout)
+                        <div x-show="confirming" x-cloak class="rounded-md border-2 border-red-300 bg-red-50 p-3">
+                            <p class="text-sm font-bold text-red-800">Yakin ulang sampai LAYOUT?</p>
+                            <p class="text-xs text-red-700 mt-1">Order akan kembali ke tahap paling awal dan dikerjakan ulang dari desain. Pastikan bukan salah pilih.</p>
+                            <div class="flex justify-end gap-2 mt-3">
+                                <button type="button" @click="confirming = false" class="px-4 py-1.5 text-sm font-semibold rounded-md border border-red-300 bg-white text-red-700 hover:bg-red-50">Tidak</button>
+                                <button type="submit" class="px-4 py-1.5 text-sm font-semibold rounded-md bg-red-600 text-white hover:bg-red-700">Ya, ulang dari Layout</button>
+                            </div>
+                        </div>
+                    @endif
+
+                    <div class="flex justify-end gap-2 pt-1" @if ($confirmLayout) x-show="! confirming" @endif>
                         <button type="button" @click="open = false" class="px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded-md">Batal</button>
                         <button type="submit"
                                 @if ($selectFiles) :disabled="selectedFiles.length === 0" @endif
