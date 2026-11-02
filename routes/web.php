@@ -12,6 +12,7 @@ use App\Http\Controllers\ChatController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\CustomerServiceController;
 use App\Http\Controllers\DailySummaryController;
+use App\Http\Controllers\ApresiasiController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DataWarehouseController;
 use App\Http\Controllers\DetailIndoorController;
@@ -86,6 +87,7 @@ Route::get('/', function () {
 Route::get('/dashboard', [DashboardController::class, 'index'])->middleware(['auth', 'verified'])->name('dashboard');
 Route::get('/dashboard/overdue-orders', [DashboardController::class, 'overdueOrders'])->middleware(['auth', 'verified'])->name('dashboard.overdue-orders');
 Route::get('/dashboard/order-progress/{type}/{id}', [DashboardController::class, 'orderProgress'])->middleware(['auth', 'verified'])->name('dashboard.order-progress');
+Route::get('/apresiasi/jam-ini', ApresiasiController::class)->middleware(['auth', 'verified', 'throttle:20,1'])->name('apresiasi');
 
 Route::middleware('auth')->group(function () {
     // Pencarian cepat (Ctrl+K) — semua user; tautan hasil mengikuti hak akses.

@@ -937,6 +937,9 @@
         </div>
 
         @include('partials.chat-widget')
+        @if (config('apresiasi.aktif'))
+            <x-apresiasi-maskot />
+        @endif
         @can('kasir.manage')
             <x-otorisasi-notifier />
         @endcan
