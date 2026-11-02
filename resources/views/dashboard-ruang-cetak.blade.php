@@ -272,8 +272,8 @@
         };
         $total = max(1, (int) $stats['total']);
         $percent = fn (float $ratio) => $ratio > 0 && $ratio < .01 ? '<1%' : number_format($ratio * 100, 0).'%';
-        // Ringkasan uang (bayar/lunas/VIP/DP) hanya untuk admin, pajak, keuangan & owner; yang lain cukup kotak telat.
-        $showKpis = in_array(strtolower((string) auth()->user()?->role?->name), ['admin', 'owner', 'admin-pajak', 'keuangan'], true);
+        // Ringkasan uang (bayar/lunas/VIP/DP) hanya untuk role yang dicentang; yang lain cukup kotak telat.
+        $showKpis = (bool) auth()->user()?->hasPermission('dashboard.ringkasan.view');
         $kpis = [
             ['label' => 'Order masuk', 'value' => $stats['total'], 'meta' => 'Semua tipe order', 'ratio' => null],
             ['label' => 'Menunggu bayar', 'value' => $stats['belum_bayar'], 'meta' => 'Belum ada pembayaran', 'ratio' => $stats['belum_bayar'] / $total],

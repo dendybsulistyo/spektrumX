@@ -14,6 +14,9 @@ class Role extends Model
      * @var array<string, array<string, string>>
      */
     public const PERMISSION_GROUPS = [
+        'Dashboard' => [
+            'dashboard.ringkasan.view' => 'Lihat Ringkasan Order di dashboard (order masuk, menunggu bayar, lunas, VIP/hutang, DP)',
+        ],
         'Customer' => [
             'customers.view' => 'Lihat data customer',
             'customers.manage' => 'Tambah/ubah/hapus customer',
