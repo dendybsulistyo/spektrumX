@@ -89,8 +89,10 @@
             $layoutRevisionCompletion = $type === 'outdoor'
                 ? $item->layoutRevisionCompletions->first()
                 : null;
+            // Divisi 01 "Print Dokumen" diberi latar pink di semua antrean operator.
+            $isPrintDokumen = $type === 'indoor' && ($item->jenis_produk ?? 'indoor') !== 'artwork' && $item->produk?->KdDivs === '01';
         @endphp
-        <div class="item-row">
+        <div class="item-row" @if ($isPrintDokumen) style="background: #fce7f3;" title="Print Dokumen" @endif>
             <div>
                 @if ($type === 'outdoor')
                     <x-printer-badge :code="$item->printerCode()" :name="$printerNames[$item->printerCode()] ?? null" />
