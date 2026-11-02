@@ -215,11 +215,10 @@
             #rc-dashboard .rcd-team-stage { margin-bottom: 3px; font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--ink); }
             #rc-dashboard .rcd-team-line { display: flex; justify-content: space-between; gap: 10px; font-size: 12.5px; color: var(--ink); }
             #rc-dashboard .rcd-team-line .mono { font-size: 11.5px; color: var(--muted); }
-            #rc-dashboard .rcd-kpis.is-solo { grid-template-columns: minmax(0, 1fr); }
-            #rc-dashboard .rcd-kpis.is-solo .rcd-kpi.alert { display: flex; align-items: center; gap: 18px; padding: 12px 18px 12px 24px; border-left: 0; }
-            #rc-dashboard .rcd-kpis.is-solo .rcd-kpi-value { order: -1; margin-top: 0; min-width: 48px; }
-            #rc-dashboard .rcd-kpis.is-solo .rcd-kpi-meta { margin-top: 0; }
-            #rc-dashboard .rcd-kpis.is-solo .rcd-kpi-meta::before { content: "\00b7"; margin-right: 8px; }
+            #rc-dashboard .rcd-flow-row { display: grid; grid-template-columns: minmax(0, 1fr) 220px; gap: 12px; align-items: stretch; }
+            #rc-dashboard .rcd-flow-telat { display: flex; overflow: hidden; }
+            #rc-dashboard .rcd-flow-telat .rcd-kpi.alert { border-left: 0; padding-left: 22px; }
+            @media (max-width: 900px) { #rc-dashboard .rcd-flow-row { grid-template-columns: minmax(0, 1fr); } }
             #rc-dashboard .rcd-label { margin-bottom: 8px; font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
             #rc-dashboard .rcd-item { padding: 8px 10px; margin-bottom: 6px; border: 1px solid var(--rule); border-radius: 8px; background: #fff; }
             #rc-dashboard .rcd-item-name { font-weight: 600; color: var(--ink); margin-bottom: 4px; }
@@ -390,11 +389,12 @@
              },
          }">
 
-        {{-- ================= Ringkasan ================= --}}
+        {{-- ================= Ringkasan (role bercentang dashboard.ringkasan.view) ================= --}}
+        @if ($showKpis)
         <section>
-            <div class="rcd-section-title"><h3>{{ $showKpis ? 'Ringkasan order' : 'Order telat' }}</h3><span>dari {{ number_format($stats['total'], 0, ',', '.') }} order</span></div>
-            <div @class(['sheet rcd-kpis', 'is-solo' => ! $showKpis])>
-                @foreach ($showKpis ? $kpis : [] as $kpi)
+            <div class="rcd-section-title"><h3>Ringkasan order</h3><span>dari {{ number_format($stats['total'], 0, ',', '.') }} order</span></div>
+            <div class="sheet rcd-kpis">
+                @foreach ($kpis as $kpi)
                     <div class="rcd-kpi">
                         <div class="rcd-kpi-label">{{ $kpi['label'] }}</div>
                         <div class="rcd-kpi-value">{{ number_format($kpi['value'], 0, ',', '.') }}</div>
@@ -413,18 +413,16 @@
                         @endif
                     </div>
                 @endforeach
-                <button type="button" @click="openOverdue()" @class(['rcd-kpi alert', 'calm' => (int) $stats['telat'] === 0, 'flashing' => (int) $stats['telat'] > 0])
-                        title="Buka resume semua order telat">
-                    <div class="rcd-kpi-label">Telat &gt; 1&times;24 jam</div>
-                    <div class="rcd-kpi-value">{{ number_format($stats['telat'], 0, ',', '.') }}</div>
-                    <div class="rcd-kpi-meta">{{ (int) $stats['telat'] === 0 ? 'Semua order sesuai jadwal' : 'Order belum siap diambil' }}</div>
-                </button>
+                <x-dashboard-telat-card :telat="$stats['telat']" />
             </div>
         </section>
+        @endif
 
         {{-- ================= Alur produksi ================= --}}
         <section>
             <div class="rcd-section-title"><h3>Alur produksi</h3><span><span class="mono">{{ number_format($inProgress, 0, ',', '.') }}</span> order masih berjalan &middot; klik tahap untuk membuka antreannya</span></div>
+            {{-- Tanpa Ringkasan, kotak telat duduk di sebelah alur produksi agar halaman lebih ringkas. --}}
+            <div @class(['rcd-flow-row' => ! $showKpis])>
             <div class="sheet rcd-flow">
                 <div class="rcd-stages">
                     @foreach ($stages as $stage)
@@ -457,6 +455,10 @@
                         @endforeach
                     </div>
                 @endif
+            </div>
+            @unless ($showKpis)
+                <div class="sheet rcd-flow-telat"><x-dashboard-telat-card :telat="$stats['telat']" /></div>
+            @endunless
             </div>
         </section>
 
