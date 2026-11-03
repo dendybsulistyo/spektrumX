@@ -28,9 +28,23 @@
                          x-data="{
                             query: @js($selectedCustomer ? $selectedCustomer->NmCust.' ('.$selectedCustomer->KdCust.')' : ''),
                             selectedCode: @js(old('customer_code', '')),
+                            selectedPhone: @js($selectedCustomer?->Telp ?? ''),
+                            copiedPhone: '',
                             results: [], open: false, timer: null,
+                            copyPhone(phone) {
+                                const t = document.createElement('textarea');
+                                t.value = phone;
+                                document.body.appendChild(t);
+                                t.select();
+                                t.setSelectionRange(0, 99999);
+                                document.execCommand('copy');
+                                document.body.removeChild(t);
+                                this.copiedPhone = phone;
+                                setTimeout(() => this.copiedPhone = '', 1500);
+                            },
                             search() {
                                 this.selectedCode = '';
+                                this.selectedPhone = '';
                                 clearTimeout(this.timer);
                                 this.timer = setTimeout(async () => {
                                     const response = await fetch(`/customers-search?q=${encodeURIComponent(this.query)}`);
@@ -40,6 +54,7 @@
                             },
                             select(customer) {
                                 this.selectedCode = customer.KdCust;
+                                this.selectedPhone = customer.Telp || '';
                                 this.query = `${customer.NmCust} (${customer.KdCust})`;
                                 this.open = false;
                             }
@@ -55,10 +70,21 @@
                                 <button type="button" @click="select(customer)" class="block w-full px-3 py-2 text-left text-slate-700 hover:bg-blue-50">
                                     <span class="font-medium" x-text="customer.NmCust"></span>
                                     <span class="ml-1 text-xs text-slate-400" x-text="`(${customer.KdCust})`"></span>
-                                    <span x-show="customer.Telp" class="mt-0.5 block text-xs text-slate-400" x-text="customer.Telp"></span>
+                                    <span x-show="customer.Telp" class="mt-0.5 flex items-center gap-1 text-xs text-slate-400">
+                                        <span x-text="customer.Telp"></span>
+                                        <span role="button" tabindex="0" @click.stop="copyPhone(customer.Telp)" @keydown.enter.stop.prevent="copyPhone(customer.Telp)"
+                                              :title="copiedPhone === customer.Telp ? 'Tersalin!' : 'Salin nomor'"
+                                              class="inline-flex cursor-pointer text-slate-400 hover:text-slate-700"
+                                              x-text="copiedPhone === customer.Telp ? '✓' : '⧉'"></span>
+                                    </span>
                                 </button>
                             </template>
                         </div>
+                        <p x-show="selectedCode && selectedPhone" x-cloak class="mt-1 flex items-center gap-1 text-[11px] font-normal normal-case tracking-normal text-slate-500">
+                            Telp: <span x-text="selectedPhone"></span>
+                            <button type="button" @click="copyPhone(selectedPhone)" :title="copiedPhone === selectedPhone ? 'Tersalin!' : 'Salin nomor'"
+                                    class="inline-flex text-slate-400 hover:text-slate-700" x-text="copiedPhone === selectedPhone ? '✓ tersalin' : '⧉ salin'"></button>
+                        </p>
                         <p x-show="query && !selectedCode" class="mt-1 text-[11px] font-normal normal-case tracking-normal text-amber-600">Pilih customer dari hasil pencarian.</p>
                         <x-input-error :messages="$errors->get('customer_code')" class="mt-1 normal-case tracking-normal" />
                     </div>

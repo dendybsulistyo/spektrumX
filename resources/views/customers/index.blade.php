@@ -54,7 +54,7 @@
                                     <td style="font-weight: 600; color: var(--color-ink, inherit);">{{ $customer->NmCust }}</td>
                                     <td class="text-muted">{{ $customer->Alamat }}</td>
                                     <td class="text-muted">{{ $customer->Kota }}</td>
-                                    <td class="text-muted">{{ $customer->Telp }}</td>
+                                    <td class="text-muted" style="white-space: nowrap;">{{ $customer->Telp }}<x-copy-button :text="$customer->Telp" label="Salin nomor" /></td>
                                     <td>
                                         @if ($customer->is_vip)
                                             @php $sisaPlafon = (float) $customer->limit->Batas - (float) $customer->limit->Total; @endphp
