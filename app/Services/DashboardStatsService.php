@@ -14,7 +14,8 @@ use Illuminate\Support\Facades\DB;
 
 class DashboardStatsService
 {
-    private const OVERDUE_EXCLUDED_STATUSES = ['siap_diambil', 'selesai', 'batal'];
+    /** Telat = > 24 jam sejak dibayar dan belum siap; order Baru/belum bayar tidak dihitung. */
+    private const OVERDUE_EXCLUDED_STATUSES = ['baru', 'siap_diambil', 'selesai', 'batal'];
 
     /**
      * @return array<string, mixed>
@@ -38,8 +39,8 @@ class DashboardStatsService
                 .'SUM(CASE WHEN status = "siap_diambil" THEN 1 ELSE 0 END) as siap_diambil, '
                 .'SUM(CASE WHEN status = "selesai" THEN 1 ELSE 0 END) as selesai, '
                 .'SUM(CASE WHEN status = "batal" THEN 1 ELSE 0 END) as batal, '
-                .'SUM(CASE WHEN status NOT IN ("siap_diambil", "selesai", "batal") '
-                .'AND created_at IS NOT NULL AND created_at < ? THEN 1 ELSE 0 END) as telat',
+                .'SUM(CASE WHEN status NOT IN ("baru", "siap_diambil", "selesai", "batal") AND status_bayar <> "belum_bayar" '
+                .'AND dibayar_at IS NOT NULL AND dibayar_at < ? THEN 1 ELSE 0 END) as telat',
                 [now()->subHours(24)]
             )->first());
 
@@ -161,12 +162,14 @@ class DashboardStatsService
         foreach (['indoor' => 'order_indoor', 'outdoor' => 'order_outdoor', 'artwork' => 'order_artwork'] as $slug => $table) {
             $query = DB::table($table)
                 ->select([
-                    'id', 'NoOrder', 'KdCust', 'status', 'status_bayar', 'created_at',
+                    'id', 'NoOrder', 'KdCust', 'status', 'status_bayar', 'created_at', 'dibayar_at',
                     'desain_by', 'cetak_by', 'finishing_by', 'qc_by', 'bungkus_by',
                 ])
                 ->selectRaw('? as type_slug', [$slug])
                 ->whereNotNull('created_at')
-                ->where('created_at', '<', $cutoff)
+                ->whereNotNull('dibayar_at')
+                ->where('dibayar_at', '<', $cutoff)
+                ->where('status_bayar', '!=', 'belum_bayar')
                 ->whereNotIn('status', self::OVERDUE_EXCLUDED_STATUSES)
                 ->when($from, fn ($builder) => $builder->where('created_at', '>=', $from.' 00:00:00'))
                 ->when($to, fn ($builder) => $builder->where('created_at', '<=', $to.' 23:59:59'));
@@ -310,8 +313,9 @@ class DashboardStatsService
 
     private function isOverdue($order): bool
     {
-        return ! in_array($order->status, ['siap_diambil', 'selesai', 'batal'], true)
-            && $order->created_at
-            && $order->created_at->lt(now()->subHours(24));
+        return ! in_array($order->status, self::OVERDUE_EXCLUDED_STATUSES, true)
+            && $order->status_bayar !== 'belum_bayar'
+            && $order->dibayar_at
+            && $order->dibayar_at->lt(now()->subHours(24));
     }
 }
