@@ -4,6 +4,7 @@ use App\Http\Controllers\AccountingFixedAssetController;
 use App\Http\Controllers\AccountingPurchaseController;
 use App\Http\Controllers\AccountingSupplierController;
 use App\Http\Controllers\AkunController;
+use App\Http\Controllers\ApresiasiController;
 use App\Http\Controllers\AvatarController;
 use App\Http\Controllers\BahanCetakOutdoorController;
 use App\Http\Controllers\BahanOutdoorController;
@@ -12,7 +13,6 @@ use App\Http\Controllers\ChatController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\CustomerServiceController;
 use App\Http\Controllers\DailySummaryController;
-use App\Http\Controllers\ApresiasiController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DataWarehouseController;
 use App\Http\Controllers\DetailIndoorController;
@@ -24,6 +24,7 @@ use App\Http\Controllers\GunggunganHistoricalJournalController;
 use App\Http\Controllers\HargaArtworkController;
 use App\Http\Controllers\HargaCetakOutdoorController;
 use App\Http\Controllers\HargaCetakOutdoorKhususController;
+use App\Http\Controllers\HistoryTelatController;
 use App\Http\Controllers\HutangApprovalController;
 use App\Http\Controllers\InventoryHppController;
 use App\Http\Controllers\InvoiceController;
@@ -44,7 +45,6 @@ use App\Http\Controllers\OperatorController;
 use App\Http\Controllers\OrderArtworkController;
 use App\Http\Controllers\OrderBungkusController;
 use App\Http\Controllers\OrderCetakController;
-use App\Http\Controllers\OutdoorNestingController;
 use App\Http\Controllers\OrderCommentController;
 use App\Http\Controllers\OrderDesainController;
 use App\Http\Controllers\OrderDocumentController;
@@ -54,6 +54,7 @@ use App\Http\Controllers\OrderIndoorController;
 use App\Http\Controllers\OrderOutdoorController;
 use App\Http\Controllers\OrderQcController;
 use App\Http\Controllers\OrderReworkController;
+use App\Http\Controllers\OutdoorNestingController;
 use App\Http\Controllers\PapanPantauController;
 use App\Http\Controllers\PayrollController;
 use App\Http\Controllers\PembatalanController;
@@ -155,6 +156,10 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware('permission:rekap-bulanan.view')->group(function () {
         Route::get('/analitik/rekap-transaksi-bulanan', [MonthlyTransactionController::class, 'index'])->name('rekap-bulanan.index');
+    });
+
+    Route::middleware('permission:history-telat.view')->group(function () {
+        Route::get('/history-telat', [HistoryTelatController::class, 'index'])->name('history-telat.index');
     });
 
     Route::middleware('permission:papan-pantau.view')->group(function () {

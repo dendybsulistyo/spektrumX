@@ -5,7 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\Customer;
 use App\Models\OrderArtwork;
 use App\Models\OrderIndoor;
+use App\Models\OrderLateLog;
 use App\Models\OrderOutdoor;
+use App\Services\OrderLateLogService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -104,7 +106,7 @@ class QuickSearchController extends Controller
                     }
                 })
                 ->orderByDesc('id')->limit(self::LIMIT)
-                ->get(['id', 'NoOrder', 'KdCust', 'TglOrder', 'status', 'status_bayar'])
+                ->get(['id', 'NoOrder', 'KdCust', 'TglOrder', 'status', 'status_bayar', 'created_at'])
                 ->each(fn (Model $order) => $results->push($this->orderRow($request, $type, $order)));
         }
 
@@ -116,8 +118,12 @@ class QuickSearchController extends Controller
             })->orderBy('sequence')->get(['order_type', 'order_id', 'number'])
             ->keyBy(fn ($doc) => $doc->order_type.'-'.$doc->order_id);
 
-        return $results->map(function (array $row) use ($invoices) {
+        $lateLogs = app(OrderLateLogService::class)->logsFor($results);
+
+        return $results->map(function (array $row) use ($invoices, $lateLogs) {
             $row['invoice'] = $invoices->get($row['type'].'-'.$row['id'])?->number;
+            $row['late'] = $this->lateInfo($lateLogs->get($row['type'].'-'.$row['id']), $row);
+            unset($row['created_at']);
 
             return $row;
         })->sortByDesc('date')->take(self::LIMIT)->values();
@@ -140,10 +146,38 @@ class QuickSearchController extends Controller
             'date_label' => optional($order->TglOrder)->locale('id')->translatedFormat('d M Y'),
             'status' => $order->status,
             'status_bayar' => $order->status_bayar,
+            'created_at' => $order->created_at,
             'edit_url' => $canEdit ? route($editRoute, $order->id) : null,
             'nota_url' => $canNota ? route('invoice.show', ['type' => $type, 'id' => $order->id]) : null,
             'progress_url' => url("/dashboard/order-progress/{$type}/{$order->id}"),
         ];
+    }
+
+    /**
+     * Penanda "pernah telat" untuk titik merah. Order yang baru lewat 24 jam dan
+     * belum tercatat scheduler tetap ditandai dari aturan yang sama.
+     *
+     * @param  array<string, mixed>  $row
+     * @return array{ongoing: bool, label: string}|null
+     */
+    private function lateInfo(?OrderLateLog $log, array $row): ?array
+    {
+        if ($log) {
+            $ongoing = $log->resolved_at === null;
+            $label = ($ongoing ? 'Sedang telat ' : 'Pernah telat ').$log->lateDurationLabel()
+                .($log->stage ? ' (tertahan di '.$log->stageLabel().')' : '')
+                .($log->is_estimated ? ' · perkiraan' : '');
+
+            return ['ongoing' => $ongoing, 'label' => $label];
+        }
+
+        $createdAt = $row['created_at'] ?? null;
+        if ($createdAt && ! in_array($row['status'], OrderLateLogService::DONE_STATUSES, true)
+            && $createdAt->lt(now()->subHours(OrderLateLog::LATE_AFTER_HOURS))) {
+            return ['ongoing' => true, 'label' => 'Sedang telat (lewat 24 jam, belum siap diambil)'];
+        }
+
+        return null;
     }
 
     private function customers(Request $request, string $q): Collection

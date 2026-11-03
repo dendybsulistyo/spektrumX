@@ -75,9 +75,9 @@
                         <div class="cc-row" :class="active === i && 'is-active'" @mouseenter="active = i" @click="choose(i)">
                             <span class="cc-type" x-text="o.type === 'indoor' ? 'IND' : (o.type === 'outdoor' ? 'OUT' : 'ART')"></span>
                             <div class="cc-main">
-                                <div><strong class="cc-mono" x-text="o.no_order"></strong>
+                                <div><span class="cc-late" x-show="o.late" :class="o.late?.ongoing && 'is-ongoing'" :title="o.late?.label"></span><strong class="cc-mono" x-text="o.no_order"></strong>
                                     <span class="cc-muted cc-mono" x-show="o.invoice" x-text="'· ' + o.invoice"></span></div>
-                                <div class="cc-muted"><span x-text="o.customer"></span> · <span x-text="o.date_label"></span></div>
+                                <div class="cc-muted"><span x-text="o.customer"></span> · <span x-text="o.date_label"></span><span class="cc-late-text" x-show="o.late" x-text="' · ' + o.late?.label"></span></div>
                             </div>
                             <span class="cc-pill" x-text="statusLabel(o.status)"></span>
                             <span class="cc-pill" :class="'pay-' + o.status_bayar" x-text="payLabel(o.status_bayar)"></span>
@@ -152,6 +152,10 @@
         .cc-pills { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
         .cc-history { display: flex; gap: 10px; padding: 7px 4px; font-size: 13px; border-bottom: 1px dashed #e3ddcf; }
         .cc-dot { flex: 0 0 auto; width: 8px; height: 8px; margin-top: 6px; background: #0f8fb3; border-radius: 50%; }
+        .cc-late { display: inline-block; width: 8px; height: 8px; margin-right: 6px; vertical-align: 1px; background: #d64545; border-radius: 50%; }
+        .cc-late.is-ongoing { box-shadow: 0 0 0 3px rgba(214, 69, 69, .2); animation: cc-pulse 1.4s ease-in-out infinite; }
+        @keyframes cc-pulse { 50% { box-shadow: 0 0 0 5px rgba(214, 69, 69, .05); } }
+        .cc-late-text { color: #b23a3a; }
         .cc-right { margin-left: auto; text-align: right; white-space: nowrap; }
     </style>
     <script>

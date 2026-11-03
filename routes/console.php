@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\UserStatus;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -17,10 +18,16 @@ Artisan::command('inspire', function () {
 //     ->withoutOverlapping();
 
 // Hapus status (ala WhatsApp) yang sudah lewat 24 jam.
-Schedule::call(fn () => \App\Models\UserStatus::where('expires_at', '<=', now())->delete())
+Schedule::call(fn () => UserStatus::where('expires_at', '<=', now())->delete())
     ->hourly()
     ->name('status:prune')
     ->withoutOverlapping();
+
+// History telat: catat order yang lewat 24 jam & tutup yang sudah siap.
+Schedule::command('telat:catat')
+    ->hourly()
+    ->withoutOverlapping()
+    ->runInBackground();
 
 // Tracking order customer: kirim status yang berubah ke Worker (gagal → diulang menit berikutnya).
 Schedule::command('tracking:kirim')

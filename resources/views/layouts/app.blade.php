@@ -161,7 +161,7 @@
             $masterDataActive = request()->routeIs('customers.*', 'kategori-produk-indoor.*', 'detail-indoor.*', 'harga-artwork.*', 'printer-outdoor.*', 'bahan-cetak-outdoor.*', 'harga-cetak-outdoor.*', 'printers.*');
             $transaksiActive = request()->routeIs('order-indoor.*', 'order-outdoor.*', 'order-artwork.*', 'customer-service.index', 'customer-service.job-sheets.*');
             $operatorActive = request()->routeIs('file.*', 'kasir.*', 'customer-service.payment-queue', 'order-desain.*', 'order-cetak.*', 'order-finishing.*', 'order-qc.*', 'order-bungkus.*', 'pengambilan.*');
-            $analitikActive = request()->routeIs('data-warehouse.*', 'laporan-operator-indoor.*', 'rekap-penerimaan.*', 'monitoring-kinerja.*', 'monitoring-transaksi.*', 'papan-pantau.*', 'printer-performance.*', 'rekap-bulanan.*');
+            $analitikActive = request()->routeIs('data-warehouse.*', 'laporan-operator-indoor.*', 'rekap-penerimaan.*', 'monitoring-kinerja.*', 'monitoring-transaksi.*', 'papan-pantau.*', 'history-telat.*', 'printer-performance.*', 'rekap-bulanan.*');
             $keuanganActive = request()->routeIs('akuntansi.*', 'keuangan.*', 'pengeluaran.*', 'payroll.*', 'order-documents.*');
             $canApproveCancel = Auth::user()->hasPermission('order-indoor.approve-cancel') || Auth::user()->hasPermission('order-outdoor.approve-cancel') || Auth::user()->hasPermission('order-artwork.approve-cancel');
             $pendingApprovalCount = $canApproveCancel ? \App\Http\Controllers\PembatalanController::pendingCount() : 0;
@@ -184,7 +184,7 @@
             $showMasterData = Auth::user()->hasPermission('customers.view') || Auth::user()->hasPermission('produk.view') || Auth::user()->hasPermission('harga-artwork.view') || Auth::user()->hasPermission('printers.view') || Auth::user()->hasPermission('printer-outdoor.view') || Auth::user()->hasPermission('bahan-cetak-outdoor.view') || Auth::user()->hasPermission('harga-cetak-outdoor.view') || Auth::user()->hasPermission('kategori-produk-indoor.view');
             $showTransaksi = Auth::user()->hasPermission('order-indoor.view') || Auth::user()->hasPermission('order-outdoor.view') || Auth::user()->hasPermission('order-artwork.view') || Auth::user()->hasPermission('customer-service.view');
             $showOperator = Auth::user()->hasPermission('customer-service.view') || Auth::user()->hasPermission('kasir.view') || Auth::user()->hasPermission('order-desain.view') || Auth::user()->hasPermission('order-cetak.view') || Auth::user()->hasPermission('order-finishing.view') || Auth::user()->hasPermission('order-qc.view') || Auth::user()->hasPermission('order-bungkus.view') || Auth::user()->hasPermission('pengambilan.view') || Auth::user()->hasPermission('file-monitor.view') || Auth::user()->hasPermission('laporan-order.view');
-            $showAnalitik = Auth::user()->hasPermission('data-warehouse.view') || Auth::user()->hasPermission('monitoring-kinerja.view') || Auth::user()->hasPermission('monitoring-transaksi.view') || Auth::user()->hasPermission('papan-pantau.view') || Auth::user()->hasPermission('printer-performance.view') || Auth::user()->hasPermission('rekap-bulanan.view');
+            $showAnalitik = Auth::user()->hasPermission('data-warehouse.view') || Auth::user()->hasPermission('monitoring-kinerja.view') || Auth::user()->hasPermission('monitoring-transaksi.view') || Auth::user()->hasPermission('papan-pantau.view') || Auth::user()->hasPermission('history-telat.view') || Auth::user()->hasPermission('printer-performance.view') || Auth::user()->hasPermission('rekap-bulanan.view');
             $showPengaturan = Auth::user()->hasPermission('keuangan.pengaturan') || Auth::user()->hasPermission('roles.manage') || Auth::user()->hasPermission('jasa-potong.manage') || Auth::user()->hasPermission('jasa-potong-artwork.manage');
 
             $operatorPageTitle = match (true) {
@@ -539,6 +539,9 @@
                                             @can('papan-pantau.view')
                                                 <a href="{{ route('papan-pantau.index') }}" class="{{ $dropdownLink(request()->routeIs('papan-pantau.*')) }}">Papan Pantau</a>
                                             @endcan
+                                            @can('history-telat.view')
+                                                <a href="{{ route('history-telat.index') }}" class="{{ $dropdownLink(request()->routeIs('history-telat.*')) }}">History Telat</a>
+                                            @endcan
                                             @can('printer-performance.view')
                                                 <a href="{{ route('printer-performance.index') }}" class="{{ $dropdownLink(request()->routeIs('printer-performance.*')) }}">Kinerja Printer</a>
                                             @endcan
@@ -850,6 +853,9 @@
                             @endcan
                             @can('papan-pantau.view')
                                 <a href="{{ route('papan-pantau.index') }}" class="{{ $mobileLink(request()->routeIs('papan-pantau.*')) }}">Papan Pantau</a>
+                            @endcan
+                            @can('history-telat.view')
+                                <a href="{{ route('history-telat.index') }}" class="{{ $mobileLink(request()->routeIs('history-telat.*')) }}">History Telat</a>
                             @endcan
                             @can('printer-performance.view')
                                 <a href="{{ route('printer-performance.index') }}" class="{{ $mobileLink(request()->routeIs('printer-performance.*')) }}">Kinerja Printer</a>
