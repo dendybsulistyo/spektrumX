@@ -35,31 +35,43 @@ class QuickSearchController extends Controller
             return response()->json(['orders' => [], 'customers' => []]);
         }
 
+        $customers = $this->customers($request, $q);
+
         return response()->json([
-            'orders' => $this->orders($request, $q),
-            'customers' => $this->customers($request, $q),
+            'orders' => $this->orders($request, $q, $customers->pluck('code')->all()),
+            'customers' => $customers,
         ]);
     }
 
-    private function orders(Request $request, string $q): Collection
+    /**
+     * @param  array<int, string>  $customerCodes  customer yang cocok; dipakai bila yang diketik berupa nama
+     */
+    private function orders(Request $request, string $q, array $customerCodes = []): Collection
     {
         $upper = mb_strtoupper(str_replace(' ', '', $q));
-        if (! preg_match('/^[A-Z0-9.]+$/', $upper) || ! preg_match('/\d/', $upper)) {
+        $isNumberQuery = preg_match('/^[A-Z0-9.]+$/', $upper) && preg_match('/\d/', $upper);
+        if (! $isNumberQuery && ! $customerCodes) {
             return collect();
         }
 
         /** @var array<string, array<int, string>> $prefixes per tipe → daftar awalan No. Order */
         $prefixes = [];
         $byId = [];
+        $byCustomer = [];
 
-        if (preg_match('/^SO\.?([123])\.?(.*)$/', $upper, $m)) {
+        if (! $isNumberQuery) {
+            // Nama customer: tampilkan order terbaru milik customer yang cocok.
+            $byCustomer = $customerCodes;
+        } elseif (preg_match('/^SO\.?([123])\.?(.*)$/', $upper, $m)) {
             $type = self::DIVISION_TYPES[$m[1]];
             $prefixes[$type][] = self::ORDER_PREFIX[$type].$m[2];
             $prefixes[$type][] = $m[2] === '' ? null : $m[2];
         } elseif (str_starts_with($upper, 'INV')) {
             DB::table('order_documents')->where('kind', 'inv')->where('number', 'like', $upper.'%')
                 ->orderByDesc('id')->limit(self::LIMIT)->get(['order_type', 'order_id'])
-                ->each(function ($doc) use (&$byId) { $byId[$doc->order_type][] = $doc->order_id; });
+                ->each(function ($doc) use (&$byId) {
+                    $byId[$doc->order_type][] = $doc->order_id;
+                });
         } elseif (preg_match('/^\d/', $upper)) {
             // Nomor polos: cocokkan nomor lama dan nomor baru berawalan tipe.
             foreach (self::ORDER_PREFIX as $type => $prefix) {
@@ -76,16 +88,19 @@ class QuickSearchController extends Controller
         foreach (self::MODELS as $type => $model) {
             $typePrefixes = array_filter($prefixes[$type] ?? []);
             $ids = $byId[$type] ?? [];
-            if (! $typePrefixes && ! $ids) {
+            if (! $typePrefixes && ! $ids && ! $byCustomer) {
                 continue;
             }
             $model::query()->with('customer:id,KdCust,NmCust')
-                ->where(function ($query) use ($typePrefixes, $ids) {
+                ->where(function ($query) use ($typePrefixes, $ids, $byCustomer) {
                     foreach ($typePrefixes as $prefix) {
                         $query->orWhere('NoOrder', 'like', $prefix.'%');
                     }
                     if ($ids) {
                         $query->orWhereIn('id', $ids);
+                    }
+                    if ($byCustomer) {
+                        $query->orWhereIn('KdCust', $byCustomer);
                     }
                 })
                 ->orderByDesc('id')->limit(self::LIMIT)
