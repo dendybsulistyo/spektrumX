@@ -300,6 +300,10 @@
                                                     <span class="item-meta-divider item-meta-divider-small" aria-hidden="true"></span>
                                                     {{ rtrim(rtrim(number_format((float) $item->Panjang, 2), '0'), '.') }} x {{ rtrim(rtrim(number_format((float) $item->Lebar, 2), '0'), '.') }}
                                                 @endif
+                                                @if (filled($item->jenis_finishing) || $item->ada_finishing)
+                                                    <span class="item-meta-divider item-meta-divider-small" aria-hidden="true"></span>
+                                                    <span title="Finishing">Finishing: <strong>{{ filled($item->jenis_finishing) ? $item->jenis_finishing : 'Ya' }}</strong></span>
+                                                @endif
                                             </span>
                                         </div>
                                         <div style="display: inline-flex; align-items: center; gap: var(--space-3); flex-wrap: wrap;">
