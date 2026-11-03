@@ -559,7 +559,7 @@
                                                      late() { return this.now > new Date(this.deadline).getTime(); },
                                                      label() {
                                                          const ms = Math.abs(new Date(this.deadline) - this.now), h = Math.floor(ms / 3600000), m = Math.floor(ms % 3600000 / 60000);
-                                                         return (this.late() ? 'Lewat ' : '') + (h ? h + ' jam ' : '') + m + ' mnt';
+                                                         return (this.late() ? 'Lewat ' : '') + (h ? h + 'j ' : '') + m + ' mnt';
                                                      },
                                                  }"
                                                  x-init="setInterval(() => now = Date.now(), 30000)">
