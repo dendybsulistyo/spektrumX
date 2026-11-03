@@ -144,6 +144,28 @@ class OrderLateLogService
         })->all();
     }
 
+    /**
+     * Log telat untuk sekumpulan order, dikunci "tipe-id".
+     *
+     * @param  Collection<int, array{type: string, id: int}>  $orders
+     * @return Collection<string, OrderLateLog>
+     */
+    public function logsFor(Collection $orders): Collection
+    {
+        if ($orders->isEmpty() || ! $this->isAvailable()) {
+            return collect();
+        }
+
+        return OrderLateLog::query()
+            ->where(function ($query) use ($orders) {
+                foreach ($orders->groupBy('type') as $type => $rows) {
+                    $query->orWhere(fn ($q) => $q->where('order_type', $type)->whereIn('order_id', $rows->pluck('id')));
+                }
+            })
+            ->get()
+            ->keyBy(fn (OrderLateLog $log) => $log->order_type.'-'.$log->order_id);
+    }
+
     /** Tutup log yang ordernya sudah Siap Diambil / Selesai / Batal. */
     private function resolve(Carbon $now): int
     {
