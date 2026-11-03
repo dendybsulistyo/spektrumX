@@ -480,7 +480,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/order-documents/{document}/register-print', [OrderDocumentController::class, 'registerPrint'])->name('order-documents.register-print');
 
     // Proforma Invoice tagihan VIP (hanya tampilan, tanpa nomor dokumen/jurnal).
-    Route::middleware('permission.any:kasir.view,keuangan.view,kasir.piutang-report.view')->group(function () {
+    Route::middleware('permission.any:kasir.view,keuangan.view,kasir.piutang-report.view,pengambilan.view')->group(function () {
         Route::get('/kasir/{type}/{id}/proforma', [ProformaInvoiceController::class, 'show'])
             ->whereIn('type', ['indoor', 'outdoor', 'artwork'])->whereNumber('id')->name('kasir.proforma');
     });

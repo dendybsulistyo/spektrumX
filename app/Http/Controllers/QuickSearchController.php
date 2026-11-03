@@ -134,7 +134,7 @@ class QuickSearchController extends Controller
         $user = $request->user();
         $editRoute = "order-{$type}.edit";
         $canEdit = $user->hasPermission("order-{$type}.view") && Route::has($editRoute);
-        $canProforma = $user->hasPermission('kasir.view') || $user->hasPermission('keuangan.view') || $user->hasPermission('kasir.piutang-report.view');
+        $canProforma = $user->hasPermission('kasir.view') || $user->hasPermission('keuangan.view') || $user->hasPermission('kasir.piutang-report.view') || $user->hasPermission('pengambilan.view');
         $canNota = $user->hasPermission('kasir.view') || $user->hasPermission('pengambilan.view')
             || $user->hasPermission('customer-service.view') || $user->hasPermission('keuangan.view');
 

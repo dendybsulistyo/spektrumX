@@ -137,7 +137,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @php $canProforma = auth()->user()->hasPermission('kasir.view') || auth()->user()->hasPermission('keuangan.view') || auth()->user()->hasPermission('kasir.piutang-report.view'); @endphp
+                            @php $canProforma = auth()->user()->hasPermission('kasir.view') || auth()->user()->hasPermission('keuangan.view') || auth()->user()->hasPermission('kasir.piutang-report.view') || auth()->user()->hasPermission('pengambilan.view'); @endphp
                             @forelse ($salesTransactions as $transaction)
                                 <tr>
                                     <td style="font-family: var(--font-heading); font-weight: 600; white-space: nowrap;">{{ $transaction->invoice }}</td>
