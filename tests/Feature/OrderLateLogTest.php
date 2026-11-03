@@ -84,6 +84,18 @@ class OrderLateLogTest extends TestCase
         $this->assertSame('2026-10-03 09:00:00', $log->resolved_at->format('Y-m-d H:i:s'));
     }
 
+    public function test_backfill_skips_stages_an_item_never_went_through(): void
+    {
+        DB::table('order_indoor')->insert([
+            'status' => 'selesai', 'created_at' => '2026-10-01 08:00:00',
+            'finishing_at' => '2026-10-02 10:00:00', 'qc_at' => '2026-10-02 11:00:00', 'bungkus_at' => '2026-10-02 12:00:00',
+        ]);
+
+        app(OrderLateLogService::class)->backfill();
+
+        $this->assertSame('finishing', OrderLateLog::first()->stage);
+    }
+
     public function test_commands_run_without_errors(): void
     {
         DB::table('order_outdoor')->insert(['status' => 'desain', 'created_at' => '2026-11-01 08:00:00']);

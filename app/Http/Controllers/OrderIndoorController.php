@@ -13,13 +13,14 @@ use App\Models\OrderIndoor;
 use App\Models\OrderIndoorDetail;
 use App\Models\OrderStatusNote;
 use App\Models\Produk;
-use App\Services\OrderCancellationRefund;
 use App\Services\ApproverNotificationService;
-use App\Services\OrderPricingService;
+use App\Services\OrderCancellationRefund;
 use App\Services\OrderNumberService;
+use App\Services\OrderPricingService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\View\View;
 
 class OrderIndoorController extends Controller
@@ -333,10 +334,14 @@ class OrderIndoorController extends Controller
         $itemsByType = collect($items)->groupBy(fn (array $item) => $item['jenis_produk'] ?? 'indoor');
         $indoorProducts = Produk::query()
             ->whereIn('KdProd', $itemsByType->get('indoor', collect())->pluck('KdProd')->unique())
-            ->get(['KdProd', 'NmProd', 'diproses'])->keyBy('KdProd');
+            ->get(['KdProd', 'NmProd', 'KdDivs', 'diproses'])->keyBy('KdProd');
         $artworkProducts = HargaArtwork::query()
             ->whereIn('KdProd', $itemsByType->get('artwork', collect())->pluck('KdProd')->unique())
-            ->get(['KdProd', 'NmProd', 'diproses'])->keyBy('KdProd');
+            ->get(['KdProd', 'NmProd', 'KdDivs', 'diproses'])->keyBy('KdProd');
+        // Kategori barang jadi (mis. stand banner): tidak lewat Layout & Cetak.
+        $skipLayoutCetakDivisions = Schema::hasColumn('kategori_produk_indoor', 'lewati_layout_cetak')
+            ? Kategori::query()->where('lewati_layout_cetak', true)->pluck('KdDivs')->all()
+            : [];
 
         foreach ($items as $index => $item) {
             $seq = str_pad((string) ($index + 1), 2, '0', STR_PAD_LEFT);
@@ -349,6 +354,8 @@ class OrderIndoorController extends Controller
             $nmProd = $product?->NmProd;
             // Produk tidak diproses operator: langsung selesai sejak SO dibuat.
             $tanpaProses = $product?->diproses === false;
+            $division = $product?->KdDivs ?: substr((string) $item['KdProd'], 0, 2);
+            $mulaiFinishing = ! $tanpaProses && in_array($division, $skipLayoutCetakDivisions, true);
 
             OrderIndoorDetail::create([
                 'order_indoor_id' => $order->id,
@@ -360,7 +367,8 @@ class OrderIndoorController extends Controller
                 'Panjang' => $item['Panjang'],
                 'Lebar' => $item['Lebar'],
                 'Qty' => $item['Qty'],
-                'qty_desain' => $tanpaProses ? 0 : $item['Qty'],
+                'qty_desain' => $tanpaProses || $mulaiFinishing ? 0 : $item['Qty'],
+                'qty_finishing' => $mulaiFinishing ? $item['Qty'] : 0,
                 'qty_selesai' => $tanpaProses ? $item['Qty'] : 0,
                 'tanpa_proses' => $tanpaProses,
                 'KdStat' => 0,
@@ -383,5 +391,4 @@ class OrderIndoorController extends Controller
             ->orderBy('NoUrut')
             ->get();
     }
-
 }

@@ -20,7 +20,15 @@ class Kategori extends Model
         'KdDivs',
         'NmDivs',
         'NoUrut',
+        'lewati_layout_cetak',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'lewati_layout_cetak' => 'boolean',
+        ];
+    }
 
     public function produk(): HasMany
     {

@@ -39,6 +39,10 @@ class OrderPaymentWorkflow
 
             $result = $action($locked);
             app(OrderDocumentService::class)->issueInvoice($locked->fresh());
+            // Order yang tidak punya item untuk Layout (mis. stand banner): status ikut tahap item.
+            if (method_exists($locked, 'skipToFirstActiveStage')) {
+                $locked->fresh()->skipToFirstActiveStage();
+            }
             // Order yang seluruh item-nya tanpa proses operator: langsung Selesai + DO otomatis.
             app(TanpaProsesService::class)->afterPayment($locked->fresh());
 

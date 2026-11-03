@@ -154,8 +154,15 @@ class OrderLateLogService
         if ($order->dibayar_at && Carbon::parse($order->dibayar_at)->gt($lateAt)) {
             return 'baru';
         }
-        foreach (self::STAGE_COLUMNS as $stage => $column) {
-            if (! $order->{$column} || Carbon::parse($order->{$column})->gt($lateAt)) {
+        $columns = array_values(self::STAGE_COLUMNS);
+        foreach (array_keys(self::STAGE_COLUMNS) as $index => $stage) {
+            $value = $order->{$columns[$index]};
+            // Tahap kosong tapi tahap sesudahnya terisi = dilewati (mis. stand banner tanpa Layout & Cetak).
+            $skipped = ! $value && collect(array_slice($columns, $index + 1))->contains(fn ($later) => (bool) $order->{$later});
+            if ($skipped) {
+                continue;
+            }
+            if (! $value || Carbon::parse($value)->gt($lateAt)) {
                 return $stage;
             }
         }

@@ -32,6 +32,7 @@ class StoreKategoriProdukIndoorRequest extends FormRequest
             ],
             'NmDivs' => ['required', 'string', 'max:19'],
             'NoUrut' => ['required', 'integer', 'min:0'],
+            'lewati_layout_cetak' => ['boolean'],
         ];
     }
 

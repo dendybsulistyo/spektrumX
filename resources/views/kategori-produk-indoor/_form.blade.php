@@ -22,3 +22,12 @@
         value="{{ old('NmDivs', $kategoriProdukIndoor?->NmDivs) }}" maxlength="19" placeholder="Print Dokumen" required />
     <x-input-error :messages="$errors->get('NmDivs')" class="mt-1" />
 </div>
+
+<label class="flex items-start gap-2">
+    <input type="hidden" name="lewati_layout_cetak" value="0">
+    <input type="checkbox" name="lewati_layout_cetak" value="1" {{ old('lewati_layout_cetak', $kategoriProdukIndoor?->lewati_layout_cetak) ? 'checked' : '' }}
+           class="mt-0.5 rounded border-gray-300 text-gray-900 focus:ring-gray-900">
+    <span class="text-sm text-gray-700">Lewati Layout &amp; Cetak
+        <span class="block text-xs text-gray-500">Untuk barang jadi seperti stand banner: item produk di kategori ini langsung masuk Finishing saat SO dibuat, lalu lanjut Back Office, Bungkus, Pengambilan seperti biasa. Berlaku untuk order baru.</span>
+    </span>
+</label>

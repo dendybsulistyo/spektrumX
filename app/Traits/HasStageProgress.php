@@ -59,6 +59,29 @@ trait HasStageProgress
     }
 
     /**
+     * Setelah kasir order masuk 'desain'. Bila tidak ada item yang perlu Layout
+     * (mis. seluruhnya stand banner yang mulai di Finishing), majukan status ke
+     * tahap item paling awal tanpa mencatat operator tahap yang dilewati.
+     * Order yang seluruh item-nya sudah selesai ditangani TanpaProsesService.
+     */
+    public function skipToFirstActiveStage(): void
+    {
+        if ($this->status !== 'desain') {
+            return;
+        }
+
+        $items = $this->detailItems();
+        if ($items->isEmpty()) {
+            return;
+        }
+
+        $stage = $items->first()::stageName($items->min(fn ($item) => $item->earliestActiveStageIndex()));
+        if (in_array($stage, ['cetak', 'finishing', 'qc', 'bungkus'], true)) {
+            $this->update(['status' => $stage]);
+        }
+    }
+
+    /**
      * Recomputes the header `status` as the LEAST-advanced stage among this
      * order's line items, and writes it back — same column, same
      * downstream consumers (Kasir, Papan Pantau, Dashboard, File Monitor,
