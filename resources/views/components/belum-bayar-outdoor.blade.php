@@ -37,6 +37,9 @@
                                 <div class="cc-actions"><a x-show="o.kasir_url" :href="o.kasir_url">Kasir</a></div>
                             </div>
                             <table class="bbo-items">
+                                <colgroup>
+                                    <col class="c-name"><col class="c-size"><col class="c-fin"><col class="c-qty"><col class="c-bahan"><col class="c-printer"><col class="c-sub">
+                                </colgroup>
                                 <thead><tr><th>File / Item</th><th>Ukuran (cm)</th><th>Finishing</th><th class="r">Qty</th><th>Bahan</th><th>Printer</th><th class="r">Subtotal</th></tr></thead>
                                 <tbody>
                                     <template x-for="(it, i) in o.items" :key="i">
@@ -69,12 +72,21 @@
         .bbo-order { margin:6px 2px 10px; border:1px solid #e9e3d6; border-radius:10px; background:#fff; overflow:hidden; }
         .bbo-head { display:flex; align-items:center; gap:10px; padding:8px 10px; background:#faf7f0; border-bottom:1px solid #eee8db; }
         .bbo-total { margin-left:auto; font-size:13px; white-space:nowrap; color:#1b2236; }
-        .bbo-items { width:100%; border-collapse:collapse; font-size:12.5px; }
+        /* Lebar kolom sama di semua order agar kolom lurus dari atas ke bawah. */
+        .bbo-items { width:100%; border-collapse:collapse; table-layout:fixed; font-size:12.5px; }
+        .bbo-items .c-name { width:25%; } .bbo-items .c-size { width:11%; } .bbo-items .c-fin { width:21%; }
+        .bbo-items .c-qty { width:5%; } .bbo-items .c-bahan { width:15%; } .bbo-items .c-printer { width:12%; } .bbo-items .c-sub { width:11%; }
+        .bbo-items td { overflow-wrap:anywhere; }
+        .bbo-items td.cc-mono, .bbo-items td.r { overflow-wrap:normal; white-space:nowrap; }
         .bbo-items th { padding:5px 10px; color:#77736a; font-size:10.5px; font-weight:700; letter-spacing:.06em; text-align:left; text-transform:uppercase; }
         .bbo-items td { padding:5px 10px; border-top:1px solid #f1ece0; vertical-align:top; color:#262a33; }
         .bbo-items .r { text-align:right; white-space:nowrap; }
         .bbo-name { font-weight:600; overflow-wrap:anywhere; }
-        @media (max-width:640px) { .bbo-items th:nth-child(5), .bbo-items td:nth-child(5), .bbo-items th:nth-child(6), .bbo-items td:nth-child(6) { display:none; } }
+        @media (max-width:640px) {
+            .bbo-items .c-bahan, .bbo-items .c-printer { width:0; }
+            .bbo-items th:nth-child(5), .bbo-items td:nth-child(5), .bbo-items th:nth-child(6), .bbo-items td:nth-child(6) { display:none; }
+            .bbo-items .c-name { width:38%; } .bbo-items .c-fin { width:25%; } .bbo-items .c-qty { width:8%; } .bbo-items .c-sub { width:17%; }
+        }
     </style>
     <script>
         function belumBayarOutdoor(url) {
