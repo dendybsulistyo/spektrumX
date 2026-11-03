@@ -165,6 +165,11 @@ class QuickSearchController extends Controller
      */
     private function lateInfo(?OrderLateLog $log, array $row): ?array
     {
+        // Belum bayar = jam telat belum berjalan, termasuk bila masih ada catatan dari aturan lama.
+        if ($row['status_bayar'] === 'belum_bayar' || in_array($row['status'], OrderLateLogService::UNPAID_STATUSES, true)) {
+            return null;
+        }
+
         if ($log) {
             $ongoing = $log->resolved_at === null;
             $label = ($ongoing ? 'Sedang telat ' : 'Pernah telat ').$log->lateDurationLabel()
