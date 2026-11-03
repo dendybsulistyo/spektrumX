@@ -40,7 +40,7 @@
             <div class="blueprint" style="padding: var(--space-6);">
                 <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
                 <div style="overflow-x: auto;">
-                    <table class="table" style="min-width: 640px;">
+                    <table class="table" style="min-width: 640px; font-size: 12.5px;">
                         <thead>
                             <tr>
                                 <th style="width: 32px;">No</th><th>Kode</th><th>Nama customer</th><th>Alamat</th><th>Kota</th><th>Telepon</th><th>Tipe</th><th style="text-align: right;">Aksi</th>
@@ -51,7 +51,7 @@
                                 <tr>
                                     <td class="text-muted">{{ $customers->firstItem() + $loop->index }}</td>
                                     <td class="text-muted">{{ $customer->KdCust }}</td>
-                                    <td style="font-family: var(--font-heading); font-weight: 600;">{{ $customer->NmCust }}</td>
+                                    <td style="font-weight: 600; color: var(--color-ink, inherit);">{{ $customer->NmCust }}</td>
                                     <td class="text-muted">{{ $customer->Alamat }}</td>
                                     <td class="text-muted">{{ $customer->Kota }}</td>
                                     <td class="text-muted">{{ $customer->Telp }}</td>
