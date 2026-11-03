@@ -63,7 +63,7 @@
                     <template x-if="q.trim().length < 3">
                         <div class="cc-hint">
                             Ketik minimal 3 huruf. Contoh: <code>IND.2.2610</code> · <code>26100800056</code> · <code>INV.2.</code> · <code>SO.2.</code> · nama customer
-                            <div class="cc-keys"><kbd>↑</kbd><kbd>↓</kbd> pilih &nbsp; <kbd>Enter</kbd> buka &nbsp; <kbd>Esc</kbd> tutup</div>
+                            <div class="cc-keys"><kbd>↑</kbd><kbd>↓</kbd> pilih &nbsp; <kbd>Enter</kbd> buka &nbsp; <kbd>Esc</kbd> tutup@if (collect(\App\Http\Controllers\UnpaidOutdoorOrderController::PERMISSIONS)->contains(fn ($permission) => auth()->user()?->hasPermission($permission))) &nbsp; <kbd x-text="isMac ? '⌘B' : 'Ctrl B'"></kbd> Outdoor belum bayar@endif</div>
                         </div>
                     </template>
                     <template x-if="q.trim().length >= 3 && !loading && !items.length">

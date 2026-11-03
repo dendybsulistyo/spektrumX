@@ -582,6 +582,9 @@
 
                         <div class="hidden lg:flex lg:items-center">
                             <x-cari-cepat />
+                            @if (collect(\App\Http\Controllers\UnpaidOutdoorOrderController::PERMISSIONS)->contains(fn ($permission) => Auth::user()->hasPermission($permission)))
+                                <x-belum-bayar-outdoor />
+                            @endif
                             <x-status-wa />
                             @php
                                 $showDailySummary = \App\Http\Controllers\DailySummaryController::applies(Auth::user());

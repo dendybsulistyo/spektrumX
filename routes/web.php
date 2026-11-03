@@ -79,6 +79,7 @@ use App\Http\Controllers\RoleController;
 use App\Http\Controllers\ServerMonitorController;
 use App\Http\Controllers\SystemStatusController;
 use App\Http\Controllers\TutupBukuController;
+use App\Http\Controllers\UnpaidOutdoorOrderController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\UserStatusController;
 use Illuminate\Support\Facades\Route;
@@ -95,6 +96,9 @@ Route::get('/apresiasi/jam-ini', ApresiasiController::class)->middleware(['auth'
 Route::middleware('auth')->group(function () {
     // Pencarian cepat (Ctrl+K) — semua user; tautan hasil mengikuti hak akses.
     Route::get('/cari', QuickSearchController::class)->name('quick-search');
+    // Daftar cepat (Ctrl+B): Order Outdoor belum bayar beserta rincian ukuran.
+    Route::get('/order-outdoor/belum-bayar', UnpaidOutdoorOrderController::class)
+        ->middleware('permission.any:'.implode(',', UnpaidOutdoorOrderController::PERMISSIONS))->name('unpaid-outdoor');
     // Avatar mini — tiap user hanya mengubah avatarnya sendiri.
     Route::post('/profile/avatar', [AvatarController::class, 'store'])->name('avatar.store');
     Route::delete('/profile/avatar', [AvatarController::class, 'destroy'])->name('avatar.destroy');
