@@ -15,6 +15,7 @@ use App\Http\Controllers\CustomerServiceController;
 use App\Http\Controllers\DailySummaryController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DataWarehouseController;
+use App\Http\Controllers\DeletedOrderLogController;
 use App\Http\Controllers\DetailIndoorController;
 use App\Http\Controllers\DiskonApprovalController;
 use App\Http\Controllers\FileMonitorController;
@@ -566,6 +567,7 @@ Route::middleware('auth')->group(function () {
     // Riwayat ulang proses untuk admin.
     Route::middleware('permission:roles.manage')->group(function () {
         Route::get('/riwayat-ulang-proses', [ReworkHistoryController::class, 'index'])->name('rework-history.index');
+        Route::get('/riwayat-order-dihapus', [DeletedOrderLogController::class, 'index'])->name('deleted-orders.index');
     });
 
     // Access controlled inside the controller (kasir.approve-diskon).
