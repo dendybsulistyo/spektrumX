@@ -37,12 +37,13 @@
                                 <div class="cc-actions"><a x-show="o.kasir_url" :href="o.kasir_url">Kasir</a></div>
                             </div>
                             <table class="bbo-items">
-                                <thead><tr><th>File / Item</th><th>Ukuran (cm)</th><th class="r">Qty</th><th>Bahan</th><th>Printer</th><th class="r">Subtotal</th></tr></thead>
+                                <thead><tr><th>File / Item</th><th>Ukuran (cm)</th><th>Finishing</th><th class="r">Qty</th><th>Bahan</th><th>Printer</th><th class="r">Subtotal</th></tr></thead>
                                 <tbody>
                                     <template x-for="(it, i) in o.items" :key="i">
                                         <tr>
                                             <td class="bbo-name" x-text="it.name"></td>
                                             <td class="cc-mono" x-text="size(it)"></td>
+                                            <td x-text="it.finishing || '-'"></td>
                                             <td class="r" x-text="it.qty"></td>
                                             <td x-text="it.bahan || '-'"></td>
                                             <td x-text="it.printer || '-'"></td>
@@ -73,7 +74,7 @@
         .bbo-items td { padding:5px 10px; border-top:1px solid #f1ece0; vertical-align:top; color:#262a33; }
         .bbo-items .r { text-align:right; white-space:nowrap; }
         .bbo-name { font-weight:600; overflow-wrap:anywhere; }
-        @media (max-width:640px) { .bbo-items th:nth-child(4), .bbo-items td:nth-child(4), .bbo-items th:nth-child(5), .bbo-items td:nth-child(5) { display:none; } }
+        @media (max-width:640px) { .bbo-items th:nth-child(5), .bbo-items td:nth-child(5), .bbo-items th:nth-child(6), .bbo-items td:nth-child(6) { display:none; } }
     </style>
     <script>
         function belumBayarOutdoor(url) {

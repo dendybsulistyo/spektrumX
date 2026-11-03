@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\OrderOutdoor;
+use App\Models\OrderOutdoorDetail;
 use App\Services\OrderPricingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -40,8 +41,9 @@ class UnpaidOutdoorOrderController extends Controller
                 'queue' => ($order->payment_queue ?? 'kasir') === 'kasir' ? 'Kasir' : 'CS',
                 'total' => (float) ($order->total ?? 0),
                 'kasir_url' => $canOpenKasir ? route('kasir.show', ['type' => 'outdoor', 'id' => $order->id]) : null,
-                'items' => $pricing->detailedLineItems('outdoor', $order, $order->items)->map(fn ($item) => [
+                'items' => $pricing->detailedLineItems('outdoor', $order, $order->items)->values()->map(fn ($item, $index) => [
                     'name' => $item->name ?: '-',
+                    'finishing' => $this->finishing($order->items->values()->get($index)),
                     'panjang' => $item->panjang,
                     'lebar' => $item->lebar,
                     'qty' => $item->qty,
@@ -51,5 +53,15 @@ class UnpaidOutdoorOrderController extends Controller
                 ])->values(),
             ])->values(),
         ]);
+    }
+
+    /** Sama dengan tampilan Layout: jenis finishing, "Ya" bila hanya dicentang. */
+    private function finishing(?OrderOutdoorDetail $item): ?string
+    {
+        if (! $item) {
+            return null;
+        }
+
+        return filled($item->jenis_finishing) ? $item->jenis_finishing : ($item->ada_finishing ? 'Ya' : null);
     }
 }
