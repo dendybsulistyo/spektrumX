@@ -302,7 +302,7 @@
                                                 @endif
                                                 @if (filled($item->jenis_finishing) || $item->ada_finishing)
                                                     <span class="item-meta-divider item-meta-divider-small" aria-hidden="true"></span>
-                                                    <span title="Finishing">Finishing: <strong>{{ filled($item->jenis_finishing) ? $item->jenis_finishing : 'Ya' }}</strong></span>
+                                                    <span title="Finishing">F: {{ filled($item->jenis_finishing) ? $item->jenis_finishing : 'Ya' }}</span>
                                                 @endif
                                             </span>
                                         </div>
