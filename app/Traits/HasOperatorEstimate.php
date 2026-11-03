@@ -7,28 +7,25 @@ use Illuminate\Support\Carbon;
 trait HasOperatorEstimate
 {
     /**
-     * Estimasi dari Lembar Kerja CS selalu diprioritaskan. Order lama yang
-     * belum memiliki estimasi mendapat fallback 1x24 jam sejak dibuat.
+     * Batas estimasi pengerjaan (keputusan user 3 Nov 2026): dihitung sejak
+     * order pertama kali diproses kasir, selama Progress Hari dari Lembar Kerja
+     * CS (default 1 hari). Order yang belum dibayar belum punya batas.
+     * Dipakai antrean operator, dashboard, kartu Telat & History Telat.
      */
     public function operatorEstimateEndsAt(): ?Carbon
     {
-        $jobSheetDeadline = $this->customerServiceJobSheet?->estimateEndsAt();
-
-        if ($jobSheetDeadline) {
-            return $jobSheetDeadline;
-        }
-
-        $createdAt = $this->created_at ?? $this->TglOrder;
-        if (! $createdAt) {
+        $start = $this->diproses_kasir_at;
+        if (! $start) {
             return null;
         }
 
-        $createdAt = $createdAt instanceof Carbon ? $createdAt->copy() : Carbon::parse($createdAt);
+        $start = $start instanceof Carbon ? $start->copy() : Carbon::parse($start);
 
-        if (! $createdAt->lt(now()->startOfDay())) {
-            return null;
-        }
+        return $start->addDays($this->operatorEstimateDays());
+    }
 
-        return $createdAt->addDay();
+    public function operatorEstimateDays(): int
+    {
+        return max(1, (int) ($this->customerServiceJobSheet?->progress_hari ?: 1));
     }
 }

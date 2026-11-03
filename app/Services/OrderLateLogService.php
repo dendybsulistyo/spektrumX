@@ -47,12 +47,12 @@ class OrderLateLogService
                 ->whereNotNull('created_at')
                 ->whereNotIn('status', [...self::DONE_STATUSES, ...self::UNPAID_STATUSES])
                 ->where('status_bayar', '!=', 'belum_bayar')
-                ->select(['id', 'created_at', 'status', 'dibayar_at'])
+                ->select(['id', 'created_at', 'status', 'dibayar_at', 'diproses_kasir_at'])
                 ->chunkById(self::CHUNK, function (Collection $orders) use ($type, $now, &$opened) {
-                    $starts = $this->paidStarts($type, $orders);
+                    $deadlines = $this->deadlines($type, $orders);
                     $rows = [];
                     foreach ($orders as $order) {
-                        $lateAt = $starts[$order->id]?->copy()->addHours(OrderLateLog::LATE_AFTER_HOURS);
+                        $lateAt = $deadlines[$order->id];
                         if ($lateAt && $lateAt->lt($now)) {
                             $rows[] = $this->row($type, $order->id, Carbon::parse($order->created_at), $lateAt, $order->status, false, $now);
                         }
@@ -80,12 +80,12 @@ class OrderLateLogService
                 ->whereIn('status', ['siap_diambil', 'selesai'])
                 ->whereNotNull('created_at')
                 ->whereNotNull('bungkus_at')
-                ->select(['id', 'created_at', 'status', 'dibayar_at', ...array_values(self::STAGE_COLUMNS)])
+                ->select(['id', 'created_at', 'status', 'dibayar_at', 'diproses_kasir_at', ...array_values(self::STAGE_COLUMNS)])
                 ->chunkById(self::CHUNK, function (Collection $orders) use ($type, $now, $progress, &$inserted) {
-                    $starts = $this->paidStarts($type, $orders);
+                    $deadlines = $this->deadlines($type, $orders);
                     $rows = [];
                     foreach ($orders as $order) {
-                        $lateAt = $starts[$order->id]?->copy()->addHours(OrderLateLog::LATE_AFTER_HOURS);
+                        $lateAt = $deadlines[$order->id];
                         $readyAt = Carbon::parse($order->bungkus_at);
                         if (! $lateAt || $readyAt->lte($lateAt)) {
                             continue;
@@ -111,48 +111,37 @@ class OrderLateLogService
     }
 
     /**
-     * Waktu order pertama kali diproses kasir: catatan status kasir paling awal
-     * (tidak berubah saat pelunasan), atau dibayar_at bila catatannya tidak ada.
+     * Batas estimasi per order, sama dengan HasOperatorEstimate: sejak pertama
+     * diproses kasir + Progress Hari Lembar Kerja CS (default 1 hari).
+     * Awal hitungan: diproses_kasir_at, lalu catatan status kasir paling awal,
+     * lalu dibayar_at (untuk data sebelum kolom itu ada).
      *
      * @param  Collection<int, object>  $orders
      * @return array<int, Carbon|null>
      */
-    private function paidStarts(string $type, Collection $orders): array
+    private function deadlines(string $type, Collection $orders): array
     {
+        $ids = $orders->pluck('id');
         $notes = Schema::hasTable('order_status_notes')
             ? DB::table('order_status_notes')->where('order_type', $type)->where('stage', 'kasir')
-                ->whereIn('order_id', $orders->pluck('id'))
+                ->whereIn('order_id', $ids)
                 ->groupBy('order_id')->selectRaw('order_id, MIN(created_at) as first_at')
                 ->pluck('first_at', 'order_id')
             : collect();
+        $progressDays = Schema::hasTable('customer_service_job_sheets')
+            ? DB::table('customer_service_job_sheets')->where('order_type', $type)->whereIn('order_id', $ids)
+                ->where('progress_hari', '>', 0)
+                ->groupBy('order_id')->selectRaw('order_id, MAX(progress_hari) as days')
+                ->pluck('days', 'order_id')
+            : collect();
 
-        return $orders->mapWithKeys(function ($order) use ($notes) {
-            $start = $notes->get($order->id) ?? $order->dibayar_at;
+        return $orders->mapWithKeys(function ($order) use ($notes, $progressDays) {
+            $start = ($order->diproses_kasir_at ?? null) ?? $notes->get($order->id) ?? $order->dibayar_at;
 
-            return [$order->id => $start ? Carbon::parse($start) : null];
+            return [$order->id => $start
+                ? Carbon::parse($start)->addDays(max(1, (int) $progressDays->get($order->id, 1)))
+                : null];
         })->all();
-    }
-
-    /**
-     * Log telat untuk sekumpulan order, dikunci "tipe-id".
-     *
-     * @param  Collection<int, array{type: string, id: int}>  $orders
-     * @return Collection<string, OrderLateLog>
-     */
-    public function logsFor(Collection $orders): Collection
-    {
-        if ($orders->isEmpty() || ! $this->isAvailable()) {
-            return collect();
-        }
-
-        return OrderLateLog::query()
-            ->where(function ($query) use ($orders) {
-                foreach ($orders->groupBy('type') as $type => $rows) {
-                    $query->orWhere(fn ($q) => $q->where('order_type', $type)->whereIn('order_id', $rows->pluck('id')));
-                }
-            })
-            ->get()
-            ->keyBy(fn (OrderLateLog $log) => $log->order_type.'-'.$log->order_id);
     }
 
     /** Tutup log yang ordernya sudah Siap Diambil / Selesai / Batal. */

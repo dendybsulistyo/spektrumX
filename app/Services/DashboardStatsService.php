@@ -14,7 +14,10 @@ use Illuminate\Support\Facades\DB;
 
 class DashboardStatsService
 {
-    /** Telat = > 24 jam sejak dibayar dan belum siap; order Baru/belum bayar tidak dihitung. */
+    /**
+     * Telat = lewat batas estimasi (diproses kasir + Progress Hari CS, default 1 hari)
+     * dan belum siap; sama dengan HasOperatorEstimate. Order Baru/belum bayar tidak dihitung.
+     */
     private const OVERDUE_EXCLUDED_STATUSES = ['baru', 'siap_diambil', 'selesai', 'batal'];
 
     /**
@@ -22,8 +25,9 @@ class DashboardStatsService
      */
     public function stats(?string $from = null, ?string $to = null): array
     {
-        $totals = collect($this->scopedQueries($from, $to))
-            ->map(fn ($query) => $query->selectRaw(''
+        $types = ['indoor' => 'order_indoor', 'outdoor' => 'order_outdoor', 'artwork' => 'order_artwork'];
+        $totals = collect($this->scopedQueries($from, $to))->values()
+            ->map(fn ($query, $index) => $query->selectRaw(''
                 .'COUNT(*) as total, '
                 .'SUM(CASE WHEN status_bayar = "belum_bayar" THEN 1 ELSE 0 END) as belum_bayar, '
                 .'SUM(CASE WHEN status_bayar = "lunas" THEN 1 ELSE 0 END) as lunas, '
@@ -39,9 +43,8 @@ class DashboardStatsService
                 .'SUM(CASE WHEN status = "siap_diambil" THEN 1 ELSE 0 END) as siap_diambil, '
                 .'SUM(CASE WHEN status = "selesai" THEN 1 ELSE 0 END) as selesai, '
                 .'SUM(CASE WHEN status = "batal" THEN 1 ELSE 0 END) as batal, '
-                .'SUM(CASE WHEN status NOT IN ("baru", "siap_diambil", "selesai", "batal") AND status_bayar <> "belum_bayar" '
-                .'AND dibayar_at IS NOT NULL AND dibayar_at < ? THEN 1 ELSE 0 END) as telat',
-                [now()->subHours(24)]
+                .'SUM(CASE WHEN '.$this->overdueSql(array_values($types)[$index], array_keys($types)[$index]).' THEN 1 ELSE 0 END) as telat',
+                $this->overdueBindings(array_keys($types)[$index])
             )->first());
 
         $sum = fn (string $key): int => (int) $totals->sum(fn ($row) => $row->{$key} ?? 0);
@@ -156,21 +159,17 @@ class DashboardStatsService
         ?string $from = null,
         ?string $to = null,
     ): LengthAwarePaginator {
-        $cutoff = now()->subHours(24);
         $union = null;
 
         foreach (['indoor' => 'order_indoor', 'outdoor' => 'order_outdoor', 'artwork' => 'order_artwork'] as $slug => $table) {
             $query = DB::table($table)
                 ->select([
-                    'id', 'NoOrder', 'KdCust', 'status', 'status_bayar', 'created_at', 'dibayar_at',
+                    'id', 'NoOrder', 'KdCust', 'status', 'status_bayar', 'created_at', 'diproses_kasir_at',
                     'desain_by', 'cetak_by', 'finishing_by', 'qc_by', 'bungkus_by',
                 ])
                 ->selectRaw('? as type_slug', [$slug])
                 ->whereNotNull('created_at')
-                ->whereNotNull('dibayar_at')
-                ->where('dibayar_at', '<', $cutoff)
-                ->where('status_bayar', '!=', 'belum_bayar')
-                ->whereNotIn('status', self::OVERDUE_EXCLUDED_STATUSES)
+                ->whereRaw($this->overdueSql($table, $slug), $this->overdueBindings($slug))
                 ->when($from, fn ($builder) => $builder->where('created_at', '>=', $from.' 00:00:00'))
                 ->when($to, fn ($builder) => $builder->where('created_at', '<=', $to.' 23:59:59'));
 
@@ -258,6 +257,7 @@ class DashboardStatsService
                 && ! in_array($order->status, ['baru', 'siap_diambil', 'selesai', 'batal'], true)
                     ? $order->operatorEstimateEndsAt()?->toIso8601String()
                     : null,
+            'estimate_start' => $order->diproses_kasir_at?->toIso8601String(),
             'operator_file' => $order->createdBy?->name,
             'kasir' => $order->kasir?->name,
             'desain_by' => $order->desainBy?->name,
@@ -313,9 +313,31 @@ class DashboardStatsService
 
     private function isOverdue($order): bool
     {
+        $deadline = method_exists($order, 'operatorEstimateEndsAt')
+            ? $order->operatorEstimateEndsAt()
+            : $order->diproses_kasir_at?->copy()->addDay();
+
         return ! in_array($order->status, self::OVERDUE_EXCLUDED_STATUSES, true)
             && $order->status_bayar !== 'belum_bayar'
-            && $order->dibayar_at
-            && $order->dibayar_at->lt(now()->subHours(24));
+            && $deadline !== null
+            && $deadline->lt(now());
+    }
+
+    /**
+     * Kondisi SQL telat untuk satu tabel order (MySQL): lewat diproses kasir +
+     * Progress Hari Lembar Kerja CS (default 1 hari), belum siap, sudah dibayar.
+     */
+    private function overdueSql(string $table, string $type): string
+    {
+        return "{$table}.status NOT IN ('baru', 'siap_diambil', 'selesai', 'batal') AND {$table}.status_bayar <> 'belum_bayar' "
+            ."AND {$table}.diproses_kasir_at IS NOT NULL "
+            ."AND DATE_ADD({$table}.diproses_kasir_at, INTERVAL COALESCE((SELECT MAX(js.progress_hari) FROM customer_service_job_sheets js "
+            ."WHERE js.order_type = ? AND js.order_id = {$table}.id AND js.progress_hari > 0), 1) DAY) < ?";
+    }
+
+    /** @return array<int, mixed> */
+    private function overdueBindings(string $type): array
+    {
+        return [$type, now()];
     }
 }

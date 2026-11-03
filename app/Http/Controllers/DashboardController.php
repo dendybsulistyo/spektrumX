@@ -173,8 +173,8 @@ class DashboardController extends Controller
                     'no_order' => $order->NoOrder,
                     'customer' => $order->customer ?: $order->KdCust,
                     'created_at' => $createdAt->format('d M Y · H:i'),
-                    // Lama telat dihitung sejak dibayar, sama dengan kartu & History Telat.
-                    'overdue' => Carbon::parse($order->dibayar_at ?? $order->created_at)->locale('id')->diffForHumans(now(), true),
+                    // Lama order berjalan sejak diproses kasir (awal hitungan estimasi/telat).
+                    'overdue' => Carbon::parse($order->diproses_kasir_at ?? $order->created_at)->locale('id')->diffForHumans(now(), true),
                     'status' => $order->status,
                     'status_label' => $stageLabels[$order->status] ?? ucfirst($order->status),
                     'status_bayar' => $order->status_bayar,

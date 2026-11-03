@@ -10,6 +10,7 @@ use App\Traits\HasTrackingToken;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Collection;
 
 class OrderArtwork extends Model
 {
@@ -37,6 +38,7 @@ class OrderArtwork extends Model
         'jumlah_piutang',
         'kasir_user_id',
         'dibayar_at',
+        'diproses_kasir_at',
         'status',
         'desain_by',
         'desain_at',
@@ -92,6 +94,7 @@ class OrderArtwork extends Model
             'jumlah_dibayar' => 'float',
             'jumlah_piutang' => 'float',
             'dibayar_at' => 'datetime',
+            'diproses_kasir_at' => 'datetime',
             'desain_at' => 'datetime',
             'cetak_at' => 'datetime',
             'finishing_at' => 'datetime',
@@ -132,7 +135,7 @@ class OrderArtwork extends Model
      * Common name HasStageProgress::recalculateStatus() calls across all 3
      * order types, regardless of each type's own relation name/shape.
      */
-    public function detailItems(): \Illuminate\Support\Collection
+    public function detailItems(): Collection
     {
         return $this->items;
     }

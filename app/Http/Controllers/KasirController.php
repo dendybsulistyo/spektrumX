@@ -19,10 +19,12 @@ use App\Services\OrderPaymentWorkflow;
 use App\Services\OrderPricingService;
 use App\Support\ResolvesOrderType;
 use App\Support\Rupiah;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
@@ -162,7 +164,7 @@ class KasirController extends Controller
      * Keputusan otorisasi (diskon nota & hutang VIP) yang diambil sejak $since,
      * terbaru dulu. $requesterId membatasi ke pengajuan milik user tertentu.
      */
-    private function authorizationDecisions(\Carbon\CarbonInterface $since, ?int $requesterId = null): \Illuminate\Support\Collection
+    private function authorizationDecisions(CarbonInterface $since, ?int $requesterId = null): Collection
     {
         $authorizations = collect();
         foreach (['indoor' => OrderIndoor::class, 'outdoor' => OrderOutdoor::class, 'artwork' => OrderArtwork::class] as $orderType => $model) {
@@ -356,6 +358,7 @@ class KasirController extends Controller
                     'kasir_user_id' => auth()->id(),
                     'dibayar_at' => now(),
                     'status' => 'desain',
+                    'diproses_kasir_at' => $order->diproses_kasir_at ?? now(),
                 ]);
 
                 OrderStatusNote::create([
@@ -509,6 +512,7 @@ class KasirController extends Controller
                 'kasir_user_id' => auth()->id(),
                 'dibayar_at' => now(),
                 'status' => 'desain',
+                'diproses_kasir_at' => $order->diproses_kasir_at ?? now(),
             ]);
 
             $catatan = trim(collect([
@@ -638,6 +642,7 @@ class KasirController extends Controller
                 'kasir_user_id' => $kasirUserId,
                 'dibayar_at' => now(),
                 'status' => 'desain',
+                'diproses_kasir_at' => $order->diproses_kasir_at ?? now(),
                 'hutang_approved_at' => $approvedBy ? now() : null,
                 'hutang_approved_by' => $approvedBy,
             ]);

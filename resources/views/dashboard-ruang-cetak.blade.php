@@ -521,8 +521,8 @@
                                 <tr x-show="matches('{{ strtolower($row['tipe']) }}', '{{ $row['status'] }}', @js($searchText))"
                                     @class(['is-cancelled' => $row['status'] === 'batal', 'is-late' => $row['telat'] && $row['status'] !== 'batal'])
                                     @if (! empty($row['estimate_deadline']) && $row['status'] !== 'batal')
-                                        {{-- Lewat batas → baris berkedip. Batas = 24 jam sejak order masuk,
-                                             atau Progress Hari dari form CS bila sudah ditentukan. --}}
+                                        {{-- Lewat batas → baris berkedip. Batas = sejak diproses kasir + Progress Hari
+                                             dari form CS (default 1 hari); sama dengan kartu Telat. --}}
                                         x-data="{ deadline: @js($row['estimate_deadline']), now: Date.now() }"
                                         x-init="setInterval(() => now = Date.now(), 60000)"
                                         :class="now > new Date(deadline).getTime() && 'is-late'"
@@ -548,10 +548,10 @@
                                     <td><span class="pill no-dot" style="background: {{ $bayarBg }}; color: {{ $bayarFg }};">{{ $bayarText }}</span></td>
                                     <td class="rcd-proses">
                                         <div>{{ $row['durasi'] ?? '-' }}<x-estimate-badge :deadline="$row['estimate_deadline'] ?? null" compact /></div>
-                                        @if (! empty($row['estimate_deadline']) && $row['created_at'] && ! in_array($row['status'], ['siap_diambil', 'selesai', 'batal'], true))
+                                        @if (! empty($row['estimate_deadline']) && ! empty($row['estimate_start']) && ! in_array($row['status'], ['siap_diambil', 'selesai', 'batal'], true))
                                             {{-- Garis = porsi waktu estimasi yang terpakai; di bawahnya timer sisa/lewat. --}}
                                             <div x-data="{
-                                                     start: @js($row['created_at']->toIso8601String()),
+                                                     start: @js($row['estimate_start']),
                                                      deadline: @js($row['estimate_deadline']),
                                                      now: Date.now(),
                                                      span() { return Math.max(1, new Date(this.deadline) - new Date(this.start)); },

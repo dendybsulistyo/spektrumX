@@ -21,7 +21,7 @@ class OrderLateLogTest extends TestCase
                 $table->string('status');
                 $table->string('status_bayar')->default('lunas');
                 $table->timestamp('created_at')->nullable();
-                foreach (['dibayar_at', 'desain_at', 'cetak_at', 'finishing_at', 'qc_at', 'bungkus_at'] as $column) {
+                foreach (['dibayar_at', 'diproses_kasir_at', 'desain_at', 'cetak_at', 'finishing_at', 'qc_at', 'bungkus_at'] as $column) {
                     $table->timestamp($column)->nullable();
                 }
             });
@@ -32,6 +32,12 @@ class OrderLateLogTest extends TestCase
             $table->unsignedBigInteger('order_id');
             $table->string('stage');
             $table->timestamp('created_at')->nullable();
+        });
+        Schema::create('customer_service_job_sheets', function (Blueprint $table) {
+            $table->id();
+            $table->string('order_type');
+            $table->unsignedBigInteger('order_id');
+            $table->unsignedInteger('progress_hari')->nullable();
         });
         (require database_path('migrations/2026_11_03_095523_create_order_late_logs_table.php'))->up();
         Carbon::setTestNow('2026-11-03 12:00:00');
@@ -78,6 +84,28 @@ class OrderLateLogTest extends TestCase
         app(OrderLateLogService::class)->record();
 
         $this->assertSame('2026-11-03 09:00:00', OrderLateLog::sole()->late_at->format('Y-m-d H:i:s'));
+    }
+
+    public function test_deadline_follows_cashier_time_plus_cs_progress_days(): void
+    {
+        $twoDays = DB::table('order_outdoor')->insertGetId(['status' => 'cetak', 'created_at' => '2026-11-01 08:00:00', 'diproses_kasir_at' => '2026-11-01 09:00:00']);
+        DB::table('order_outdoor')->insert(['status' => 'cetak', 'created_at' => '2026-11-02 08:00:00', 'diproses_kasir_at' => '2026-11-02 09:00:00']);
+        DB::table('customer_service_job_sheets')->insert(['order_type' => 'outdoor', 'order_id' => $twoDays, 'progress_hari' => 2]);
+
+        app(OrderLateLogService::class)->record();
+
+        // 2 hari dari 1 Nov 09:00 = 3 Nov 09:00 (telat); 1 hari dari 2 Nov 09:00 = 3 Nov 09:00 (telat).
+        $this->assertSame(['2026-11-03 09:00:00', '2026-11-03 09:00:00'], OrderLateLog::orderBy('order_id')->get()->map(fn ($log) => $log->late_at->format('Y-m-d H:i:s'))->all());
+    }
+
+    public function test_cs_progress_days_keep_an_order_on_time(): void
+    {
+        $id = DB::table('order_outdoor')->insertGetId(['status' => 'cetak', 'created_at' => '2026-11-02 08:00:00', 'diproses_kasir_at' => '2026-11-02 09:00:00']);
+        DB::table('customer_service_job_sheets')->insert(['order_type' => 'outdoor', 'order_id' => $id, 'progress_hari' => 3]);
+
+        app(OrderLateLogService::class)->record();
+
+        $this->assertDatabaseCount('order_late_logs', 0);
     }
 
     public function test_resolves_log_once_order_is_ready_using_bungkus_time(): void
