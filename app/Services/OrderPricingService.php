@@ -10,6 +10,7 @@ use App\Models\HargaCetakOutdoorKhusus;
 use App\Models\KonfigurasiJasaPotong;
 use App\Models\KonfigurasiJasaPotongArtwork;
 use App\Models\OrderArtwork;
+use App\Models\OrderArtworkDetail;
 use App\Models\OrderIndoor;
 use App\Models\OrderOutdoor;
 use App\Models\PrinterOutdoor;
@@ -136,9 +137,9 @@ class OrderPricingService
 
     /**
      * Outdoor memiliki minimum tagihan satu meter persegi per lembar.
-     * Ukuran produksi asli tetap disimpan pada detail order; hanya ukuran
-     * perhitungan harga dan tampilan SO yang menjadi 100 × 100 cm ketika
-     * luas input kurang dari 1 m².
+     * Ukuran produksi asli tetap disimpan dan ditampilkan; hanya ukuran
+     * perhitungan harga yang menjadi 100 × 100 cm ketika luas input kurang
+     * dari 1 m².
      *
      * @return array{0: float, 1: float}
      */
@@ -382,9 +383,9 @@ class OrderPricingService
                 $hargaSatuan = $item->harga_satuan_snapshot !== null ? (float) $item->harga_satuan_snapshot : null;
             }
 
-            [$displayPanjang, $displayLebar] = $type === 'outdoor'
-                ? $this->outdoorBillableDimensions((float) $item->Panjang, (float) $item->Lebar)
-                : [$item->Panjang, $item->Lebar];
+            // Tampilan selalu ukuran asli (keputusan user 3 Nov 2026); minimal 1 m²
+            // outdoor hanya berlaku pada perhitungan harga di atas.
+            [$displayPanjang, $displayLebar] = [$item->Panjang, $item->Lebar];
 
             return (object) [
                 'name' => $name,
@@ -513,7 +514,7 @@ class OrderPricingService
 
     private function cashierUnitPriceAllowed($item): bool
     {
-        $isArtworkCatalog = $item instanceof \App\Models\OrderArtworkDetail
+        $isArtworkCatalog = $item instanceof OrderArtworkDetail
             || (method_exists($item, 'isArtwork') && $item->isArtwork());
 
         if ($isArtworkCatalog) {
