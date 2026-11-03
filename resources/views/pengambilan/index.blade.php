@@ -123,11 +123,35 @@
                         </div>
                     @endforeach
 
-                    <div x-show="tab === 'transaksi'" x-cloak>
+                    @php
+                        $canArchive = auth()->user()->hasPermission('pengambilan.manage');
+                        // Boleh Simpan langsung / dicentang: lunas, penerimaan lengkap, invoice sudah pernah dicetak.
+                        $directArchivable = fn ($t) => $canArchive && $t->status_bayar === 'lunas' && (float) $t->jumlah_piutang <= 0
+                            && (float) $t->payment_total + 0.01 >= (float) $t->jumlah_dibayar && ($t->invoice_printed ?? false);
+                        $archivableKeys = collect($salesTransactions->items())->filter($directArchivable)
+                            ->map(fn ($t) => $t->order_type.':'.$t->order_id)->values();
+                    @endphp
+                    <div x-show="tab === 'transaksi'" x-cloak x-data="{ picked: [], all: @js($archivableKeys) }">
+                @if ($archivableKeys->isNotEmpty())
+                    <form id="bulk-archive" method="POST" action="{{ route('pengambilan.transaksi.archive-many') }}"
+                          @submit="if (! confirm(`Simpan ${picked.length} transaksi lunas dan hilangkan dari daftar?`)) $event.preventDefault()"
+                          style="display:flex; align-items:center; justify-content:flex-end; gap:var(--space-3); margin-bottom:var(--space-3);">
+                        @csrf
+                        <span class="text-muted" style="font-size:13px;" x-text="picked.length ? picked.length + ' transaksi dicentang' : 'Centang transaksi yang invoice-nya sudah dicetak untuk disimpan sekaligus'"></span>
+                        <button type="submit" class="in-btn" :disabled="! picked.length" :style="! picked.length && 'opacity:.45;cursor:not-allowed'">Simpan yang dicentang</button>
+                    </form>
+                @endif
                 <div class="blueprint" style="overflow-x: auto;">
                     <table class="sales-table">
                         <thead>
                             <tr>
+                                <th style="width: 32px;">
+                                    @if ($archivableKeys->isNotEmpty())
+                                        <input type="checkbox" title="Centang semua yang bisa disimpan"
+                                               :checked="picked.length && picked.length === all.length"
+                                               @change="picked = $event.target.checked ? [...all] : []">
+                                    @endif
+                                </th>
                                 <th>No Invoice</th>
                                 <th>Nama Customer</th>
                                 <th>Tanggal SO</th>
@@ -139,7 +163,13 @@
                         <tbody>
                             @php $canProforma = auth()->user()->hasPermission('kasir.view') || auth()->user()->hasPermission('keuangan.view') || auth()->user()->hasPermission('kasir.piutang-report.view') || auth()->user()->hasPermission('pengambilan.view'); @endphp
                             @forelse ($salesTransactions as $transaction)
+                                @php $archiveKey = $transaction->order_type.':'.$transaction->order_id; @endphp
                                 <tr>
+                                    <td>
+                                        @if ($directArchivable($transaction))
+                                            <input type="checkbox" form="bulk-archive" name="transaksi[]" value="{{ $archiveKey }}" x-model="picked" title="Pilih untuk disimpan">
+                                        @endif
+                                    </td>
                                     <td style="font-family: var(--font-heading); font-weight: 600; white-space: nowrap;">{{ $transaction->invoice }}</td>
                                     <td>{{ $transaction->customer }}</td>
                                     <td style="white-space: nowrap;">{{ \Carbon\CarbonImmutable::parse($transaction->sales_order_date)->format('d-m-Y') }}</td>
@@ -167,7 +197,13 @@
                                             </button>
                                         @else
                                             @php $paymentRecorded = (float) $transaction->payment_total + 0.01 >= (float) $transaction->jumlah_dibayar; @endphp
-                                            @if ($paymentRecorded)
+                                            @if ($directArchivable($transaction))
+                                                <form method="POST" action="{{ route('pengambilan.transaksi.archive-many') }}" style="display:inline;">
+                                                    @csrf
+                                                    <input type="hidden" name="transaksi[]" value="{{ $archiveKey }}">
+                                                    <button type="submit" class="in-btn" title="Invoice sudah dicetak: simpan tanpa membuka pratinjau">Simpan langsung</button>
+                                                </form>
+                                            @elseif ($paymentRecorded)
                                                 <a href="{{ route('invoice.show', ['type' => $transaction->order_type, 'id' => $transaction->order_id, 'source' => 'pengambilan', 'payment_preview' => 1]) }}"
                                                    class="in-btn" style="text-decoration:none;">Simpan</a>
                                             @else
@@ -180,7 +216,7 @@
                                     </td>
                                 </tr>
                             @empty
-                                <tr><td colspan="6" class="text-muted" style="padding: var(--space-6); text-align: center;">{{ $search !== '' ? 'Tidak ada transaksi yang cocok dengan pencarian "'.$search.'".' : 'Belum ada transaksi penjualan Indoor atau Outdoor.' }}</td></tr>
+                                <tr><td colspan="7" class="text-muted" style="padding: var(--space-6); text-align: center;">{{ $search !== '' ? 'Tidak ada transaksi yang cocok dengan pencarian "'.$search.'".' : 'Belum ada transaksi penjualan Indoor atau Outdoor.' }}</td></tr>
                             @endforelse
                         </tbody>
                     </table>

@@ -3,8 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\OrderComment;
-use App\Models\OrderIndoor;
 use App\Models\OrderDocument;
+use App\Models\OrderIndoor;
 use App\Models\OrderOutdoor;
 use App\Models\OrderPayment;
 use App\Models\OrderReworkRequest;
@@ -155,7 +155,13 @@ class PengambilanController extends Controller
                 ->get()->keyBy('id'),
         ];
 
-        $paginator->setCollection($rows->map(function ($transaction) use ($orders) {
+        // Invoice yang sudah pernah dicetak → boleh Simpan langsung / dicentang.
+        $printedInvoices = DB::table('order_document_prints')
+            ->whereIn('order_document_id', $rows->pluck('invoice_document_id')->filter()->unique())
+            ->distinct()->pluck('order_document_id')->flip();
+
+        $paginator->setCollection($rows->map(function ($transaction) use ($orders, $printedInvoices) {
+            $transaction->invoice_printed = $transaction->invoice_document_id && $printedInvoices->has($transaction->invoice_document_id);
             if ($transaction->status_bayar !== 'dp') {
                 return $transaction;
             }
@@ -177,10 +183,53 @@ class PengambilanController extends Controller
     public function archiveTransaction(string $type, int $id): RedirectResponse
     {
         abort_unless(in_array($type, ['indoor', 'outdoor'], true), 404);
+
+        $error = $this->archiveOne($type, $id);
+        if ($error) {
+            return redirect()->route('pengambilan.index', ['tab' => 'transaksi'])->with('error', $error);
+        }
+
+        return redirect()->route('pengambilan.index', ['tab' => 'transaksi'])
+            ->with('status', 'Transaksi lunas sudah tersimpan dan dihilangkan dari daftar.');
+    }
+
+    /**
+     * Simpan langsung (satu atau beberapa yang dicentang) tanpa membuka pratinjau.
+     * Hanya untuk transaksi yang invoice-nya sudah pernah dicetak.
+     */
+    public function archiveTransactions(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'transaksi' => ['required', 'array', 'min:1', 'max:200'],
+            'transaksi.*' => ['string', 'regex:/^(indoor|outdoor):\d+$/'],
+        ], ['transaksi.required' => 'Pilih minimal satu transaksi.']);
+
+        $saved = 0;
+        $errors = [];
+        foreach (array_unique($data['transaksi']) as $key) {
+            [$type, $id] = explode(':', $key);
+            $error = $this->archiveOne($type, (int) $id, requirePrintedInvoice: true);
+            $error ? $errors[] = $this->orderNumber($type, (int) $id).': '.$error : $saved++;
+        }
+
+        $redirect = redirect()->route('pengambilan.index', ['tab' => 'transaksi']);
+        if ($saved > 0) {
+            $redirect->with('status', "{$saved} transaksi lunas tersimpan dan dihilangkan dari daftar.");
+        }
+
+        return $errors ? $redirect->with('error', implode(' · ', $errors)) : $redirect;
+    }
+
+    /** Aturan simpan yang sama untuk tombol Simpan (pratinjau), Simpan langsung, dan simpan beberapa. */
+    private function archiveOne(string $type, int $id, bool $requirePrintedInvoice = false): ?string
+    {
         $model = $type === 'indoor' ? OrderIndoor::class : OrderOutdoor::class;
 
-        $error = DB::transaction(function () use ($model, $type, $id): ?string {
-            $order = $model::query()->lockForUpdate()->findOrFail($id);
+        return DB::transaction(function () use ($model, $type, $id, $requirePrintedInvoice): ?string {
+            $order = $model::query()->lockForUpdate()->find($id);
+            if (! $order) {
+                return 'Order tidak ditemukan.';
+            }
             if ($order->status_bayar !== 'lunas' || (float) $order->jumlah_piutang > 0) {
                 return 'Transaksi belum lunas dan belum dapat disimpan.';
             }
@@ -191,6 +240,10 @@ class PengambilanController extends Controller
                 return 'Penerimaan pembayaran belum tercatat lengkap di Keuangan. Hubungi Kasir sebelum menyimpan transaksi.';
             }
 
+            if ($requirePrintedInvoice && ! $this->invoicePrinted($type, $id)) {
+                return 'Invoice belum dicetak; simpan lewat tombol Simpan (cetak invoice dulu).';
+            }
+
             DB::table('sales_transaction_archives')->updateOrInsert(
                 ['order_type' => $type, 'order_id' => $id],
                 ['archived_by' => auth()->id(), 'archived_at' => now(), 'created_at' => now(), 'updated_at' => now()]
@@ -198,13 +251,22 @@ class PengambilanController extends Controller
 
             return null;
         });
+    }
 
-        if ($error) {
-            return redirect()->route('pengambilan.index', ['tab' => 'transaksi'])->with('error', $error);
-        }
+    private function invoicePrinted(string $type, int $id): bool
+    {
+        return DB::table('order_documents')
+            ->join('order_document_prints', 'order_document_prints.order_document_id', '=', 'order_documents.id')
+            ->where('order_documents.kind', 'inv')->where('order_documents.order_type', $type)
+            ->where('order_documents.order_id', $id)
+            ->exists();
+    }
 
-        return redirect()->route('pengambilan.index', ['tab' => 'transaksi'])
-            ->with('status', 'Transaksi lunas sudah tersimpan dan dihilangkan dari daftar.');
+    private function orderNumber(string $type, int $id): string
+    {
+        $model = $type === 'indoor' ? OrderIndoor::class : OrderOutdoor::class;
+
+        return $model::query()->whereKey($id)->value('NoOrder') ?? "#{$id}";
     }
 
     /**

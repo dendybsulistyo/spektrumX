@@ -611,6 +611,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/pengambilan', [PengambilanController::class, 'index'])->name('pengambilan.index');
     });
     Route::middleware('permission:pengambilan.manage')->group(function () {
+        // Harus sebelum /pengambilan/{type}/{id} agar "transaksi/simpan-langsung" tidak tertangkap route itu.
+        Route::post('/pengambilan/transaksi/simpan-langsung', [PengambilanController::class, 'archiveTransactions'])->name('pengambilan.transaksi.archive-many');
         Route::post('/pengambilan/{type}/{id}', [PengambilanController::class, 'updateItem'])->name('pengambilan.serahkan');
         Route::post('/pengambilan/transaksi/{type}/{id}/simpan', [PengambilanController::class, 'archiveTransaction'])->name('pengambilan.transaksi.archive');
     });
