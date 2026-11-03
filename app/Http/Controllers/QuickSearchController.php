@@ -93,7 +93,7 @@ class QuickSearchController extends Controller
             if (! $typePrefixes && ! $ids && ! $byCustomer) {
                 continue;
             }
-            $model::query()->with('customer:id,KdCust,NmCust')
+            $model::query()->with('customer:id,KdCust,NmCust', 'customer.limit')
                 ->where(function ($query) use ($typePrefixes, $ids, $byCustomer) {
                     foreach ($typePrefixes as $prefix) {
                         $query->orWhere('NoOrder', 'like', $prefix.'%');
@@ -106,7 +106,7 @@ class QuickSearchController extends Controller
                     }
                 })
                 ->orderByDesc('id')->limit(self::LIMIT)
-                ->get(['id', 'NoOrder', 'KdCust', 'TglOrder', 'status', 'status_bayar', 'created_at'])
+                ->get(['id', 'NoOrder', 'KdCust', 'TglOrder', 'status', 'status_bayar', 'jumlah_piutang', 'invoice_voided_at', 'created_at'])
                 ->each(fn (Model $order) => $results->push($this->orderRow($request, $type, $order)));
         }
 
@@ -134,6 +134,7 @@ class QuickSearchController extends Controller
         $user = $request->user();
         $editRoute = "order-{$type}.edit";
         $canEdit = $user->hasPermission("order-{$type}.view") && Route::has($editRoute);
+        $canProforma = $user->hasPermission('kasir.view') || $user->hasPermission('keuangan.view') || $user->hasPermission('kasir.piutang-report.view');
         $canNota = $user->hasPermission('kasir.view') || $user->hasPermission('pengambilan.view')
             || $user->hasPermission('customer-service.view') || $user->hasPermission('keuangan.view');
 
@@ -149,6 +150,7 @@ class QuickSearchController extends Controller
             'created_at' => $order->created_at,
             'edit_url' => $canEdit ? route($editRoute, $order->id) : null,
             'nota_url' => $canNota ? route('invoice.show', ['type' => $type, 'id' => $order->id]) : null,
+            'proforma_url' => $canProforma && ProformaInvoiceController::isAvailableFor($order) ? route('kasir.proforma', ['type' => $type, 'id' => $order->id]) : null,
             'progress_url' => url("/dashboard/order-progress/{$type}/{$order->id}"),
         ];
     }

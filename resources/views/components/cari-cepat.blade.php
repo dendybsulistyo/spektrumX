@@ -84,6 +84,7 @@
                             <div class="cc-actions">
                                 <button type="button" @click.stop="openDetail(o)" title="Lihat riwayat proses">Riwayat</button>
                                 <a x-show="o.nota_url" :href="o.nota_url" @click.stop title="Lihat nota">Nota</a>
+                                <a x-show="o.proforma_url" :href="o.proforma_url" target="_blank" @click.stop title="Cetak Proforma Invoice tagihan VIP">Proforma</a>
                                 <a x-show="o.edit_url" :href="o.edit_url" @click.stop title="Buka order">Buka</a>
                             </div>
                         </div>

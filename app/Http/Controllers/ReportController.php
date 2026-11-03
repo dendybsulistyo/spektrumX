@@ -4,9 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\BahanCetakOutdoor;
 use App\Models\Customer;
+use App\Models\CustomerLimit;
 use App\Models\FinalSalesDiscount;
 use App\Models\HargaCetakOutdoor;
 use App\Models\OrderArtwork;
+use App\Models\OrderDocument;
 use App\Models\OrderIndoor;
 use App\Models\OrderIndoorDetail;
 use App\Models\OrderOutdoor;
@@ -17,6 +19,7 @@ use App\Services\OrderDocumentService;
 use App\Services\OrderPricingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
@@ -92,7 +95,7 @@ class ReportController extends Controller
                 ->get(['order_id', 'jumlah'])
                 ->groupBy('order_id');
             // Nomor INV per order (terbaru bila pernah diterbitkan ulang).
-            $invoiceNumbers = \App\Models\OrderDocument::query()
+            $invoiceNumbers = OrderDocument::query()
                 ->where('kind', 'inv')->where('order_type', $type)
                 ->whereIn('order_id', $orders->pluck('id'))
                 ->orderBy('sequence')->pluck('number', 'order_id');
@@ -165,7 +168,7 @@ class ReportController extends Controller
         return view('reports.daily-settlements', ['date' => $date, ...$this->settlementData($date)]);
     }
 
-    /** @return array{settlementRows: \Illuminate\Support\Collection, settlementTotal: float, byMethod: \Illuminate\Support\Collection} */
+    /** @return array{settlementRows: Collection, settlementTotal: float, byMethod: Collection} */
     private function settlementData(string $date): array
     {
         $models = ['indoor' => OrderIndoor::class, 'outdoor' => OrderOutdoor::class, 'artwork' => OrderArtwork::class];
@@ -552,7 +555,7 @@ class ReportController extends Controller
         if ($selectedCustomer) {
             // Reguler: lunas + sudah ber-INVOICE. VIP (ber-plafon): sudah ber-INVOICE dan DO,
             // boleh belum lunas (sisa tagihannya tampil di kolom Kredit).
-            $isVip = \App\Models\CustomerLimit::query()->where('KdCust', $customerCode)->exists();
+            $isVip = CustomerLimit::query()->where('KdCust', $customerCode)->exists();
             foreach (['indoor' => OrderIndoor::class, 'outdoor' => OrderOutdoor::class, 'artwork' => OrderArtwork::class] as $type => $model) {
                 $relations = $type === 'outdoor' ? ['items.hargaCetak'] : ['items'];
                 $orderTable = (new $model)->getTable();
@@ -670,6 +673,7 @@ class ReportController extends Controller
                         }
                         $rows->push((object) [
                             'date' => $order->TglOrder, 'invoice' => $invoiceNumbers[$order->id] ?? $order->NoOrder,
+                            'order_type' => $type, 'order_id' => $order->id, 'first_item' => $index === 0,
                             'product' => collect([$item->printer, $item->bahan])->filter()->implode(' / ') ?: $item->name,
                             'description' => $item->name, 'length' => $item->panjang, 'width' => $item->lebar,
                             'qty' => $item->qty, 'price' => $item->harga_satuan, 'subtotal' => (float) $item->subtotal,
@@ -694,8 +698,8 @@ class ReportController extends Controller
     {
         // Per bulan (bukan rentang tanggal): ?bulan=2026-10, bawaan bulan berjalan.
         $month = preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', (string) $request->query('bulan')) ? (string) $request->query('bulan') : now()->format('Y-m');
-        $from = \Illuminate\Support\Carbon::createFromFormat('Y-m-d', $month.'-01')->format('Y-m-d');
-        $to = \Illuminate\Support\Carbon::createFromFormat('Y-m-d', $month.'-01')->endOfMonth()->format('Y-m-d');
+        $from = Carbon::createFromFormat('Y-m-d', $month.'-01')->format('Y-m-d');
+        $to = Carbon::createFromFormat('Y-m-d', $month.'-01')->endOfMonth()->format('Y-m-d');
 
         $rows = collect();
         foreach (['indoor' => OrderIndoor::class, 'outdoor' => OrderOutdoor::class, 'artwork' => OrderArtwork::class] as $type => $model) {

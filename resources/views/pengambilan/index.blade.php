@@ -137,6 +137,7 @@
                             </tr>
                         </thead>
                         <tbody>
+                            @php $canProforma = auth()->user()->hasPermission('kasir.view') || auth()->user()->hasPermission('keuangan.view') || auth()->user()->hasPermission('kasir.piutang-report.view'); @endphp
                             @forelse ($salesTransactions as $transaction)
                                 <tr>
                                     <td style="font-family: var(--font-heading); font-weight: 600; white-space: nowrap;">{{ $transaction->invoice }}</td>
@@ -154,6 +155,10 @@
                                         @if ($transaction->invoice_document_id)
                                             <a target="_blank" href="{{ route('order-documents.show', $transaction->invoice_document_id) }}"
                                                class="in-btn" style="text-decoration:none;background:#334155;border-color:#334155;">Invoice</a>
+                                        @endif
+                                        @if ($transaction->status_bayar === 'hutang' && (float) $transaction->jumlah_piutang > 0 && $canProforma)
+                                            <a target="_blank" href="{{ route('kasir.proforma', ['type' => $transaction->order_type, 'id' => $transaction->order_id]) }}"
+                                               class="in-btn" style="text-decoration:none;background:#7c3aed;border-color:#7c3aed;" title="Cetak Proforma Invoice tagihan VIP">Proforma</a>
                                         @endif
                                         @if (in_array($transaction->status_bayar, ['dp', 'hutang']))
                                             <button type="button" class="in-btn"

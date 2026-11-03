@@ -68,6 +68,7 @@ use App\Http\Controllers\PrinterOutdoorController;
 use App\Http\Controllers\PrinterPerformanceController;
 use App\Http\Controllers\ProdukController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ProformaInvoiceController;
 use App\Http\Controllers\QuickSearchController;
 use App\Http\Controllers\RekapPenerimaanController;
 use App\Http\Controllers\ReportController;
@@ -477,6 +478,12 @@ Route::middleware('auth')->group(function () {
     Route::post('/invoice/{type}/{id}/register-print', [InvoiceController::class, 'registerPrint'])->name('invoice.register-print');
     // Catat cetak DO/Invoice; dipakai juga oleh cetak Invoice setelah pembayaran di Pengambilan.
     Route::post('/order-documents/{document}/register-print', [OrderDocumentController::class, 'registerPrint'])->name('order-documents.register-print');
+
+    // Proforma Invoice tagihan VIP (hanya tampilan, tanpa nomor dokumen/jurnal).
+    Route::middleware('permission.any:kasir.view,keuangan.view,kasir.piutang-report.view')->group(function () {
+        Route::get('/kasir/{type}/{id}/proforma', [ProformaInvoiceController::class, 'show'])
+            ->whereIn('type', ['indoor', 'outdoor', 'artwork'])->whereNumber('id')->name('kasir.proforma');
+    });
 
     Route::middleware('permission:kasir.view')->group(function () {
         Route::get('/kasir', [KasirController::class, 'index'])->name('kasir.index');
