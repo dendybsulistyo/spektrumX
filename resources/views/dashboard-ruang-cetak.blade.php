@@ -193,6 +193,11 @@
             #rc-dashboard .rcd-meter { width: 56px; height: 3px; margin: 3px auto 0; border-radius: 2px; background: #efe9db; overflow: hidden; }
             #rc-dashboard .rcd-meter > i { display: block; height: 100%; background: var(--cyan); }
             #rc-dashboard .rcd-meter > i.is-full { background: var(--green); }
+            #rc-dashboard .rcd-meter-time { margin: 4px 0 0 auto; }
+            #rc-dashboard .rcd-meter-time > i { background: var(--green); }
+            #rc-dashboard .rcd-meter-time > i.is-late { background: #dc2626; }
+            #rc-dashboard .rcd-timer { display: block; margin-top: 2px; font-size: 10.5px; color: var(--muted); }
+            #rc-dashboard .rcd-timer.is-late { color: #dc2626; font-weight: 600; }
             #rc-dashboard .rcd-empty { padding: 28px; text-align: center; color: var(--muted); }
 
             /* ---------- Popup riwayat ---------- */
@@ -526,7 +531,6 @@
                                     <td style="white-space: nowrap;">
                                         <button type="button" class="rcd-order" @click="openHistory('{{ $row['type_slug'] }}', {{ $row['id'] }})"
                                                 title="Lihat riwayat proses">{{ $row['no_order'] }}</button>
-                                        <x-estimate-badge :deadline="$row['estimate_deadline'] ?? null" compact />
                                     </td>
                                     <td>
                                         <div class="rcd-customer">{{ $row['customer'] ? ucwords(mb_strtolower($row['customer'])) : '-' }}</div>
@@ -542,7 +546,28 @@
                                         @endif
                                     </td>
                                     <td><span class="pill no-dot" style="background: {{ $bayarBg }}; color: {{ $bayarFg }};">{{ $bayarText }}</span></td>
-                                    <td class="rcd-proses">{{ $row['durasi'] ?? '-' }}</td>
+                                    <td class="rcd-proses">
+                                        <div>{{ $row['durasi'] ?? '-' }}<x-estimate-badge :deadline="$row['estimate_deadline'] ?? null" compact /></div>
+                                        @if (! empty($row['estimate_deadline']) && $row['created_at'] && ! in_array($row['status'], ['siap_diambil', 'selesai', 'batal'], true))
+                                            {{-- Garis = porsi waktu estimasi yang terpakai; di bawahnya timer sisa/lewat. --}}
+                                            <div x-data="{
+                                                     start: @js($row['created_at']->toIso8601String()),
+                                                     deadline: @js($row['estimate_deadline']),
+                                                     now: Date.now(),
+                                                     span() { return Math.max(1, new Date(this.deadline) - new Date(this.start)); },
+                                                     used() { return Math.min(100, Math.max(0, (this.now - new Date(this.start)) / this.span() * 100)); },
+                                                     late() { return this.now > new Date(this.deadline).getTime(); },
+                                                     label() {
+                                                         const ms = Math.abs(new Date(this.deadline) - this.now), h = Math.floor(ms / 3600000), m = Math.floor(ms % 3600000 / 60000);
+                                                         return (this.late() ? 'Lewat ' : 'Sisa ') + (h ? h + ' jam ' : '') + m + ' mnt';
+                                                     },
+                                                 }"
+                                                 x-init="setInterval(() => now = Date.now(), 30000)">
+                                                <div class="rcd-meter rcd-meter-time"><i :class="late() && 'is-late'" :style="`width: ${late() ? 100 : used()}%`"></i></div>
+                                                <small class="rcd-timer" :class="late() && 'is-late'" x-text="label()"></small>
+                                            </div>
+                                        @endif
+                                    </td>
                                     <td class="rcd-people">{{ $row['operator_file'] ?? '-' }}</td>
                                     <td class="rcd-people">{{ $row['kasir'] ?? '-' }}</td>
                                     @foreach (array_keys($stageCols) as $key)
