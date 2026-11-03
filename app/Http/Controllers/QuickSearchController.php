@@ -11,6 +11,7 @@ use App\Services\OrderLateLogService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
@@ -106,7 +107,7 @@ class QuickSearchController extends Controller
                     }
                 })
                 ->orderByDesc('id')->limit(self::LIMIT)
-                ->get(['id', 'NoOrder', 'KdCust', 'TglOrder', 'status', 'status_bayar', 'jumlah_piutang', 'invoice_voided_at', 'created_at'])
+                ->get(['id', 'NoOrder', 'KdCust', 'TglOrder', 'status', 'status_bayar', 'jumlah_piutang', 'invoice_voided_at', 'created_at', 'dibayar_at'])
                 ->each(fn (Model $order) => $results->push($this->orderRow($request, $type, $order)));
         }
 
@@ -123,7 +124,7 @@ class QuickSearchController extends Controller
         return $results->map(function (array $row) use ($invoices, $lateLogs) {
             $row['invoice'] = $invoices->get($row['type'].'-'.$row['id'])?->number;
             $row['late'] = $this->lateInfo($lateLogs->get($row['type'].'-'.$row['id']), $row);
-            unset($row['created_at']);
+            unset($row['dibayar_at']);
 
             return $row;
         })->sortByDesc('date')->take(self::LIMIT)->values();
@@ -147,7 +148,7 @@ class QuickSearchController extends Controller
             'date_label' => optional($order->TglOrder)->locale('id')->translatedFormat('d M Y'),
             'status' => $order->status,
             'status_bayar' => $order->status_bayar,
-            'created_at' => $order->created_at,
+            'dibayar_at' => $order->dibayar_at,
             'edit_url' => $canEdit ? route($editRoute, $order->id) : null,
             'nota_url' => $canNota ? route('invoice.show', ['type' => $type, 'id' => $order->id]) : null,
             'proforma_url' => $canProforma && ProformaInvoiceController::isAvailableFor($order) ? route('kasir.proforma', ['type' => $type, 'id' => $order->id]) : null,
@@ -173,10 +174,12 @@ class QuickSearchController extends Controller
             return ['ongoing' => $ongoing, 'label' => $label];
         }
 
-        $createdAt = $row['created_at'] ?? null;
-        if ($createdAt && ! in_array($row['status'], OrderLateLogService::DONE_STATUSES, true)
-            && $createdAt->lt(now()->subHours(OrderLateLog::LATE_AFTER_HOURS))) {
-            return ['ongoing' => true, 'label' => 'Sedang telat (lewat 24 jam, belum siap diambil)'];
+        // Jam telat berjalan sejak dibayar/diproses kasir; order belum bayar tidak dihitung.
+        $paidAt = $row['dibayar_at'] ?? null;
+        if ($paidAt && $row['status_bayar'] !== 'belum_bayar'
+            && ! in_array($row['status'], [...OrderLateLogService::DONE_STATUSES, ...OrderLateLogService::UNPAID_STATUSES], true)
+            && Carbon::parse($paidAt)->lt(now()->subHours(OrderLateLog::LATE_AFTER_HOURS))) {
+            return ['ongoing' => true, 'label' => 'Sedang telat (lewat 24 jam sejak dibayar, belum siap diambil)'];
         }
 
         return null;

@@ -9,7 +9,7 @@ class CatatOrderTelat extends Command
 {
     protected $signature = 'telat:catat';
 
-    protected $description = 'Catat order yang telat (> 24 jam belum Siap Diambil) dan tutup catatan order yang sudah siap';
+    protected $description = 'Catat order yang telat (> 24 jam sejak dibayar belum Siap Diambil) dan tutup catatan order yang sudah siap';
 
     public function handle(OrderLateLogService $lateLogs): int
     {

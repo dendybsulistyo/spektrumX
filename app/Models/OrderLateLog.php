@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * Order yang pernah telat (> 24 jam belum Siap Diambil). is_estimated = hasil
+ * Order yang pernah telat (> 24 jam sejak pertama diproses kasir belum Siap Diambil). is_estimated = hasil
  * backfill dari waktu Bungkus, bukan tercatat langsung oleh scheduler.
  */
 class OrderLateLog extends Model

@@ -157,7 +157,7 @@ class Role extends Model
             'papan-pantau.view' => 'Lihat papan pantau produksi lintas tahap (read-only)',
         ],
         'History Telat' => [
-            'history-telat.view' => 'Lihat history order yang pernah telat (> 24 jam belum siap diambil)',
+            'history-telat.view' => 'Lihat history order yang pernah telat (> 24 jam sejak dibayar belum siap diambil)',
         ],
         'Menu Pajak & Akuntansi' => [
             'menu.perpajakan' => 'Tampilkan kolom menu Perpajakan (butuh juga "Lihat rekap kas harian & laporan akuntansi")',

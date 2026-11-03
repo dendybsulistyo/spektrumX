@@ -9,13 +9,16 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Pencatat order telat. Aturan sama dengan kartu telat dashboard: lewat 24 jam
- * sejak dibuat dan belum Siap Diambil / Selesai / Batal.
+ * Pencatat order telat. Telat = lewat 24 jam sejak pertama diproses kasir (dibayar/hutang)
+ * dan belum Siap Diambil / Selesai / Batal. Order belum bayar tidak dihitung.
  */
 class OrderLateLogService
 {
     /** Status yang berarti order sudah tidak (bisa) telat lagi. */
     public const DONE_STATUSES = ['siap_diambil', 'selesai', 'batal'];
+
+    /** Status sebelum kasir: belum dibayar, jam telat belum berjalan. */
+    public const UNPAID_STATUSES = ['baru'];
 
     /** Urutan tahap untuk menebak posisi order saat batas 24 jam (backfill). */
     private const STAGE_COLUMNS = ['desain' => 'desain_at', 'cetak' => 'cetak_at', 'finishing' => 'finishing_at', 'qc' => 'qc_at', 'bungkus' => 'bungkus_at'];
@@ -29,24 +32,32 @@ class OrderLateLogService
 
     /**
      * Catat order yang sedang telat dan tutup log order yang sudah siap.
+     * Hitungan dimulai sejak order pertama kali diproses kasir (dibayar/hutang),
+     * bukan sejak dibuat: order yang belum dibayar tidak pernah dihitung telat.
      *
      * @return array{opened: int, resolved: int}
      */
     public function record(?Carbon $now = null): array
     {
         $now ??= now();
-        $cutoff = $now->copy()->subHours(OrderLateLog::LATE_AFTER_HOURS);
         $opened = 0;
 
         foreach (OrderDocumentService::MODELS as $type => $model) {
             DB::table((new $model)->getTable())
                 ->whereNotNull('created_at')
-                ->where('created_at', '<', $cutoff)
-                ->whereNotIn('status', self::DONE_STATUSES)
-                ->select(['id', 'created_at', 'status'])
+                ->whereNotIn('status', [...self::DONE_STATUSES, ...self::UNPAID_STATUSES])
+                ->where('status_bayar', '!=', 'belum_bayar')
+                ->select(['id', 'created_at', 'status', 'dibayar_at'])
                 ->chunkById(self::CHUNK, function (Collection $orders) use ($type, $now, &$opened) {
-                    $rows = $orders->map(fn ($order) => $this->row($type, $order->id, Carbon::parse($order->created_at), $order->status, false, $now))->all();
-                    $opened += DB::table('order_late_logs')->insertOrIgnore($rows);
+                    $starts = $this->paidStarts($type, $orders);
+                    $rows = [];
+                    foreach ($orders as $order) {
+                        $lateAt = $starts[$order->id]?->copy()->addHours(OrderLateLog::LATE_AFTER_HOURS);
+                        if ($lateAt && $lateAt->lt($now)) {
+                            $rows[] = $this->row($type, $order->id, Carbon::parse($order->created_at), $lateAt, $order->status, false, $now);
+                        }
+                    }
+                    $opened += $rows ? DB::table('order_late_logs')->insertOrIgnore($rows) : 0;
                 });
         }
 
@@ -55,7 +66,7 @@ class OrderLateLogService
 
     /**
      * Isi log perkiraan untuk order lama yang sudah siap: telat bila Bungkus selesai
-     * lebih dari 24 jam setelah order dibuat. Order tanpa waktu Bungkus dilewati.
+     * lebih dari 24 jam setelah pertama diproses kasir. Order tanpa waktu Bungkus dilewati.
      *
      * @param  callable(string, int): void|null  $progress
      */
@@ -71,15 +82,15 @@ class OrderLateLogService
                 ->whereNotNull('bungkus_at')
                 ->select(['id', 'created_at', 'status', 'dibayar_at', ...array_values(self::STAGE_COLUMNS)])
                 ->chunkById(self::CHUNK, function (Collection $orders) use ($type, $now, $progress, &$inserted) {
+                    $starts = $this->paidStarts($type, $orders);
                     $rows = [];
                     foreach ($orders as $order) {
-                        $createdAt = Carbon::parse($order->created_at);
-                        $lateAt = $createdAt->copy()->addHours(OrderLateLog::LATE_AFTER_HOURS);
+                        $lateAt = $starts[$order->id]?->copy()->addHours(OrderLateLog::LATE_AFTER_HOURS);
                         $readyAt = Carbon::parse($order->bungkus_at);
-                        if ($readyAt->lte($lateAt)) {
+                        if (! $lateAt || $readyAt->lte($lateAt)) {
                             continue;
                         }
-                        $row = $this->row($type, $order->id, $createdAt, $this->stageAt($order, $lateAt), true, $now);
+                        $row = $this->row($type, $order->id, Carbon::parse($order->created_at), $lateAt, $this->stageAt($order, $lateAt), true, $now);
                         $rows[] = ['resolved_at' => $readyAt, 'resolved_status' => $order->status] + $row;
                     }
                     $count = $rows ? DB::table('order_late_logs')->insertOrIgnore($rows) : 0;
@@ -91,6 +102,35 @@ class OrderLateLogService
         }
 
         return $inserted;
+    }
+
+    /** Hapus semua log (dipakai sebelum backfill ulang setelah aturan berubah). */
+    public function reset(): int
+    {
+        return DB::table('order_late_logs')->delete();
+    }
+
+    /**
+     * Waktu order pertama kali diproses kasir: catatan status kasir paling awal
+     * (tidak berubah saat pelunasan), atau dibayar_at bila catatannya tidak ada.
+     *
+     * @param  Collection<int, object>  $orders
+     * @return array<int, Carbon|null>
+     */
+    private function paidStarts(string $type, Collection $orders): array
+    {
+        $notes = Schema::hasTable('order_status_notes')
+            ? DB::table('order_status_notes')->where('order_type', $type)->where('stage', 'kasir')
+                ->whereIn('order_id', $orders->pluck('id'))
+                ->groupBy('order_id')->selectRaw('order_id, MIN(created_at) as first_at')
+                ->pluck('first_at', 'order_id')
+            : collect();
+
+        return $orders->mapWithKeys(function ($order) use ($notes) {
+            $start = $notes->get($order->id) ?? $order->dibayar_at;
+
+            return [$order->id => $start ? Carbon::parse($start) : null];
+        })->all();
     }
 
     /**
@@ -128,11 +168,17 @@ class OrderLateLogService
                 }
                 $orders = DB::table((new $model)->getTable())
                     ->whereIn('id', $typeLogs->pluck('order_id'))
-                    ->get(['id', 'status', 'bungkus_at'])
+                    ->get(['id', 'status', 'status_bayar', 'bungkus_at'])
                     ->keyBy('id');
 
                 foreach ($typeLogs as $log) {
                     $order = $orders->get($log->order_id);
+                    // Tercatat dengan aturan lama padahal belum dibayar: bukan telat.
+                    if ($order && (in_array($order->status, self::UNPAID_STATUSES, true) || $order->status_bayar === 'belum_bayar')) {
+                        $log->delete();
+
+                        continue;
+                    }
                     if ($order && ! in_array($order->status, self::DONE_STATUSES, true)) {
                         continue;
                     }
@@ -173,13 +219,13 @@ class OrderLateLogService
     /**
      * @return array<string, mixed>
      */
-    private function row(string $type, int $orderId, Carbon $createdAt, ?string $stage, bool $estimated, Carbon $now): array
+    private function row(string $type, int $orderId, Carbon $createdAt, Carbon $lateAt, ?string $stage, bool $estimated, Carbon $now): array
     {
         return [
             'order_type' => $type,
             'order_id' => $orderId,
             'order_created_at' => $createdAt,
-            'late_at' => $createdAt->copy()->addHours(OrderLateLog::LATE_AFTER_HOURS),
+            'late_at' => $lateAt,
             'stage' => $stage,
             'resolved_at' => null,
             'resolved_status' => null,

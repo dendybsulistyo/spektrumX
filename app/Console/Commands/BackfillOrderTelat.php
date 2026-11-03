@@ -7,7 +7,7 @@ use Illuminate\Console\Command;
 
 class BackfillOrderTelat extends Command
 {
-    protected $signature = 'telat:backfill';
+    protected $signature = 'telat:backfill {--ulang : hapus semua catatan lalu hitung ulang (setelah aturan telat berubah)}';
 
     protected $description = 'Isi history telat order lama (perkiraan dari waktu Bungkus). Aman dijalankan ulang.';
 
@@ -17,6 +17,10 @@ class BackfillOrderTelat extends Command
             $this->error('Tabel order_late_logs belum ada; jalankan migrasi dulu.');
 
             return self::FAILURE;
+        }
+
+        if ($this->option('ulang')) {
+            $this->line($lateLogs->reset().' catatan lama dihapus.');
         }
 
         $total = $lateLogs->backfill(function (string $type, int $count) {
