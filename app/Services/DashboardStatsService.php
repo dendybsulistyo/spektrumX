@@ -21,6 +21,9 @@ class DashboardStatsService
     private const OVERDUE_EXCLUDED_STATUSES = ['baru', 'siap_diambil', 'selesai', 'batal'];
 
     /**
+     * Kartu status bayar (belum bayar/lunas/hutang/DP + nominal) tidak menghitung order
+     * batal: nota hangus tetap berstatus bayar lunas/hutang dan akan dobel dengan penggantinya.
+     *
      * @return array<string, mixed>
      */
     public function stats(?string $from = null, ?string $to = null): array
@@ -29,12 +32,12 @@ class DashboardStatsService
         $totals = collect($this->scopedQueries($from, $to))->values()
             ->map(fn ($query, $index) => $query->selectRaw(''
                 .'COUNT(*) as total, '
-                .'SUM(CASE WHEN status_bayar = "belum_bayar" THEN 1 ELSE 0 END) as belum_bayar, '
-                .'SUM(CASE WHEN status_bayar = "lunas" THEN 1 ELSE 0 END) as lunas, '
-                .'SUM(CASE WHEN status_bayar = "hutang" THEN 1 ELSE 0 END) as hutang, '
-                .'COALESCE(SUM(CASE WHEN status_bayar = "hutang" THEN jumlah_piutang ELSE 0 END), 0) as hutang_nominal, '
-                .'SUM(CASE WHEN status_bayar = "dp" THEN 1 ELSE 0 END) as dp, '
-                .'COALESCE(SUM(CASE WHEN status_bayar = "dp" THEN jumlah_piutang ELSE 0 END), 0) as dp_nominal, '
+                .'SUM(CASE WHEN status <> "batal" AND status_bayar = "belum_bayar" THEN 1 ELSE 0 END) as belum_bayar, '
+                .'SUM(CASE WHEN status <> "batal" AND status_bayar = "lunas" THEN 1 ELSE 0 END) as lunas, '
+                .'SUM(CASE WHEN status <> "batal" AND status_bayar = "hutang" THEN 1 ELSE 0 END) as hutang, '
+                .'COALESCE(SUM(CASE WHEN status <> "batal" AND status_bayar = "hutang" THEN jumlah_piutang ELSE 0 END), 0) as hutang_nominal, '
+                .'SUM(CASE WHEN status <> "batal" AND status_bayar = "dp" THEN 1 ELSE 0 END) as dp, '
+                .'COALESCE(SUM(CASE WHEN status <> "batal" AND status_bayar = "dp" THEN jumlah_piutang ELSE 0 END), 0) as dp_nominal, '
                 .'SUM(CASE WHEN status = "desain" THEN 1 ELSE 0 END) as desain, '
                 .'SUM(CASE WHEN status = "cetak" THEN 1 ELSE 0 END) as cetak, '
                 .'SUM(CASE WHEN status = "finishing" THEN 1 ELSE 0 END) as finishing, '
