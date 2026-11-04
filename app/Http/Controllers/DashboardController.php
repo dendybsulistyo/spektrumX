@@ -42,9 +42,9 @@ class DashboardController extends Controller
     public function orderProgress(string $type, int $id): JsonResponse
     {
         $order = match ($type) {
-            'indoor' => OrderIndoor::with('customer', 'items')->findOrFail($id),
+            'indoor' => OrderIndoor::with('customer', 'items.produk.kategori', 'items.produkArtwork.kategori')->findOrFail($id),
             'outdoor' => OrderOutdoor::with('customer', 'items')->findOrFail($id),
-            'artwork' => OrderArtwork::with('customer', 'items')->findOrFail($id),
+            'artwork' => OrderArtwork::with('customer', 'items.produk.kategori')->findOrFail($id),
             default => abort(404),
         };
 
@@ -66,6 +66,7 @@ class DashboardController extends Controller
                 'Gabungan' => $item->gabungan,
             ] : [
                 'Produk' => trim($item->KdProd.' · '.$item->NmProd, ' ·'),
+                'Kategori' => $type === 'indoor' ? $item->divisionName() : $item->produk?->kategori?->NmDivs,
                 'Ukuran (P × L)' => (float) $item->Panjang > 0 || (float) $item->Lebar > 0 ? $number($item->Panjang).' × '.$number($item->Lebar) : null,
                 'Pisau turun' => $item->PisauTurun,
                 'Jumlah kertas' => $item->JumlahKertas,
