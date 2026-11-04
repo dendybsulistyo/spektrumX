@@ -26,6 +26,8 @@ class KoreksiHangusJadiBatalTotalTest extends TestCase
                 $t->decimal('jumlah_piutang', 15, 2)->default(0);
                 $t->timestamp('invoice_voided_at')->nullable();
                 $t->unsignedBigInteger('replacement_order_id')->nullable();
+                $t->timestamp('cancel_approved_at')->nullable();
+                $t->unsignedBigInteger('cancel_approved_by')->nullable();
                 $t->timestamps();
             });
         }
@@ -105,5 +107,34 @@ class KoreksiHangusJadiBatalTotalTest extends TestCase
         $this->voidedOrder();
 
         $this->artisan('spektrum:koreksi-hangus-batal', $this->commandOptions(['--refund' => '50000', '--jalankan' => true]))->assertFailed();
+    }
+
+    public function test_cancels_picked_up_order_with_flag_and_reason(): void
+    {
+        $id = $this->voidedOrder(['NoOrder' => 'IND.2.261103022', 'status' => 'siap_diambil', 'jumlah_dibayar' => 39800, 'invoice_voided_at' => null]);
+        $service = Mockery::mock(OrderCancellationRefund::class);
+        $service->shouldReceive('process')->once()
+            ->withArgs(fn ($order, $type, $refund) => $order->status === 'batal' && $refund['refund'] === 39800.0)
+            ->andReturn('Refund Rp 39.800 (Tunai).');
+        $this->app->instance(OrderCancellationRefund::class, $service);
+
+        $this->artisan('spektrum:koreksi-hangus-batal', $this->commandOptions([
+            'nomor' => 'IND.2.261103022', '--refund' => '39800', '--bukan-hangus' => true,
+            '--keterangan' => 'Complaint, diganti nota 040.', '--jalankan' => true,
+        ]))->expectsConfirmation('Lanjutkan koreksi?', 'yes')->assertSuccessful();
+
+        $order = DB::table('order_indoor')->find($id);
+        $this->assertSame(['batal', 1], [$order->status, (int) $order->cancel_approved_by]);
+        $this->assertStringContainsString('Complaint, diganti nota 040.', DB::table('order_status_notes')->value('catatan'));
+    }
+
+    public function test_active_order_requires_flag_and_reason(): void
+    {
+        $this->voidedOrder(['status' => 'siap_diambil', 'invoice_voided_at' => null]);
+
+        $this->artisan('spektrum:koreksi-hangus-batal', $this->commandOptions(['--jalankan' => true]))->assertFailed();
+        $this->artisan('spektrum:koreksi-hangus-batal', $this->commandOptions(['--bukan-hangus' => true, '--jalankan' => true]))->assertFailed();
+
+        $this->assertSame('siap_diambil', DB::table('order_indoor')->value('status'));
     }
 }

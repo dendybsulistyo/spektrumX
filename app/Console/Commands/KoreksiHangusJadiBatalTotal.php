@@ -22,10 +22,14 @@ use Illuminate\Validation\ValidationException;
  *
  *   php artisan spektrum:koreksi-hangus-batal IND.2.261103072 --refund=47800 --cara=tunai --user=email@user           → hanya tampilkan
  *   php artisan spektrum:koreksi-hangus-batal IND.2.261103072 --refund=47800 --cara=tunai --user=email@user --jalankan
+ *
+ * --bukan-hangus: order belum batal (mis. sudah diambil, complaint, lalu dibuat
+ * nota baru yang dibayar penuh memakai uang nota lama) ikut dibatalkan total;
+ * --keterangan wajib diisi.
  */
 class KoreksiHangusJadiBatalTotal extends Command
 {
-    protected $signature = 'spektrum:koreksi-hangus-batal {nomor : No. Order yang hangus} {--refund= : nominal uang yang dikembalikan} {--cara=tunai : tunai/transfer} {--referensi= : no. referensi transfer} {--user= : email user pencatat refund} {--keterangan= : tambahan catatan} {--jalankan : benar-benar menyimpan (tanpa ini hanya menampilkan)}';
+    protected $signature = 'spektrum:koreksi-hangus-batal {nomor : No. Order yang hangus} {--refund= : nominal uang yang dikembalikan} {--cara=tunai : tunai/transfer} {--referensi= : no. referensi transfer} {--user= : email user pencatat refund} {--keterangan= : tambahan catatan} {--bukan-hangus : batalkan total order yang belum batal (mis. sudah diambil lalu diganti nota baru)} {--jalankan : benar-benar menyimpan (tanpa ini hanya menampilkan)}';
 
     protected $description = 'Ubah nota hangus (tanpa nota pengganti resmi) menjadi Batal Total beserta refund & jurnalnya';
 
@@ -39,8 +43,16 @@ class KoreksiHangusJadiBatalTotal extends Command
 
             return self::FAILURE;
         }
-        if ($order->status !== 'batal' || ! $order->invoice_voided_at) {
-            $this->error("{$order->NoOrder} bukan nota hangus (status {$order->status}).");
+        $notVoided = (bool) $this->option('bukan-hangus');
+        if ($notVoided && ($order->status === 'batal' || ! trim((string) $this->option('keterangan')))) {
+            $this->error($order->status === 'batal'
+                ? "{$order->NoOrder} sudah batal."
+                : 'Isi --keterangan (alasan, mis. nota pengganti) untuk membatalkan order yang bukan nota hangus.');
+
+            return self::FAILURE;
+        }
+        if (! $notVoided && ($order->status !== 'batal' || ! $order->invoice_voided_at)) {
+            $this->error("{$order->NoOrder} bukan nota hangus (status {$order->status}). Pakai --bukan-hangus bila order ini memang harus dibatalkan total.");
 
             return self::FAILURE;
         }
@@ -81,9 +93,11 @@ class KoreksiHangusJadiBatalTotal extends Command
 
         Auth::setUser($user);
 
-        $note = DB::transaction(function () use ($order, $type, $refund, $refundService, $user) {
+        $note = DB::transaction(function () use ($order, $type, $refund, $refundService, $user, $notVoided) {
             $order = $order->newQuery()->lockForUpdate()->findOrFail($order->id);
-            $order->update(['invoice_voided_at' => null]);
+            $order->update($notVoided
+                ? ['status' => 'batal', 'cancel_approved_at' => now(), 'cancel_approved_by' => $user->id]
+                : ['invoice_voided_at' => null]);
             $note = $refundService->process($order, $type, $refund);
 
             OrderStatusNote::create([
@@ -91,7 +105,8 @@ class KoreksiHangusJadiBatalTotal extends Command
                 'order_id' => $order->id,
                 'stage' => 'pembatalan',
                 'action' => 'disetujui',
-                'catatan' => trim('Dikoreksi menjadi batal total (nota pengganti dibuat sebagai order biasa). '.$note.' '.$this->option('keterangan')),
+                'catatan' => trim(($notVoided ? 'Batal total koreksi. ' : 'Dikoreksi menjadi batal total (nota pengganti dibuat sebagai order biasa). ')
+                    .$note.' '.$this->option('keterangan')),
                 'user_id' => $user->id,
                 'created_at' => now(),
             ]);
