@@ -57,6 +57,9 @@ class OrderIndoorDetailTest extends TestCase
             'DTF Sticker' => ['Print DTF Sticker'],
             'DTF UV' => ['Print DTF UV'],
             'UV DTF' => ['Print UV DTF'],
+            'singkatan STC' => ['DUNIA AKHIRAT STC DTF'],
+            'ejaan stiker' => ['Logo Toko (Stiker DTF)'],
+            'DTF stiker' => ['Print DTF Stiker 10 cm'],
         ];
     }
 }
