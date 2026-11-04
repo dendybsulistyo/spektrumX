@@ -30,7 +30,7 @@ class MonitoringKinerjaController extends Controller
      * Outdoor Laminat, Floor Laminat, Ongkos Kirim, Biaya Edit, Lobang Mata Ayam,
      * Universal Laser Cutting A3 (artwork), Tas Plastik / Kresek.
      */
-    private const EXCLUDED_RECAP_PRODUCTS = ['1101', '1102', '2001', '2002', '2017', '1612', '2804'];
+    public const EXCLUDED_RECAP_PRODUCTS = ['1101', '1102', '2001', '2002', '2017', '1612', '2804'];
 
     private const ORDER_TYPE_LABELS = [
         'indoor' => 'Indoor',

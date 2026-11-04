@@ -18,6 +18,7 @@ use App\Http\Controllers\DataWarehouseController;
 use App\Http\Controllers\DeletedOrderLogController;
 use App\Http\Controllers\DetailIndoorController;
 use App\Http\Controllers\DiskonApprovalController;
+use App\Http\Controllers\EmployeeOfMonthController;
 use App\Http\Controllers\FileMonitorController;
 use App\Http\Controllers\FinalSalesDiscountController;
 use App\Http\Controllers\GunggunganController;
@@ -162,6 +163,10 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware('permission:rekap-bulanan.view')->group(function () {
         Route::get('/analitik/rekap-transaksi-bulanan', [MonthlyTransactionController::class, 'index'])->name('rekap-bulanan.index');
+    });
+
+    Route::middleware('permission:employee-of-month.view')->group(function () {
+        Route::get('/employee-of-the-month', EmployeeOfMonthController::class)->name('employee-of-month.index');
     });
 
     Route::middleware('permission:history-telat.view')->group(function () {

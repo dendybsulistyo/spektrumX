@@ -159,6 +159,9 @@ class Role extends Model
         'History Telat' => [
             'history-telat.view' => 'Lihat history order yang pernah telat (> 24 jam sejak dibayar belum siap diambil)',
         ],
+        'Employee of the Month' => [
+            'employee-of-month.view' => 'Lihat peringkat Employee of the Month per divisi',
+        ],
         'Menu Pajak & Akuntansi' => [
             'menu.perpajakan' => 'Tampilkan kolom menu Perpajakan (butuh juga "Lihat rekap kas harian & laporan akuntansi")',
             'menu.akuntansi' => 'Tampilkan kolom menu Akuntansi (butuh juga "Lihat rekap kas harian & laporan akuntansi")',
