@@ -13,6 +13,11 @@
         .nota-group td.nota-cell { background:#fff; }
         .nota-group { break-inside:avoid; }
         .nota-group tr + tr td.line { border-top-style:dotted; }
+        /* Header tabel tetap terlihat saat di-scroll (layar saja; cetak tetap mengulang header per halaman). */
+        @media screen {
+            .daily-report .overflow-x-auto { max-height:calc(100vh - 140px); overflow:auto; }
+            .daily-report thead th { position:sticky; top:0; z-index:2; box-shadow:inset 0 -1px 0 #64748b; }
+        }
         @media print {
             @page { size:A4 landscape; margin:8mm; }
             body { background:#fff !important; }

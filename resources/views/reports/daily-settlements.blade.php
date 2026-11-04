@@ -8,6 +8,11 @@
         .daily-report th { background:#e2e8f0; text-align:center; white-space:nowrap; font-weight:700; }
         .daily-report .number { text-align:right; white-space:nowrap; }
         .daily-report .center { text-align:center; white-space:nowrap; }
+        /* Header tabel tetap terlihat saat di-scroll (layar saja; cetak tetap mengulang header per halaman). */
+        @media screen {
+            .daily-report .overflow-x-auto { max-height:calc(100vh - 140px); overflow:auto; }
+            .daily-report thead th { position:sticky; top:0; z-index:2; box-shadow:inset 0 -1px 0 #64748b; }
+        }
         @media print {
             @page { size:A4 landscape; margin:8mm; }
             body { background:#fff !important; }
