@@ -279,7 +279,7 @@ class KasirController extends Controller
     {
 
         if ($this->missingCashierArtworkPrice($type, $order)) {
-            return back()->with('error', 'Harga satuan Rupiah untuk Art Work atau Ongkos Kirim wajib diisi sebelum pembayaran.');
+            return back()->with('error', 'Harga satuan Rupiah untuk Art Work, Ongkos Kirim, Produk Jadi, Branding atau Pasang Visual wajib diisi sebelum pembayaran.');
         }
 
         // Nota pengganti only ever moves the topup/cashback difference in
@@ -576,10 +576,10 @@ class KasirController extends Controller
             $isCustomPriceItem = ($type === 'artwork' && (string) $item->KdProd === '1706')
                 || ($type === 'indoor' && (
                     ((string) $item->KdProd === '1706' && $item->isArtwork())
-                    || ((string) $item->KdProd === '2001' && ! $item->isArtwork())
+                    || (in_array((string) $item->KdProd, OrderPricingService::INDOOR_CASHIER_PRICE_CODES, true) && ! $item->isArtwork())
                     || (in_array((string) $item->KdProd, OrderPricingService::indoorCustomPriceCodes(), true) && ! $item->isArtwork())
                 ));
-            abort_unless($isCustomPriceItem, 422, 'Harga manual hanya berlaku untuk Art Work 1706, produk custom 1005/1006, produk Consumable, dan Ongkos Kirim 2001.');
+            abort_unless($isCustomPriceItem, 422, 'Harga manual hanya berlaku untuk Art Work 1706, produk custom 1005/1006, produk Consumable, Ongkos Kirim 2001, Produk Jadi 1701, Branding 2018, dan Pasang Visual 2019.');
 
             $item->update(['harga_satuan_kasir' => (int) $data['harga_satuan']]);
             $total = $type === 'indoor'
@@ -610,7 +610,7 @@ class KasirController extends Controller
                 $query->where('jenis_produk', 'artwork')->where('KdProd', '1706');
             })->orWhere(function ($query) {
                 $query->where('jenis_produk', 'indoor')
-                    ->whereIn('KdProd', ['2001', ...OrderPricingService::indoorCustomPriceCodes()]);
+                    ->whereIn('KdProd', [...OrderPricingService::INDOOR_CASHIER_PRICE_CODES, ...OrderPricingService::indoorCustomPriceCodes()]);
             });
         });
 

@@ -28,9 +28,10 @@ class MonitoringKinerjaController extends Controller
     /**
      * Produk yang bukan prestasi operator, tidak dihitung di Rekap Operator Indoor:
      * Outdoor Laminat, Floor Laminat, Ongkos Kirim, Biaya Edit, Lobang Mata Ayam,
-     * Universal Laser Cutting A3 (artwork), Tas Plastik / Kresek.
+     * Universal Laser Cutting A3 (artwork), Tas Plastik / Kresek, Produk Jadi,
+     * Branding, Pasang Visual.
      */
-    public const EXCLUDED_RECAP_PRODUCTS = ['1101', '1102', '2001', '2002', '2017', '1612', '2804'];
+    public const EXCLUDED_RECAP_PRODUCTS = ['1101', '1102', '2001', '2002', '2017', '1612', '2804', '1701', '2018', '2019'];
 
     private const ORDER_TYPE_LABELS = [
         'indoor' => 'Indoor',

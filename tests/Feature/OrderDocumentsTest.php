@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
-use App\Http\Controllers\OrderReworkController;
 use App\Http\Controllers\KeuanganController;
+use App\Http\Controllers\OrderReworkController;
 use App\Models\OrderDocument;
 use App\Models\OrderIndoor;
 use App\Models\OrderIndoorDetail;
@@ -16,12 +16,13 @@ use App\Services\OrderPaymentWorkflow;
 use App\Services\OrderPricingService;
 use Illuminate\Database\QueryException;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Tests\TestCase;
 
@@ -47,6 +48,7 @@ class OrderDocumentsTest extends TestCase
                 $t->integer('pengambilan_by')->nullable();
                 $t->timestamp('siap_diambil_at')->nullable();
                 $t->integer('siap_diambil_by')->nullable();
+                $t->string('tracking_token')->nullable();
             });
         }
         Schema::create('order_indoor_detail', function (Blueprint $t) {
@@ -164,6 +166,26 @@ class OrderDocumentsTest extends TestCase
         ]);
 
         $this->assertSame(45000.0, app(OrderPricingService::class)->totalIndoor($order->fresh()));
+    }
+
+    #[DataProvider('cashierPricedProductCodes')]
+    public function test_cashier_priced_products_use_cashier_unit_price(string $code): void
+    {
+        $order = $this->order(['total' => 0]);
+        $order->items->first()->update([
+            'KdProd' => $code,
+            'jenis_produk' => 'indoor',
+            'Qty' => 2,
+            'harga_satuan_kasir' => 150000,
+        ]);
+
+        $this->assertSame(300000.0, app(OrderPricingService::class)->totalIndoor($order->fresh()));
+    }
+
+    /** @return array<string, array{string}> */
+    public static function cashierPricedProductCodes(): array
+    {
+        return ['Produk Jadi' => ['1701'], 'Branding' => ['2018'], 'Pasang Visual' => ['2019']];
     }
 
     public function test_indoor_tiered_price_uses_matching_quantity_range(): void

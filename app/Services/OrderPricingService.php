@@ -30,6 +30,12 @@ class OrderPricingService
     /** Produk Indoor custom (DTF UV Sticker) yang harganya diisi manual oleh CS/Kasir. */
     public const INDOOR_CUSTOM_PRICE_CODES = ['1005', '1006'];
 
+    /**
+     * Produk indoor berharga satuan manual dari Kasir (bukan katalog artwork):
+     * 2001 Ongkos Kirim, 1701 Produk Jadi, 2018 Branding, 2019 Pasang Visual.
+     */
+    public const INDOOR_CASHIER_PRICE_CODES = ['2001', '1701', '2018', '2019'];
+
     /** Divisi indoor yang seluruh produknya berharga satuan custom (21 = Consumable). */
     public const INDOOR_CUSTOM_PRICE_DIVISIONS = ['21'];
 
@@ -523,7 +529,7 @@ class OrderPricingService
             return $artwork === null || (float) $artwork->HargaStd <= 0;
         }
 
-        return (string) $item->KdProd === '2001'
+        return in_array((string) $item->KdProd, self::INDOOR_CASHIER_PRICE_CODES, true)
             || in_array((string) $item->KdProd, self::indoorCustomPriceCodes(), true);
     }
 
