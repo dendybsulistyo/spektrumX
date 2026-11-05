@@ -2,11 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\OrderDocument;
+use App\Models\OrderDocumentPrint;
 use App\Models\OrderPayment;
 use App\Models\PengaturanKeuangan;
 use App\Models\SalesOrderPrint;
 use App\Services\OrderDocumentService;
 use App\Services\OrderPricingService;
+use App\Services\OrderTrackingService;
 use App\Services\ReprintGate;
 use App\Support\ResolvesOrderType;
 use Illuminate\Http\JsonResponse;
@@ -19,7 +22,7 @@ class InvoiceController extends Controller
 
     public function __construct(
         private readonly OrderPricingService $pricingService,
-        private readonly \App\Services\OrderTrackingService $tracking,
+        private readonly OrderTrackingService $tracking,
     ) {}
 
     public function show(string $type, int $id): View
@@ -46,10 +49,10 @@ class InvoiceController extends Controller
         $printRecord = SalesOrderPrint::query()->where('order_type', $type)->where('order_id', $id)->first();
         // Invoice yang dicetak setelah pembayaran (Pengambilan) dicatat sebagai dokumen INV.
         $invoiceDocument = request()->boolean('payment_preview')
-            ? \App\Models\OrderDocument::query()->where('kind', 'inv')->where('order_type', $type)->where('order_id', $id)->latest('id')->first()
+            ? OrderDocument::query()->where('kind', 'inv')->where('order_type', $type)->where('order_id', $id)->latest('id')->first()
             : null;
         $invoicePrinted = $invoiceDocument
-            && \App\Models\OrderDocumentPrint::query()->where('order_document_id', $invoiceDocument->id)->exists();
+            && OrderDocumentPrint::query()->where('order_document_id', $invoiceDocument->id)->exists();
 
         // DP and hutang orders are paid in more than one visit. The nota
         // lists every receipt so the customer can see how the balance was
@@ -81,9 +84,16 @@ class InvoiceController extends Controller
             'soReprintState' => app(ReprintGate::class)->state($printRecord, 'so', $type, $id),
             'invoiceDocument' => $invoiceDocument,
             'invoiceReprintState' => $invoiceDocument
-                ? app(ReprintGate::class)->state(\App\Models\OrderDocumentPrint::query()->where('order_document_id', $invoiceDocument->id)->first(), 'inv', $type, $id, $invoiceDocument->id)
+                ? app(ReprintGate::class)->state(OrderDocumentPrint::query()->where('order_document_id', $invoiceDocument->id)->first(), 'inv', $type, $id, $invoiceDocument->id)
                 : 'first',
             'invoicePrinted' => (bool) $invoicePrinted,
+            // Pratinjau invoice Pengambilan: tanggal INV, bukan tanggal SO. Belum disimpan =
+            // hari ini, karena tanggal invoice dikunci saat tombol Simpan diklik.
+            'invoiceDate' => $invoiceDocument
+                ? (DB::table('sales_transaction_archives')->where('order_type', $type)->where('order_id', $id)->exists()
+                    ? $invoiceDocument->issued_at
+                    : now())->format('d-m-Y')
+                : null,
             // QR tracking customer hanya di Sales Order (bukan pratinjau invoice pembayaran).
             'trackingQr' => config('tracking.qr.aktif') && ! request()->boolean('payment_preview') && ($url = $this->tracking->url($order))
                 ? $this->tracking->qrSvg($url)

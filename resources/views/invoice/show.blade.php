@@ -157,7 +157,7 @@
         <header class="invoice-header">
             <div class="preprinted-header-space" aria-hidden="true"></div>
             <section class="customer-block">
-                <div class="customer-row title-row"><span class="key"></span><span class="value">{{ $tanggalOrder }}</span></div>
+                <div class="customer-row title-row"><span class="key"></span><span class="value">{{ $invoiceDate ?? $tanggalOrder }}</span></div>
                 <div class="customer-row"><span class="key"></span><span class="value">{{ $order->customer?->NmCust ?? '-' }}</span></div>
                 <div class="customer-row"><span class="key"></span><span class="value">{{ $customerAddress ?: '-' }}</span></div>
                 <div class="customer-row"><span class="key"></span><span class="value">{{ $order->NoOrder }}</span></div>
