@@ -33,9 +33,12 @@
     $canPickup = ! $capturePenerima
         || ($order->status_bayar === 'lunas' && (float) $order->jumlah_piutang <= 0)
         || ($order->status_bayar === 'hutang' && $order->customer?->isVip);
+    // Outdoor: centang beberapa item satu SO → satu tanda tangan, satu DO.
+    $pickMultiple = $capturePenerima && $canPickup && $type === 'outdoor' && $pickupItems->count() > 1
+        && auth()->user()?->can($manageAbility);
 @endphp
 
-<div class="order-card">
+<div class="order-card" @if ($pickMultiple) x-data="{ picked: [], all: @js($pickupItems->pluck('id')) }" @endif>
     <x-order-date-rail :date="$order->TglOrder" />
     <div class="order-card-head">
         <div class="order-summary">
@@ -67,6 +70,17 @@
                         Serahkan Pesanan
                     </button>
                 @endcan
+            @endif
+            @if ($pickMultiple)
+                <label style="display:inline-flex; align-items:center; gap:4px; font-size:12px; cursor:pointer;" title="Pilih semua item SO ini">
+                    <input type="checkbox" :checked="picked.length === all.length"
+                           @change="picked = $event.target.checked ? [...all] : []" style="width:16px;height:16px;">
+                    Semua
+                </label>
+                <button type="button" class="in-btn" :disabled="picked.length === 0"
+                        @click="$dispatch('open-penerima-modal', { type: 'outdoor', id: picked[0], noOrder: '{{ $order->NoOrder }}', items: {{ Illuminate\Support\Js::from($pickupItems) }}.filter(item => picked.includes(item.id)) })">
+                    Serahkan Terpilih (<span x-text="picked.length"></span>)
+                </button>
             @endif
             @if ($type === 'outdoor' && $outdoorComments !== null)
                 <x-order-discussion type="outdoor" :order-id="$order->id" :no-order="$order->NoOrder"
@@ -153,6 +167,11 @@
                     @if ($capturePenerima && $canPickup && $type !== 'indoor')
                         {{-- Pengambilan butuh nama & kontak penerima dulu sebelum
                              diserahkan — tangkap lewat modal di halaman induk. --}}
+                        @if ($pickMultiple)
+                            <input type="checkbox" value="{{ $item->id }}" x-model.number="picked"
+                                   title="Pilih untuk diserahkan bersama (satu tanda tangan)" aria-label="Pilih item untuk diserahkan bersama"
+                                   style="width:16px;height:16px;cursor:pointer;">
+                        @endif
                         <button type="button" class="in-btn"
                                 @click="$dispatch('open-penerima-modal', { type: '{{ $type }}', id: {{ $item->id }}, noOrder: '{{ $order->NoOrder }}', items: {{ Illuminate\Support\Js::from($pickupItems->where('id', $item->id)->values()) }} })">
                             Kirim {{ $nextLabel }}
