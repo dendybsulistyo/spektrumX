@@ -27,8 +27,9 @@ class StoreBahanCetakOutdoorRequest extends FormRequest
 
         return [
             'NmBhn' => ['required', 'string', 'max:30'],
+            // Nomor Urut adalah kunci data: hanya diisi saat tambah, tidak ikut dikirim ulang saat edit.
             'NoUrut' => [
-                'required', 'integer', 'min:0',
+                $bahanCetakOutdoor ? 'exclude' : 'required', 'integer', 'min:0',
                 Rule::unique('bahan_cetak_outdoor', 'NoUrut')->ignore($bahanCetakOutdoor?->NoUrut, 'NoUrut'),
             ],
             'NoCetak' => ['nullable', 'string', 'max:10'],
