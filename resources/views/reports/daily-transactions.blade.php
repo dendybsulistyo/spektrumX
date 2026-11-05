@@ -55,7 +55,7 @@
                 <div class="overflow-x-auto">
                     <table>
                         <thead><tr>
-                            <th>Tanggal SO</th><th class="document-number">No. INV</th><th>Customer</th><th class="product">Produk</th><th>Keterangan</th>
+                            <th>Tgl DO/INV</th><th class="document-number">No. INV</th><th>Customer</th><th class="product">Produk</th><th>Keterangan</th>
                             <th class="tight">Pj.</th><th class="tight">Leb.</th><th class="tight">Qty</th><th class="tight">Harga</th><th>Sub Total</th>
                             <th>Diskon</th><th>Total</th><th>Tunai</th><th>Kredit</th>
                         </tr></thead>

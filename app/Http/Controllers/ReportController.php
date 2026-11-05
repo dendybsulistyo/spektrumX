@@ -99,8 +99,14 @@ class ReportController extends Controller
                 ->where('kind', 'inv')->where('order_type', $type)
                 ->whereIn('order_id', $orders->pluck('id'))
                 ->orderBy('sequence')->pluck('number', 'order_id');
+            // Tanggal dokumen per order: tanggal INV, atau tanggal DO bila INV belum terbit.
+            $documentDates = OrderDocument::query()
+                ->whereIn('kind', ['do', 'inv'])->where('order_type', $type)
+                ->whereIn('order_id', $orders->pluck('id'))
+                ->orderByRaw("kind = 'inv'")->orderBy('sequence')
+                ->get(['order_id', 'issued_at'])->pluck('issued_at', 'order_id');
 
-            $orders->each(function ($order) use ($type, $payments, $invoiceNumbers, &$rows) {
+            $orders->each(function ($order) use ($type, $payments, $invoiceNumbers, $documentDates, &$rows) {
                 $items = $this->pricing->detailedLineItems($type, $order, $order->items);
                 $gross = (float) $items->sum('subtotal');
                 $net = $order->diskonStatus() === 'approved' ? $order->totalSetelahDiskon() : (float) $order->total;
@@ -131,7 +137,7 @@ class ReportController extends Controller
                     $allocatedCredit += $lineCredit;
 
                     $rows->push((object) [
-                        'date' => $order->TglOrder, 'number' => $order->NoOrder,
+                        'date' => $documentDates[$order->id] ?? $order->TglOrder, 'number' => $order->NoOrder,
                         // Rekap harian tetap per TglOrder, tetapi yang ditampilkan nomor INV-nya
                         // (SO hanya sebagai keterangan kecil di bawahnya).
                         'invoices' => collect([$invoiceNumbers[$order->id] ?? 'Belum INV']),
