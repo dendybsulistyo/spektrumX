@@ -395,13 +395,21 @@ class OrderPricingService
             // outdoor hanya berlaku pada perhitungan harga di atas.
             [$displayPanjang, $displayLebar] = [$item->Panjang, $item->Lebar];
 
+            // Jasa Potong/Lipat (Qty = Harga): angka yang diinput tampil di
+            // Hrg. Satuan dengan Qty 1, bukan sebagai Qty.
+            $displayQty = $item->Qty;
+            if ($type !== 'outdoor' && $this->isQtyAsPriceItem($item)) {
+                $displayQty = 1;
+                $hargaSatuan = (float) $item->Qty;
+            }
+
             return (object) [
                 'name' => $name,
                 'bahan' => $bahan,
                 'printer' => $printer,
                 'panjang' => $displayPanjang,
                 'lebar' => $displayLebar,
-                'qty' => $item->Qty,
+                'qty' => $displayQty,
                 'harga_satuan' => $hargaSatuan,
                 // true = pengali dari data master (boleh tampil desimal di layar internal);
                 // Outdoor per m² dihitung balik dari subtotal, jadi bukan pengali master.
@@ -562,6 +570,19 @@ class OrderPricingService
         }
 
         return 'Jasa Potong: (PisauTurun '.$item->PisauTurun.' × JumlahKertas '.$item->JumlahKertas.' × TebalKertas '.$item->TebalKertas.') ÷ 10 + Rp '.number_format($nilaiX, 0, ',', '.');
+    }
+
+    private function isQtyAsPriceItem($item): bool
+    {
+        if ($this->usesCashierUnitPrice($item)) {
+            return false;
+        }
+
+        $isArtworkCatalog = ! method_exists($item, 'isArtwork') || $item->isArtwork();
+
+        return $isArtworkCatalog
+            ? (bool) $this->artwork($item->KdProd)?->isJasaPotong()
+            : $this->produk($item->KdProd)?->isPjLb === Produk::PJLB_QTY_ALT;
     }
 
     private function produk(?string $code): ?Produk
