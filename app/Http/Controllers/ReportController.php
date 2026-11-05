@@ -563,16 +563,18 @@ class ReportController extends Controller
                     ->whereColumn('order_documents.order_id', $orderTable.'.id')
                     ->where('order_documents.order_type', $type)->where('order_documents.kind', $kind);
                 // SO batal selalu ikut tampil (bertanda BATAL), tetapi tidak dihitung di Grand Total.
+                // Tanggal & periode mengikuti tanggal INVOICE (SO batal tanpa invoice: tanggal SO).
+                $invoiceInPeriod = fn ($q) => $hasDocument('inv')($q)
+                    ->whereBetween('order_documents.issued_at', [$from.' 00:00:00', $to.' 23:59:59']);
                 $orders = $model::query()->with($relations)->where('KdCust', $customerCode)
-                    ->whereBetween('TglOrder', [$from, $to])
-                    ->where(fn ($q) => $q->where('status', 'batal')
+                    ->where(fn ($q) => $q->where(fn ($cancelled) => $cancelled->where('status', 'batal')->whereBetween('TglOrder', [$from, $to]))
                         ->orWhere(fn ($active) => $active->where('status', '!=', 'batal')
-                            ->whereExists($hasDocument('inv'))
+                            ->whereExists($invoiceInPeriod)
                             ->when($isVip, fn ($q) => $q->whereExists($hasDocument('do')), fn ($q) => $q->where('status_bayar', 'lunas'))))
                     ->orderBy('TglOrder')->orderBy('NoOrder')->get();
-                $invoiceNumbers = DB::table('order_documents')->where('kind', 'inv')->where('order_type', $type)
+                $invoices = DB::table('order_documents')->where('kind', 'inv')->where('order_type', $type)
                     ->whereIn('order_id', $orders->pluck('id'))->orderByDesc('sequence')
-                    ->get(['order_id', 'number'])->unique('order_id')->pluck('number', 'order_id');
+                    ->get(['order_id', 'number', 'issued_at'])->unique('order_id')->keyBy('order_id');
                 $paymentsByOrder = OrderPayment::query()->where('order_type', $type)
                     ->whereIn('order_id', $orders->pluck('id'))->get()->groupBy('order_id');
 
@@ -606,7 +608,8 @@ class ReportController extends Controller
                             $allocated[$key] += $part[$key];
                         }
                         $rows->push((object) [
-                            'date' => $order->TglOrder, 'invoice' => $invoiceNumbers[$order->id] ?? $order->NoOrder,
+                            'date' => isset($invoices[$order->id]) ? substr($invoices[$order->id]->issued_at, 0, 10) : $order->TglOrder?->format('Y-m-d'),
+                            'invoice' => $invoices[$order->id]->number ?? $order->NoOrder,
                             'product' => collect([$item->printer, $item->bahan])->filter()->implode(' / ') ?: $item->name,
                             'description' => $item->name, 'length' => $item->panjang, 'width' => $item->lebar,
                             'qty' => $item->qty, 'price' => $item->harga_satuan, 'subtotal' => (float) $item->subtotal,
@@ -672,7 +675,8 @@ class ReportController extends Controller
                             $allocated[$key] += $part[$key];
                         }
                         $rows->push((object) [
-                            'date' => $order->TglOrder, 'invoice' => $invoiceNumbers[$order->id] ?? $order->NoOrder,
+                            'date' => isset($invoices[$order->id]) ? substr($invoices[$order->id]->issued_at, 0, 10) : $order->TglOrder?->format('Y-m-d'),
+                            'invoice' => $invoices[$order->id]->number ?? $order->NoOrder,
                             'order_type' => $type, 'order_id' => $order->id, 'first_item' => $index === 0,
                             'product' => collect([$item->printer, $item->bahan])->filter()->implode(' / ') ?: $item->name,
                             'description' => $item->name, 'length' => $item->panjang, 'width' => $item->lebar,
