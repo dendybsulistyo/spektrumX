@@ -325,10 +325,10 @@
                                                     <input type="text" name="NmFile" value="{{ $item->NmFile }}" maxlength="255"
                                                            placeholder="Nama file{{ $isLayoutRevision ? ' hasil revisi' : '' }}"
                                                            @change="rememberPosition('layout-item-outdoor-{{ $item->id }}'); $el.form.submit()" class="in-input"
-                                                           style="width: {{ $isLayoutRevision ? '190px' : '140px' }}; {{ $isLayoutRevision ? 'border-color:#f59e0b; background:#fffbeb;' : '' }}">
+                                                           style="width: {{ $isLayoutRevision ? '190px' : '140px' }}; font-weight: 700; {{ $isLayoutRevision ? 'border-color:#f59e0b; background:#fffbeb;' : '' }}">
                                                 </form>
                                             @else
-                                                <input type="text" value="{{ $item->NmFile }}" class="in-input" style="width: 140px;" disabled
+                                                <input type="text" value="{{ $item->NmFile }}" class="in-input" style="width: 140px; font-weight: 700;" disabled
                                                        title="Nama File hanya dapat dilihat oleh Operator Layout">
                                             @endif
                                             @can('order-desain.manage')
@@ -337,10 +337,10 @@
                                                     <input type="text" name="gabungan" value="{{ $item->gabungan }}" maxlength="255"
                                                            placeholder="Gabungan"
                                                            x-model="gabungan"
-                                                           @change="rememberPosition('layout-item-outdoor-{{ $item->id }}'); $el.form.submit()" class="in-input" style="width: 140px; font-weight: 700;">
+                                                           @change="rememberPosition('layout-item-outdoor-{{ $item->id }}'); $el.form.submit()" class="in-input" style="width: 140px;">
                                                 </form>
                                             @else
-                                                <span class="text-muted" style="white-space: nowrap; font-weight: 700;">{{ $item->gabungan ?: '-' }}</span>
+                                                <span class="text-muted" style="white-space: nowrap;">{{ $item->gabungan ?: '-' }}</span>
                                             @endcan
                                             <span class="progress-tag progress-plain">Progress: {{ $item->Qty - $item->qtyAt('desain') }}/{{ $item->Qty }}</span>
                                             @can('order-desain.manage')
