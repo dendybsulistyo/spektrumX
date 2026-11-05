@@ -38,6 +38,7 @@ class OrderOutdoorDetail extends Model
         'KdCtk',
         'ada_finishing',
         'jenis_finishing',
+        'is_proof',
     ];
 
     protected function casts(): array
@@ -46,6 +47,7 @@ class OrderOutdoorDetail extends Model
             'Panjang' => 'float',
             'Lebar' => 'float',
             'ada_finishing' => 'boolean',
+            'is_proof' => 'boolean',
             'qty_desain' => 'integer',
             'qty_cetak' => 'integer',
             'qty_finishing' => 'integer',

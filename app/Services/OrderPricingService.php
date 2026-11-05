@@ -351,7 +351,11 @@ class OrderPricingService
                         // re-reading harga_cetak_outdoor directly) so it
                         // always matches whatever price actually applied,
                         // VIP override included.
-                        $hargaSatuan = $areaM2 * $item->Qty > 0 ? $subtotal / ($areaM2 * $item->Qty) : $harga->HargaStd;
+                        $hargaSatuan = match (true) {
+                            (bool) $item->is_proof => 0.0,
+                            $areaM2 * $item->Qty > 0 => $subtotal / ($areaM2 * $item->Qty),
+                            default => $harga->HargaStd,
+                        };
                     }
 
                     // No breakdown text — same treatment as Indoor: Bahan

@@ -12,10 +12,10 @@ use App\Models\OrderOutdoor;
 use App\Models\OrderOutdoorDetail;
 use App\Models\OrderStatusNote;
 use App\Models\PrinterOutdoor;
-use App\Services\OrderCancellationRefund;
 use App\Services\ApproverNotificationService;
-use App\Services\OrderPricingService;
+use App\Services\OrderCancellationRefund;
 use App\Services\OrderNumberService;
+use App\Services\OrderPricingService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -160,7 +160,7 @@ class OrderOutdoorController extends Controller
 
         return view('order-outdoor.edit', [
             'order' => $orderOutdoor,
-            'items' => $orderOutdoor->items,
+            'items' => $orderOutdoor->items->reject->is_proof->values(),
             'selectedCustomer' => $orderOutdoor->customer,
             'hargaCetakList' => HargaCetakOutdoor::orderBy('KdCtk')->get(),
             'printerOutdoorList' => PrinterOutdoor::orderBy('NoUrut')->get(),
@@ -323,27 +323,44 @@ class OrderOutdoorController extends Controller
     }
 
     /**
+     * Item dengan Proof = Ya otomatis mendapat satu baris proof ukuran mini
+     * (qty 1, Rp 0) yang ikut alur produksi bersama item aslinya.
+     *
      * @param  array<int, array<string, mixed>>  $items
      */
     private function saveItems(OrderOutdoor $order, array $items): void
     {
-        foreach ($items as $index => $item) {
-            $seq = str_pad((string) ($index + 1), 2, '0', STR_PAD_LEFT);
-            $brsOrder = $order->NoOrder.$seq;
+        $sequence = 0;
+
+        foreach ($items as $item) {
+            $withProof = ($item['ada_finishing'] ?? null) === 'ya';
 
             OrderOutdoorDetail::create([
                 'order_outdoor_id' => $order->id,
-                'BrsOrder' => $brsOrder,
+                'BrsOrder' => $order->NoOrder.str_pad((string) ++$sequence, 2, '0', STR_PAD_LEFT),
                 'NmFile' => $item['NmFile'],
                 'Panjang' => $item['Panjang'],
                 'Lebar' => $item['Lebar'],
                 'Qty' => $item['Qty'],
                 'qty_desain' => $item['Qty'],
                 'KdCtk' => $item['KdCtk'] ?? null,
-                'ada_finishing' => isset($item['ada_finishing']) ? $item['ada_finishing'] === 'ya' : null,
+                'ada_finishing' => isset($item['ada_finishing']) ? $withProof : null,
                 'jenis_finishing' => $item['jenis_finishing'] ?? null,
             ]);
+
+            if ($withProof) {
+                OrderOutdoorDetail::create([
+                    'order_outdoor_id' => $order->id,
+                    'BrsOrder' => $order->NoOrder.str_pad((string) ++$sequence, 2, '0', STR_PAD_LEFT),
+                    'NmFile' => mb_substr('PROOF MINI - '.$item['NmFile'], 0, 255),
+                    'Panjang' => 0,
+                    'Lebar' => 0,
+                    'Qty' => 1,
+                    'qty_desain' => 1,
+                    'KdCtk' => $item['KdCtk'] ?? null,
+                    'is_proof' => true,
+                ]);
+            }
         }
     }
-
 }
