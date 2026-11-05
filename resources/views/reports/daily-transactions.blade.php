@@ -52,7 +52,7 @@
                 <div class="overflow-x-auto kolom-11 kolom-14">
                     <table>
                         <thead><tr>
-                            <th>No</th><th>Tanggal SO</th><th>No. INV</th><th>Customer</th><th>Status Nota</th><th>Produk</th><th>Keterangan</th>
+                            <th>Tanggal SO</th><th>No. INV</th><th>Customer</th><th>Produk</th><th>Keterangan</th>
                             <th>Pj.</th><th>Leb.</th><th>Qty</th><th>Harga</th><th>Sub Total</th>
                             <th>Diskon</th><th>Total</th><th>Tunai</th><th>Kredit</th>
                         </tr></thead>
@@ -64,14 +64,12 @@
                             @foreach ($items as $item)
                                 <tr>
                                     @if ($loop->first)
-                                        <td class="center nota-cell" rowspan="{{ $span }}">{{ $loop->parent->iteration }}</td>
                                         <td class="center nota-cell" rowspan="{{ $span }}">{{ \Carbon\Carbon::parse($nota->date)->format('d-m-Y') }}</td>
                                         <td class="document-number nota-cell" rowspan="{{ $span }}">
                                             @foreach ($nota->invoices as $number)<div>{{ $number }}</div>@endforeach
                                             <div style="font-size:.8em;color:#6b7280;">SO {{ $nota->number }}</div>
                                         </td>
                                         <td class="nota-cell" rowspan="{{ $span }}">{{ $nota->customer }}</td>
-                                        <td class="center nota-cell" rowspan="{{ $span }}">{{ $nota->note_status }}</td>
                                     @endif
                                     <td class="line">{{ $item->product }}</td><td class="line">{{ $item->description }}</td>
                                     <td class="number line">{{ number_format((float) $item->length, 2, ',', '.') }}</td>
@@ -89,10 +87,10 @@
                             @endforeach
                             </tbody>
                         @empty
-                            <tbody><tr><td colspan="16" class="center" style="padding:28px">{{ ['lunas' => 'Belum ada nota lunas pada tanggal ini.', 'tagihan' => 'Belum ada tagihan customer VIP pada tanggal ini.'][$kind] ?? 'Belum ada nota lunas atau tagihan customer VIP pada tanggal ini.' }}</td></tr></tbody>
+                            <tbody><tr><td colspan="14" class="center" style="padding:28px">{{ ['lunas' => 'Belum ada nota lunas pada tanggal ini.', 'tagihan' => 'Belum ada tagihan customer VIP pada tanggal ini.'][$kind] ?? 'Belum ada nota lunas atau tagihan customer VIP pada tanggal ini.' }}</td></tr></tbody>
                         @endforelse
                         <tfoot class="font-bold"><tr>
-                            <td colspan="11" class="number">Grand Total:</td>
+                            <td colspan="9" class="number">Grand Total:</td>
                             <td class="number">{{ number_format($totals->subtotal, 0, ',', '.') }}</td>
                             <td class="number">{{ number_format($totals->discount, 0, ',', '.') }}</td>
                             <td class="number">{{ number_format($totals->total, 0, ',', '.') }}</td>
