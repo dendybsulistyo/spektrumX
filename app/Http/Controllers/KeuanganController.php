@@ -40,6 +40,9 @@ class KeuanganController extends Controller
      */
     private const NON_CASH_METHODS = ['transfer', 'qris', 'debit'];
 
+    /** Awal operasional kas laci (keputusan user 5 Nov 2026), dipakai bila belum ada Saldo Awal manual. */
+    private const CASH_OPENING_START_DATE = '2026-11-02';
+
     /** Pusat pengajuan dan pemantauan pembatalan pre-order/nota Indoor dan Outdoor. */
     public function pembatalanOrder(): View
     {
@@ -664,8 +667,12 @@ class KeuanganController extends Controller
             ->whereDate('tanggal', '<', $date)
             ->max('tanggal');
 
+        // Tanpa Saldo Awal manual: berjalan dari awal operasional dengan saldo 0.
         if (! $checkpointDate) {
-            return 0.0;
+            if ($date <= self::CASH_OPENING_START_DATE) {
+                return 0.0;
+            }
+            $checkpointDate = self::CASH_OPENING_START_DATE;
         }
 
         $checkpoint = (float) CashDailyEntry::query()
