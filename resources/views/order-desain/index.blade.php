@@ -337,10 +337,10 @@
                                                     <input type="text" name="gabungan" value="{{ $item->gabungan }}" maxlength="255"
                                                            placeholder="Gabungan"
                                                            x-model="gabungan"
-                                                           @change="rememberPosition('layout-item-outdoor-{{ $item->id }}'); $el.form.submit()" class="in-input" style="width: 140px;">
+                                                           @change="rememberPosition('layout-item-outdoor-{{ $item->id }}'); $el.form.submit()" class="in-input" style="width: 140px; font-weight: 700;">
                                                 </form>
                                             @else
-                                                <span class="text-muted" style="white-space: nowrap;">{{ $item->gabungan ?: '-' }}</span>
+                                                <span class="text-muted" style="white-space: nowrap; font-weight: 700;">{{ $item->gabungan ?: '-' }}</span>
                                             @endcan
                                             <span class="progress-tag progress-plain">Progress: {{ $item->Qty - $item->qtyAt('desain') }}/{{ $item->Qty }}</span>
                                             @can('order-desain.manage')
