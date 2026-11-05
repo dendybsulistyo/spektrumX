@@ -9,10 +9,10 @@
         .daily-report th { background:#e2e8f0; text-align:center; white-space:nowrap; font-size:11px !important; font-weight:700; }
         .daily-report .number { text-align:right; white-space:nowrap; }
         /* Pj/Leb/Qty/Harga dibuat sesempit isinya supaya kolom Produk lebih lebar. */
-        .daily-report .tight { width:1%; white-space:nowrap; }
-        .daily-report .product { min-width:180px; }
+        .daily-report .tight { width:1%; white-space:nowrap; font-variant-numeric:tabular-nums; }
+        .daily-report .product { min-width:260px; }
         .daily-report .center { text-align:center; }
-        .daily-report .document-number { min-width:108px; white-space:nowrap; }
+        .daily-report .document-number { width:1%; white-space:nowrap; }
         .nota-group td.nota-cell { background:#fff; }
         .nota-group { break-inside:avoid; }
         .nota-group tr + tr td.line { border-top-style:dotted; }
@@ -55,7 +55,7 @@
                 <div class="overflow-x-auto kolom-11 kolom-14">
                     <table>
                         <thead><tr>
-                            <th>Tanggal SO</th><th>No. INV</th><th>Customer</th><th>Produk</th><th>Keterangan</th>
+                            <th>Tanggal SO</th><th class="document-number">No. INV</th><th>Customer</th><th class="product">Produk</th><th>Keterangan</th>
                             <th class="tight">Pj.</th><th class="tight">Leb.</th><th class="tight">Qty</th><th class="tight">Harga</th><th>Sub Total</th>
                             <th>Diskon</th><th>Total</th><th>Tunai</th><th>Kredit</th>
                         </tr></thead>
