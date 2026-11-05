@@ -114,10 +114,9 @@ class OrderPricingService
      * falls back to the shop-wide standard ($harga) when no override exists
      * for that customer/KdCtk combo.
      */
-    public function lineTotalOutdoor(HargaCetakOutdoor $harga, float $panjangCm, float $lebarCm, int $qty, ?string $kdCust = null): float
+    public function lineTotalOutdoor(HargaCetakOutdoor $harga, float $panjangCm, float $lebarCm, int $qty, ?string $kdCust = null, float $areaFactor = 1.0): float
     {
-        [$panjangTagihan, $lebarTagihan] = $this->outdoorBillableDimensions($panjangCm, $lebarCm);
-        $areaM2 = ($panjangTagihan / 100) * ($lebarTagihan / 100);
+        $areaM2 = ($panjangCm / 100) * ($lebarCm / 100) * $areaFactor;
 
         $hargaStd = (float) $harga->HargaStd;
 
@@ -138,24 +137,24 @@ class OrderPricingService
         // Area-based pricing (harga per m²) almost never lands on a round
         // Rupiah amount once Panjang/Lebar aren't whole meters — always
         // round up to Rp100 so subtotal/total never show a sub-100 remainder.
-        return Rupiah::bulatkan($hargaStd * $areaM2 * $qty);
+        return Rupiah::bulatkan(round($hargaStd * $areaM2 * $qty, 2));
     }
 
     /**
-     * Outdoor memiliki minimum tagihan satu meter persegi per lembar.
-     * Ukuran produksi asli tetap disimpan dan ditampilkan; hanya ukuran
-     * perhitungan harga yang menjadi 100 × 100 cm ketika luas input kurang
-     * dari 1 m².
+     * Outdoor memiliki minimum tagihan 1 m² per nota (keputusan user 5 Nov 2026):
+     * total luas semua baris (P × L × Qty) di bawah 1 m² dinaikkan secara
+     * proporsional ke 1 m²; di atas itu setiap baris dihitung ukuran asli.
      *
-     * @return array{0: float, 1: float}
+     * @param  iterable<int, mixed>  $items
      */
-    public function outdoorBillableDimensions(float $panjangCm, float $lebarCm): array
+    public function outdoorAreaFactor(iterable $items): float
     {
-        if (($panjangCm / 100) * ($lebarCm / 100) < 1) {
-            return [100.0, 100.0];
+        $totalM2 = 0.0;
+        foreach ($items as $item) {
+            $totalM2 += ((float) $item->Panjang / 100) * ((float) $item->Lebar / 100) * (int) $item->Qty;
         }
 
-        return [$panjangCm, $lebarCm];
+        return $totalM2 > 0 && $totalM2 < 1 ? 1 / $totalM2 : 1.0;
     }
 
     /**
@@ -194,10 +193,12 @@ class OrderPricingService
 
     public function totalOutdoor(OrderOutdoor $order): float
     {
-        return Rupiah::bulatkan($order->items->sum(function ($item) use ($order) {
+        $areaFactor = $this->outdoorAreaFactor($order->items);
+
+        return Rupiah::bulatkan($order->items->sum(function ($item) use ($order, $areaFactor) {
             $harga = $item->hargaCetak;
 
-            return $harga ? $this->lineTotalOutdoor($harga, $item->Panjang, $item->Lebar, $item->Qty, $order->KdCust) : 0;
+            return $harga ? $this->lineTotalOutdoor($harga, $item->Panjang, $item->Lebar, $item->Qty, $order->KdCust, $areaFactor) : 0;
         }));
     }
 
@@ -271,8 +272,9 @@ class OrderPricingService
         $bahanNames = $type === 'outdoor'
             ? ($this->bahanNames ??= BahanCetakOutdoor::pluck('NmBhn', 'NoCetak'))
             : collect();
+        $outdoorAreaFactor = $type === 'outdoor' ? $this->outdoorAreaFactor($rawItems) : 1.0;
 
-        $lines = $rawItems->map(function ($item) use ($type, $order, $printerNames, $bahanNames, $live) {
+        $lines = $rawItems->map(function ($item) use ($type, $order, $printerNames, $bahanNames, $live, $outdoorAreaFactor) {
             [$name, $subtotal, $hargaSatuan, $bahan, $printer, $breakdown] = match ($type) {
                 // Order Indoor now also holds Artwork-catalog items in the
                 // same order (jenis_produk per line) — look up whichever
@@ -329,24 +331,20 @@ class OrderPricingService
                         $produk ? $this->produkBreakdown($item, $nilaiX) : null,
                     ];
                 })(),
-                'outdoor' => (function () use ($item, $order, $printerNames, $bahanNames) {
+                'outdoor' => (function () use ($item, $order, $printerNames, $bahanNames, $outdoorAreaFactor) {
                     $harga = $item->hargaCetak;
 
                     // Mirrors the VIP per-customer override the order form
                     // itself applied at creation time, so a VIP customer's
                     // nota shows the same unit price they were actually
                     // charged instead of the shop-wide standard.
-                    $subtotal = $harga ? $this->lineTotalOutdoor($harga, $item->Panjang, $item->Lebar, $item->Qty, $order->KdCust) : 0;
+                    $subtotal = $harga ? $this->lineTotalOutdoor($harga, $item->Panjang, $item->Lebar, $item->Qty, $order->KdCust, $outdoorAreaFactor) : 0;
 
                     $hargaSatuan = null;
                     $bahan = null;
                     $printer = null;
                     if ($harga) {
-                        [$panjangTagihan, $lebarTagihan] = $this->outdoorBillableDimensions(
-                            (float) $item->Panjang,
-                            (float) $item->Lebar,
-                        );
-                        $areaM2 = ($panjangTagihan / 100) * ($lebarTagihan / 100);
+                        $areaM2 = ((float) $item->Panjang / 100) * ((float) $item->Lebar / 100) * $outdoorAreaFactor;
                         $printer = $printerNames[$item->printerCode()] ?? $item->printerCode() ?? '-';
                         $bahan = $bahanNames[$item->bahanCode()] ?? $item->bahanCode() ?? '-';
                         // Back-derived from the subtotal (rather than

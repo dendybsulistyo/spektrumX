@@ -21,18 +21,30 @@ class RupiahTest extends TestCase
         $this->assertSame(48500, $special->HargaStd);
     }
 
-    public function test_outdoor_price_uses_one_square_meter_minimum_per_quantity(): void
+    public function test_outdoor_minimum_one_square_meter_applies_per_nota(): void
     {
         $harga = (new HargaCetakOutdoor)->setRawAttributes([
             'KdCtk' => 'TEST',
-            'HargaStd' => 13800,
+            'HargaStd' => 10000,
         ]);
         $pricing = new OrderPricingService;
+        $item = fn (float $p, float $l, int $qty) => (object) ['Panjang' => $p, 'Lebar' => $l, 'Qty' => $qty];
 
-        $this->assertSame(27600.0, $pricing->lineTotalOutdoor($harga, 50, 50, 2));
-        $this->assertSame([100.0, 100.0], $pricing->outdoorBillableDimensions(80, 120));
-        $this->assertSame(20700.0, $pricing->lineTotalOutdoor($harga, 50, 300, 1));
-        $this->assertSame([50.0, 300.0], $pricing->outdoorBillableDimensions(50, 300));
+        // 90×90 + 80×80 = 1,45 m² → ukuran asli.
+        $factor = $pricing->outdoorAreaFactor([$item(90, 90, 1), $item(80, 80, 1)]);
+        $this->assertSame(1.0, $factor);
+        $this->assertSame(8100.0, $pricing->lineTotalOutdoor($harga, 90, 90, 1, null, $factor));
+        $this->assertSame(6400.0, $pricing->lineTotalOutdoor($harga, 80, 80, 1, null, $factor));
+
+        // Banyak kecil, qty ikut dihitung: 41×41×56 = 9,41 m² → ukuran asli (tidak 1 m² per lembar).
+        $this->assertSame(1.0, $pricing->outdoorAreaFactor([$item(41, 41, 56)]));
+        $this->assertSame(94200.0, $pricing->lineTotalOutdoor($harga, 41, 41, 56));
+
+        // 30×30 + 40×40 = 0,25 m² → total menjadi harga 1 m².
+        $factor = $pricing->outdoorAreaFactor([$item(30, 30, 1), $item(40, 40, 1)]);
+        $total = $pricing->lineTotalOutdoor($harga, 30, 30, 1, null, $factor)
+            + $pricing->lineTotalOutdoor($harga, 40, 40, 1, null, $factor);
+        $this->assertSame(10000.0, $total);
     }
 
     public function test_harga_satuan_desimal_tetap_tampil(): void
