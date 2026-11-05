@@ -8,6 +8,9 @@
         .daily-report th,.daily-report td { border:1px solid #64748b; padding:2px 3px !important; vertical-align:top; font-size:11px !important; line-height:1.18 !important; }
         .daily-report th { background:#e2e8f0; text-align:center; white-space:nowrap; font-size:11px !important; font-weight:700; }
         .daily-report .number { text-align:right; white-space:nowrap; }
+        /* Pj/Leb/Qty/Harga dibuat sesempit isinya supaya kolom Produk lebih lebar. */
+        .daily-report .tight { width:1%; white-space:nowrap; }
+        .daily-report .product { min-width:180px; }
         .daily-report .center { text-align:center; }
         .daily-report .document-number { min-width:108px; white-space:nowrap; }
         .nota-group td.nota-cell { background:#fff; }
@@ -53,7 +56,7 @@
                     <table>
                         <thead><tr>
                             <th>Tanggal SO</th><th>No. INV</th><th>Customer</th><th>Produk</th><th>Keterangan</th>
-                            <th>Pj.</th><th>Leb.</th><th>Qty</th><th>Harga</th><th>Sub Total</th>
+                            <th class="tight">Pj.</th><th class="tight">Leb.</th><th class="tight">Qty</th><th class="tight">Harga</th><th>Sub Total</th>
                             <th>Diskon</th><th>Total</th><th>Tunai</th><th>Kredit</th>
                         </tr></thead>
                         {{-- Dikelompokkan per nota: kolom nota & total digabung (rowspan), item tampil per baris. --}}
@@ -71,11 +74,11 @@
                                         </td>
                                         <td class="nota-cell" rowspan="{{ $span }}">{{ $nota->customer }}</td>
                                     @endif
-                                    <td class="line">{{ $item->product }}</td><td class="line">{{ $item->description }}</td>
-                                    <td class="number line">{{ number_format((float) $item->length, 2, ',', '.') }}</td>
-                                    <td class="number line">{{ number_format((float) $item->width, 2, ',', '.') }}</td>
-                                    <td class="number line">{{ number_format((float) $item->qty, 0, ',', '.') }}</td>
-                                    <td class="number line">{{ $item->price !== null ? number_format($item->price, 0, ',', '.') : '-' }}</td>
+                                    <td class="line product">{{ $item->product }}</td><td class="line">{{ $item->description }}</td>
+                                    <td class="number line tight">{{ number_format((float) $item->length, 2, ',', '.') }}</td>
+                                    <td class="number line tight">{{ number_format((float) $item->width, 2, ',', '.') }}</td>
+                                    <td class="number line tight">{{ number_format((float) $item->qty, 0, ',', '.') }}</td>
+                                    <td class="number line tight">{{ $item->price !== null ? number_format($item->price, 0, ',', '.') : '-' }}</td>
                                     <td class="number line">{{ number_format($item->subtotal, 0, ',', '.') }}</td>
                                     @if ($loop->first)
                                         <td class="number nota-cell" rowspan="{{ $span }}">{{ $items->sum('discount') > 0 ? number_format($items->sum('discount'), 0, ',', '.') : '-' }}</td>
