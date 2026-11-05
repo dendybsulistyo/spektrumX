@@ -4,7 +4,7 @@
 
     <style>
         .daily-report { color:#111827; }
-        .daily-report table { width:100%; border-collapse:collapse; }
+        .daily-report table { width:100%; border-collapse:collapse; table-layout:auto; }
         .daily-report th,.daily-report td { border:1px solid #64748b; padding:2px 3px !important; vertical-align:top; font-size:11px !important; line-height:1.18 !important; }
         .daily-report th { background:#e2e8f0; text-align:center; white-space:nowrap; font-size:11px !important; font-weight:700; }
         .daily-report .number { text-align:right; white-space:nowrap; }
@@ -52,7 +52,7 @@
                     <h1 class="text-base font-bold">{{ mb_strtoupper($title) }} SPEKTRUM</h1>
                     <p class="text-sm">Tanggal: {{ \Carbon\Carbon::parse($date)->translatedFormat('d F Y') }}</p>
                 </div>
-                <div class="overflow-x-auto kolom-11 kolom-14">
+                <div class="overflow-x-auto">
                     <table>
                         <thead><tr>
                             <th>Tanggal SO</th><th class="document-number">No. INV</th><th>Customer</th><th class="product">Produk</th><th>Keterangan</th>
