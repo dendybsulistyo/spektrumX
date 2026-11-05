@@ -25,5 +25,11 @@ class BahanCetakOutdoor extends Model
         'NmBhn',
         'NoUrut',
         'NoCetak',
+        'lewati_layout_cetak',
     ];
+
+    protected function casts(): array
+    {
+        return ['lewati_layout_cetak' => 'boolean'];
+    }
 }

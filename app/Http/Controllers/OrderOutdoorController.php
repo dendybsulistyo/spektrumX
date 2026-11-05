@@ -19,6 +19,7 @@ use App\Services\OrderPricingService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\View\View;
 
 class OrderOutdoorController extends Controller
@@ -333,9 +334,14 @@ class OrderOutdoorController extends Controller
     private function saveItems(OrderOutdoor $order, array $items): void
     {
         $sequence = 0;
+        // Bahan barang jadi (mis. laminasi): tidak lewat Layout & Cetak, langsung Finishing.
+        $skipLayoutCetakBahan = Schema::hasColumn('bahan_cetak_outdoor', 'lewati_layout_cetak')
+            ? BahanCetakOutdoor::query()->where('lewati_layout_cetak', true)->whereNotNull('NoCetak')->pluck('NoCetak')->all()
+            : [];
 
         foreach ($items as $item) {
             $withProof = ($item['ada_finishing'] ?? null) === 'ya';
+            $mulaiFinishing = in_array(substr((string) ($item['KdCtk'] ?? ''), 2, 2), $skipLayoutCetakBahan, true);
 
             OrderOutdoorDetail::create([
                 'order_outdoor_id' => $order->id,
@@ -344,7 +350,8 @@ class OrderOutdoorController extends Controller
                 'Panjang' => $item['Panjang'],
                 'Lebar' => $item['Lebar'],
                 'Qty' => $item['Qty'],
-                'qty_desain' => $item['Qty'],
+                'qty_desain' => $mulaiFinishing ? 0 : $item['Qty'],
+                'qty_finishing' => $mulaiFinishing ? $item['Qty'] : 0,
                 'KdCtk' => $item['KdCtk'] ?? null,
                 'ada_finishing' => isset($item['ada_finishing']) ? $withProof : null,
                 'jenis_finishing' => $item['jenis_finishing'] ?? null,
@@ -358,7 +365,8 @@ class OrderOutdoorController extends Controller
                     'Panjang' => 0,
                     'Lebar' => 0,
                     'Qty' => 1,
-                    'qty_desain' => 1,
+                    'qty_desain' => $mulaiFinishing ? 0 : 1,
+                    'qty_finishing' => $mulaiFinishing ? 1 : 0,
                     'KdCtk' => $item['KdCtk'] ?? null,
                     'is_proof' => true,
                 ]);

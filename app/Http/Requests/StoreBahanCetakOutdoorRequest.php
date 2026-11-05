@@ -32,6 +32,7 @@ class StoreBahanCetakOutdoorRequest extends FormRequest
                 Rule::unique('bahan_cetak_outdoor', 'NoUrut')->ignore($bahanCetakOutdoor?->NoUrut, 'NoUrut'),
             ],
             'NoCetak' => ['nullable', 'string', 'max:10'],
+            'lewati_layout_cetak' => ['boolean'],
         ];
     }
 
