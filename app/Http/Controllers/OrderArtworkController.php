@@ -9,10 +9,10 @@ use App\Models\KonfigurasiJasaPotongArtwork;
 use App\Models\OrderArtwork;
 use App\Models\OrderArtworkDetail;
 use App\Models\OrderStatusNote;
-use App\Services\OrderCancellationRefund;
 use App\Services\ApproverNotificationService;
-use App\Services\OrderPricingService;
+use App\Services\OrderCancellationRefund;
 use App\Services\OrderNumberService;
+use App\Services\OrderPricingService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -50,8 +50,6 @@ class OrderArtworkController extends Controller
      * keep working through every other method on this controller
      * (edit/update/destroy/cancel/nota-pengganti) unchanged.
      */
-
-    
     public function create(): RedirectResponse
     {
         return redirect()->route('order-indoor.create')
@@ -102,6 +100,7 @@ class OrderArtworkController extends Controller
                 'TglOrder' => $data['TglOrder'],
                 'NoOrder' => $noOrder,
                 'KdCust' => $data['KdCust'],
+                'estimasi_hari' => $data['estimasi_hari'] ?? null,
                 'created_by' => auth()->id(),
                 'Cetak' => false,
                 'status' => 'baru',
@@ -148,6 +147,7 @@ class OrderArtworkController extends Controller
             $orderArtwork->update([
                 'TglOrder' => $data['TglOrder'],
                 'KdCust' => $data['KdCust'],
+                'estimasi_hari' => $data['estimasi_hari'] ?? null,
             ]);
 
             $orderArtwork->items()->delete();
@@ -307,5 +307,4 @@ class OrderArtworkController extends Controller
             ]);
         }
     }
-
 }

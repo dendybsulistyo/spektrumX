@@ -9,7 +9,8 @@ trait HasOperatorEstimate
     /**
      * Batas estimasi pengerjaan (keputusan user 3 Nov 2026): dihitung sejak
      * order pertama kali diproses kasir, selama Progress Hari dari Lembar Kerja
-     * CS (default 1 hari). Order yang belum dibayar belum punya batas.
+     * CS, lalu estimasi_hari isian Operator File (5 Nov 2026), default 1 hari.
+     * Order yang belum dibayar belum punya batas.
      * Dipakai antrean operator, dashboard, kartu Telat & History Telat.
      */
     public function operatorEstimateEndsAt(): ?Carbon
@@ -26,6 +27,8 @@ trait HasOperatorEstimate
 
     public function operatorEstimateDays(): int
     {
-        return max(1, (int) ($this->customerServiceJobSheet?->progress_hari ?: 1));
+        $csDays = method_exists($this, 'customerServiceJobSheet') ? $this->customerServiceJobSheet?->progress_hari : null;
+
+        return max(1, (int) ($csDays ?: $this->estimasi_hari ?: 1));
     }
 }

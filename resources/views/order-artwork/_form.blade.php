@@ -106,6 +106,8 @@
             <x-input-error :messages="$errors->get('TglOrder')" class="mt-1" />
         </div>
 
+        <x-order-estimasi-field :value="$order?->estimasi_hari" />
+
         <div class="relative flex-1"
              x-data="{
                 query: @js($selectedCustomerLabel),

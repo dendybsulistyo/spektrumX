@@ -47,7 +47,7 @@ class OrderLateLogService
                 ->whereNotNull('created_at')
                 ->whereNotIn('status', [...self::DONE_STATUSES, ...self::UNPAID_STATUSES])
                 ->where('status_bayar', '!=', 'belum_bayar')
-                ->select(['id', 'created_at', 'status', 'dibayar_at', 'diproses_kasir_at'])
+                ->select(['id', 'created_at', 'status', 'dibayar_at', 'diproses_kasir_at', 'estimasi_hari'])
                 ->chunkById(self::CHUNK, function (Collection $orders) use ($type, $now, &$opened) {
                     $deadlines = $this->deadlines($type, $orders);
                     $rows = [];
@@ -80,7 +80,7 @@ class OrderLateLogService
                 ->whereIn('status', ['siap_diambil', 'selesai'])
                 ->whereNotNull('created_at')
                 ->whereNotNull('bungkus_at')
-                ->select(['id', 'created_at', 'status', 'dibayar_at', 'diproses_kasir_at', ...array_values(self::STAGE_COLUMNS)])
+                ->select(['id', 'created_at', 'status', 'dibayar_at', 'diproses_kasir_at', 'estimasi_hari', ...array_values(self::STAGE_COLUMNS)])
                 ->chunkById(self::CHUNK, function (Collection $orders) use ($type, $now, $progress, &$inserted) {
                     $deadlines = $this->deadlines($type, $orders);
                     $rows = [];
@@ -139,7 +139,7 @@ class OrderLateLogService
             $start = ($order->diproses_kasir_at ?? null) ?? $notes->get($order->id) ?? $order->dibayar_at;
 
             return [$order->id => $start
-                ? Carbon::parse($start)->addDays(max(1, (int) $progressDays->get($order->id, 1)))
+                ? Carbon::parse($start)->addDays(max(1, (int) ($progressDays->get($order->id) ?: ($order->estimasi_hari ?? null) ?: 1)))
                 : null];
         })->all();
     }

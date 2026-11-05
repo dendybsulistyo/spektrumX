@@ -328,14 +328,15 @@ class DashboardStatsService
 
     /**
      * Kondisi SQL telat untuk satu tabel order (MySQL): lewat diproses kasir +
-     * Progress Hari Lembar Kerja CS (default 1 hari), belum siap, sudah dibayar.
+     * Progress Hari Lembar Kerja CS, lalu estimasi_hari order (default 1 hari),
+     * belum siap, sudah dibayar.
      */
     private function overdueSql(string $table, string $type): string
     {
         return "{$table}.status NOT IN ('baru', 'siap_diambil', 'selesai', 'batal') AND {$table}.status_bayar <> 'belum_bayar' "
             ."AND {$table}.diproses_kasir_at IS NOT NULL "
             ."AND DATE_ADD({$table}.diproses_kasir_at, INTERVAL COALESCE((SELECT MAX(js.progress_hari) FROM customer_service_job_sheets js "
-            ."WHERE js.order_type = ? AND js.order_id = {$table}.id AND js.progress_hari > 0), 1) DAY) < ?";
+            ."WHERE js.order_type = ? AND js.order_id = {$table}.id AND js.progress_hari > 0), NULLIF({$table}.estimasi_hari, 0), 1) DAY) < ?";
     }
 
     /** @return array<int, mixed> */

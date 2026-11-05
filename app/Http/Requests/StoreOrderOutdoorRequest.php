@@ -24,6 +24,7 @@ class StoreOrderOutdoorRequest extends FormRequest
     {
         return [
             'TglOrder' => ['required', 'date'],
+            'estimasi_hari' => ['nullable', 'integer', 'between:1,10'],
             'KdCust' => ['required', 'string', 'exists:customers,KdCust'],
             'replacement_order_id' => ['nullable', 'integer', 'exists:order_outdoor,id'],
             'job_sheet_id' => ['nullable', 'integer'],
@@ -49,6 +50,7 @@ class StoreOrderOutdoorRequest extends FormRequest
     {
         return [
             'TglOrder' => 'tanggal order',
+            'estimasi_hari' => 'estimasi',
             'KdCust' => 'customer',
             'items.*.NmFile' => 'nama file',
             'items.*.Panjang' => 'panjang',

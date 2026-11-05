@@ -123,6 +123,7 @@ class OrderOutdoorController extends Controller
                 'TglOrder' => $data['TglOrder'],
                 'NoOrder' => $noOrder,
                 'KdCust' => $data['KdCust'],
+                'estimasi_hari' => $this->estimasiHari($data, empty($data['job_sheet_id']) ? null : CustomerServiceJobSheet::find($data['job_sheet_id'])),
                 'created_by' => auth()->id(),
                 'Cetak' => false,
                 'status' => 'baru',
@@ -180,6 +181,7 @@ class OrderOutdoorController extends Controller
             $orderOutdoor->update([
                 'TglOrder' => $data['TglOrder'],
                 'KdCust' => $data['KdCust'],
+                'estimasi_hari' => $this->estimasiHari($data, $orderOutdoor->customerServiceJobSheet),
             ]);
 
             $orderOutdoor->items()->delete();
@@ -362,5 +364,16 @@ class OrderOutdoorController extends Controller
                 ]);
             }
         }
+    }
+
+    /**
+     * Estimasi (hari) isian Operator File; bila Lembar Kerja CS sudah punya
+     * Progress Hari, angka CS yang dipakai dan tidak bisa diubah. Kosong = 1 hari.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function estimasiHari(array $data, ?CustomerServiceJobSheet $jobSheet): ?int
+    {
+        return $jobSheet?->progress_hari ?: (isset($data['estimasi_hari']) ? (int) $data['estimasi_hari'] : null);
     }
 }
