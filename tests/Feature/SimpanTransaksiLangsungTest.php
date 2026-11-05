@@ -32,8 +32,11 @@ class SimpanTransaksiLangsungTest extends TestCase
         Schema::create('order_documents', function (Blueprint $table) {
             $table->id();
             $table->string('kind');
+            $table->string('number')->nullable();
             $table->string('order_type');
             $table->unsignedBigInteger('order_id');
+            $table->timestamp('issued_at')->nullable();
+            $table->timestamps();
         });
         Schema::create('order_document_prints', function (Blueprint $table) {
             $table->id();
@@ -66,11 +69,36 @@ class SimpanTransaksiLangsungTest extends TestCase
         $this->assertTrue($response->isRedirect());
     }
 
+    public function test_simpan_mengubah_tanggal_invoice_sekali_saja(): void
+    {
+        $order = $this->paidOrder('IND.2.004', printed: true);
+        $this->travelTo('2026-11-05 10:00:00');
+
+        app(PengambilanController::class)->archiveTransactions(Request::create('/', 'POST', ['transaksi' => ["indoor:{$order}"]]));
+        $this->travelTo('2026-11-06 09:00:00');
+        app(PengambilanController::class)->archiveTransactions(Request::create('/', 'POST', ['transaksi' => ["indoor:{$order}"]]));
+
+        $this->assertSame('2026-11-05 10:00:00', (string) DB::table('order_documents')->where('order_id', $order)->value('issued_at'));
+    }
+
+    public function test_command_menyamakan_tanggal_invoice_lama_dengan_tanggal_simpan(): void
+    {
+        $order = $this->paidOrder('IND.2.005', printed: true);
+        DB::table('sales_transaction_archives')->insert(['order_type' => 'indoor', 'order_id' => $order, 'archived_at' => '2026-11-04 15:30:00']);
+
+        $this->artisan('spektrum:samakan-tanggal-invoice-simpan')->assertSuccessful();
+        $this->assertSame('2026-11-03 08:00:00', (string) DB::table('order_documents')->where('order_id', $order)->value('issued_at'));
+
+        $this->artisan('spektrum:samakan-tanggal-invoice-simpan', ['--jalankan' => true])
+            ->expectsConfirmation('Ubah tanggal 1 invoice di atas?', 'yes')->assertSuccessful();
+        $this->assertSame('2026-11-04 15:30:00', (string) DB::table('order_documents')->where('order_id', $order)->value('issued_at'));
+    }
+
     private function paidOrder(string $number, bool $printed): int
     {
         $id = DB::table('order_indoor')->insertGetId(['NoOrder' => $number, 'status_bayar' => 'lunas', 'jumlah_dibayar' => 10000]);
         DB::table('order_payments')->insert(['order_type' => 'indoor', 'order_id' => $id, 'jumlah' => 10000]);
-        $document = DB::table('order_documents')->insertGetId(['kind' => 'inv', 'order_type' => 'indoor', 'order_id' => $id]);
+        $document = DB::table('order_documents')->insertGetId(['kind' => 'inv', 'order_type' => 'indoor', 'order_id' => $id, 'issued_at' => '2026-11-03 08:00:00']);
         if ($printed) {
             DB::table('order_document_prints')->insert(['order_document_id' => $document]);
         }

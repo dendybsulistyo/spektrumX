@@ -244,6 +244,15 @@ class PengambilanController extends Controller
                 return 'Invoice belum dicetak; simpan lewat tombol Simpan (cetak invoice dulu).';
             }
 
+            // Tanggal invoice = saat transaksi disimpan di Pengambilan (keputusan user 5 Nov 2026);
+            // simpan ulang tidak mengubahnya lagi. Laporan yang membaca issued_at ikut tanggal ini.
+            $alreadyArchived = DB::table('sales_transaction_archives')
+                ->where('order_type', $type)->where('order_id', $id)->exists();
+            if (! $alreadyArchived) {
+                OrderDocument::query()->where('kind', 'inv')->where('order_type', $type)->where('order_id', $id)
+                    ->update(['issued_at' => now(), 'updated_at' => now()]);
+            }
+
             DB::table('sales_transaction_archives')->updateOrInsert(
                 ['order_type' => $type, 'order_id' => $id],
                 ['archived_by' => auth()->id(), 'archived_at' => now(), 'created_at' => now(), 'updated_at' => now()]
