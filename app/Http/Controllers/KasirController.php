@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ApprovalRequest;
 use App\Models\ChatMessage;
 use App\Models\OrderArtwork;
 use App\Models\OrderComment;
@@ -442,6 +443,7 @@ class KasirController extends Controller
                 'hutang_rejected_at' => null,
                 'hutang_rejected_by' => null,
             ]);
+            ApprovalRequest::open('hutang', $type, $order->id, 'Rp '.number_format(Rupiah::bulatkan($total), 0, ',', '.'), $data['catatan'] ?? null);
 
             $this->notifyHutangApprovers($order, $total);
 
@@ -687,6 +689,7 @@ class KasirController extends Controller
         $order->loadMissing('customer.limit');
 
         $this->commitHutang($order, $type, $order->hutangAmount(), $order->hutang_catatan, (int) $order->hutang_requested_by, auth()->id());
+        ApprovalRequest::decide('hutang', $type, $order->id, true);
 
         return back()->with('status', "Pengajuan hutang order {$order->NoOrder} disetujui.");
     }
@@ -694,7 +697,7 @@ class KasirController extends Controller
     public function rejectHutang(string $type, int $id): RedirectResponse
     {
         $order = $this->resolveOrder($type, $id);
-        DB::transaction(function () use ($order): void {
+        DB::transaction(function () use ($order, $type): void {
             $order = $order->newQuery()->lockForUpdate()->findOrFail($order->id);
             abort_if($order->status_bayar !== 'belum_bayar' || $order->hutangApprovalStatus() !== 'pending', 422, 'Tidak ada pengajuan hutang yang menunggu persetujuan untuk order ini.');
 
@@ -702,6 +705,7 @@ class KasirController extends Controller
                 'hutang_rejected_at' => now(),
                 'hutang_rejected_by' => auth()->id(),
             ]);
+            ApprovalRequest::decide('hutang', $type, $order->id, false);
         }, attempts: 3);
 
         return back()->with('status', "Pengajuan hutang order {$order->NoOrder} ditolak.");
@@ -997,7 +1001,7 @@ class KasirController extends Controller
             ? "{$data['diskon_persen']}%"
             : 'Rp '.number_format((float) $data['diskon_nominal'], 0, ',', '.');
 
-        DB::transaction(function () use ($data, $label, $order): void {
+        DB::transaction(function () use ($data, $label, $order, $type): void {
             $order = $order->newQuery()->lockForUpdate()->findOrFail($order->id);
             abort_if($order->status_bayar === 'lunas', 422, 'Order ini sudah lunas, tidak bisa diajukan diskon.');
             abort_if($order->diskonStatus() === 'pending', 422, 'Order ini sudah punya pengajuan diskon yang masih menunggu persetujuan.');
@@ -1015,6 +1019,7 @@ class KasirController extends Controller
                 'diskon_rejected_at' => null,
                 'diskon_rejected_by' => null,
             ]);
+            ApprovalRequest::open('diskon', $type, $order->id, $label, $data['diskon_alasan']);
 
             $this->notifyDiskonApprovers($order, $label, $data['diskon_alasan']);
         }, attempts: 3);
@@ -1025,7 +1030,7 @@ class KasirController extends Controller
     public function approveDiskon(Request $request, string $type, int $id): RedirectResponse
     {
         $order = $this->resolveOrder($type, $id);
-        DB::transaction(function () use ($order): void {
+        DB::transaction(function () use ($order, $type): void {
             $order = $order->newQuery()->lockForUpdate()->findOrFail($order->id);
             abort_if($order->status_bayar !== 'belum_bayar' || $order->diskonStatus() !== 'pending', 422, 'Tidak ada pengajuan diskon yang menunggu persetujuan untuk order ini.');
 
@@ -1035,6 +1040,7 @@ class KasirController extends Controller
                 'diskon_approved_at' => now(),
                 'diskon_approved_by' => auth()->id(),
             ]);
+            ApprovalRequest::decide('diskon', $type, $order->id, true);
         }, attempts: 3);
 
         $order->refresh();
@@ -1045,7 +1051,7 @@ class KasirController extends Controller
     public function rejectDiskon(Request $request, string $type, int $id): RedirectResponse
     {
         $order = $this->resolveOrder($type, $id);
-        DB::transaction(function () use ($order): void {
+        DB::transaction(function () use ($order, $type): void {
             $order = $order->newQuery()->lockForUpdate()->findOrFail($order->id);
             abort_if($order->status_bayar !== 'belum_bayar' || $order->diskonStatus() !== 'pending', 422, 'Tidak ada pengajuan diskon yang menunggu persetujuan untuk order ini.');
 
@@ -1053,6 +1059,7 @@ class KasirController extends Controller
                 'diskon_rejected_at' => now(),
                 'diskon_rejected_by' => auth()->id(),
             ]);
+            ApprovalRequest::decide('diskon', $type, $order->id, false);
         }, attempts: 3);
 
         return back()->with('status', "Pengajuan diskon untuk order {$order->NoOrder} ditolak.");

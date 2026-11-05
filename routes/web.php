@@ -4,6 +4,7 @@ use App\Http\Controllers\AccountingFixedAssetController;
 use App\Http\Controllers\AccountingPurchaseController;
 use App\Http\Controllers\AccountingSupplierController;
 use App\Http\Controllers\AkunController;
+use App\Http\Controllers\ApprovalHistoryController;
 use App\Http\Controllers\ApresiasiController;
 use App\Http\Controllers\AvatarController;
 use App\Http\Controllers\BahanCetakOutdoorController;
@@ -589,6 +590,11 @@ Route::middleware('auth')->group(function () {
     Route::post('/cetak-ulang/permintaan', [ReprintApprovalController::class, 'store'])->name('reprint-requests.store');
     Route::get('/approval-cetak-ulang', [ReprintApprovalController::class, 'index'])->name('reprint-approval.index');
     Route::post('/approval-cetak-ulang/{reprintRequest}', [ReprintApprovalController::class, 'decide'])->name('reprint-approval.decide');
+
+    // History Approval: Admin, Keuangan, Kasir.
+    Route::get('/approval-history', [ApprovalHistoryController::class, 'index'])
+        ->middleware('permission.any:kasir.view,keuangan.view,kasir.approve-diskon,kasir.approve-hutang')
+        ->name('approval-history.index');
 
     Route::middleware('permission:order-finishing.view')->group(function () {
         Route::get('/order-finishing', [OrderFinishingController::class, 'index'])->name('order-finishing.index');
