@@ -52,12 +52,12 @@ class ApprovalHistoryController extends Controller
         $rows = $rows->map(function (array $row) use ($orders, $users) {
             $order = $orders[$row['order_type'].'-'.$row['order_id']] ?? null;
 
-            return (object) $row + [
+            return (object) ($row + [
                 'no_order' => $order?->NoOrder ?? '#'.$row['order_id'],
                 'customer' => $order?->customer?->NmCust ?? '-',
                 'requested_name' => $users[$row['requested_by']] ?? '-',
                 'decided_name' => $users[$row['decided_by']] ?? null,
-            ];
+            ]);
         })
             ->when($status, fn (Collection $rows) => $rows->where('status', $status))
             ->when($search !== '', fn (Collection $rows) => $rows->filter(fn ($row) => str_contains(mb_strtolower(
