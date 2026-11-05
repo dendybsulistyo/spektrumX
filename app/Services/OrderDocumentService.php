@@ -49,6 +49,10 @@ class OrderDocumentService
                 $price = $priced->get($index);
                 $item['unit_price'] = $price?->harga_satuan;
                 $item['subtotal'] = $price?->subtotal;
+                // Kolom invoice disamakan dengan SO (5 Nov 2026); invoice lama tanpa data ini tampil "-".
+                $item['bahan'] = $price?->bahan;
+                $item['printer'] = $price?->printer;
+                $item['display_qty'] = $price?->qty;
 
                 return $item;
             });

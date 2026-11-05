@@ -38,6 +38,7 @@
         .items .number { width:29mm; text-align:right; white-space:nowrap; }
         .items .qty { width:15mm; text-align:right; }
         .items .size { width:25mm; text-align:center; }
+        .items .dim { width:12mm; text-align:right; white-space:nowrap; }
         .description { font-weight:700; }
         .summary-wrap { display:grid; grid-template-columns:1fr 67mm; gap:10mm; margin-top:3mm; align-items:start; }
         .notes { color:var(--muted); font-size:10px; line-height:1.5; }
@@ -201,16 +202,29 @@
         <table class="items">
             <thead>
                 <tr>
-                    <th>Deskripsi</th><th class="size">Ukuran</th><th class="qty">Qty</th>
-                    @if ($isInvoice)<th class="number">Harga</th><th class="number">Subtotal</th>@endif
+                    @if ($isInvoice)
+                        {{-- Kolom sama dengan SO. --}}
+                        <th>Item</th><th>Bahan</th><th>Printer</th><th class="dim">PJ</th><th class="dim">LB</th>
+                        <th class="qty">Qty</th><th class="number">Hrg. Satuan</th><th class="number">Subtotal</th>
+                    @else
+                        <th>Deskripsi</th><th class="size">Ukuran</th><th class="qty">Qty</th>
+                    @endif
                 </tr>
             </thead>
             <tbody>
                 @forelse ($pageItems as $item)
                     <tr>
                         <td class="description">{{ $item['description'] ?? '-' }}</td>
-                        <td class="size">{{ $item['length'] ?? '-' }} × {{ $item['width'] ?? '-' }}</td>
-                        <td class="qty">{{ $item['qty'] ?? 0 }}</td>
+                        @if ($isInvoice)
+                            <td>{{ $item['bahan'] ?? '-' }}</td>
+                            <td>{{ $item['printer'] ?? '-' }}</td>
+                            <td class="dim">{{ $item['length'] ?? '-' }}</td>
+                            <td class="dim">{{ $item['width'] ?? '-' }}</td>
+                            <td class="qty">{{ $item['display_qty'] ?? $item['qty'] ?? 0 }}</td>
+                        @else
+                            <td class="size">{{ $item['length'] ?? '-' }} × {{ $item['width'] ?? '-' }}</td>
+                            <td class="qty">{{ $item['qty'] ?? 0 }}</td>
+                        @endif
                         @if ($isInvoice)
                             @php
                                 $unitPrice = $item['unit_price'] ?? ($singleItemFallback && ($item['qty'] ?? 0) > 0 ? $gross / $item['qty'] : null);
@@ -221,7 +235,7 @@
                         @endif
                     </tr>
                 @empty
-                    <tr><td colspan="{{ $isInvoice ? 5 : 3 }}">Tidak ada rincian barang.</td></tr>
+                    <tr><td colspan="{{ $isInvoice ? 8 : 3 }}">Tidak ada rincian barang.</td></tr>
                 @endforelse
             </tbody>
         </table>
