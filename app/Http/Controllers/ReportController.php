@@ -60,16 +60,17 @@ class ReportController extends Controller
             $orderTable = (new $model)->getTable();
             $orders = $model::query()
                 ->with($relations)
-                ->where('TglOrder', $date)
                 ->where('status', '!=', 'batal')
-                // Cukup sudah terbit DO ATAU INV: reguler lunas biasanya baru punya INV
-                // (DO keluar saat barang diambil); tagihan VIP mendapat INV bersamaan DO.
-                ->whereExists(function ($document) use ($type, $orderTable): void {
+                // Masuk rekap di tanggal DO/INV (keputusan user 5 Nov 2026): reguler lunas
+                // = tanggal INV (pelunasan); tagihan VIP = tanggal DO/INV terbit.
+                // Tanggal pastinya (INV didahulukan dari DO) disaring di bawah.
+                ->whereExists(function ($document) use ($type, $orderTable, $date): void {
                     $document->selectRaw('1')
                         ->from('order_documents')
                         ->whereColumn('order_documents.order_id', $orderTable.'.id')
                         ->where('order_documents.order_type', $type)
-                        ->whereIn('order_documents.kind', ['do', 'inv']);
+                        ->whereIn('order_documents.kind', ['do', 'inv'])
+                        ->whereBetween('order_documents.issued_at', [$date.' 00:00:00', $date.' 23:59:59']);
                 })
                 ->where(function ($query) use ($kind): void {
                     if ($kind !== 'tagihan') {
@@ -105,6 +106,7 @@ class ReportController extends Controller
                 ->whereIn('order_id', $orders->pluck('id'))
                 ->orderByRaw("kind = 'inv'")->orderBy('sequence')
                 ->get(['order_id', 'issued_at'])->pluck('issued_at', 'order_id');
+            $orders = $orders->filter(fn ($order) => substr((string) ($documentDates[$order->id] ?? ''), 0, 10) === $date);
 
             $orders->each(function ($order) use ($type, $payments, $invoiceNumbers, $documentDates, &$rows) {
                 $items = $this->pricing->detailedLineItems($type, $order, $order->items);
@@ -138,8 +140,7 @@ class ReportController extends Controller
 
                     $rows->push((object) [
                         'date' => $documentDates[$order->id] ?? $order->TglOrder, 'number' => $order->NoOrder,
-                        // Rekap harian tetap per TglOrder, tetapi yang ditampilkan nomor INV-nya
-                        // (SO hanya sebagai keterangan kecil di bawahnya).
+                        // Yang ditampilkan nomor INV-nya (SO hanya sebagai keterangan kecil di bawahnya).
                         'invoices' => collect([$invoiceNumbers[$order->id] ?? 'Belum INV']),
                         'customer' => $order->customer?->NmCust ?? '-',
                         'note_status' => $order->status_bayar === 'hutang' ? 'Tagihan VIP' : 'Lunas',
