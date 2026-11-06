@@ -13,7 +13,7 @@ class BahanCetakOutdoorController extends Controller
     public function index(Request $request): View
     {
         $bahanCetakOutdoors = BahanCetakOutdoor::query()
-            ->select(['NoUrut', 'NmBhn', 'NoCetak'])
+            ->select(['NoUrut', 'NmBhn', 'NoCetak', 'lewati_layout_cetak'])
             ->when($request->filled('search'), function ($q) use ($request) {
                 $search = $request->string('search');
                 $q->where('NmBhn', 'like', "%{$search}%")

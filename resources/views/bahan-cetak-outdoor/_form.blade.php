@@ -4,7 +4,7 @@
     <div>
         <x-input-label for="NoUrut" value="Nomor Urut" />
         <x-text-input id="NoUrut" name="NoUrut" type="number" class="mt-1 block w-full"
-            value="{{ old('NoUrut', $bahanCetakOutdoor?->NoUrut) }}" :required="! $bahanCetakOutdoor" :readonly="(bool) $bahanCetakOutdoor" />
+            value="{{ old('NoUrut', $bahanCetakOutdoor?->NoUrut) }}" required />
         <x-input-error :messages="$errors->get('NoUrut')" class="mt-1" />
     </div>
 
