@@ -32,7 +32,8 @@ class StoreBahanCetakOutdoorRequest extends FormRequest
                 'required', 'integer', 'min:0',
                 Rule::unique('bahan_cetak_outdoor', 'NoUrut')->ignore($bahanCetakOutdoor?->NoUrut, 'NoUrut'),
             ],
-            'NoCetak' => ['nullable', 'string', 'max:10'],
+            // Nomor Cetak = 2 digit terakhir kode harga cetak (KdCtk); dikunci setelah bahan dibuat.
+            'NoCetak' => [$bahanCetakOutdoor ? 'exclude' : 'nullable', 'string', 'max:10'],
             'lewati_layout_cetak' => ['boolean'],
         ];
     }

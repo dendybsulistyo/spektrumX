@@ -47,6 +47,13 @@ class BahanCetakOutdoorUrutanTest extends TestCase
         $this->assertTrue(BahanCetakOutdoor::find(10)->lewati_layout_cetak);
     }
 
+    public function test_nomor_cetak_tidak_ikut_berubah_saat_edit(): void
+    {
+        $this->update(BahanCetakOutdoor::find(2), ['NoUrut' => 2, 'NmBhn' => 'Sandblast V170 SM', 'NoCetak' => '50']);
+
+        $this->assertSame('29', BahanCetakOutdoor::find(2)->NoCetak);
+    }
+
     public function test_nomor_urut_tidak_boleh_kembar(): void
     {
         $this->expectException(ValidationException::class);

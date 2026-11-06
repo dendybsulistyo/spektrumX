@@ -83,3 +83,4 @@ class KembaliKeHalamanIndex
         return md5(rtrim(parse_url($url, PHP_URL_PATH) ?: '/', '/'));
     }
 }
+

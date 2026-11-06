@@ -11,7 +11,11 @@
     <div>
         <x-input-label for="NoCetak" value="Nomor Cetak" />
         <x-text-input id="NoCetak" name="NoCetak" type="text" class="mt-1 block w-full"
-            value="{{ old('NoCetak', $bahanCetakOutdoor?->NoCetak) }}" maxlength="10" />
+            value="{{ old('NoCetak', $bahanCetakOutdoor?->NoCetak) }}" maxlength="10" :readonly="(bool) $bahanCetakOutdoor"
+            :class="$bahanCetakOutdoor ? 'bg-gray-100 text-gray-500' : ''" />
+        @if ($bahanCetakOutdoor)
+            <p class="mt-1 text-xs text-gray-500">Dikunci: kode bahan ini dipakai di kode harga cetak dan order outdoor.</p>
+        @endif
         <x-input-error :messages="$errors->get('NoCetak')" class="mt-1" />
     </div>
 </div>

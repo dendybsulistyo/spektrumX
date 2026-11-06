@@ -965,6 +965,31 @@
             </main>
         </div>
 
+        {{-- Cetakan laporan keuangan diberi waktu cetak di kiri bawah setiap halaman (6 Nov 2026). --}}
+        @if (request()->routeIs('keuangan.*', 'akuntansi.*', 'report.*', 'rekap-penerimaan.*'))
+            <div id="waktu-cetak" class="waktu-cetak"></div>
+            <style>
+                .waktu-cetak { display: none; }
+                @media print {
+                    .waktu-cetak { display: block !important; position: fixed; left: 0; bottom: 0; font-size: 8pt; color: #475569; background: #fff; padding-top: 2px; }
+                    @page { margin-bottom: 14mm; }
+                }
+            </style>
+            <script>
+                (function () {
+                    const label = document.getElementById('waktu-cetak');
+                    const pad = (n) => String(n).padStart(2, '0');
+                    const stamp = () => {
+                        const now = new Date();
+                        label.textContent = 'Dicetak : ' + pad(now.getDate()) + '/' + pad(now.getMonth() + 1) + '/' + now.getFullYear()
+                            + ' : ' + pad(now.getHours()) + ':' + pad(now.getMinutes());
+                    };
+                    stamp();
+                    window.addEventListener('beforeprint', stamp);
+                })();
+            </script>
+        @endif
+
         @include('partials.chat-widget')
         @if (config('apresiasi.aktif'))
             <x-apresiasi-maskot />
