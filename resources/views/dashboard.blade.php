@@ -402,7 +402,7 @@
             'selesai' => 'Selesai', 'batal' => 'Batal', default => ucfirst($status ?? '-'),
         };
         $bayarLabel = fn (?string $statusBayar) => match ($statusBayar) {
-            'lunas' => 'Lunas', 'belum_bayar' => 'Belum Bayar', 'hutang' => 'Hutang', 'dp' => 'DP', default => '-',
+            'lunas' => 'Lunas', 'belum_bayar' => 'Belum Bayar', 'hutang' => 'Plafon', 'dp' => 'DP', default => '-',
         };
         $cards = [
             ['label' => 'Order masuk', 'value' => $stats['total'], 'meta' => 'Semua tipe order'],

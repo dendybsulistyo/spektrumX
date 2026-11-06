@@ -273,7 +273,7 @@
         $bayarStyle = fn (?string $statusBayar) => match ($statusBayar) {
             'lunas' => ['Lunas', '#e6f2ea', '#2e7a4f'],
             'dp' => ['DP', '#e2f1f7', '#0b6a86'],
-            'hutang' => ['Hutang', '#fbe6ef', '#a3124a'],
+            'hutang' => ['Plafon', '#fbe6ef', '#a3124a'],
             'belum_bayar' => ['Belum Bayar', '#fdf2d3', '#8a6400'],
             default => ['-', '#f1ece0', '#77736a'],
         };
@@ -657,7 +657,7 @@
                                     <td class="rcd-proses" style="text-align:left" x-text="row.overdue"></td>
                                     <td><span class="pill pill-late" x-text="row.status_label"></span></td>
                                     <td class="rcd-people" x-text="row.operator || '-'"></td>
-                                    <td class="rcd-people" x-text="({'lunas':'Lunas','dp':'DP','hutang':'Hutang','belum_bayar':'Belum Bayar'})[row.status_bayar] || '-'"></td>
+                                    <td class="rcd-people" x-text="({'lunas':'Lunas','dp':'DP','hutang':'Plafon','belum_bayar':'Belum Bayar'})[row.status_bayar] || '-'"></td>
                                 </tr>
                             </template>
                             <tr x-show="overdueRows.length === 0"><td colspan="8" class="rcd-empty">Tidak ada order telat untuk filter ini.</td></tr>
