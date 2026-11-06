@@ -1,7 +1,7 @@
 {{--
     Maskot apresiasi Spektrum — tiap pergantian jam satu karakter (acak, tidak sama dengan
     sebelumnya) lewat di bawah layar dan berterima kasih pada yang aktif sejam terakhir.
-    Karakter: bintang tinta, Si Tinta (CMYK), roll banner, printer, gunting & mata ayam.
+    Karakter: bintang tinta, Si Tinta (CMYK), roll banner, printer, gunting & mata ayam, ular hijau.
     Semua animasi di browser; server hanya memberi rekap yang di-cache per jam (ApresiasiController).
 --}}
 <div id="apresiasi" aria-live="polite" hidden>
@@ -95,6 +95,22 @@
                 <path d="M160 106 v10 M176 106 v10" stroke="#92400e" stroke-width="3" stroke-linecap="round"/>
             </g>
         </svg>
+
+        {{-- 6. Ular hijau melata: badan lurus–melengkung–lurus–melengkung bergantian --}}
+        <svg class="apr-char apr-char-wide" data-char="ular" viewBox="0 0 200 130" role="img" aria-label="Ular hijau melata">
+            <ellipse cx="96" cy="116" rx="84" ry="4" fill="#000" opacity=".1"/>
+            <path class="apr-snake-body" d="M14 104 H44 Q59 80 74 104 H104 Q119 80 134 104 H160" fill="none" stroke="#166534" stroke-width="17" stroke-linecap="round" stroke-linejoin="round"/>
+            <path class="apr-snake-body" d="M14 104 H44 Q59 80 74 104 H104 Q119 80 134 104 H160" fill="none" stroke="#22c55e" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+            <path class="apr-snake-body apr-snake-scales" d="M14 104 H44 Q59 80 74 104 H104 Q119 80 134 104 H160" fill="none" stroke="#bbf7d0" stroke-width="3" stroke-dasharray="2 9" stroke-linecap="round"/>
+            <g class="apr-snake-head">
+                <path class="apr-tongue" d="M190 101 h8 l4 -3 M198 101 l4 3" fill="none" stroke="#e11d48" stroke-width="1.8" stroke-linecap="round"/>
+                <ellipse cx="174" cy="100" rx="18" ry="13" fill="#22c55e" stroke="#166534" stroke-width="2.5"/>
+                <ellipse cx="176" cy="92" rx="5" ry="5.5" fill="#fff" stroke="#111827" stroke-width="1.4"/>
+                <circle cx="177.5" cy="93" r="2.6" fill="#111827"/>
+                <path d="M178 106 Q184 109 189 104" fill="none" stroke="#111827" stroke-width="1.6" stroke-linecap="round"/>
+                <ellipse cx="168" cy="105" rx="3.5" ry="2" fill="#fb7185" opacity=".7"/>
+            </g>
+        </svg>
     </div>
 </div>
 
@@ -117,6 +133,9 @@
     #apresiasi .apr-blade-a { animation: apr-snip-a .3s ease-in-out infinite alternate; }
     #apresiasi .apr-blade-b { animation: apr-snip-b .3s ease-in-out infinite alternate; }
     #apresiasi .apr-hop { animation: apr-hop-drop .45s ease-in-out infinite alternate; }
+    #apresiasi .apr-snake-body { animation: apr-slither .6s ease-in-out infinite alternate; }
+    #apresiasi .apr-snake-head { animation: apr-snake-nod .6s ease-in-out infinite alternate; }
+    #apresiasi .apr-tongue { animation: apr-tongue .5s steps(1) infinite; }
     #apresiasi .apr-bubble { max-width: min(520px, 85vw); margin: 0 0 6px 40px; padding: 9px 12px; background: #fff; color: #111827; border: 2px solid #111827; border-radius: 14px;
         font-size: 13px; line-height: 1.35; box-shadow: 3px 3px 0 #06b6d4; position: relative; }
     #apresiasi .apr-bubble::after { content: ""; position: absolute; left: 22px; bottom: -9px; width: 14px; height: 14px; background: #fff; border-right: 2px solid #111827; border-bottom: 2px solid #111827; transform: rotate(45deg); }
@@ -132,6 +151,13 @@
     @keyframes apr-blink { 0%, 92% { transform: scaleY(1); } 93%, 100% { transform: scaleY(.1); } }
     @keyframes apr-snip-a { from { transform: rotate(0deg); } to { transform: rotate(14deg); } }
     @keyframes apr-snip-b { from { transform: rotate(0deg); } to { transform: rotate(-14deg); } }
+    /* Bagian lurus dan lengkung bertukar tempat, seolah ular melata. */
+    @keyframes apr-slither {
+        from { d: path("M14 104 H44 Q59 80 74 104 H104 Q119 80 134 104 H160"); }
+        to { d: path("M14 104 Q29 80 44 104 H74 Q89 80 104 104 H134 Q147 92 160 104"); }
+    }
+    @keyframes apr-tongue { 0%, 60% { opacity: 1; } 61%, 100% { opacity: 0; } }
+    @keyframes apr-snake-nod { from { transform: translateY(0); } to { transform: translateY(-3px); } }
     @media (prefers-reduced-motion: reduce) {
         #apresiasi .apr-walker { animation: none; transform: translateX(16px); }
         #apresiasi .apr-walker * { animation: none !important; }
@@ -208,7 +234,7 @@
         };
 
         // Coba tampilan tanpa menunggu jam (data contoh, tidak ke server):
-        //   ?maskot=coba  → karakter acak;  ?maskot=printer (bintang|tinta|roll|printer|gunting) → karakter tertentu.
+        //   ?maskot=coba  → karakter acak;  ?maskot=printer (bintang|tinta|roll|printer|gunting|ular) → karakter tertentu.
         const preview = new URLSearchParams(location.search).get('maskot');
         if (preview) {
             setTimeout(() => show({ names: ['Adisa', 'Zildjian', 'Sanjay', 'Rina', 'Dewi', 'Bagus', 'Lia', 'Fajar'], more: 0, progress: 124, pembayaran: 18, lembar_kerja: 9 },
