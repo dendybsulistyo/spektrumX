@@ -49,6 +49,7 @@ use App\Http\Controllers\OrderArtworkController;
 use App\Http\Controllers\OrderBungkusController;
 use App\Http\Controllers\OrderCetakController;
 use App\Http\Controllers\OrderCommentController;
+use App\Http\Controllers\OrderCorrectionController;
 use App\Http\Controllers\OrderDesainController;
 use App\Http\Controllers\OrderDocumentController;
 use App\Http\Controllers\OrderFinancialAdjustmentController;
@@ -617,6 +618,9 @@ Route::middleware('auth')->group(function () {
     Route::middleware('permission:order-bungkus.manage')->group(function () {
         Route::post('/order-bungkus/{type}/{id}', [OrderBungkusController::class, 'updateItem'])->name('order-bungkus.update');
     });
+
+    Route::get('/koreksi-order', [OrderCorrectionController::class, 'index'])->name('order-corrections.index');
+    Route::post('/koreksi-order/{type}/{id}', [OrderCorrectionController::class, 'store'])->name('order-corrections.store');
 
     Route::middleware('permission:pengambilan.view')->group(function () {
         Route::get('/pengambilan', [PengambilanController::class, 'index'])->name('pengambilan.index');

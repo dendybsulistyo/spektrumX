@@ -264,6 +264,13 @@ class OrderOutdoorController extends Controller
 
         $isReplacement = $data['resolution'] === 'nota_pengganti';
 
+        // Nota pengganti tidak menghapus piutang lama; order hutang VIP harus batal total.
+        abort_if(
+            $isReplacement && $orderOutdoor->status_bayar === 'hutang',
+            422,
+            'Order hutang VIP hanya dapat dibatalkan total (piutang dihapus, plafon dikembalikan).'
+        );
+
         abort_if(
             $isReplacement && $orderOutdoor->status_bayar === 'belum_bayar',
             422,

@@ -34,7 +34,14 @@ class KoreksiItemLangsungSiapDiambilTest extends TestCase
             foreach (['desain', 'cetak', 'finishing', 'qc', 'bungkus', 'siap_diambil', 'selesai'] as $stage) {
                 $t->integer('qty_'.$stage)->default(0);
             }
+            $t->timestamp('stage_entered_at')->nullable();
             $t->timestamps();
+        });
+        Schema::create('order_rework_requests', function (Blueprint $t) {
+            $t->id();
+            $t->string('order_type');
+            $t->unsignedBigInteger('order_id');
+            $t->string('status');
         });
         Schema::create('bahan_cetak_outdoor', function (Blueprint $t) {
             $t->integer('NoUrut')->primary();

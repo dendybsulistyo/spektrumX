@@ -236,10 +236,13 @@
                             </div>
                         @else
                             <div class="mt-3 flex gap-2">
+                                {{-- Hutang VIP: hanya Batalkan Order (piutang dihapus, plafon kembali). --}}
+                                @if ($order->status_bayar !== 'hutang')
                                 <button type="button" @click="cancelModalOpen = true"
                                         class="inline-flex items-center px-3 py-1.5 bg-red-600 text-white text-xs font-semibold rounded-md hover:bg-red-700">
                                     Batal &amp; IB
                                 </button>
+                                @endif
                                 <button type="button" @click="batalOrderModalOpen = true"
                                         class="inline-flex items-center px-3 py-1.5 bg-red-50 text-red-700 border border-red-300 text-xs font-semibold rounded-md hover:bg-red-100">
                                     Batalkan Order

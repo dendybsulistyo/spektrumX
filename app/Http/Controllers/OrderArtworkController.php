@@ -218,6 +218,13 @@ class OrderArtworkController extends Controller
 
         $isReplacement = $data['resolution'] === 'nota_pengganti';
 
+        // Nota pengganti tidak menghapus piutang lama; order hutang VIP harus batal total.
+        abort_if(
+            $isReplacement && $orderArtwork->status_bayar === 'hutang',
+            422,
+            'Order hutang VIP hanya dapat dibatalkan total (piutang dihapus, plafon dikembalikan).'
+        );
+
         $cancelNote = '';
 
         DB::transaction(function () use ($orderArtwork, $isReplacement, $request, &$cancelNote) {

@@ -90,7 +90,8 @@ class KasirController extends Controller
         foreach (['indoor' => OrderIndoor::class, 'outdoor' => OrderOutdoor::class, 'artwork' => OrderArtwork::class] as $orderType => $model) {
             $model::query()
                 ->with('customer')
-                ->where('status_bayar', 'lunas')
+                // Hutang VIP ikut tampil supaya bisa dibatalkan dari Kasir (6 Nov 2026).
+                ->whereIn('status_bayar', ['lunas', 'hutang'])
                 ->whereNotIn('status', ['selesai', 'batal'])
                 ->orderByDesc('dibayar_at')
                 ->get()

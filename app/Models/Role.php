@@ -113,6 +113,9 @@ class Role extends Model
         'Pembatalan & Ulang Proses' => [
             'order-rework.approve' => 'Setujui/tolak pengajuan pembatalan atau ulang proses order',
         ],
+        'Koreksi Proses' => [
+            'order-correction.manage' => 'Paksa item order ke Bungkus atau Siap Diambil',
+        ],
         'Bahan Outdoor' => [
             'bahan-outdoor.view' => 'Lihat bahan outdoor',
             'bahan-outdoor.manage' => 'Tambah/ubah/hapus bahan outdoor',

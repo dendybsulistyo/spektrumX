@@ -3,13 +3,12 @@
 namespace App\Console\Commands;
 
 use App\Models\BahanCetakOutdoor;
-use App\Models\OrderStatusNote;
 use App\Models\User;
+use App\Services\OrderCorrectionService;
 use App\Services\OrderDocumentService;
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 
 /**
  * Item yang secara fisik sudah jadi tetapi masih tertahan di antrean (mis.
@@ -29,7 +28,7 @@ class KoreksiItemLangsungSiapDiambil extends Command
 
     private const OPEN_STAGES = ['desain', 'cetak', 'finishing', 'qc', 'bungkus'];
 
-    public function handle(): int
+    public function handle(OrderCorrectionService $corrections): int
     {
         [$type, $order] = $this->find($this->argument('nomor')) ?? [null, null];
         if (! $order) {
@@ -86,26 +85,14 @@ class KoreksiItemLangsungSiapDiambil extends Command
         // recalculateStatus() mencatat operator tahap dari user yang login.
         Auth::setUser($user);
 
-        DB::transaction(function () use ($items, $order, $type, $user): void {
-            foreach ($items as $item) {
-                $item = $item->newQuery()->lockForUpdate()->findOrFail($item->id);
-                foreach (self::OPEN_STAGES as $stage) {
-                    $qty = $item->qtyAt($stage);
-                    if ($qty <= 0) {
-                        continue;
-                    }
-                    $item->decrement("qty_{$stage}", $qty);
-                    $item->increment('qty_siap_diambil', $qty);
-                    OrderStatusNote::create([
-                        'order_type' => $type, 'order_id' => $order->id, 'order_detail_id' => $item->id, 'qty' => $qty,
-                        'stage' => $stage, 'action' => 'selesai',
-                        'catatan' => 'Koreksi: item sudah jadi, dipindah langsung ke Siap Diambil.',
-                        'user_id' => $user->id, 'created_at' => now(),
-                    ]);
-                }
-            }
-            $order->fresh()->recalculateStatus();
-        });
+        foreach ($items as $item) {
+            $corrections->moveTo(
+                $item,
+                'siap_diambil',
+                'Item sudah jadi, dipindah langsung ke Siap Diambil melalui command koreksi.',
+                $user->id,
+            );
+        }
 
         $this->info("{$order->NoOrder} sekarang berstatus: ".$order->fresh()->status);
 

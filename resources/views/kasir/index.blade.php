@@ -280,6 +280,9 @@
                                 <a href="{{ route('kasir.show', ['type' => $order->order_type, 'id' => $order->id]) }}" class="hover:underline">
                                     {{ $order->NoOrder }}
                                 </a>
+                                @if ($order->status_bayar === 'hutang')
+                                    <span class="ml-1 rounded-full bg-pink-100 px-2 py-0.5 text-[10px] font-semibold text-pink-700">Hutang VIP</span>
+                                @endif
                                 @if ($order->cancel_requested_at)
                                     <span class="ml-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">Menunggu batal</span>
                                 @elseif ($pendingRework->has($order->order_type.'-'.$order->id))
@@ -298,11 +301,14 @@
                                 @can('kasir.manage')
                                     @if (! $order->cancel_requested_at && ! $pendingRework->has($order->order_type.'-'.$order->id) && $order->status === 'desain')
                                         <div class="inline-flex gap-1.5">
+                                            {{-- Hutang VIP: hanya Batalkan Order (piutang dihapus, plafon kembali). --}}
+                                            @if ($order->status_bayar !== 'hutang')
                                             <button type="button"
                                                     @click="cancelModalOpen = true; cancelType = '{{ $order->order_type }}'; cancelId = {{ $order->id }}; cancelNoOrder = '{{ $order->NoOrder }}'"
                                                     class="inline-flex items-center px-3 py-1.5 bg-red-600 text-white text-xs font-semibold rounded-md hover:bg-red-700">
                                                 Batal &amp; IB
                                             </button>
+                                            @endif
                                             <button type="button"
                                                     @click="batalOrderModalOpen = true; batalOrderType = '{{ $order->order_type }}'; batalOrderId = {{ $order->id }}; batalOrderNoOrder = '{{ $order->NoOrder }}'"
                                                     class="inline-flex items-center px-3 py-1.5 bg-red-50 text-red-700 border border-red-300 text-xs font-semibold rounded-md hover:bg-red-100">
