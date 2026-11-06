@@ -22,7 +22,7 @@
                         <a href="{{ route('dashboard', ['from' => $pFrom, 'to' => $pTo]) }}"
                            @class(['rcd-preset', 'is-active' => $from === $pFrom && $to === $pTo])>{{ $label }}</a>
                     @endforeach
-                    <a href="{{ route('dashboard') }}" @class(['rcd-preset', 'is-active' => ! $from && ! $to])>Semua</a>
+                    <a href="{{ route('dashboard') }}" @class(['rcd-preset', 'is-active' => ! $from && ! $to])>50 Terakhir</a>
                 </div>
                 <label>Dari<input type="date" name="from" value="{{ $from }}"></label>
                 <label>Sampai<input type="date" name="to" value="{{ $to }}"></label>

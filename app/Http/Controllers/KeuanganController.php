@@ -204,7 +204,7 @@ class KeuanganController extends Controller
                     'debet' => 0,
                     'kredit' => abs($jumlah),
                     'sort' => '2-'.$baseSort.'-0',
-                ], ...($this->refundKind($p, $order, $discountRefunds) === 'potongan' ? [] : $this->nonCashRefundOffset($p, fn (string $method) => [
+                ], ...(in_array($this->refundKind($p, $order, $discountRefunds), ['potongan', 'pembatalan'], true) ? [] : $this->nonCashRefundOffset($p, fn (string $method) => [
                     'user_id' => $activityUserId,
                     'kasir' => $activityUser ?? '-',
                     'no_nota' => null,
@@ -506,7 +506,8 @@ class KeuanganController extends Controller
      * Baris penetral untuk refund / Potongan Penjualan Akhir yang dibayar lewat bank/QRIS/debit: baris
      * Refund tetap tampil (Kredit) sebagai catatan, lalu dinetralkan di
      * Debet karena uangnya keluar dari rekening bank, bukan dari laci kas.
-     * Pola ini sama dengan pembayaran non-tunai ("Bayar via ...").
+     * Pola ini sama dengan pembayaran non-tunai ("Bayar via ..."). Refund pembatalan
+     * dan Potongan Penjualan Akhir tidak memakai baris ini: cukup Kredit (permintaan Yovita, 6 Nov 2026).
      */
     private function nonCashRefundOffset(OrderPayment $payment, callable $row): array
     {
@@ -858,7 +859,7 @@ class KeuanganController extends Controller
                     'user_id' => $activityUserId,
                     'sort' => $baseSort.'-0',
                 ]);
-                foreach (($isPotongan ? [] : $this->nonCashRefundOffset($payment, fn (string $method) => [
+                foreach (($isPotongan || $isCancellation ? [] : $this->nonCashRefundOffset($payment, fn (string $method) => [
                     'category' => $batal ? 'other_transaction' : 'non_cash_refund',
                     'description' => $batal
                         ? "{$batal}refund via {$method} (keluar dari bank, bukan kas) - {$customer}"
@@ -1097,7 +1098,10 @@ class KeuanganController extends Controller
                 ];
             });
 
-        if (! $manualRows->contains(fn (array $row) => $row['user_id'] === null && strcasecmp($row['keterangan'], 'Saldo Awal') === 0)) {
+        // Saldo Awal milik seluruh laci, bukan milik satu kasir: hanya tampil di "Semua Kasir".
+        if ($kasirId) {
+            $manualRows = $manualRows->reject(fn (array $row) => $row['user_id'] === null && strcasecmp($row['keterangan'], 'Saldo Awal') === 0)->values();
+        } elseif (! $manualRows->contains(fn (array $row) => $row['user_id'] === null && strcasecmp($row['keterangan'], 'Saldo Awal') === 0)) {
             $opening = $this->openingCashBalance($tanggal);
             $occurredAt = Carbon::parse($tanggal)->startOfDay();
             $manualRows->prepend([
@@ -1161,7 +1165,7 @@ class KeuanganController extends Controller
                     'kasir' => $payment->user?->name,
                     'user_id' => $payment->user_id,
                     'sort' => $baseSort.'-0',
-                ], ...($this->refundKind($payment, $order, $discountRefunds) === 'potongan' ? [] : $this->nonCashRefundOffset($payment, fn (string $method) => [
+                ], ...(in_array($this->refundKind($payment, $order, $discountRefunds), ['potongan', 'pembatalan'], true) ? [] : $this->nonCashRefundOffset($payment, fn (string $method) => [
                     'occurred_at' => $payment->created_at,
                     'no_nota' => null,
                     'keterangan' => $this->nonCashOffsetLabel($this->refundKind($payment, $order, $discountRefunds), $method)." - {$customer}",
