@@ -50,6 +50,17 @@ class OrderDesainController extends Controller
     }
 
     /**
+     * Urutkan item satu order menurut nama file (natural: _2 sebelum _10, tanpa beda huruf besar/kecil).
+     *
+     * @param  Collection<int, mixed>  $items
+     * @return Collection<int, mixed>
+     */
+    private function sortByFileName(Collection $items): Collection
+    {
+        return $items->sortBy(fn ($item) => (string) $item->NmFile, SORT_NATURAL | SORT_FLAG_CASE)->values();
+    }
+
+    /**
      * @return array<string, mixed>
      */
     private function loadData(): array
@@ -76,6 +87,8 @@ class OrderDesainController extends Controller
 
         if ($showOutdoor) {
             $outdoorItems = $itemsByType['outdoor'] ?? collect();
+            // Item dalam satu order diurutkan menurut nama file (6 Nov 2026).
+            $outdoorItems = $outdoorItems->map(fn ($items) => $this->sortByFileName($items));
 
             // An order that already left the desain stage can still resurface
             // here if someone (typically the Status Cetak operator) posts a new
@@ -85,7 +98,8 @@ class OrderDesainController extends Controller
 
             $outdoorNeedsReply = OrderOutdoor::query()->with('customer', 'items', 'createdBy', 'customerServiceJobSheet')
                 ->whereIn('id', $needsReplyIds)
-                ->orderByDesc('TglOrder')->orderByDesc('NoOrder')->get();
+                ->orderByDesc('TglOrder')->orderByDesc('NoOrder')->get()
+                ->each(fn ($order) => $order->setRelation('items', $this->sortByFileName($order->items)));
 
             $allOutdoorIds = $outdoorItems->keys()->merge($outdoorNeedsReply->pluck('id'));
 
