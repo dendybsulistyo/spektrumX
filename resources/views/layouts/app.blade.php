@@ -967,22 +967,17 @@
 
         {{-- Cetakan laporan keuangan diberi waktu cetak di kiri bawah setiap halaman (6 Nov 2026). --}}
         @if (request()->routeIs('keuangan.*', 'akuntansi.*', 'report.*', 'rekap-penerimaan.*'))
-            <div id="waktu-cetak" class="waktu-cetak"></div>
-            <style>
-                .waktu-cetak { display: none; }
-                @media print {
-                    .waktu-cetak { display: block !important; position: fixed; left: 0; bottom: 0; font-size: 8pt; color: #475569; background: #fff; padding-top: 2px; }
-                    @page { margin-bottom: 14mm; }
-                }
-            </style>
+            {{-- Ditulis di kotak margin halaman (@bottom-left), jadi tidak pernah menimpa isi laporan. --}}
+            <style id="waktu-cetak"></style>
             <script>
                 (function () {
-                    const label = document.getElementById('waktu-cetak');
+                    const style = document.getElementById('waktu-cetak');
                     const pad = (n) => String(n).padStart(2, '0');
                     const stamp = () => {
                         const now = new Date();
-                        label.textContent = 'Dicetak : ' + pad(now.getDate()) + '/' + pad(now.getMonth() + 1) + '/' + now.getFullYear()
+                        const text = 'Dicetak : ' + pad(now.getDate()) + '/' + pad(now.getMonth() + 1) + '/' + now.getFullYear()
                             + ' : ' + pad(now.getHours()) + ':' + pad(now.getMinutes());
+                        style.textContent = '@page { margin-bottom: 10mm; @bottom-left { content: "' + text + '"; font-size: 7pt; color: #64748b; vertical-align: middle; } }';
                     };
                     stamp();
                     window.addEventListener('beforeprint', stamp);
