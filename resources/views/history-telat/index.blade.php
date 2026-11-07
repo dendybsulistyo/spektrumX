@@ -90,7 +90,18 @@
                             <td class="whitespace-nowrap text-gray-600">{{ $log->order_created_at?->format('d-m-Y H:i') ?? '-' }}</td>
                             <td class="whitespace-nowrap text-gray-600">{{ $log->late_at->format('d-m-Y H:i') }}</td>
                             <td class="whitespace-nowrap">{{ $log->stageLabel() }}</td>
-                            <td class="whitespace-nowrap text-gray-700">{{ $operatorId ? ($operators[$operatorId] ?? '-') : '-' }}</td>
+                            <td class="whitespace-nowrap text-gray-700">
+                                @php $working = $workingOperators->get($log->order_type.'-'.$log->order_id.'-'.$log->stage); @endphp
+                                @if ($operatorId)
+                                    {{ $operators[$operatorId] ?? '-' }}
+                                @elseif ($working)
+                                    {{ $working }} <span class="text-xs text-amber-700">(sedang)</span>
+                                @elseif (in_array($log->stage, ['desain', 'cetak', 'finishing', 'qc', 'bungkus'], true))
+                                    <span class="text-gray-400">Belum dikerjakan</span>
+                                @else
+                                    -
+                                @endif
+                            </td>
                             <td class="whitespace-nowrap font-semibold {{ $log->resolved_at ? 'text-gray-800' : 'text-red-700' }}">{{ $log->lateDurationLabel() }}</td>
                             <td class="whitespace-nowrap">
                                 @if ($log->resolved_at)

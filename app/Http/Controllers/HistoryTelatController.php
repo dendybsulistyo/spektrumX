@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\OrderLateLog;
 use App\Models\OrderLateReason;
+use App\Models\OrderStatusNote;
 use App\Models\User;
 use App\Services\OrderDocumentService;
 use App\Services\OrderLateLogService;
@@ -43,7 +44,7 @@ class HistoryTelatController extends Controller
         if (! $lateLogs->isAvailable()) {
             return view('history-telat.index', $view + [
                 'logs' => new LengthAwarePaginator([], 0, 50), 'orders' => collect(), 'operators' => collect(),
-                'summary' => ['total' => 0, 'ongoing' => 0, 'stages' => collect()], 'lateReasons' => collect(), 'unavailable' => true,
+                'summary' => ['total' => 0, 'ongoing' => 0, 'stages' => collect()], 'lateReasons' => collect(), 'workingOperators' => collect(), 'unavailable' => true,
             ]);
         }
 
@@ -95,9 +96,30 @@ class HistoryTelatController extends Controller
             ->filter()->unique();
         $operators = $operatorIds->isEmpty() ? collect() : User::query()->whereIn('id', $operatorIds)->pluck('name', 'id');
 
+        // Tahap yang belum selesai belum punya operator penyelesai ({tahap}_by); tampilkan
+        // operator yang sudah mengirim progres sebagian di tahap itu (7 Nov 2026).
+        $workingOperators = collect();
+        $openLogs = collect($logs->items())->filter(function (OrderLateLog $log) use ($orders) {
+            $order = $orders->get($log->order_type.'-'.$log->order_id);
+
+            return $order && in_array($log->stage, ['desain', 'cetak', 'finishing', 'qc', 'bungkus'], true) && ! $order->{$log->stage.'_by'};
+        });
+        if ($openLogs->isNotEmpty()) {
+            OrderStatusNote::query()->with('user:id,name')
+                ->whereIn('action', ['progress', 'selesai'])->whereNotNull('user_id')
+                ->where(function ($query) use ($openLogs) {
+                    foreach ($openLogs as $log) {
+                        $query->orWhere(fn ($q) => $q->where('order_type', $log->order_type)->where('order_id', $log->order_id)->where('stage', $log->stage));
+                    }
+                })
+                ->orderByDesc('created_at')->get()
+                ->groupBy(fn ($note) => $note->order_type.'-'.$note->order_id.'-'.$note->stage)
+                ->each(fn ($notes, $key) => $workingOperators->put($key, $notes->pluck('user.name')->filter()->unique()->implode(', ')));
+        }
+
         $lateReasons = OrderLateReason::groupedFor(collect($logs->items())->groupBy('order_type')
             ->map(fn ($rows) => $rows->pluck('order_id')->unique()->all())->all());
 
-        return view('history-telat.index', $view + compact('logs', 'orders', 'operators', 'summary', 'lateReasons') + ['unavailable' => false]);
+        return view('history-telat.index', $view + compact('logs', 'orders', 'operators', 'summary', 'lateReasons', 'workingOperators') + ['unavailable' => false]);
     }
 }
