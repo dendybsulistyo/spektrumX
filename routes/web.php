@@ -55,6 +55,7 @@ use App\Http\Controllers\OrderDocumentController;
 use App\Http\Controllers\OrderFinancialAdjustmentController;
 use App\Http\Controllers\OrderFinishingController;
 use App\Http\Controllers\OrderIndoorController;
+use App\Http\Controllers\OrderLateReasonController;
 use App\Http\Controllers\OrderOutdoorController;
 use App\Http\Controllers\OrderQcController;
 use App\Http\Controllers\OrderReworkController;
@@ -94,6 +95,7 @@ Route::get('/', function () {
 Route::get('/dashboard', [DashboardController::class, 'index'])->middleware(['auth', 'verified'])->name('dashboard');
 Route::get('/dashboard/overdue-orders', [DashboardController::class, 'overdueOrders'])->middleware(['auth', 'verified'])->name('dashboard.overdue-orders');
 Route::get('/dashboard/order-progress/{type}/{id}', [DashboardController::class, 'orderProgress'])->middleware(['auth', 'verified'])->name('dashboard.order-progress');
+Route::post('/dashboard/order-late-reasons/{type}/{id}', [OrderLateReasonController::class, 'store'])->middleware(['auth', 'verified', 'permission:history-telat.alasan'])->name('dashboard.order-late-reasons.store');
 Route::get('/apresiasi/jam-ini', ApresiasiController::class)->middleware(['auth', 'verified', 'throttle:20,1'])->name('apresiasi');
 
 Route::middleware('auth')->group(function () {

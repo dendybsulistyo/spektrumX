@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\OrderLateLog;
+use App\Models\OrderLateReason;
 use App\Models\User;
 use App\Services\OrderDocumentService;
 use App\Services\OrderLateLogService;
@@ -42,7 +43,7 @@ class HistoryTelatController extends Controller
         if (! $lateLogs->isAvailable()) {
             return view('history-telat.index', $view + [
                 'logs' => new LengthAwarePaginator([], 0, 50), 'orders' => collect(), 'operators' => collect(),
-                'summary' => ['total' => 0, 'ongoing' => 0, 'stages' => collect()], 'unavailable' => true,
+                'summary' => ['total' => 0, 'ongoing' => 0, 'stages' => collect()], 'lateReasons' => collect(), 'unavailable' => true,
             ]);
         }
 
@@ -94,6 +95,9 @@ class HistoryTelatController extends Controller
             ->filter()->unique();
         $operators = $operatorIds->isEmpty() ? collect() : User::query()->whereIn('id', $operatorIds)->pluck('name', 'id');
 
-        return view('history-telat.index', $view + compact('logs', 'orders', 'operators', 'summary') + ['unavailable' => false]);
+        $lateReasons = OrderLateReason::groupedFor(collect($logs->items())->groupBy('order_type')
+            ->map(fn ($rows) => $rows->pluck('order_id')->unique()->all())->all());
+
+        return view('history-telat.index', $view + compact('logs', 'orders', 'operators', 'summary', 'lateReasons') + ['unavailable' => false]);
     }
 }

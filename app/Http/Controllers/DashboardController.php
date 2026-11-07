@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\BahanCetakOutdoor;
 use App\Models\OrderArtwork;
 use App\Models\OrderIndoor;
+use App\Models\OrderLateReason;
 use App\Models\OrderOutdoor;
 use App\Models\OrderStatusNote;
 use App\Models\PrinterOutdoor;
@@ -124,6 +125,9 @@ class DashboardController extends Controller
             'items' => $items,
             'team' => $team,
             'history' => $history,
+            'late_reasons' => OrderLateReason::forOrder($type, $id)->with('user:id,name')->latest()->orderByDesc('id')->get()
+                ->map(fn (OrderLateReason $reason) => $reason->toDisplay()),
+            'can_add_late_reason' => (bool) auth()->user()?->hasPermission('history-telat.alasan'),
         ]);
     }
 
@@ -154,8 +158,11 @@ class DashboardController extends Controller
         $stageLabels = self::STAGE_LABELS;
         $typeLabels = ['indoor' => 'Indoor', 'outdoor' => 'Outdoor', 'artwork' => 'Artwork'];
 
+        $lateReasons = OrderLateReason::groupedFor($orders->getCollection()->groupBy('type_slug')
+            ->map(fn ($rows) => $rows->pluck('id')->all())->all());
+
         return response()->json([
-            'data' => $orders->getCollection()->map(function ($order) use ($stageLabels, $typeLabels) {
+            'data' => $orders->getCollection()->map(function ($order) use ($stageLabels, $typeLabels, $lateReasons) {
                 $createdAt = Carbon::parse($order->created_at);
                 $operatorColumn = match ($order->status) {
                     'desain' => 'desain_by',
@@ -180,6 +187,7 @@ class DashboardController extends Controller
                     'status_label' => $stageLabels[$order->status] ?? ucfirst($order->status),
                     'status_bayar' => $order->status_bayar,
                     'operator' => $operator,
+                    'late_reason' => $lateReasons->get($order->type_slug.'-'.$order->id)?->first()?->toDisplay(),
                 ];
             })->values(),
             'meta' => [

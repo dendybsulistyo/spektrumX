@@ -161,6 +161,7 @@ class Role extends Model
         ],
         'History Telat' => [
             'history-telat.view' => 'Lihat history order yang pernah telat (> 24 jam sejak dibayar belum siap diambil)',
+            'history-telat.alasan' => 'Input alasan order telat (dicatat dengan nama penulis; bisa ditambah operator lain)',
         ],
         'Employee of the Month' => [
             'employee-of-month.view' => 'Lihat peringkat Employee of the Month per divisi',

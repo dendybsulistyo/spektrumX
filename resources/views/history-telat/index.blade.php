@@ -75,7 +75,7 @@
             <table>
                 <thead><tr>
                     <th style="width:44px;text-align:center;">No</th><th>No. Order</th><th>Customer</th><th>Order dibuat</th>
-                    <th>Mulai telat</th><th>Tertahan di</th><th>Operator tahap</th><th>Lama telat</th><th>Kondisi</th>
+                    <th>Mulai telat</th><th>Tertahan di</th><th>Operator tahap</th><th>Lama telat</th><th>Kondisi</th><th>Alasan</th>
                 </tr></thead>
                 <tbody>
                     @forelse ($logs as $log)
@@ -103,9 +103,19 @@
                                     <div class="mt-1 text-xs text-amber-700">Perkiraan</div>
                                 @endif
                             </td>
+                            <td style="min-width:220px;" class="text-sm">
+                                @forelse ($lateReasons->get($log->order_type.'-'.$log->order_id, collect()) as $reason)
+                                    <div @class(['mt-1.5' => ! $loop->first])>
+                                        <div class="text-gray-800">{{ $reason->alasan }}</div>
+                                        <div class="text-xs text-gray-500">{{ $reason->user?->name ?? '-' }} · {{ $reason->created_at?->format('d-m-Y H:i') }}</div>
+                                    </div>
+                                @empty
+                                    <span class="text-gray-400">-</span>
+                                @endforelse
+                            </td>
                         </tr>
                     @empty
-                        <tr><td colspan="9" class="py-8 text-center text-gray-400">Tidak ada order telat pada filter ini.</td></tr>
+                        <tr><td colspan="10" class="py-8 text-center text-gray-400">Tidak ada order telat pada filter ini.</td></tr>
                     @endforelse
                 </tbody>
             </table>

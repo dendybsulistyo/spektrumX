@@ -325,6 +325,10 @@
              historyOpen: false,
              historyLoading: false,
              historyData: null,
+             lateReasonDraft: '',
+             lateReasonSaving: false,
+             lateReasonError: '',
+             historyKey: null,
              overdueOpen: false,
              overdueLoading: false,
              overdueRows: [],
@@ -336,11 +340,29 @@
                  const q = this.search.trim().toLowerCase();
                  return okTipe && (q === '' || text.includes(q));
              },
+             saveLateReason() {
+                 if (!this.lateReasonDraft.trim() || this.lateReasonSaving) return;
+                 this.lateReasonSaving = true;
+                 this.lateReasonError = '';
+                 const { type, id } = this.historyKey;
+                 axios.post(`{{ url('/dashboard/order-late-reasons') }}/${type}/${id}`, { alasan: this.lateReasonDraft })
+                     .then(r => {
+                         this.historyData.late_reasons = r.data.late_reasons;
+                         this.lateReasonDraft = '';
+                         const row = this.overdueRows.find(o => o.type_slug === type && o.id === id);
+                         if (row) row.late_reason = r.data.late_reasons[0];
+                     })
+                     .catch(e => { this.lateReasonError = e.response?.data?.message || 'Gagal menyimpan alasan.'; })
+                     .finally(() => { this.lateReasonSaving = false; });
+             },
              openHistory(type, id) {
                  this.overdueOpen = false;
                  this.historyOpen = true;
                  this.historyLoading = true;
                  this.historyData = null;
+                 this.historyKey = { type, id };
+                 this.lateReasonDraft = '';
+                 this.lateReasonError = '';
                  axios.get(`{{ url('/dashboard/order-progress') }}/${type}/${id}`)
                      .then(r => { this.historyData = r.data; })
                      .finally(() => { this.historyLoading = false; });
@@ -657,7 +679,12 @@
                                 <tr>
                                     <td><button type="button" class="rcd-order rcd-order-blink" @click="openHistory(row.type_slug, row.id)" x-text="row.no_order"
                                                 :style="`animation-duration:${1.2 + (row.id * 7919 % 13) / 10}s;animation-delay:-${(row.id * 104729 % 2000) / 1000}s`"></button></td>
-                                    <td class="rcd-customer" x-text="row.customer || '-'"></td>
+                                    <td class="rcd-customer">
+                                        <div x-text="row.customer || '-'"></div>
+                                        <template x-if="row.late_reason">
+                                            <div style="margin-top: 2px; font-size: 11.5px; color: var(--muted); white-space: normal;" x-text="'Alasan: ' + row.late_reason.alasan + ' — ' + row.late_reason.user"></div>
+                                        </template>
+                                    </td>
                                     <td class="rcd-date" x-text="row.created_at"></td>
                                     <td><span class="pill pill-late" x-text="row.status_label"></span></td>
                                 </tr>
@@ -694,6 +721,30 @@
                     </template>
                     <template x-if="!historyLoading && historyData">
                         <div style="display: flex; flex-direction: column; gap: 18px;">
+                            <div x-show="(historyData.late_reasons && historyData.late_reasons.length) || historyData.can_add_late_reason">
+                                <div class="rcd-label">Alasan telat</div>
+                                <template x-for="(reason, idx) in (historyData.late_reasons || [])" :key="idx">
+                                    <div class="rcd-item" style="display: flex; justify-content: space-between; gap: 14px; font-size: 13px;">
+                                        <div style="color: var(--ink); white-space: pre-line;" x-text="reason.alasan"></div>
+                                        <div style="white-space: nowrap; text-align: right; line-height: 1.5; color: var(--muted);">
+                                            <div class="mono" style="font-size: 11.5px;" x-text="reason.created_at"></div>
+                                            <div x-text="reason.user"></div>
+                                        </div>
+                                    </div>
+                                </template>
+                                <template x-if="historyData.can_add_late_reason">
+                                    <form @submit.prevent="saveLateReason()" style="display: flex; flex-direction: column; gap: 6px;">
+                                        <textarea x-model="lateReasonDraft" rows="2" maxlength="1000" placeholder="Tulis alasan order telat…"
+                                                  style="width: 100%; padding: 8px 10px; font-size: 13px; border: 1px solid var(--rule-strong); border-radius: 6px;"></textarea>
+                                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+                                            <span style="font-size: 12px; color: #c8246c;" x-text="lateReasonError"></span>
+                                            <button type="submit" :disabled="lateReasonSaving || !lateReasonDraft.trim()"
+                                                    style="height: 32px; padding: 0 14px; font-size: 12px; font-weight: 600; color: #fff; background: var(--ink); border: 0; border-radius: 6px; cursor: pointer;"
+                                                    x-text="lateReasonSaving ? 'Menyimpan…' : 'Tambah alasan'"></button>
+                                        </div>
+                                    </form>
+                                </template>
+                            </div>
                             <div x-show="historyData.team && historyData.team.length">
                                 <div class="rcd-label">Operator per tahap</div>
                                 <div class="rcd-team-grid">
