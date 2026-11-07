@@ -1722,6 +1722,9 @@ class KeuanganController extends Controller
 
     public function customerReceivableDetails(Request $request): View
     {
+        // Kasir (kasir.manage) hanya membuka mode Pembayaran Piutang; laporan tetap milik menu Keuangan.
+        abort_if($request->input('mode') === 'report'
+            && ! FinanceMenuAccess::allows($request->user(), 'keuangan.customer-receivable-details'), 403);
         // Piutang tidak dibatasi periode: tampilkan seluruh nota yang belum lunas.
         $customerSearch = $request->string('customer')->trim()->toString();
         // Laporan Piutang per Customer: pilihan hanya customer VIP (ber-plafon), karena hanya mereka yang berpiutang.

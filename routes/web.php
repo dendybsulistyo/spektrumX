@@ -196,6 +196,10 @@ Route::middleware('auth')->group(function () {
         Route::get('/report/rekap-order-outdoor', [ReportController::class, 'outdoorOrderRecap'])->name('report.outdoor-recap');
     });
 
+    // Pembayaran Piutang juga dari menu Kasir (7 Nov 2026); tombol bayar tetap khusus kasir.manage.
+    Route::get('/keuangan/piutang-per-customer', [KeuanganController::class, 'customerReceivableDetails'])
+        ->middleware('permission.any:keuangan.view,kasir.manage')->name('keuangan.customer-receivable-details');
+
     Route::middleware('permission.any:keuangan.view,kasir.laporan-kasir-harian.view')->group(function () {
         Route::get('/keuangan/laporan-kasir-harian', [KeuanganController::class, 'laporanKasirHarian'])->name('keuangan.laporan-kasir-harian');
         Route::get('/keuangan/laporan-kasir-harian/excel', [KeuanganController::class, 'exportLaporanKasirHarianExcel'])->name('keuangan.laporan-kasir-harian.excel');
@@ -242,7 +246,6 @@ Route::middleware('auth')->group(function () {
         Route::get('/keuangan/total-tagihan-piutang', [KeuanganController::class, 'totalTagihanPiutang'])->name('keuangan.total-tagihan-piutang');
         Route::get('/keuangan/limit-piutang', [KeuanganController::class, 'creditLimits'])->name('keuangan.credit-limits');
         Route::get('/keuangan/piutang-customer-global', [KeuanganController::class, 'globalCustomerReceivables'])->name('keuangan.global-customer-receivables');
-        Route::get('/keuangan/piutang-per-customer', [KeuanganController::class, 'customerReceivableDetails'])->name('keuangan.customer-receivable-details');
         Route::get('/keuangan/rekap-piutang-customer', [KeuanganController::class, 'customerReceivablesRecap'])->name('keuangan.customer-receivables-recap');
         Route::get('/keuangan/penerimaan-piutang', [KeuanganController::class, 'dailyReceivableCollections'])->name('keuangan.daily-receivable-collections');
         Route::get('/keuangan/laba-rugi', [KeuanganController::class, 'labaRugi'])->name('keuangan.laba-rugi');

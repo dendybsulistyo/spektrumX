@@ -482,6 +482,9 @@
                                             @endcan
                                             @can('kasir.view')
                                                 <a href="{{ route('kasir.index') }}" class="{{ $dropdownLink(request()->routeIs('kasir.*')) }}">Kasir</a>
+                                                @can('kasir.manage')
+                                                    <a href="{{ route('keuangan.customer-receivable-details') }}" class="{{ $dropdownLink(request()->routeIs('keuangan.customer-receivable-details') && request('mode') !== 'report') }}">Pembayaran Piutang</a>
+                                                @endcan
                                             @endcan
                                             @if (Auth::user()->hasPermission('kasir.piutang-report.view') && ! Auth::user()->hasPermission('keuangan.view'))
                                                 <a href="{{ route('report.credit-orders-by-customer') }}" class="{{ $dropdownLink(request()->routeIs('report.credit-orders-by-customer')) }}">Rekap Order Customer (Piutang)</a>
@@ -821,6 +824,9 @@
                             @endcan
                             @can('kasir.view')
                                 <a href="{{ route('kasir.index') }}" class="{{ $mobileLink(request()->routeIs('kasir.*')) }}">Kasir</a>
+                                @can('kasir.manage')
+                                    <a href="{{ route('keuangan.customer-receivable-details') }}" class="{{ $mobileLink(request()->routeIs('keuangan.customer-receivable-details') && request('mode') !== 'report') }}">Pembayaran Piutang</a>
+                                @endcan
                             @endcan
                             @if (Auth::user()->hasPermission('kasir.piutang-report.view') && ! Auth::user()->hasPermission('keuangan.view'))
                                 <a href="{{ route('report.credit-orders-by-customer') }}" class="{{ $mobileLink(request()->routeIs('report.credit-orders-by-customer')) }}">Rekap Order Customer (Piutang)</a>
