@@ -190,7 +190,7 @@ class PengambilanController extends Controller
         }
 
         return redirect()->route('pengambilan.index', ['tab' => 'transaksi'])
-            ->with('status', 'Transaksi lunas sudah tersimpan dan dihilangkan dari daftar.');
+            ->with('status', 'Transaksi sudah tersimpan dan dihilangkan dari daftar.');
     }
 
     /**
@@ -214,7 +214,7 @@ class PengambilanController extends Controller
 
         $redirect = redirect()->route('pengambilan.index', ['tab' => 'transaksi']);
         if ($saved > 0) {
-            $redirect->with('status', "{$saved} transaksi lunas tersimpan dan dihilangkan dari daftar.");
+            $redirect->with('status', "{$saved} transaksi tersimpan dan dihilangkan dari daftar.");
         }
 
         return $errors ? $redirect->with('error', implode(' · ', $errors)) : $redirect;
@@ -230,13 +230,19 @@ class PengambilanController extends Controller
             if (! $order) {
                 return 'Order tidak ditemukan.';
             }
-            if ($order->status_bayar !== 'lunas' || (float) $order->jumlah_piutang > 0) {
+            // Hutang/Plafon VIP (7 Nov 2026): invoice tagihan sudah diserahkan, boleh disimpan sebelum lunas;
+            // pelunasan lewat Keuangan → Piutang per Customer atau Kasir.
+            $isPlafon = $order->status_bayar === 'hutang';
+            if ($isPlafon && ($order->status === 'batal' || $order->invoice_voided_at)) {
+                return 'Order batal tidak dapat disimpan.';
+            }
+            if (! $isPlafon && ($order->status_bayar !== 'lunas' || (float) $order->jumlah_piutang > 0)) {
                 return 'Transaksi belum lunas dan belum dapat disimpan.';
             }
 
             $received = (float) OrderPayment::query()->forOrder($type, $id)->sum('jumlah');
             $expected = (float) $order->jumlah_dibayar;
-            if ($expected <= 0 || $received + 0.01 < $expected) {
+            if (! $isPlafon && ($expected <= 0 || $received + 0.01 < $expected)) {
                 return 'Penerimaan pembayaran belum tercatat lengkap di Keuangan. Hubungi Kasir sebelum menyimpan transaksi.';
             }
 

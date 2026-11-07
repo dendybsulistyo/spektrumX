@@ -94,6 +94,20 @@ class SimpanTransaksiLangsungTest extends TestCase
         $this->assertSame('2026-11-04 15:30:00', (string) DB::table('order_documents')->where('order_id', $order)->value('issued_at'));
     }
 
+    public function test_plafon_vip_boleh_disimpan_sebelum_lunas_dan_tanggal_invoice_ikut_simpan(): void
+    {
+        $order = DB::table('order_indoor')->insertGetId(['NoOrder' => 'IND.2.006', 'status_bayar' => 'hutang', 'jumlah_piutang' => 75000, 'jumlah_dibayar' => 0]);
+        $document = DB::table('order_documents')->insertGetId(['kind' => 'inv', 'order_type' => 'indoor', 'order_id' => $order, 'issued_at' => '2026-11-03 08:00:00']);
+        DB::table('order_document_prints')->insert(['order_document_id' => $document]);
+        $this->travelTo('2026-11-07 14:00:00');
+
+        app(PengambilanController::class)->archiveTransactions(Request::create('/', 'POST', ['transaksi' => ["indoor:{$order}"]]));
+
+        $this->assertSame([$order], DB::table('sales_transaction_archives')->pluck('order_id')->all());
+        $this->assertSame('2026-11-07 14:00:00', (string) DB::table('order_documents')->where('order_id', $order)->value('issued_at'));
+        $this->assertSame(['hutang', 75000.0], [DB::table('order_indoor')->where('id', $order)->value('status_bayar'), (float) DB::table('order_indoor')->where('id', $order)->value('jumlah_piutang')]);
+    }
+
     private function paidOrder(string $number, bool $printed): int
     {
         $id = DB::table('order_indoor')->insertGetId(['NoOrder' => $number, 'status_bayar' => 'lunas', 'jumlah_dibayar' => 10000]);

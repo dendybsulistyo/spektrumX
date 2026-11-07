@@ -126,15 +126,16 @@
                     @php
                         $canArchive = auth()->user()->hasPermission('pengambilan.manage');
                         // Boleh Simpan langsung / dicentang: lunas, penerimaan lengkap, invoice sudah pernah dicetak.
-                        $directArchivable = fn ($t) => $canArchive && $t->status_bayar === 'lunas' && (float) $t->jumlah_piutang <= 0
-                            && (float) $t->payment_total + 0.01 >= (float) $t->jumlah_dibayar && ($t->invoice_printed ?? false);
+                        // Lunas (uang tercatat lengkap) atau Hutang/Plafon VIP (invoice tagihan diserahkan), invoice sudah dicetak.
+                        $directArchivable = fn ($t) => $canArchive && ($t->invoice_printed ?? false) && ($t->status_bayar === 'hutang'
+                            || ($t->status_bayar === 'lunas' && (float) $t->jumlah_piutang <= 0 && (float) $t->payment_total + 0.01 >= (float) $t->jumlah_dibayar));
                         $archivableKeys = collect($salesTransactions->items())->filter($directArchivable)
                             ->map(fn ($t) => $t->order_type.':'.$t->order_id)->values();
                     @endphp
                     <div x-show="tab === 'transaksi'" x-cloak x-data="{ picked: [], all: @js($archivableKeys) }">
                 @if ($archivableKeys->isNotEmpty())
                     <form id="bulk-archive" method="POST" action="{{ route('pengambilan.transaksi.archive-many') }}"
-                          @submit="if (! confirm(`Simpan ${picked.length} transaksi lunas dan hilangkan dari daftar?`)) $event.preventDefault()"
+                          @submit="if (! confirm(`Simpan ${picked.length} transaksi dan hilangkan dari daftar?`)) $event.preventDefault()"
                           style="display:flex; align-items:center; justify-content:flex-end; gap:var(--space-3); margin-bottom:var(--space-3);">
                         @csrf
                         <span class="text-muted" style="font-size:13px;" x-text="picked.length ? picked.length + ' transaksi dicentang' : 'Centang transaksi yang invoice-nya sudah dicetak untuk disimpan sekaligus'"></span>
@@ -195,6 +196,11 @@
                                                     @click="paymentOpen = true; paymentType = @js($transaction->order_type); paymentId = @js((int) $transaction->order_id); paymentMode = @js($transaction->status_bayar); paymentOrder = @js($transaction->invoice); paymentRemaining = @js((float) $transaction->jumlah_piutang); paymentMethod = 'tunai'">
                                                 Bayar
                                             </button>
+                                            @if ($transaction->status_bayar === 'hutang' && $canArchive)
+                                                <a href="{{ route('invoice.show', ['type' => $transaction->order_type, 'id' => $transaction->order_id, 'source' => 'pengambilan', 'payment_preview' => 1]) }}"
+                                                   onclick="return confirm('Simpan invoice tagihan Plafon? Transaksi hilang dari daftar Pengambilan; pelunasan lewat Keuangan → Piutang per Customer atau Kasir.')"
+                                                   class="in-btn" style="text-decoration:none;" title="Invoice tagihan Plafon sudah diserahkan ke customer">Simpan</a>
+                                            @endif
                                         @else
                                             @php $paymentRecorded = (float) $transaction->payment_total + 0.01 >= (float) $transaction->jumlah_dibayar; @endphp
                                             @if ($directArchivable($transaction))
