@@ -58,13 +58,15 @@ class InvoiceController extends Controller
         // lists every receipt so the customer can see how the balance was
         // settled, even after the order has flipped to lunas.
         $paymentHistory = OrderPayment::query()->forOrder($type, $id)
-            ->whereIn('jenis', ['dp', 'pelunasan_dp', 'pelunasan_hutang'])
+            // Lunas sekali bayar ikut dirinci (7 Nov 2026): Total → Dibayar → LUNAS, seperti Proforma.
+            ->whereIn('jenis', ['lunas', 'dp', 'pelunasan_dp', 'pelunasan_hutang'])
             ->orderBy('created_at')->orderBy('id')->get()
             ->groupBy(fn (OrderPayment $payment) => $payment->jenis.'|'.$payment->created_at?->format('Y-m-d H:i'))
             ->map(fn ($rows) => (object) [
                 'jenis' => $rows->first()->jenis,
                 'label' => match ($rows->first()->jenis) {
                     'dp' => 'DP',
+                    'lunas' => 'Dibayar',
                     default => 'Pelunasan',
                 },
                 'tanggal' => $rows->first()->created_at,
