@@ -17,6 +17,7 @@ use App\Services\ApproverNotificationService;
 use App\Services\OrderCancellationRefund;
 use App\Services\OrderNumberService;
 use App\Services\OrderPricingService;
+use App\Services\OrderProofService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -29,6 +30,7 @@ class OrderIndoorController extends Controller
         private readonly OrderPricingService $pricingService,
         private readonly ApproverNotificationService $notifier,
         private readonly OrderNumberService $orderNumbers,
+        private readonly OrderProofService $proofs,
     ) {}
 
     public function index(Request $request): View
@@ -71,11 +73,17 @@ class OrderIndoorController extends Controller
                 'TebalKertas' => null,
             ])
             : null;
+        // Order reguler dari proof yang sudah selesai di Layout (daftar Ctrl+X).
+        $proof = $request->integer('proof') ? $this->proofs->convertible($request->integer('proof'), 'indoor') : null;
+        if ($proof) {
+            $items = $this->proofs->formItems($proof);
+        }
 
         return view('order-indoor.create', [
-            'selectedCustomer' => old('KdCust') ? Customer::where('KdCust', old('KdCust'))->first() : $jobSheet?->customer,
+            'selectedCustomer' => old('KdCust') ? Customer::where('KdCust', old('KdCust'))->first() : ($proof?->customer ?? $jobSheet?->customer),
             'items' => $items,
             'sourceJobSheet' => $jobSheet,
+            'sourceProof' => $proof,
             'produkList' => Produk::with('hargaBertingkat')->orderBy('NoUrut')->get(),
             'artworkProdukList' => HargaArtwork::with('hargaBertingkat')->orderBy('NoUrut')->get(),
             'kategoriList' => $this->kategoriGabungan(),
@@ -146,6 +154,10 @@ class OrderIndoorController extends Controller
 
             $order->update(['total' => $this->pricingService->totalIndoor($order)]);
             $this->pricingService->snapshotLinePrices('indoor', $order);
+
+            if (! $replacement && ! empty($data['proof_id'])) {
+                $this->proofs->markConverted((int) $data['proof_id'], 'indoor', $order);
+            }
 
             // Catat nomor order ke Lembar Kerja CS asalnya (untuk riwayat CS).
             if (! empty($data['job_sheet_id'])) {

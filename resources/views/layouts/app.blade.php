@@ -159,7 +159,7 @@
             // Grouping mirrors the old sidebar sections — only the container changed
             // from a vertical accordion to a horizontal dropdown-per-group navbar.
             $masterDataActive = request()->routeIs('customers.*', 'kategori-produk-indoor.*', 'detail-indoor.*', 'harga-artwork.*', 'printer-outdoor.*', 'bahan-cetak-outdoor.*', 'harga-cetak-outdoor.*', 'printers.*');
-            $transaksiActive = request()->routeIs('order-indoor.*', 'order-outdoor.*', 'order-artwork.*', 'customer-service.index', 'customer-service.job-sheets.*');
+            $transaksiActive = request()->routeIs('order-indoor.*', 'order-outdoor.*', 'order-proof.*', 'order-artwork.*', 'customer-service.index', 'customer-service.job-sheets.*');
             $operatorActive = request()->routeIs('file.*', 'kasir.*', 'customer-service.payment-queue', 'order-desain.*', 'order-cetak.*', 'order-finishing.*', 'order-qc.*', 'order-bungkus.*', 'pengambilan.*', 'order-corrections.*');
             $analitikActive = request()->routeIs('data-warehouse.*', 'laporan-operator-indoor.*', 'rekap-penerimaan.*', 'monitoring-kinerja.*', 'monitoring-transaksi.*', 'papan-pantau.*', 'history-telat.*', 'employee-of-month.*', 'printer-performance.*', 'rekap-bulanan.*');
             $keuanganActive = request()->routeIs('akuntansi.*', 'keuangan.*', 'pengeluaran.*', 'payroll.*', 'order-documents.*');
@@ -184,7 +184,7 @@
             $pengaturanActive = request()->routeIs('pengaturan.cetak-sales-order.*', 'roles.*', 'users.*', 'jasa-potong.*', 'jasa-potong-artwork.*', 'server-monitor.*');
 
             $showMasterData = Auth::user()->hasPermission('customers.view') || Auth::user()->hasPermission('produk.view') || Auth::user()->hasPermission('harga-artwork.view') || Auth::user()->hasPermission('printers.view') || Auth::user()->hasPermission('printer-outdoor.view') || Auth::user()->hasPermission('bahan-cetak-outdoor.view') || Auth::user()->hasPermission('harga-cetak-outdoor.view') || Auth::user()->hasPermission('kategori-produk-indoor.view');
-            $showTransaksi = Auth::user()->hasPermission('order-indoor.view') || Auth::user()->hasPermission('order-outdoor.view') || Auth::user()->hasPermission('order-artwork.view') || Auth::user()->hasPermission('customer-service.view');
+            $showTransaksi = Auth::user()->hasPermission('order-indoor.view') || Auth::user()->hasPermission('order-outdoor.view') || Auth::user()->hasPermission('order-artwork.view') || Auth::user()->hasPermission('customer-service.view') || Auth::user()->hasPermission('order-proof.manage');
             $canCorrectOrder = Auth::user()->role?->name === 'admin' || Auth::user()->hasPermission('order-correction.manage');
             $showOperator = Auth::user()->hasPermission('customer-service.view') || Auth::user()->hasPermission('kasir.view') || Auth::user()->hasPermission('order-desain.view') || Auth::user()->hasPermission('order-cetak.view') || Auth::user()->hasPermission('order-finishing.view') || Auth::user()->hasPermission('order-qc.view') || Auth::user()->hasPermission('order-bungkus.view') || Auth::user()->hasPermission('pengambilan.view') || Auth::user()->hasPermission('file-monitor.view') || Auth::user()->hasPermission('laporan-order.view') || $canCorrectOrder;
             $showAnalitik = Auth::user()->hasPermission('data-warehouse.view') || Auth::user()->hasPermission('monitoring-kinerja.view') || Auth::user()->hasPermission('monitoring-transaksi.view') || Auth::user()->hasPermission('papan-pantau.view') || Auth::user()->hasPermission('history-telat.view') || Auth::user()->hasPermission('employee-of-month.view') || Auth::user()->hasPermission('printer-performance.view') || Auth::user()->hasPermission('rekap-bulanan.view');
@@ -453,6 +453,9 @@
                                             @can('order-outdoor.view')
                                                 <a href="{{ route('order-outdoor.index') }}" class="{{ $dropdownLink(request()->routeIs('order-outdoor.*')) }}">Order Outdoor</a>
                                             @endcan
+                                            @can('order-proof.manage')
+                                                <a href="{{ route('order-proof.index') }}" class="{{ $dropdownLink(request()->routeIs('order-proof.*')) }}">Order Proof</a>
+                                            @endcan
                                             @can('customer-service.view')
                                                 <a href="{{ route('customer-service.index') }}" class="{{ $dropdownLink(request()->routeIs('customer-service.index')) }}">Customer Service</a>
                                                 <a href="{{ route('customer-service.job-sheets.index') }}" class="{{ $dropdownLink(request()->routeIs('customer-service.job-sheets.*')) }}">Lembar Kerja</a>
@@ -596,6 +599,9 @@
                             @if (collect(\App\Http\Controllers\UnpaidOutdoorOrderController::PERMISSIONS)->contains(fn ($permission) => Auth::user()->hasPermission($permission)))
                                 <x-belum-bayar-outdoor />
                             @endif
+                            @can('order-proof.manage')
+                                <x-proof-siap />
+                            @endcan
                             <x-status-wa />
                             @php
                                 $showDailySummary = \App\Http\Controllers\DailySummaryController::applies(Auth::user());

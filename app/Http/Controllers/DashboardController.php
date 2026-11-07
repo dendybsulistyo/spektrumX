@@ -7,6 +7,7 @@ use App\Models\OrderArtwork;
 use App\Models\OrderIndoor;
 use App\Models\OrderLateReason;
 use App\Models\OrderOutdoor;
+use App\Models\OrderProof;
 use App\Models\OrderStatusNote;
 use App\Models\PrinterOutdoor;
 use App\Services\DashboardStatsService;
@@ -127,6 +128,9 @@ class DashboardController extends Controller
             'history' => $history,
             'late_reasons' => OrderLateReason::forOrder($type, $id)->with('user:id,name')->latest()->orderByDesc('id')->get()
                 ->map(fn (OrderLateReason $reason) => $reason->toDisplay()),
+            'proof' => ($proof = OrderProof::fromOrder($type, $id))
+                ? ['no_order' => $proof->NoOrder, 'url' => route('order-proof.show', $proof)]
+                : null,
             'can_add_late_reason' => (bool) auth()->user()?->hasPermission('history-telat.alasan'),
         ]);
     }

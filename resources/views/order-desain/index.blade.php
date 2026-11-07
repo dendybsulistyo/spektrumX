@@ -56,6 +56,7 @@
         if (auth()->user()->hasPermission('order-outdoor.view')) {
             $tabs['outdoor'] = ['label' => 'Outdoor', 'count' => $outdoorItems->count() + $outdoorNeedsReply->count()];
         }
+        $tabs['proof'] = ['label' => 'Proof', 'count' => $proofs->count()];
         $initialTab = array_key_exists(request('tab'), $tabs) ? request('tab') : array_key_first($tabs);
     @endphp
 
@@ -204,7 +205,7 @@
                             </div>
                         @endif
                     </div>
-                    <button type="button" class="in-btn" :disabled="selectedCount === 0 || sending" @click="bulkSend()"
+                    <button type="button" class="in-btn" x-show="tab !== 'proof'" :disabled="selectedCount === 0 || sending" @click="bulkSend()"
                             :style="(selectedCount === 0 || sending) ? 'opacity:0.5; cursor:not-allowed;' : ''">
                         <span x-text="sending ? 'Mengirim...' : 'Kirim Terpilih (' + selectedCount + ') ke Cetak'"></span>
                     </button>
@@ -412,6 +413,55 @@
                         @endif
                         </div>
                     @endif
+
+                    {{-- Order proof: tagihan 0, cukup dibuat lalu ditandai Selesai (tidak lanjut ke Cetak). --}}
+                    <div x-show="tab === 'proof'">
+                        @forelse ($proofs as $proof)
+                            <div class="order-card" style="padding: var(--space-4);">
+                                <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px;">
+                                    <div>
+                                        <span class="pill" style="background:#fef3c7;color:#92400e;font-weight:700;">PROOF {{ strtoupper($proof->typeLabel()) }}</span>
+                                        <a href="{{ route('order-proof.show', $proof) }}" class="mono" style="margin-left: 6px; font-weight: 700; color: var(--ink);">{{ $proof->NoOrder }}</a>
+                                        <span class="text-muted"> · {{ $proof->customer?->NmCust ?? $proof->KdCust }} · {{ $proof->created_at?->format('d M Y H:i') }} · {{ $proof->createdBy?->name ?? '-' }}</span>
+                                    </div>
+                                    @can('order-desain.manage')
+                                        <form method="POST" action="{{ route('order-proof.layout-done', $proof) }}"
+                                              onsubmit="return confirm('Tandai proof {{ $proof->NoOrder }} selesai?')">
+                                            @csrf
+                                            <button type="submit" class="in-btn">Selesai</button>
+                                        </form>
+                                    @endcan
+                                </div>
+                                <table style="width: 100%; margin-top: 10px; font-size: 13px; border-collapse: collapse;">
+                                    <thead>
+                                        <tr style="text-align: left; color: var(--muted); font-size: 11px; text-transform: uppercase;">
+                                            <th style="padding: 4px 6px;">Nama file / judul</th>
+                                            <th style="padding: 4px 6px;">{{ $proof->order_type === 'outdoor' ? 'Printer · Bahan' : 'Produk' }}</th>
+                                            <th style="padding: 4px 6px;">Perkiraan ukuran</th>
+                                            <th style="padding: 4px 6px;">Qty</th>
+                                            <th style="padding: 4px 6px;">Catatan</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach ($proof->items as $item)
+                                            <tr style="border-top: 1px dashed var(--rule);">
+                                                <td style="padding: 5px 6px; font-weight: 700;">{{ $item->NmFile ?: '-' }}</td>
+                                                <td style="padding: 5px 6px;">{{ $proofItemLabels[$proof->order_type][$item->kode] ?? ($item->kode ?: '-') }}</td>
+                                                <td style="padding: 5px 6px;">{{ $item->Panjang || $item->Lebar ? (float) $item->Panjang.' × '.(float) $item->Lebar : 'Belum pasti' }}</td>
+                                                <td style="padding: 5px 6px;" class="mono">{{ $item->Qty }}</td>
+                                                <td style="padding: 5px 6px;" class="text-muted">{{ $item->catatan ?: '-' }}</td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                                @if ($proof->catatan)
+                                    <div style="margin-top: 8px; font-size: 13px; white-space: pre-line;"><strong>Catatan:</strong> {{ $proof->catatan }}</div>
+                                @endif
+                            </div>
+                        @empty
+                            <div class="blueprint text-muted" style="padding: var(--space-6); text-align: center;">Tidak ada proof di antrian Layout.</div>
+                        @endforelse
+                    </div>
                 </div>
             </div>
 

@@ -7,6 +7,7 @@ use App\Models\OrderArtwork;
 use App\Models\OrderIndoor;
 use App\Models\OrderLateLog;
 use App\Models\OrderOutdoor;
+use App\Models\OrderProof;
 use App\Services\OrderLateLogService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
@@ -119,14 +120,60 @@ class QuickSearchController extends Controller
             ->keyBy(fn ($doc) => $doc->order_type.'-'.$doc->order_id);
 
         $lateLogs = app(OrderLateLogService::class)->logsFor($results);
+        // Order yang dibuat dari proof: nomor proof asal ikut tampil.
+        $sourceProofs = $results->isEmpty() ? collect() : OrderProof::query()
+            ->where(function ($query) use ($results) {
+                foreach ($results->groupBy('type') as $type => $rows) {
+                    $query->orWhere(fn ($q) => $q->where('converted_order_type', $type)->whereIn('converted_order_id', $rows->pluck('id')));
+                }
+            })->get(['NoOrder', 'converted_order_type', 'converted_order_id'])
+            ->keyBy(fn ($proof) => $proof->converted_order_type.'-'.$proof->converted_order_id);
 
-        return $results->map(function (array $row) use ($invoices, $lateLogs) {
+        return $results->map(function (array $row) use ($invoices, $lateLogs, $sourceProofs) {
             $row['invoice'] = $invoices->get($row['type'].'-'.$row['id'])?->number;
+            $row['proof'] = $sourceProofs->get($row['type'].'-'.$row['id'])?->NoOrder;
             $row['late'] = $this->lateInfo($lateLogs->get($row['type'].'-'.$row['id']), $row);
             unset($row['estimate_end']);
 
             return $row;
-        })->sortByDesc('date')->take(self::LIMIT)->values();
+        })->sortByDesc('date')->take(self::LIMIT)->values()
+            ->concat($this->proofs($request, $upper, $isNumberQuery, $byCustomer));
+    }
+
+    /**
+     * Order proof (PRF.x.yymmdd###) atau proof milik customer yang cocok; dibuka ke halaman detail proof.
+     *
+     * @param  array<int, string>  $byCustomer
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function proofs(Request $request, string $upper, bool $isNumberQuery, array $byCustomer): Collection
+    {
+        $canOpen = $request->user()->hasPermission('order-proof.manage') || $request->user()->hasPermission('order-desain.view');
+        $byNumber = $isNumberQuery && str_starts_with($upper, 'PRF');
+        if (! $canOpen || (! $byNumber && ! $byCustomer)) {
+            return collect();
+        }
+
+        return OrderProof::query()->with('customer:id,KdCust,NmCust')
+            ->when($byNumber, fn ($query) => $query->where('NoOrder', 'like', $upper.'%'), fn ($query) => $query->whereIn('KdCust', $byCustomer))
+            ->latest('id')->limit(self::LIMIT)->get()
+            ->map(fn (OrderProof $proof) => [
+                'type' => 'proof',
+                'id' => $proof->id,
+                'no_order' => $proof->NoOrder,
+                'customer' => $proof->customer?->NmCust ? ucwords(mb_strtolower($proof->customer->NmCust)) : ($proof->KdCust ?: '-'),
+                'date' => $proof->created_at?->format('Y-m-d'),
+                'date_label' => $proof->created_at?->locale('id')->translatedFormat('d M Y'),
+                'status' => $proof->statusLabel(),
+                'status_bayar' => null,
+                'edit_url' => route('order-proof.show', $proof),
+                'nota_url' => null,
+                'proforma_url' => null,
+                'progress_url' => null,
+                'invoice' => ($converted = $proof->convertedOrder()) ? '→ '.$converted->NoOrder : null,
+                'proof' => null,
+                'late' => null,
+            ]);
     }
 
     private function orderRow(Request $request, string $type, Model $order): array

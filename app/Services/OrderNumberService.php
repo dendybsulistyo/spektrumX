@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\OrderArtwork;
 use App\Models\OrderIndoor;
 use App\Models\OrderOutdoor;
+use App\Models\OrderProof;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
@@ -30,6 +31,10 @@ class OrderNumberService
             'indoor' => [OrderIndoor::class, 'IND.2.'.date('ymd', strtotime($date))],
             'outdoor' => [OrderOutdoor::class, 'OUT.1.'.date('ymd', strtotime($date))],
             'artwork' => [OrderArtwork::class, 'ART'.date('ymd', strtotime($date))],
+            // Order proof: urutan sendiri, PRF.1 outdoor · PRF.2 indoor · PRF.3 artwork (7 Nov 2026).
+            'prf-out' => [OrderProof::class, 'PRF.1.'.date('ymd', strtotime($date))],
+            'prf-in' => [OrderProof::class, 'PRF.2.'.date('ymd', strtotime($date))],
+            'prf-art' => [OrderProof::class, 'PRF.3.'.date('ymd', strtotime($date))],
             default => throw new RuntimeException("Jenis order {$type} tidak dikenal."),
         };
 

@@ -27,6 +27,7 @@
                             <button type="button" class="cc-back" @click="detail = null">&larr; Kembali</button>
                             <strong class="cc-mono" x-text="detail.no_order"></strong>
                             <span x-text="detail.customer || ''"></span>
+                            <a x-show="detail.proof" :href="detail.proof?.url" class="cc-muted cc-mono" x-text="'dari ' + detail.proof?.no_order"></a>
                         </div>
                         <template x-if="detail.loading"><div class="cc-empty">Memuat riwayat…</div></template>
                         <template x-if="!detail.loading">
@@ -94,11 +95,14 @@
                 <div class="cc-results" x-show="!detail">
                     <template x-if="q.trim().length < 3">
                         <div class="cc-hint">
-                            Ketik minimal 3 huruf. Contoh: <code>IND.2.2610</code> · <code>26100800056</code> · <code>INV.2.</code> · <code>SO.2.</code> · nama customer
+                            Ketik minimal 3 huruf. Contoh: <code>IND.2.2610</code> · <code>26100800056</code> · <code>INV.2.</code> · <code>SO.2.</code> · <code>PRF.1.</code> · nama customer
                             <div class="cc-keys">
                                 <kbd>↑</kbd><kbd>↓</kbd> pilih &nbsp; <kbd>Enter</kbd> buka &nbsp; <kbd>Esc</kbd> tutup
                                 @if (collect(\App\Http\Controllers\UnpaidOutdoorOrderController::PERMISSIONS)->contains(fn ($permission) => auth()->user()?->hasPermission($permission)))
                                     &nbsp; <kbd x-text="isMac ? '⌘B' : 'Ctrl B'"></kbd> Outdoor belum bayar
+                                @endif
+                                @if (auth()->user()?->hasPermission('order-proof.manage'))
+                                    &nbsp; <kbd x-text="isMac ? '⌘X' : 'Ctrl X'"></kbd> Proof siap dibuatkan order
                                 @endif
                             </div>
                         </div>
@@ -110,16 +114,17 @@
                     <template x-if="orders.length"><div class="cc-group">Order</div></template>
                     <template x-for="(o, i) in orders" :key="'o' + o.type + o.id">
                         <div class="cc-row" :class="active === i && 'is-active'" @mouseenter="active = i" @click="choose(i)">
-                            <span class="cc-type" x-text="o.type === 'indoor' ? 'IND' : (o.type === 'outdoor' ? 'OUT' : 'ART')"></span>
+                            <span class="cc-type" x-text="({ indoor: 'IND', outdoor: 'OUT', artwork: 'ART', proof: 'PRF' })[o.type]"></span>
                             <div class="cc-main">
                                 <div><span class="cc-late" x-show="o.late" :class="o.late?.ongoing && 'is-ongoing'" :title="o.late?.label"></span><strong class="cc-mono" x-text="o.no_order"></strong>
-                                    <span class="cc-muted cc-mono" x-show="o.invoice" x-text="'· ' + o.invoice"></span></div>
+                                    <span class="cc-muted cc-mono" x-show="o.invoice" x-text="'· ' + o.invoice"></span>
+                                    <span class="cc-muted cc-mono" x-show="o.proof" x-text="'· dari ' + o.proof"></span></div>
                                 <div class="cc-muted"><span x-text="o.customer"></span> · <span x-text="o.date_label"></span><span class="cc-late-text" x-show="o.late" x-text="' · ' + o.late?.label"></span></div>
                             </div>
                             <span class="cc-pill" x-text="statusLabel(o.status)"></span>
-                            <span class="cc-pill" :class="'pay-' + o.status_bayar" x-text="payLabel(o.status_bayar)"></span>
+                            <span class="cc-pill" x-show="o.type !== 'proof'" :class="'pay-' + o.status_bayar" x-text="payLabel(o.status_bayar)"></span>
                             <div class="cc-actions">
-                                <button type="button" @click.stop="openDetail(o)" title="Lihat riwayat proses">Riwayat</button>
+                                <button type="button" x-show="o.progress_url" @click.stop="openDetail(o)" title="Lihat riwayat proses">Riwayat</button>
                                 <a x-show="o.nota_url" :href="o.nota_url" @click.stop title="Lihat nota">Nota</a>
                                 <a x-show="o.proforma_url" :href="o.proforma_url" target="_blank" @click.stop title="Cetak Proforma Invoice tagihan VIP">Proforma</a>
                                 <a x-show="o.edit_url" :href="o.edit_url" @click.stop title="Buka order">Buka</a>

@@ -6,6 +6,7 @@ use App\Models\BahanCetakOutdoor;
 use App\Models\OrderComment;
 use App\Models\OrderOutdoor;
 use App\Models\OrderOutdoorDetail;
+use App\Models\OrderProof;
 use App\Models\OrderReworkRequest;
 use App\Models\OrderStatusNote;
 use App\Models\PrinterOutdoor;
@@ -117,7 +118,12 @@ class OrderDesainController extends Controller
         $pendingRework = OrderReworkRequest::pendingMap();
         $canApproveRework = $user->hasPermission('order-rework.approve');
 
-        return compact('indoorItems', 'outdoorItems', 'outdoorNeedsReply', 'outdoorComments', 'outdoorUnread', 'printerNames', 'bahanNames', 'layoutRevisionItems', 'pendingRework', 'canApproveRework');
+        // Order proof (7 Nov 2026): tab tersendiri, cukup ditandai Selesai oleh operator Layout.
+        $proofs = OrderProof::query()->with('customer:id,KdCust,NmCust', 'items', 'createdBy:id,name')
+            ->where('status', 'layout')->orderBy('created_at')->get();
+        $proofItemLabels = $proofs->isEmpty() ? [] : OrderProof::itemOptions();
+
+        return compact('proofs', 'proofItemLabels', 'indoorItems', 'outdoorItems', 'outdoorNeedsReply', 'outdoorComments', 'outdoorUnread', 'printerNames', 'bahanNames', 'layoutRevisionItems', 'pendingRework', 'canApproveRework');
     }
 
     /**

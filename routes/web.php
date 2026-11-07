@@ -57,6 +57,7 @@ use App\Http\Controllers\OrderFinishingController;
 use App\Http\Controllers\OrderIndoorController;
 use App\Http\Controllers\OrderLateReasonController;
 use App\Http\Controllers\OrderOutdoorController;
+use App\Http\Controllers\OrderProofController;
 use App\Http\Controllers\OrderQcController;
 use App\Http\Controllers\OrderReworkController;
 use App\Http\Controllers\OutdoorNestingController;
@@ -551,6 +552,18 @@ Route::middleware('auth')->group(function () {
         Route::get('/order-desain/version', [OrderDesainController::class, 'version'])->name('order-desain.version');
         Route::post('/order-desain/nmfile/{item}', [OrderDesainController::class, 'updateNmFile'])->name('order-desain.nmfile');
     });
+    // Order proof (7 Nov 2026): tagihan 0, langsung ke Layout, lalu dibuatkan satu order reguler.
+    Route::middleware('permission:order-proof.manage')->group(function () {
+        Route::get('/order-proof', [OrderProofController::class, 'index'])->name('order-proof.index');
+        Route::get('/order-proof/create', [OrderProofController::class, 'create'])->name('order-proof.create');
+        Route::post('/order-proof', [OrderProofController::class, 'store'])->name('order-proof.store');
+        Route::get('/order-proof/siap', [OrderProofController::class, 'ready'])->name('order-proof.ready');
+        Route::post('/order-proof/{orderProof}/tutup', [OrderProofController::class, 'close'])->name('order-proof.close');
+    });
+    Route::get('/order-proof/{orderProof}', [OrderProofController::class, 'show'])
+        ->middleware('permission.any:order-proof.manage,order-desain.view')->whereNumber('orderProof')->name('order-proof.show');
+    Route::post('/order-proof/{orderProof}/selesai-layout', [OrderProofController::class, 'layoutDone'])
+        ->middleware('permission:order-desain.manage')->name('order-proof.layout-done');
     Route::middleware('permission:order-desain.manage')->group(function () {
         Route::post('/order-desain/gabungan/{item}', [OrderDesainController::class, 'updateGabungan'])->name('order-desain.gabungan');
         Route::post('/order-desain/progress/{type}/{id}', [OrderDesainController::class, 'updateItem'])->name('order-desain.progress');

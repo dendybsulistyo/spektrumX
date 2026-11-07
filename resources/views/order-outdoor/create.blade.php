@@ -7,6 +7,16 @@
         <form method="POST" action="{{ isset($replacementOrder) ? route('kasir.replacement.store') : route('order-outdoor.store') }}" enctype="multipart/form-data"
               x-data="{ destinationOpen: {{ $errors->any() && old('payment_queue') ? 'true' : 'false' }} }">
             @csrf
+            @if (isset($sourceProof) && $sourceProof)
+                <input type="hidden" name="proof_id" value="{{ $sourceProof->id }}">
+                <div class="mb-4 rounded border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                    Dibuat dari proof <strong class="font-mono">{{ $sourceProof->NoOrder }}</strong> — {{ $sourceProof->customer?->NmCust ?? $sourceProof->KdCust }}.
+                    Ukuran di bawah masih perkiraan dari proof: <strong>isi ukuran pasti</strong>, lalu lengkapi seperti order biasa.
+                    @if ($sourceProof->catatan)
+                        <div class="mt-1 whitespace-pre-line text-amber-900">{{ $sourceProof->catatan }}</div>
+                    @endif
+                </div>
+            @endif
             @if (isset($sourceJobSheet) && $sourceJobSheet)
                 <input type="hidden" name="job_sheet_id" value="{{ $sourceJobSheet->id }}">
                 <div class="mb-4 rounded border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">

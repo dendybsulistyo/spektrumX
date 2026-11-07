@@ -55,6 +55,15 @@ class QuickSearchNameTest extends TestCase
             $t->unsignedBigInteger('order_id')->nullable();
             $t->unsignedInteger('progress_hari')->nullable();
         });
+        Schema::create('order_proofs', function (Blueprint $t) {
+            $t->id();
+            $t->string('NoOrder');
+            $t->string('KdCust')->nullable();
+            $t->string('status')->default('layout');
+            $t->string('converted_order_type')->nullable();
+            $t->unsignedBigInteger('converted_order_id')->nullable();
+            $t->timestamps();
+        });
     }
 
     public function test_name_search_returns_customer_and_their_orders(): void

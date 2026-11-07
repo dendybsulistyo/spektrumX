@@ -712,6 +712,9 @@
                     <div>
                         <h4 x-text="historyData ? historyData.no_order : 'Memuat…'"></h4>
                         <div x-text="historyData ? (historyData.customer || '-') : ''"></div>
+                        <template x-if="historyData && historyData.proof">
+                            <a :href="historyData.proof.url" style="color: #c4c9d8; font-size: 12px; text-decoration: underline;" x-text="'Dari proof ' + historyData.proof.no_order"></a>
+                        </template>
                     </div>
                     <button type="button" @click="historyOpen = false">Tutup</button>
                 </div>

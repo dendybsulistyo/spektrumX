@@ -81,6 +81,9 @@ class Role extends Model
             'kasir.piutang-report.view' => 'Lihat Rekap Order Customer (Piutang)',
             'kasir.laporan-kasir-harian.view' => 'Lihat Laporan Kasir Harian',
         ],
+        'Order Proof' => [
+            'order-proof.manage' => 'Buat order proof (tagihan 0), tutup proof, dan buatkan order reguler dari proof (Ctrl+X)',
+        ],
         'Customer Service' => [
             'customer-service.view' => 'Lihat antrean order Customer Service',
             'customer-service.manage' => 'Isi informasi transfer dan teruskan order ke kasir',
