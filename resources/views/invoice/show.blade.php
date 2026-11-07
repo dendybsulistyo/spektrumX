@@ -146,7 +146,7 @@
         // The DP breakdown is four rows tall. CForm pages need a little more
         // reserved space for it so the last “Kurang Bayar” row never moves
         // on to a separate sheet.
-        $itemsPerPage = $showPaymentHistory ? max(7 - max($paymentHistory->count(), 1), 3) : 7;
+        $itemsPerPage = $showPaymentHistory ? max(7 - ($order->status_bayar === 'hutang' ? 2 : max($paymentHistory->count(), 1)), 3) : 7;
         $itemPages = $items->chunk($itemsPerPage);
         if ($itemPages->isEmpty()) {
             $itemPages = collect([collect()]);
@@ -214,11 +214,17 @@
             @if ($isLastPage && $showPaymentHistory)
                 <div class="dp-breakdown">
                     <div class="row"><span class="label">Total</span><span class="amount">Rp {{ number_format($totalTagihanBulat, 0, ',', '.') }}</span></div>
-                    @forelse ($paymentHistory as $payment)
-                        <div class="row"><span class="label">{{ $payment->label }} {{ $payment->tanggal?->format('d/m/y') }} {{ $payment->cara_bayar }}</span><span class="amount">Rp {{ number_format($payment->jumlah, 0, ',', '.') }}</span></div>
-                    @empty
-                        <div class="row"><span class="label">Dibayar</span><span class="amount">Rp 0</span></div>
-                    @endforelse
+                    @if ($order->status_bayar === 'hutang')
+                        {{-- VIP belum lunas: format nota lama (Total · Uang Muka · Dibayar · Kurang Bayar). --}}
+                        <div class="row"><span class="label">Uang Muka</span><span class="amount">Rp {{ number_format($paymentHistory->where('jenis', 'dp')->sum('jumlah'), 0, ',', '.') }}</span></div>
+                        <div class="row"><span class="label">Dibayar</span><span class="amount">Rp {{ number_format($paymentHistory->where('jenis', '!=', 'dp')->sum('jumlah'), 0, ',', '.') }}</span></div>
+                    @else
+                        @forelse ($paymentHistory as $payment)
+                            <div class="row"><span class="label">{{ $payment->label }} {{ $payment->tanggal?->format('d/m/y') }} {{ $payment->cara_bayar }}</span><span class="amount">Rp {{ number_format($payment->jumlah, 0, ',', '.') }}</span></div>
+                        @empty
+                            <div class="row"><span class="label">Dibayar</span><span class="amount">Rp 0</span></div>
+                        @endforelse
+                    @endif
                     <div class="row balance"><span class="label">{{ $sisaTagihan > 0 ? 'Kurang Bayar' : 'Sisa' }}</span><span class="amount">{{ $sisaTagihan > 0 ? 'Rp '.number_format($sisaTagihan, 0, ',', '.') : 'LUNAS' }}</span></div>
                 </div>
             @endif
