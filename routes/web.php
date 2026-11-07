@@ -128,7 +128,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     // Hapus akun sendiri dinonaktifkan — akun dikelola admin.
 
-    Route::middleware('permission.any:customers.view,customer-service.view,order-indoor.manage,order-outdoor.manage,order-artwork.manage')->group(function () {
+    Route::middleware('permission.any:customers.view,customer-service.view,order-indoor.manage,order-outdoor.manage,order-artwork.manage,order-proof.manage')->group(function () {
         Route::get('/customers-search', [CustomerController::class, 'search'])->name('customers.search');
     });
     Route::middleware('permission.any:customers.manage,customer-service.manage,order-indoor.manage,order-outdoor.manage,order-artwork.manage')->group(function () {

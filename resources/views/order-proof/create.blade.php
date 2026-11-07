@@ -36,7 +36,7 @@
                       clearTimeout(this.timer);
                       this.timer = setTimeout(async () => {
                           if (this.query.trim().length < 2) { this.results = []; return; }
-                          const res = await fetch(`/customers-search?q=${encodeURIComponent(this.query)}`);
+                          const res = await fetch(`/customers-search?vip=1&q=${encodeURIComponent(this.query)}`);
                           this.results = res.ok ? await res.json() : [];
                           this.open = true;
                       }, 250);
@@ -65,7 +65,7 @@
                 <div class="relative" @click.outside="open = false">
                     <x-input-label for="proofCustomer" value="Customer" />
                     <input type="text" id="proofCustomer" x-model="query" @input="search()" autocomplete="off" required
-                           placeholder="Cari nama atau kode customer..."
+                           placeholder="Cari customer VIP (nama atau kode)..."
                            class="mt-1 block w-full rounded-md border-gray-300 text-sm">
                     <input type="hidden" name="KdCust" :value="kdCust">
                     <div x-show="open && results.length" x-cloak class="absolute z-10 mt-1 max-h-60 w-full overflow-y-auto rounded-md border bg-white shadow-lg">
@@ -75,7 +75,7 @@
                             </button>
                         </template>
                     </div>
-                    <p x-show="query && !kdCust" x-cloak class="mt-1 text-xs text-amber-700">Pilih customer dari daftar.</p>
+                    <p x-show="query && !kdCust" x-cloak class="mt-1 text-xs text-amber-700">Pilih customer dari daftar. Hanya customer VIP yang bisa dibuatkan proof.</p>
                 </div>
             </div>
 

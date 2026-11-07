@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Customer;
 use App\Models\OrderProof;
 use App\Services\OrderNumberService;
 use App\Support\PageVersion;
@@ -10,6 +11,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 /**
@@ -60,6 +62,10 @@ class OrderProofController extends Controller
             'KdCust.required' => 'Pilih customer dulu.',
             'items.required' => 'Isi minimal satu item.',
         ]);
+        // Order proof khusus customer VIP (7 Nov 2026).
+        if (! Customer::query()->where('KdCust', $data['KdCust'])->whereHas('limit')->exists()) {
+            throw ValidationException::withMessages(['KdCust' => 'Order proof hanya untuk customer VIP.']);
+        }
 
         $proof = DB::transaction(function () use ($data) {
             $proof = OrderProof::create([

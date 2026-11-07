@@ -213,6 +213,8 @@ class CustomerController extends Controller
                         ->orWhere('KdCust', 'like', "%{$q}%");
                 });
             })
+            // ?vip=1: hanya customer VIP (punya plafon), dipakai form Order Proof.
+            ->when($request->boolean('vip'), fn ($query) => $query->whereHas('limit'))
             ->orderBy('NmCust')
             ->limit(20)
             ->get(['KdCust', 'NmCust', 'Telp']);

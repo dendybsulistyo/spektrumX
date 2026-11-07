@@ -51,7 +51,9 @@ class OrderProofTest extends TestCase
             ['name' => 'Cs', 'email' => 'cs@example.test', 'role_id' => 1, 'email_verified_at' => now()],
             ['name' => 'Layouter', 'email' => 'layout@example.test', 'role_id' => 2, 'email_verified_at' => now()],
         ]);
-        DB::table('customers')->insert(['KdCust' => 'C1', 'NmCust' => 'Kiki']);
+        Schema::create('customer_limits', fn (Blueprint $t) => [$t->id(), $t->string('KdCust'), $t->decimal('Batas', 15, 2)->default(0), $t->decimal('Total', 15, 2)->default(0), $t->timestamps()]);
+        DB::table('customers')->insert([['KdCust' => 'C1', 'NmCust' => 'Kiki'], ['KdCust' => 'C2', 'NmCust' => 'Umum']]);
+        DB::table('customer_limits')->insert(['KdCust' => 'C1', 'Batas' => 1000000]);
     }
 
     private function storeProof(string $type = 'outdoor'): OrderProof
@@ -121,5 +123,19 @@ class OrderProofTest extends TestCase
 
         $this->assertSame(['ditutup', 'Customer tidak jadi'], [$proof->fresh()->status, $proof->fresh()->close_reason]);
         $this->getJson(route('order-proof.ready'))->assertJsonCount(0, 'proofs');
+    }
+
+    public function test_proof_is_only_for_vip_customers(): void
+    {
+        $this->actingAs(User::find(1))->post(route('order-proof.store'), [
+            'order_type' => 'outdoor',
+            'KdCust' => 'C2',
+            'items' => [['NmFile' => 'Banner', 'Qty' => 1]],
+        ])->assertSessionHasErrors('KdCust');
+
+        $this->assertSame(0, OrderProof::count());
+        // Pemegang hak proof (tanpa hak order/customer) tetap bisa mencari customer.
+        $this->getJson('/customers-search?vip=1&q=')->assertOk()->assertJsonCount(1)->assertJsonPath('0.KdCust', 'C1');
+        $this->getJson('/customers-search?q=')->assertOk()->assertJsonCount(2);
     }
 }
