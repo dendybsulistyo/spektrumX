@@ -17,10 +17,16 @@
                             '7 hari' => [now()->subDays(6)->toDateString(), now()->toDateString()],
                             'Bulan ini' => [now()->startOfMonth()->toDateString(), now()->toDateString()],
                         ];
+                        // Rentang "7 hari" dan "Bulan ini" bisa sama (mis. tanggal 7), jadi yang disorot
+                        // adalah tombol yang diklik; tanpa itu, cukup satu preset pertama yang cocok.
+                        $activePreset = array_key_exists((string) request('preset'), $presets)
+                            && $presets[request('preset')] === [$from, $to]
+                            ? request('preset')
+                            : collect($presets)->search(fn ($range) => $range === [$from, $to]);
                     @endphp
                     @foreach ($presets as $label => [$pFrom, $pTo])
-                        <a href="{{ route('dashboard', ['from' => $pFrom, 'to' => $pTo]) }}"
-                           @class(['rcd-preset', 'is-active' => $from === $pFrom && $to === $pTo])>{{ $label }}</a>
+                        <a href="{{ route('dashboard', ['from' => $pFrom, 'to' => $pTo, 'preset' => $label]) }}"
+                           @class(['rcd-preset', 'is-active' => $activePreset === $label])>{{ $label }}</a>
                     @endforeach
                     <a href="{{ route('dashboard') }}" @class(['rcd-preset', 'is-active' => ! $from && ! $to])>50 Terakhir</a>
                 </div>
