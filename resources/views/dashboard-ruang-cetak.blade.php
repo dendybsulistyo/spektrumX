@@ -650,23 +650,19 @@
                 </div>
                 <div class="rcd-table-wrap" style="max-height: 58vh;">
                     <template x-if="overdueLoading"><div class="rcd-empty">Memuat order telat…</div></template>
-                    <table class="rcd-table" style="min-width: 820px;" x-show="!overdueLoading">
-                        <thead><tr><th>No. Order</th><th>Tipe</th><th>Customer</th><th>Masuk</th><th>Umur order</th><th>Posisi</th><th>Operator</th><th>Bayar</th></tr></thead>
+                    <table class="rcd-table" style="min-width: 520px;" x-show="!overdueLoading">
+                        <thead><tr><th>No. Order</th><th>Customer</th><th>Masuk</th><th>Posisi</th></tr></thead>
                         <tbody>
                             <template x-for="row in overdueRows" :key="row.type_slug + '-' + row.id">
                                 <tr>
                                     <td><button type="button" class="rcd-order rcd-order-blink" @click="openHistory(row.type_slug, row.id)" x-text="row.no_order"
                                                 :style="`animation-duration:${1.2 + (row.id * 7919 % 13) / 10}s;animation-delay:-${(row.id * 104729 % 2000) / 1000}s`"></button></td>
-                                    <td><span class="rcd-tipe" style="margin-left:0" x-text="row.type"></span></td>
                                     <td class="rcd-customer" x-text="row.customer || '-'"></td>
                                     <td class="rcd-date" x-text="row.created_at"></td>
-                                    <td class="rcd-proses" style="text-align:left" x-text="row.overdue"></td>
                                     <td><span class="pill pill-late" x-text="row.status_label"></span></td>
-                                    <td class="rcd-people" x-text="row.operator || '-'"></td>
-                                    <td class="rcd-people" x-text="({'lunas':'Lunas','dp':'DP','hutang':'Plafon','belum_bayar':'Belum Bayar'})[row.status_bayar] || '-'"></td>
                                 </tr>
                             </template>
-                            <tr x-show="overdueRows.length === 0"><td colspan="8" class="rcd-empty">Tidak ada order telat untuk filter ini.</td></tr>
+                            <tr x-show="overdueRows.length === 0"><td colspan="4" class="rcd-empty">Tidak ada order telat untuk filter ini.</td></tr>
                         </tbody>
                     </table>
                 </div>
