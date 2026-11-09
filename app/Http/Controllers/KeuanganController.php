@@ -163,7 +163,7 @@ class KeuanganController extends Controller
                 continue;
             }
 
-            $model::query()->with('customer', 'cancelApprovedBy')->whereIn('id', $rows->pluck('order_id')->unique())->get()
+            $model::query()->with('customer', 'cancelApprovedBy', 'replaces.cancelApprovedBy')->whereIn('id', $rows->pluck('order_id')->unique())->get()
                 ->each(function ($order) use (&$ordersByKey, $type) {
                     $ordersByKey["{$type}-{$order->id}"] = $order;
                 });
@@ -178,7 +178,7 @@ class KeuanganController extends Controller
             $customer = $order?->customer?->NmCust
                 ? mb_strtoupper($order->customer->NmCust)
                 : '-';
-            $jenis = OrderPayment::JENIS_LABELS[$p->jenis] ?? ucfirst($p->jenis);
+            $jenis = $this->paymentKindLabel($p, $order);
             $baseSort = $p->created_at?->format('His').'-'.str_pad((string) $p->id, 10, '0', STR_PAD_LEFT);
 
             if ($jumlah < 0) {
@@ -272,7 +272,16 @@ class KeuanganController extends Controller
 
             return $rows;
         });
-        $paymentRows = $this->collapseReceivableBatchRows($paymentRows, 'debet', 'kredit', 'keterangan');
+        $paymentRows = $this->collapseReceivableBatchRows($paymentRows, 'debet', 'kredit', 'keterangan')
+            ->concat($this->replacementCancellationRows($tanggal)->map(fn (array $row) => [
+                'user_id' => $row['user_id'],
+                'kasir' => $row['kasir'] ?? '-',
+                'no_nota' => $row['no_nota'],
+                'keterangan' => $row['keterangan'],
+                'debet' => 0,
+                'kredit' => 0,
+                'sort' => '2-'.$row['occurred_at']->format('His').'-c-'.$row['no_nota'],
+            ]));
 
         $seededRows = CashDailyEntry::with('user')
             ->whereDate('tanggal', $tanggal)
@@ -516,6 +525,52 @@ class KeuanganController extends Controller
         }
 
         return [$row(OrderPayment::CARA_BAYAR_LABELS[$payment->cara_bayar] ?? ucfirst((string) $payment->cara_bayar))];
+    }
+
+    /**
+     * Label pembayaran; Nota Pengganti menyebut nota batal yang digantikannya.
+     */
+    private function paymentKindLabel(OrderPayment $payment, $order): string
+    {
+        $label = OrderPayment::JENIS_LABELS[$payment->jenis] ?? ucfirst($payment->jenis);
+        $replaced = $payment->jenis === 'nota_pengganti' ? $order?->replaces : null;
+
+        return $replaced
+            ? "{$label} dari {$replaced->NoOrder} (batal · disetujui ".($replaced->cancelApprovedBy?->name ?? '-').')'
+            : $label;
+    }
+
+    /**
+     * Pembatalan jenis Nota Pengganti tidak menggerakkan uang (pembayaran pindah jadi kredit
+     * nota baru), jadi tidak punya baris pembayaran. Baris info Rp 0 ini membuat nota batalnya
+     * tetap tampil di laporan pada tanggal disetujui, atas nama penyetujunya.
+     *
+     * @return Collection<int, array{occurred_at: Carbon, no_nota: string, keterangan: string, user_id: int|null, kasir: string|null}>
+     */
+    private function replacementCancellationRows(string $tanggal, ?int $kasirId = null): Collection
+    {
+        return collect(['indoor' => OrderIndoor::class, 'outdoor' => OrderOutdoor::class, 'artwork' => OrderArtwork::class])
+            ->flatMap(fn (string $model) => $model::query()
+                ->with('customer', 'cancelApprovedBy', 'replacement')
+                ->where('status', 'batal')
+                ->whereNotNull('invoice_voided_at')
+                ->whereDate('cancel_approved_at', $tanggal)
+                ->when($kasirId, fn ($query) => $query->where('cancel_approved_by', $kasirId))
+                ->get())
+            ->map(function ($order) {
+                $customer = $order->customer?->NmCust ? mb_strtoupper($order->customer->NmCust) : '-';
+                $replacement = $order->replacement->first()?->NoOrder;
+
+                return [
+                    'occurred_at' => $order->cancel_approved_at,
+                    'no_nota' => $order->NoOrder,
+                    'keterangan' => 'Pembatalan · Nota Pengganti'.($replacement ? " {$replacement}" : ' (belum dibuat)')
+                        .' · disetujui '.($order->cancelApprovedBy?->name ?? '-')." - {$customer}",
+                    'user_id' => $order->cancel_approved_by,
+                    'kasir' => $order->cancelApprovedBy?->name,
+                ];
+            })
+            ->values();
     }
 
     /**
@@ -1130,7 +1185,7 @@ class KeuanganController extends Controller
                 continue;
             }
 
-            $model::query()->with('customer')->whereIn('id', $typePayments->pluck('order_id')->unique())->get()
+            $model::query()->with('customer', 'replaces.cancelApprovedBy')->whereIn('id', $typePayments->pluck('order_id')->unique())->get()
                 ->each(fn ($order) => $ordersByKey->put("{$type}-{$order->id}", $order));
         }
 
@@ -1142,7 +1197,7 @@ class KeuanganController extends Controller
             $customer = $order?->customer?->NmCust ? mb_strtoupper($order->customer->NmCust) : '-';
             $amount = (float) $payment->jumlah;
             $method = OrderPayment::CARA_BAYAR_LABELS[$payment->cara_bayar] ?? ucfirst($payment->cara_bayar);
-            $kind = OrderPayment::JENIS_LABELS[$payment->jenis] ?? ucfirst($payment->jenis);
+            $kind = $this->paymentKindLabel($payment, $order);
             $baseSort = $payment->created_at->format('YmdHis').'-1-'.str_pad((string) $payment->id, 10, '0', STR_PAD_LEFT);
 
             if ($amount < 0) {
@@ -1234,7 +1289,13 @@ class KeuanganController extends Controller
 
             return $rows;
         });
-        $paymentRows = $this->collapseReceivableBatchRows($paymentRows, 'debet', 'kredit', 'keterangan');
+        $paymentRows = $this->collapseReceivableBatchRows($paymentRows, 'debet', 'kredit', 'keterangan')
+            ->concat($this->replacementCancellationRows($tanggal, $kasirId)->map(fn (array $row) => [
+                ...$row,
+                'debet' => 0.0,
+                'kredit' => 0.0,
+                'sort' => $row['occurred_at']->format('YmdHis').'-1-c-'.$row['no_nota'],
+            ]));
 
         // Potongan penjualan ditampilkan bersama pembayaran tagihannya (lihat di atas).
         $discountRows = collect();

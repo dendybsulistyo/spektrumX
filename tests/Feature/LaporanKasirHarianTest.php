@@ -26,6 +26,9 @@ class LaporanKasirHarianTest extends TestCase
                 $t->string('KdCust')->nullable();
                 $t->string('status');
                 $t->unsignedBigInteger('cancel_approved_by')->nullable();
+                $t->timestamp('cancel_approved_at')->nullable();
+                $t->timestamp('invoice_voided_at')->nullable();
+                $t->unsignedBigInteger('replacement_order_id')->nullable();
                 $t->timestamps();
             });
         }
@@ -122,5 +125,20 @@ class LaporanKasirHarianTest extends TestCase
         $this->assertEquals(50000, $perKasir['saldoKas']);
         $this->assertEquals(100000, (float) $semua['rows']->firstWhere('keterangan', 'Saldo Awal')['debet']);
         $this->assertEquals(150000, $semua['saldoKas']);
+    }
+
+    public function test_nota_batal_karena_nota_pengganti_tetap_tampil_di_laporan(): void
+    {
+        $old = DB::table('order_indoor')->insertGetId(['NoOrder' => 'IND.2.261107048', 'KdCust' => 'C1', 'status' => 'batal', 'cancel_approved_by' => 2, 'cancel_approved_at' => '2026-11-09 13:26:49', 'invoice_voided_at' => '2026-11-09 13:26:49']);
+        $new = DB::table('order_indoor')->insertGetId(['NoOrder' => 'IND.2.261109032', 'KdCust' => 'C1', 'status' => 'desain', 'replacement_order_id' => $old]);
+        $this->payment(['order_id' => $new, 'jenis' => 'nota_pengganti', 'cara_bayar' => 'tunai', 'jumlah' => 10500, 'created_at' => '2026-11-09 14:00:00']);
+
+        $report = $this->report(['tanggal' => '2026-11-09', 'kasir' => 2]);
+
+        $cancelRow = $report['rows']->firstWhere('no_nota', 'IND.2.261107048');
+        $this->assertSame('Pembatalan · Nota Pengganti IND.2.261109032 · disetujui Brian - KIKI', $cancelRow['keterangan']);
+        $this->assertSame([0.0, 0.0], [$cancelRow['debet'], $cancelRow['kredit']]);
+        $this->assertSame('Nota Pengganti dari IND.2.261107048 (batal · disetujui Brian) - KIKI', $report['rows']->firstWhere('no_nota', 'IND.2.261109032')['keterangan']);
+        $this->assertEquals(10500, $report['saldoKas']);
     }
 }
