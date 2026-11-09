@@ -83,7 +83,7 @@
                                         @if ($loop->first)
                                             <td class="center note-cell" rowspan="{{ $span }}">{{ $loop->parent->iteration }}</td>
                                             <td class="center note-cell" rowspan="{{ $span }}">{{ \Carbon\Carbon::parse($note->date)->format('d-m-Y') }}</td>
-                                            <td class="doc note-cell" rowspan="{{ $span }}">@foreach ($note->invoices as $number)<div>{{ $number }}</div>@endforeach</td>
+                                            <td class="doc note-cell" rowspan="{{ $span }}">@foreach ($note->invoices as $number)<div>{{ $number }}</div>@endforeach @if ($note->is_dp)<div style="font-size:9px;font-weight:700;color:#b45309">DP</div>@endif</td>
                                             <td class="note-cell" rowspan="{{ $span }}">{{ $note->customer }}</td>
                                         @endif
                                         <td class="line">{{ $line?->product ?? '-' }}</td>

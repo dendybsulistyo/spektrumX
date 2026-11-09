@@ -122,7 +122,7 @@
                 <p class="proforma-mark">PROFORMA INVOICE</p>
                 <table class="meta">
                     <tr><th>No.</th><td>PRO/{{ $order->NoOrder }}</td></tr>
-                    <tr><th>Tanggal</th><td>{{ now()->translatedFormat('d F Y') }}</td></tr>
+                    <tr><th>Tanggal</th><td>{{ $documentDate->translatedFormat('d F Y') }}</td></tr>
                     <tr><th>Sales Order</th><td>{{ $order->NoOrder }}</td></tr>
                     @if ($invoiceNumber)<tr><th>Invoice</th><td>{{ $invoiceNumber }}</td></tr>@endif
                     <tr><th>Pembayaran</th><td>Tagihan VIP</td></tr>

@@ -17,9 +17,13 @@ use Illuminate\View\View;
  * Rekap Transaksi Bulanan (menu Analitik). Aturan hitung sama dengan Rekap
  * Transaksi Harian (nota Lunas + Tagihan VIP), tetapi Total/Tunai/Kredit
  * ditulis sekali per nota. Order diproses per 200 agar memori tetap kecil.
+ * Mulai November 2026 nota DP ikut dihitung (Tunai = DP diterima, Kredit = sisa)
+ * agar sama dengan Rekap Penerimaan; bulan sebelumnya tetap aturan lama (keputusan owner 10 Nov 2026).
  */
 class MonthlyTransactionController extends Controller
 {
+    private const DP_INCLUDED_FROM = '2026-11-01';
+
     private const MODELS = ['indoor' => OrderIndoor::class, 'outdoor' => OrderOutdoor::class, 'artwork' => OrderArtwork::class];
 
     public function __construct(private readonly OrderPricingService $pricing) {}
@@ -32,6 +36,8 @@ class MonthlyTransactionController extends Controller
         $from = $month->startOfMonth()->toDateString();
         $to = $month->endOfMonth()->toDateString();
 
+        $includeDp = $from >= self::DP_INCLUDED_FROM;
+
         $notes = collect();
         foreach (self::MODELS as $type => $model) {
             $relations = $type === 'outdoor' ? ['customer:id,KdCust,NmCust', 'customer.limit', 'items.hargaCetak'] : ['customer:id,KdCust,NmCust', 'customer.limit', 'items'];
@@ -40,6 +46,7 @@ class MonthlyTransactionController extends Controller
                 ->whereBetween('TglOrder', [$from, $to])
                 ->where('status', '!=', 'batal')
                 ->where(fn ($query) => $query->where('status_bayar', 'lunas')
+                    ->when($includeDp, fn ($dpQuery) => $dpQuery->orWhere('status_bayar', 'dp'))
                     ->orWhere(fn ($vipDebt) => $vipDebt->where('status_bayar', 'hutang')->whereHas('customer.limit')))
                 ->chunkById(200, function (Collection $orders) use ($type, $notes) {
                     $this->collectNotes($type, $orders, $notes);
@@ -82,6 +89,7 @@ class MonthlyTransactionController extends Controller
                 'number' => $order->NoOrder,
                 'invoices' => ($invoices[$order->id] ?? collect())->pluck('number')->values()->whenEmpty(fn () => collect([$order->NoOrder])),
                 'customer' => $order->customer?->NmCust ?? '-',
+                'is_dp' => $order->status_bayar === 'dp',
                 'lines' => $items->map(fn ($item) => (object) [
                     'product' => collect([$item->printer, $item->bahan])->filter()->implode(' / ') ?: '-',
                     'description' => collect([$item->name, $item->breakdown])->filter()->implode(' — '),

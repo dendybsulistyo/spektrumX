@@ -8,6 +8,7 @@ use App\Services\OrderPricingService;
 use App\Support\ResolvesOrderType;
 use App\Support\Rupiah;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 /**
@@ -39,6 +40,10 @@ class ProformaInvoiceController extends Controller
         $total = Rupiah::bulatkan($paid + $balance);
         $gross = (float) $items->sum('subtotal');
 
+        $invoice = OrderDocument::query()->where('kind', 'inv')->where('order_type', $type)
+            ->where('order_id', $order->id)->orderBy('sequence')->first(['number', 'issued_at']);
+        $archived = DB::table('sales_transaction_archives')->where('order_type', $type)->where('order_id', $order->id)->exists();
+
         return view('proforma-invoice.show', [
             'type' => $type,
             'order' => $order,
@@ -48,8 +53,10 @@ class ProformaInvoiceController extends Controller
             'total' => $total,
             'paid' => $paid,
             'balance' => $balance,
-            'invoiceNumber' => OrderDocument::query()->where('kind', 'inv')->where('order_type', $type)
-                ->where('order_id', $order->id)->orderBy('sequence')->value('number'),
+            'invoiceNumber' => $invoice?->number,
+            // Tanggal tetap (keputusan user 9 Nov 2026): sudah disimpan = tanggal invoice/simpan,
+            // belum disimpan = tanggal order. Bukan hari ini, supaya tidak berubah tiap dibuka.
+            'documentDate' => $archived && $invoice?->issued_at ? $invoice->issued_at : ($order->TglOrder ?? $order->created_at),
             'pengaturan' => PengaturanKeuangan::current(),
         ]);
     }
