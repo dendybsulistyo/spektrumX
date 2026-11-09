@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Http\Controllers\PengambilanController;
+use App\Models\OrderDocument;
+use App\Services\PlafonInvoiceArchiver;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -21,6 +23,8 @@ class SimpanTransaksiLangsungTest extends TestCase
                 $table->string('status_bayar');
                 $table->decimal('jumlah_piutang', 15, 2)->default(0);
                 $table->decimal('jumlah_dibayar', 15, 2)->default(0);
+                $table->string('status')->nullable();
+                $table->timestamp('invoice_voided_at')->nullable();
             });
         }
         Schema::create('order_payments', function (Blueprint $table) {
@@ -41,6 +45,12 @@ class SimpanTransaksiLangsungTest extends TestCase
         Schema::create('order_document_prints', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('order_document_id');
+            $table->unsignedInteger('print_count')->default(1);
+            $table->unsignedBigInteger('first_printed_by')->nullable();
+            $table->timestamp('first_printed_at')->nullable();
+            $table->unsignedBigInteger('last_printed_by')->nullable();
+            $table->timestamp('last_printed_at')->nullable();
+            $table->timestamps();
         });
         Schema::create('sales_transaction_archives', function (Blueprint $table) {
             $table->id();
@@ -106,6 +116,38 @@ class SimpanTransaksiLangsungTest extends TestCase
         $this->assertSame([$order], DB::table('sales_transaction_archives')->pluck('order_id')->all());
         $this->assertSame('2026-11-07 14:00:00', (string) DB::table('order_documents')->where('order_id', $order)->value('issued_at'));
         $this->assertSame(['hutang', 75000.0], [DB::table('order_indoor')->where('id', $order)->value('status_bayar'), (float) DB::table('order_indoor')->where('id', $order)->value('jumlah_piutang')]);
+    }
+
+    public function test_cetak_pertama_invoice_plafon_langsung_menyimpan_transaksi(): void
+    {
+        $plafon = DB::table('order_indoor')->insertGetId(['NoOrder' => 'IND.2.007', 'status_bayar' => 'hutang', 'jumlah_piutang' => 50000]);
+        $dp = DB::table('order_indoor')->insertGetId(['NoOrder' => 'IND.2.008', 'status_bayar' => 'dp', 'jumlah_piutang' => 50000]);
+        $batal = DB::table('order_indoor')->insertGetId(['NoOrder' => 'IND.2.009', 'status_bayar' => 'hutang', 'status' => 'batal']);
+        $this->travelTo('2026-11-09 10:00:00');
+
+        foreach ([$plafon, $dp, $batal] as $orderId) {
+            $document = OrderDocument::query()->forceCreate(['kind' => 'inv', 'order_type' => 'indoor', 'order_id' => $orderId, 'issued_at' => '2026-11-03 08:00:00']);
+            app(PlafonInvoiceArchiver::class)->archiveOnFirstPrint($document);
+        }
+
+        $this->assertSame([$plafon], DB::table('sales_transaction_archives')->pluck('order_id')->all());
+        $this->assertSame('2026-11-09 10:00:00', (string) DB::table('order_documents')->where('order_id', $plafon)->value('issued_at'));
+        $this->assertSame('2026-11-03 08:00:00', (string) DB::table('order_documents')->where('order_id', $dp)->value('issued_at'));
+    }
+
+    public function test_migration_menyapu_invoice_plafon_yang_sudah_dicetak(): void
+    {
+        $plafon = DB::table('order_indoor')->insertGetId(['NoOrder' => 'IND.2.010', 'status_bayar' => 'hutang']);
+        $belumCetak = DB::table('order_indoor')->insertGetId(['NoOrder' => 'IND.2.011', 'status_bayar' => 'hutang']);
+        $document = DB::table('order_documents')->insertGetId(['kind' => 'inv', 'order_type' => 'indoor', 'order_id' => $plafon, 'issued_at' => '2026-11-02 08:00:00']);
+        DB::table('order_documents')->insert(['kind' => 'inv', 'order_type' => 'indoor', 'order_id' => $belumCetak]);
+        DB::table('order_document_prints')->insert(['order_document_id' => $document, 'first_printed_at' => '2026-11-02 09:15:00', 'first_printed_by' => 7]);
+        $this->paidOrder('IND.2.012', printed: true);
+
+        (require base_path('database/migrations/2026_11_09_141612_simpan_invoice_plafon_yang_sudah_dicetak.php'))->up();
+
+        $this->assertSame([[$plafon, 7]], DB::table('sales_transaction_archives')->get()->map(fn ($a) => [$a->order_id, $a->archived_by])->all());
+        $this->assertSame('2026-11-02 09:15:00', (string) DB::table('order_documents')->where('id', $document)->value('issued_at'));
     }
 
     private function paidOrder(string $number, bool $printed): int
