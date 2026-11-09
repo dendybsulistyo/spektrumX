@@ -301,6 +301,8 @@
                                                     <span class="item-meta-divider item-meta-divider-small" aria-hidden="true"></span>
                                                     {{ rtrim(rtrim(number_format((float) $item->Panjang, 2), '0'), '.') }} x {{ rtrim(rtrim(number_format((float) $item->Lebar, 2), '0'), '.') }}
                                                 @endif
+                                                <span class="item-meta-divider item-meta-divider-small" aria-hidden="true"></span>
+                                                <span title="Jumlah order">{{ (int) $item->Qty }} pcs</span>
                                                 @if (filled($item->jenis_finishing) || $item->ada_finishing)
                                                     <span class="item-meta-divider item-meta-divider-small" aria-hidden="true"></span>
                                                     <span title="Finishing">F: {{ filled($item->jenis_finishing) ? $item->jenis_finishing : 'Ya' }}</span>
