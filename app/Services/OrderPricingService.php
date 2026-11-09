@@ -141,20 +141,15 @@ class OrderPricingService
     }
 
     /**
-     * Outdoor memiliki minimum tagihan 1 m² per nota (keputusan user 5 Nov 2026):
-     * total luas semua baris (P × L × Qty) di bawah 1 m² dinaikkan secara
-     * proporsional ke 1 m²; di atas itu setiap baris dihitung ukuran asli.
-     *
-     * @param  iterable<int, mixed>  $items
+     * Outdoor memiliki minimum tagihan 1 m² per item (keputusan user 10 Nov 2026,
+     * sebelumnya per nota): luas baris (P × L × Qty) di bawah 1 m² ditagih 1 m²;
+     * di atas itu sesuai ukuran asli. Nota lama tetap memakai harga snapshot-nya.
      */
-    public function outdoorAreaFactor(iterable $items): float
+    public function outdoorAreaFactor(mixed $item): float
     {
-        $totalM2 = 0.0;
-        foreach ($items as $item) {
-            $totalM2 += ((float) $item->Panjang / 100) * ((float) $item->Lebar / 100) * (int) $item->Qty;
-        }
+        $lineM2 = ((float) $item->Panjang / 100) * ((float) $item->Lebar / 100) * (int) $item->Qty;
 
-        return $totalM2 > 0 && $totalM2 < 1 ? 1 / $totalM2 : 1.0;
+        return $lineM2 > 0 && $lineM2 < 1 ? 1 / $lineM2 : 1.0;
     }
 
     /**
@@ -193,9 +188,8 @@ class OrderPricingService
 
     public function totalOutdoor(OrderOutdoor $order): float
     {
-        $areaFactor = $this->outdoorAreaFactor($order->items);
-
-        return Rupiah::bulatkan($order->items->sum(function ($item) use ($order, $areaFactor) {
+        return Rupiah::bulatkan($order->items->sum(function ($item) use ($order) {
+            $areaFactor = $this->outdoorAreaFactor($item);
             $harga = $item->hargaCetak;
 
             return $harga ? $this->lineTotalOutdoor($harga, $item->Panjang, $item->Lebar, $item->Qty, $order->KdCust, $areaFactor) : 0;
@@ -272,9 +266,8 @@ class OrderPricingService
         $bahanNames = $type === 'outdoor'
             ? ($this->bahanNames ??= BahanCetakOutdoor::pluck('NmBhn', 'NoCetak'))
             : collect();
-        $outdoorAreaFactor = $type === 'outdoor' ? $this->outdoorAreaFactor($rawItems) : 1.0;
-
-        $lines = $rawItems->map(function ($item) use ($type, $order, $printerNames, $bahanNames, $live, $outdoorAreaFactor) {
+        $lines = $rawItems->map(function ($item) use ($type, $order, $printerNames, $bahanNames, $live) {
+            $outdoorAreaFactor = $type === 'outdoor' ? $this->outdoorAreaFactor($item) : 1.0;
             [$name, $subtotal, $hargaSatuan, $bahan, $printer, $breakdown] = match ($type) {
                 // Order Indoor now also holds Artwork-catalog items in the
                 // same order (jenis_produk per line) — look up whichever

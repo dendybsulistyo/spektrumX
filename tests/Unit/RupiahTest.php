@@ -21,30 +21,23 @@ class RupiahTest extends TestCase
         $this->assertSame(48500, $special->HargaStd);
     }
 
-    public function test_outdoor_minimum_one_square_meter_applies_per_nota(): void
+    public function test_outdoor_minimum_one_square_meter_applies_per_item(): void
     {
         $harga = (new HargaCetakOutdoor)->setRawAttributes([
             'KdCtk' => 'TEST',
-            'HargaStd' => 10000,
+            'HargaStd' => 55000,
         ]);
         $pricing = new OrderPricingService;
         $item = fn (float $p, float $l, int $qty) => (object) ['Panjang' => $p, 'Lebar' => $l, 'Qty' => $qty];
+        $line = fn (float $p, float $l, int $qty) => $pricing->lineTotalOutdoor($harga, $p, $l, $qty, null, $pricing->outdoorAreaFactor($item($p, $l, $qty)));
 
-        // 90×90 + 80×80 = 1,45 m² → ukuran asli.
-        $factor = $pricing->outdoorAreaFactor([$item(90, 90, 1), $item(80, 80, 1)]);
-        $this->assertSame(1.0, $factor);
-        $this->assertSame(8100.0, $pricing->lineTotalOutdoor($harga, 90, 90, 1, null, $factor));
-        $this->assertSame(6400.0, $pricing->lineTotalOutdoor($harga, 80, 80, 1, null, $factor));
+        // 60×160 = 0,96 m² → ditagih 1 m², walau nota berisi item besar lain (kasus OUT.1.261107021).
+        $this->assertSame(55000.0, $line(60, 160, 1));
+        $this->assertSame(110000.0, $line(100, 200, 1));
 
-        // Banyak kecil, qty ikut dihitung: 41×41×56 = 9,41 m² → ukuran asli (tidak 1 m² per lembar).
-        $this->assertSame(1.0, $pricing->outdoorAreaFactor([$item(41, 41, 56)]));
-        $this->assertSame(94200.0, $pricing->lineTotalOutdoor($harga, 41, 41, 56));
-
-        // 30×30 + 40×40 = 0,25 m² → total menjadi harga 1 m².
-        $factor = $pricing->outdoorAreaFactor([$item(30, 30, 1), $item(40, 40, 1)]);
-        $total = $pricing->lineTotalOutdoor($harga, 30, 30, 1, null, $factor)
-            + $pricing->lineTotalOutdoor($harga, 40, 40, 1, null, $factor);
-        $this->assertSame(10000.0, $total);
+        // Qty ikut dihitung: 100×35×22 = 7,7 m² → ukuran asli.
+        $this->assertSame(1.0, $pricing->outdoorAreaFactor($item(100, 35, 22)));
+        $this->assertSame(423500.0, $line(100, 35, 22));
     }
 
     public function test_harga_satuan_desimal_tetap_tampil(): void

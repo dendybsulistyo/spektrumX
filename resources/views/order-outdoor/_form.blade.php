@@ -323,7 +323,7 @@
         <div class="flex items-center justify-between mb-3">
             <div>
                 <h3 class="text-sm font-semibold text-gray-700">Item Order</h3>
-                <p class="mt-0.5 text-xs text-amber-700">Minimum tagihan Outdoor 1 m² per nota (total P × L × Qty semua item). Di bawah 1 m², total tagihan dihitung sebagai 1 m²; di atas itu sesuai ukuran asli.</p>
+                <p class="mt-0.5 text-xs text-amber-700">Minimum tagihan Outdoor 1 m² per item (P × L × Qty). Item di bawah 1 m² ditagih 1 m²; di atas itu sesuai ukuran asli.</p>
             </div>
         </div>
 
