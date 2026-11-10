@@ -195,7 +195,7 @@ class PengambilanController extends Controller
 
     /**
      * Simpan langsung (satu atau beberapa yang dicentang) tanpa membuka pratinjau.
-     * Hanya untuk transaksi yang invoice-nya sudah pernah dicetak.
+     * Lunas & Plafon tidak wajib cetak invoice dulu (10 Nov 2026).
      */
     public function archiveTransactions(Request $request): RedirectResponse
     {
@@ -208,7 +208,7 @@ class PengambilanController extends Controller
         $errors = [];
         foreach (array_unique($data['transaksi']) as $key) {
             [$type, $id] = explode(':', $key);
-            $error = $this->archiveOne($type, (int) $id, requirePrintedInvoice: true);
+            $error = $this->archiveOne($type, (int) $id);
             $error ? $errors[] = $this->orderNumber($type, (int) $id).': '.$error : $saved++;
         }
 
@@ -221,11 +221,11 @@ class PengambilanController extends Controller
     }
 
     /** Aturan simpan yang sama untuk tombol Simpan (pratinjau), Simpan langsung, dan simpan beberapa. */
-    private function archiveOne(string $type, int $id, bool $requirePrintedInvoice = false): ?string
+    private function archiveOne(string $type, int $id): ?string
     {
         $model = $type === 'indoor' ? OrderIndoor::class : OrderOutdoor::class;
 
-        return DB::transaction(function () use ($model, $type, $id, $requirePrintedInvoice): ?string {
+        return DB::transaction(function () use ($model, $type, $id): ?string {
             $order = $model::query()->lockForUpdate()->find($id);
             if (! $order) {
                 return 'Order tidak ditemukan.';
@@ -246,12 +246,9 @@ class PengambilanController extends Controller
                 return 'Penerimaan pembayaran belum tercatat lengkap di Keuangan. Hubungi Kasir sebelum menyimpan transaksi.';
             }
 
-            // Plafon/VIP boleh disimpan tanpa cetak invoice (permintaan Yovita 10 Nov 2026), asal INV sudah terbit.
-            if ($isPlafon && ! OrderDocument::query()->where('kind', 'inv')->where('order_type', $type)->where('order_id', $id)->exists()) {
-                return 'Invoice tagihan belum terbit; hubungi Kasir.';
-            }
-            if ($requirePrintedInvoice && ! $isPlafon && ! $this->invoicePrinted($type, $id)) {
-                return 'Invoice belum dicetak; simpan lewat tombol Simpan (cetak invoice dulu).';
+            // Lunas & Plafon/VIP boleh disimpan tanpa cetak invoice (permintaan Yovita 10 Nov 2026), asal INV sudah terbit.
+            if (! OrderDocument::query()->where('kind', 'inv')->where('order_type', $type)->where('order_id', $id)->exists()) {
+                return 'Invoice belum terbit; hubungi Kasir.';
             }
 
             // Tanggal invoice = saat transaksi disimpan di Pengambilan (keputusan user 5 Nov 2026);
@@ -270,15 +267,6 @@ class PengambilanController extends Controller
 
             return null;
         });
-    }
-
-    private function invoicePrinted(string $type, int $id): bool
-    {
-        return DB::table('order_documents')
-            ->join('order_document_prints', 'order_document_prints.order_document_id', '=', 'order_documents.id')
-            ->where('order_documents.kind', 'inv')->where('order_documents.order_type', $type)
-            ->where('order_documents.order_id', $id)
-            ->exists();
     }
 
     private function orderNumber(string $type, int $id): string

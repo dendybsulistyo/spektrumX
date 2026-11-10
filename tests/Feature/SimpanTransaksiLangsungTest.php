@@ -60,7 +60,7 @@ class SimpanTransaksiLangsungTest extends TestCase
         });
     }
 
-    public function test_saves_only_paid_transactions_whose_invoice_was_printed(): void
+    public function test_simpan_lunas_tanpa_wajib_cetak_tetapi_dp_ditolak(): void
     {
         $printed = $this->paidOrder('IND.2.001', printed: true);
         $notPrinted = $this->paidOrder('IND.2.002', printed: false);
@@ -70,9 +70,8 @@ class SimpanTransaksiLangsungTest extends TestCase
             'transaksi' => ["indoor:{$printed}", "indoor:{$notPrinted}", "indoor:{$unpaid}"],
         ]));
 
-        $this->assertSame([$printed], DB::table('sales_transaction_archives')->pluck('order_id')->all());
-        $this->assertStringContainsString('1 transaksi', session('status'));
-        $this->assertStringContainsString('IND.2.002: Invoice belum dicetak', session('error'));
+        $this->assertSame([$printed, $notPrinted], DB::table('sales_transaction_archives')->pluck('order_id')->all());
+        $this->assertStringContainsString('2 transaksi', session('status'));
         $this->assertStringContainsString('IND.2.003: Transaksi belum lunas', session('error'));
         $this->assertTrue($response->isRedirect());
     }
@@ -127,7 +126,7 @@ class SimpanTransaksiLangsungTest extends TestCase
 
         $this->assertSame([$plafon], DB::table('sales_transaction_archives')->pluck('order_id')->all());
         $this->assertSame('2026-11-10 11:00:00', (string) DB::table('order_documents')->where('order_id', $plafon)->value('issued_at'));
-        $this->assertStringContainsString('IND.2.008: Invoice tagihan belum terbit', session('error'));
+        $this->assertStringContainsString('IND.2.008: Invoice belum terbit', session('error'));
     }
 
     public function test_migration_menyapu_invoice_plafon_yang_sudah_dicetak(): void

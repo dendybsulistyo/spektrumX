@@ -125,10 +125,10 @@
 
                     @php
                         $canArchive = auth()->user()->hasPermission('pengambilan.manage');
-                        // Boleh Simpan langsung / dicentang: Lunas (uang tercatat lengkap) yang invoice-nya sudah dicetak,
-                        // atau Hutang/Plafon VIP yang sudah ber-INV tanpa wajib cetak (permintaan Yovita 10 Nov 2026).
-                        $directArchivable = fn ($t) => $canArchive && (($t->status_bayar === 'hutang' && $t->invoice_document_id)
-                            || (($t->invoice_printed ?? false) && $t->status_bayar === 'lunas' && (float) $t->jumlah_piutang <= 0 && (float) $t->payment_total + 0.01 >= (float) $t->jumlah_dibayar));
+                        // Boleh Simpan langsung / dicentang tanpa wajib cetak invoice (permintaan Yovita 10 Nov 2026):
+                        // Lunas yang uangnya tercatat lengkap, atau Hutang/Plafon VIP; keduanya sudah ber-INV.
+                        $directArchivable = fn ($t) => $canArchive && $t->invoice_document_id && ($t->status_bayar === 'hutang'
+                            || ($t->status_bayar === 'lunas' && (float) $t->jumlah_piutang <= 0 && (float) $t->payment_total + 0.01 >= (float) $t->jumlah_dibayar));
                         $archivableKeys = collect($salesTransactions->items())->filter($directArchivable)
                             ->map(fn ($t) => $t->order_type.':'.$t->order_id)->values();
                     @endphp
@@ -138,7 +138,7 @@
                           @submit="if (! confirm(`Simpan ${picked.length} transaksi dan hilangkan dari daftar?`)) $event.preventDefault()"
                           style="display:flex; align-items:center; justify-content:flex-end; gap:var(--space-3); margin-bottom:var(--space-3);">
                         @csrf
-                        <span class="text-muted" style="font-size:13px;" x-text="picked.length ? picked.length + ' transaksi dicentang' : 'Centang transaksi (Lunas yang invoice-nya sudah dicetak, atau Plafon) untuk disimpan sekaligus'"></span>
+                        <span class="text-muted" style="font-size:13px;" x-text="picked.length ? picked.length + ' transaksi dicentang' : 'Centang transaksi Lunas / Plafon untuk disimpan sekaligus'"></span>
                         <button type="submit" class="in-btn" :disabled="! picked.length" :style="! picked.length && 'opacity:.45;cursor:not-allowed'">Simpan yang dicentang</button>
                     </form>
                 @endif
@@ -210,7 +210,7 @@
                                                 <form method="POST" action="{{ route('pengambilan.transaksi.archive-many') }}" style="display:inline;">
                                                     @csrf
                                                     <input type="hidden" name="transaksi[]" value="{{ $archiveKey }}">
-                                                    <button type="submit" class="in-btn" title="Invoice sudah dicetak: simpan tanpa membuka pratinjau">Simpan langsung</button>
+                                                    <button type="submit" class="in-btn" title="Simpan tanpa harus cetak invoice">Simpan langsung</button>
                                                 </form>
                                             @elseif ($paymentRecorded)
                                                 <a href="{{ route('invoice.show', ['type' => $transaction->order_type, 'id' => $transaction->order_id, 'source' => 'pengambilan', 'payment_preview' => 1]) }}"
