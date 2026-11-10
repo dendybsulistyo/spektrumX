@@ -246,7 +246,11 @@ class PengambilanController extends Controller
                 return 'Penerimaan pembayaran belum tercatat lengkap di Keuangan. Hubungi Kasir sebelum menyimpan transaksi.';
             }
 
-            if ($requirePrintedInvoice && ! $this->invoicePrinted($type, $id)) {
+            // Plafon/VIP boleh disimpan tanpa cetak invoice (permintaan Yovita 10 Nov 2026), asal INV sudah terbit.
+            if ($isPlafon && ! OrderDocument::query()->where('kind', 'inv')->where('order_type', $type)->where('order_id', $id)->exists()) {
+                return 'Invoice tagihan belum terbit; hubungi Kasir.';
+            }
+            if ($requirePrintedInvoice && ! $isPlafon && ! $this->invoicePrinted($type, $id)) {
                 return 'Invoice belum dicetak; simpan lewat tombol Simpan (cetak invoice dulu).';
             }
 

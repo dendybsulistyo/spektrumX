@@ -116,6 +116,20 @@ class SimpanTransaksiLangsungTest extends TestCase
         $this->assertSame(['hutang', 75000.0], [DB::table('order_indoor')->where('id', $order)->value('status_bayar'), (float) DB::table('order_indoor')->where('id', $order)->value('jumlah_piutang')]);
     }
 
+    public function test_plafon_boleh_disimpan_tanpa_cetak_invoice_asal_invoice_sudah_terbit(): void
+    {
+        $plafon = DB::table('order_indoor')->insertGetId(['NoOrder' => 'IND.2.007', 'status_bayar' => 'hutang', 'jumlah_piutang' => 50000]);
+        DB::table('order_documents')->insert(['kind' => 'inv', 'order_type' => 'indoor', 'order_id' => $plafon, 'issued_at' => '2026-11-07 00:00:00']);
+        $tanpaInvoice = DB::table('order_indoor')->insertGetId(['NoOrder' => 'IND.2.008', 'status_bayar' => 'hutang', 'jumlah_piutang' => 50000]);
+        $this->travelTo('2026-11-10 11:00:00');
+
+        app(PengambilanController::class)->archiveTransactions(Request::create('/', 'POST', ['transaksi' => ["indoor:{$plafon}", "indoor:{$tanpaInvoice}"]]));
+
+        $this->assertSame([$plafon], DB::table('sales_transaction_archives')->pluck('order_id')->all());
+        $this->assertSame('2026-11-10 11:00:00', (string) DB::table('order_documents')->where('order_id', $plafon)->value('issued_at'));
+        $this->assertStringContainsString('IND.2.008: Invoice tagihan belum terbit', session('error'));
+    }
+
     public function test_migration_menyapu_invoice_plafon_yang_sudah_dicetak(): void
     {
         $plafon = DB::table('order_indoor')->insertGetId(['NoOrder' => 'IND.2.010', 'status_bayar' => 'hutang']);
