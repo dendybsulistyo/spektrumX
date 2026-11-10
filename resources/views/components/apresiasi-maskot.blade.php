@@ -1,7 +1,8 @@
 {{--
     Maskot apresiasi Spektrum — tiap pergantian jam satu karakter (acak, tidak sama dengan
     sebelumnya) lewat di bawah layar dan berterima kasih pada yang aktif sejam terakhir.
-    Karakter: bintang tinta, Si Tinta (CMYK), roll banner, printer, gunting & mata ayam, ular hijau.
+    Karakter: bintang tinta, Si Tinta (CMYK), roll banner, printer, gunting & mata ayam, ular hijau,
+    dan kru Spektrum yang tidak berjalan melainkan ngintip dari pojok kiri bawah lalu dadah-dadah.
     Semua animasi di browser; server hanya memberi rekap yang di-cache per jam (ApresiasiController).
 --}}
 <div id="apresiasi" aria-live="polite" hidden>
@@ -111,6 +112,24 @@
                 <ellipse cx="168" cy="105" rx="3.5" ry="2" fill="#fb7185" opacity=".7"/>
             </g>
         </svg>
+
+        {{-- 7. Kru Spektrum: ngintip dari pojok kiri bawah, muncul, lalu dadah-dadah --}}
+        <svg class="apr-char" data-char="ngintip" viewBox="0 0 120 130" role="img" aria-label="Kru Spektrum melambaikan tangan">
+            <g class="apr-hand" style="transform-origin: 96px 92px">
+                <path d="M96 92 L108 58" stroke="#f2c29b" stroke-width="10" stroke-linecap="round"/>
+                <circle cx="109" cy="54" r="8" fill="#f2c29b" stroke="#9a5b34" stroke-width="2"/>
+            </g>
+            <path d="M18 130 C18 98 34 84 60 84 C86 84 102 98 102 130 Z" fill="#0e7490" stroke="#111827" stroke-width="2.5"/>
+            <path d="M40 92 h40" stroke="#ec4899" stroke-width="4"/><path d="M38 99 h44" stroke="#facc15" stroke-width="4"/>
+            <rect x="52" y="74" width="16" height="14" fill="#f2c29b"/>
+            <circle cx="60" cy="50" r="28" fill="#f2c29b" stroke="#9a5b34" stroke-width="2.5"/>
+            <path d="M32 46 C32 22 50 16 62 18 C80 18 90 30 88 46 C80 36 66 32 52 36 C44 38 38 42 32 46 Z" fill="#1f2937"/>
+            <ellipse cx="48" cy="52" rx="6.5" ry="7.5" fill="#fff" stroke="#111827" stroke-width="1.5"/>
+            <ellipse cx="72" cy="52" rx="6.5" ry="7.5" fill="#fff" stroke="#111827" stroke-width="1.5"/>
+            <g class="apr-eyes"><circle cx="49" cy="53" r="3" fill="#111827"/><circle cx="73" cy="53" r="3" fill="#111827"/></g>
+            <ellipse cx="40" cy="64" rx="5" ry="3" fill="#fb7185" opacity=".6"/><ellipse cx="80" cy="64" rx="5" ry="3" fill="#fb7185" opacity=".6"/>
+            <path d="M50 66 Q60 75 70 66" fill="#7f1d1d" stroke="#111827" stroke-width="1.5"/>
+        </svg>
     </div>
 </div>
 
@@ -133,6 +152,11 @@
     #apresiasi .apr-blade-a { animation: apr-snip-a .3s ease-in-out infinite alternate; }
     #apresiasi .apr-blade-b { animation: apr-snip-b .3s ease-in-out infinite alternate; }
     #apresiasi .apr-hop { animation: apr-hop-drop .45s ease-in-out infinite alternate; }
+    /* Kru ngintip: tidak berjalan; naik dari tepi bawah, kepala dulu, lalu muncul dan dadah. */
+    #apresiasi .apr-walker.is-peek { left: 12px; bottom: 0; animation: apr-peek 13s ease-in-out forwards; }
+    #apresiasi .apr-walker.is-peek .apr-bubble { animation: apr-bubble-in 13s ease-in-out forwards; }
+    #apresiasi .apr-eyes { animation: apr-look 1.6s ease-in-out 3; }
+    #apresiasi .apr-hand { animation: apr-wave-hand .4s ease-in-out infinite alternate; }
     #apresiasi .apr-snake-body { animation: apr-slither .6s ease-in-out infinite alternate; }
     #apresiasi .apr-snake-head { animation: apr-snake-nod .6s ease-in-out infinite alternate; }
     #apresiasi .apr-tongue { animation: apr-tongue .5s steps(1) infinite; }
@@ -156,10 +180,20 @@
         from { d: path("M14 104 H44 Q59 80 74 104 H104 Q119 80 134 104 H160"); }
         to { d: path("M14 104 Q29 80 44 104 H74 Q89 80 104 104 H134 Q147 92 160 104"); }
     }
+    @keyframes apr-peek {
+        0% { transform: translateY(calc(100% + 10px)); }
+        10%, 30% { transform: translateY(calc(100% - 48px)); }
+        38%, 86% { transform: translateY(0); }
+        100% { transform: translateY(calc(100% + 10px)); }
+    }
+    @keyframes apr-bubble-in { 0%, 36% { opacity: 0; } 42%, 84% { opacity: 1; } 90%, 100% { opacity: 0; } }
+    @keyframes apr-look { 0%, 100% { transform: translateX(0); } 30% { transform: translateX(-3px); } 70% { transform: translateX(3px); } }
+    @keyframes apr-wave-hand { from { transform: rotate(-18deg); } to { transform: rotate(22deg); } }
     @keyframes apr-tongue { 0%, 60% { opacity: 1; } 61%, 100% { opacity: 0; } }
     @keyframes apr-snake-nod { from { transform: translateY(0); } to { transform: translateY(-3px); } }
     @media (prefers-reduced-motion: reduce) {
         #apresiasi .apr-walker { animation: none; transform: translateX(16px); }
+        #apresiasi .apr-walker.is-peek { transform: none; }
         #apresiasi .apr-walker * { animation: none !important; }
     }
     @media print { #apresiasi { display: none !important; } }
@@ -184,6 +218,7 @@
             const chosen = chars.find((c) => c.dataset.char === wanted) || pool[Math.floor(Math.random() * pool.length)] || chars[0];
             write(charKey, chosen.dataset.char);
             chars.forEach((c) => c.classList.toggle('is-on', c === chosen));
+            root.querySelector('.apr-walker').classList.toggle('is-peek', chosen.dataset.char === 'ngintip');
         };
 
         // Jangan ganggu: sedang mengetik, ada dialog/modal terbuka, atau tab tidak terlihat.
@@ -209,7 +244,7 @@
             root.hidden = false;
             const hide = () => { root.hidden = true; };
             walker.onclick = hide;
-            walker.onanimationend = (e) => { if (e.animationName === 'apr-walk') hide(); };
+            walker.onanimationend = (e) => { if (['apr-walk', 'apr-peek'].includes(e.animationName)) hide(); };
             if (matchMedia('(prefers-reduced-motion: reduce)').matches) setTimeout(hide, 12000);
         };
 
@@ -234,7 +269,7 @@
         };
 
         // Coba tampilan tanpa menunggu jam (data contoh, tidak ke server):
-        //   ?maskot=coba  → karakter acak;  ?maskot=printer (bintang|tinta|roll|printer|gunting|ular) → karakter tertentu.
+        //   ?maskot=coba  → karakter acak;  ?maskot=printer (bintang|tinta|roll|printer|gunting|ular|ngintip) → karakter tertentu.
         const preview = new URLSearchParams(location.search).get('maskot');
         if (preview) {
             setTimeout(() => show({ names: ['Adisa', 'Zildjian', 'Sanjay', 'Rina', 'Dewi', 'Bagus', 'Lia', 'Fajar'], more: 0, progress: 124, pembayaran: 18, lembar_kerja: 9 },
