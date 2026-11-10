@@ -61,30 +61,28 @@ class ReportController extends Controller
             $orders = $model::query()
                 ->with($relations)
                 ->where('status', '!=', 'batal')
-                // Masuk rekap di tanggal DO/INV (keputusan user 5 Nov 2026): reguler lunas
-                // = tanggal INV (pelunasan); tagihan VIP = tanggal DO/INV terbit.
-                // Tanggal pastinya (INV didahulukan dari DO) disaring di bawah.
+                // Indoor/Outdoor: hanya invoice yang sudah disimpan di Pengambilan, di tanggal INV = tanggal
+                // Simpan yang terkunci (10 Nov 2026). Artwork tidak lewat Pengambilan: tetap tanggal INV.
+                ->when($type !== 'artwork', fn ($query) => $query->whereExists(fn ($archive) => $archive->selectRaw('1')
+                    ->from('sales_transaction_archives')
+                    ->whereColumn('sales_transaction_archives.order_id', $orderTable.'.id')
+                    ->where('sales_transaction_archives.order_type', $type)))
                 ->whereExists(function ($document) use ($type, $orderTable, $date): void {
                     $document->selectRaw('1')
                         ->from('order_documents')
                         ->whereColumn('order_documents.order_id', $orderTable.'.id')
                         ->where('order_documents.order_type', $type)
-                        ->whereIn('order_documents.kind', ['do', 'inv'])
+                        ->where('order_documents.kind', 'inv')
                         ->whereBetween('order_documents.issued_at', [$date.' 00:00:00', $date.' 23:59:59']);
                 })
-                ->where(function ($query) use ($kind, $type, $orderTable): void {
+                ->where(function ($query) use ($kind): void {
                     if ($kind !== 'tagihan') {
                         $query->where('status_bayar', 'lunas');
                     }
                     if ($kind !== 'lunas') {
-                        // Tagihan VIP masuk setelah disimpan di Pengambilan (10 Nov 2026):
-                        // INV terbit sejak SO, tanggal INV pindah ke tanggal Simpan.
-                        $query->orWhere(function ($vipDebt) use ($type, $orderTable): void {
+                        $query->orWhere(function ($vipDebt): void {
                             $vipDebt->where('status_bayar', 'hutang')
-                                ->whereHas('customer.limit')
-                                ->whereExists(fn ($archive) => $archive->selectRaw('1')->from('sales_transaction_archives')
-                                    ->whereColumn('sales_transaction_archives.order_id', $orderTable.'.id')
-                                    ->where('sales_transaction_archives.order_type', $type));
+                                ->whereHas('customer.limit');
                         });
                     }
                 })
@@ -105,11 +103,11 @@ class ReportController extends Controller
                 ->where('kind', 'inv')->where('order_type', $type)
                 ->whereIn('order_id', $orders->pluck('id'))
                 ->orderBy('sequence')->pluck('number', 'order_id');
-            // Tanggal dokumen per order: tanggal INV, atau tanggal DO bila INV belum terbit.
+            // Tanggal per order = tanggal INV (tanggal Simpan).
             $documentDates = OrderDocument::query()
-                ->whereIn('kind', ['do', 'inv'])->where('order_type', $type)
+                ->where('kind', 'inv')->where('order_type', $type)
                 ->whereIn('order_id', $orders->pluck('id'))
-                ->orderByRaw("kind = 'inv'")->orderBy('sequence')
+                ->orderBy('sequence')
                 ->get(['order_id', 'issued_at'])->pluck('issued_at', 'order_id');
             $orders = $orders->filter(fn ($order) => substr((string) ($documentDates[$order->id] ?? ''), 0, 10) === $date);
 
@@ -566,7 +564,8 @@ class ReportController extends Controller
 
         if ($selectedCustomer) {
             // Reguler: lunas + sudah ber-INVOICE. VIP (ber-plafon): sudah ber-INVOICE dan disimpan
-            // di Pengambilan (10 Nov 2026, dulu: ber-DO), boleh belum lunas (sisa tampil di kolom Kredit).
+            // di Pengambilan (10 Nov 2026, dulu: ber-DO; Artwork tidak lewat Pengambilan, tetap ber-DO),
+            // boleh belum lunas (sisa tampil di kolom Kredit).
             $isVip = CustomerLimit::query()->where('KdCust', $customerCode)->exists();
             foreach (['indoor' => OrderIndoor::class, 'outdoor' => OrderOutdoor::class, 'artwork' => OrderArtwork::class] as $type => $model) {
                 $relations = $type === 'outdoor' ? ['items.hargaCetak'] : ['items'];
@@ -585,7 +584,7 @@ class ReportController extends Controller
                     ->where(fn ($q) => $q->where(fn ($cancelled) => $cancelled->where('status', 'batal')->whereBetween('TglOrder', [$from, $to]))
                         ->orWhere(fn ($active) => $active->where('status', '!=', 'batal')
                             ->whereExists($invoiceInPeriod)
-                            ->when($isVip, fn ($q) => $q->whereExists($archived), fn ($q) => $q->where('status_bayar', 'lunas'))))
+                            ->when($isVip, fn ($q) => $type === 'artwork' ? $q->whereExists($hasDocument('do')) : $q->whereExists($archived), fn ($q) => $q->where('status_bayar', 'lunas'))))
                     ->orderBy('TglOrder')->orderBy('NoOrder')->get();
                 $invoices = DB::table('order_documents')->where('kind', 'inv')->where('order_type', $type)
                     ->whereIn('order_id', $orders->pluck('id'))->orderByDesc('sequence')
