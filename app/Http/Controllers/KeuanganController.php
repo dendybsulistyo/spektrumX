@@ -207,6 +207,7 @@ class KeuanganController extends Controller
                 return [[
                     'user_id' => $activityUserId,
                     'kasir' => $activityUser ?? '-',
+                    'approval' => $isCancellation,
                     'no_nota' => $order?->NoOrder,
                     'keterangan' => match ($this->refundKind($p, $order, $discountRefunds)) {
                         'potongan' => 'Potongan Penjualan Akhir · By system - ',
@@ -291,8 +292,18 @@ class KeuanganController extends Controller
                 'no_nota' => $row['no_nota'],
                 'keterangan' => $row['keterangan'],
                 'debet' => 0,
-                'kredit' => 0,
+                'kredit' => $row['kredit'],
+                'approval' => true,
                 'sort' => '2-'.$row['occurred_at']->format('His').'-c-'.$row['no_nota'],
+            ]))
+            ->concat($this->replacementWithoutPaymentRows($tanggal)->map(fn (array $row) => [
+                'user_id' => $row['user_id'],
+                'kasir' => $row['kasir'] ?? '-',
+                'no_nota' => $row['no_nota'],
+                'keterangan' => $row['keterangan'],
+                'debet' => $row['debet'],
+                'kredit' => 0,
+                'sort' => '2-'.$row['occurred_at']->format('His').'-r-'.$row['no_nota'],
             ]));
 
         $seededRows = CashDailyEntry::with('user')
@@ -340,12 +351,24 @@ class KeuanganController extends Controller
             $groups->push($this->cashGroup('-', $openingRows));
         }
 
-        $rows->whereNotNull('user_id')->groupBy('user_id')
+        // Kelompok kasir hanya berisi penerimaan (Debet) dan pembatalan atas nama penyetujunya;
+        // baris Kredit lain (non-tunai, potongan, refund, pengeluaran) dikumpulkan di
+        // "Non-Tunai & Penyesuaian" dengan nama kasirnya (permintaan Yovita 10 Nov 2026).
+        // Hanya pengelompokan: Total & Saldo Kas tetap sama.
+        $isAdjustment = fn (array $row) => (float) $row['kredit'] > 0 && ! ($row['approval'] ?? false);
+        $userRows = $rows->whereNotNull('user_id');
+        $userRows->reject($isAdjustment)->groupBy('user_id')
             ->sortBy(fn (Collection $group) => mb_strtolower((string) $group->first()['kasir']))
             ->each(fn (Collection $group) => $groups->push($this->cashGroup(
                 ucwords(mb_strtolower((string) $group->first()['kasir'])),
                 $group->values()
             )));
+        $adjustmentRows = $userRows->filter($isAdjustment)
+            ->map(fn (array $row) => [...$row, 'keterangan' => $row['keterangan'].' · '.ucwords(mb_strtolower((string) $row['kasir']))])
+            ->values();
+        if ($adjustmentRows->isNotEmpty()) {
+            $groups->push($this->cashGroup('Non-Tunai & Penyesuaian', $adjustmentRows));
+        }
 
         $totalDebet = (float) $rows->sum('debet');
         $totalKredit = (float) $rows->sum('kredit');
@@ -540,9 +563,9 @@ class KeuanganController extends Controller
     }
 
     /**
-     * Nota Pengganti tampil berpasangan (permintaan Yovita 10 Nov 2026): nota batal di Kredit
-     * sebesar kredit yang dipindahkan, nota pengganti di Debet sebesar nilai penuhnya.
-     * Selisih bersihnya = uang yang benar-benar bergerak (tambahan/cashback), jadi saldo kas tetap.
+     * Nota Pengganti di Debet sebesar nilai penuhnya, atas nama kasir yang memproses. Nota batalnya
+     * tampil di Kredit atas nama penyetuju pada tanggal disetujui (replacementCancellationRows,
+     * permintaan Yovita 10 Nov 2026). Selisih bersihnya = uang yang benar-benar bergerak.
      *
      * @return list<array{no_nota: string|null, keterangan: string, debet: float, kredit: float, suffix: string}>|null
      */
@@ -556,13 +579,6 @@ class KeuanganController extends Controller
         $amount = (float) $payment->jumlah;
         $credit = (float) $order->replacement_credit;
         $rows = [
-            [
-                'no_nota' => $replaced->NoOrder,
-                'keterangan' => "Pembatalan · diganti {$order->NoOrder} · disetujui ".($replaced->cancelApprovedBy?->name ?? '-')." - {$customer}",
-                'debet' => 0.0,
-                'kredit' => $credit,
-                'suffix' => '0a',
-            ],
             [
                 'no_nota' => $order->NoOrder,
                 'keterangan' => "Nota Pengganti dari {$replaced->NoOrder} - {$customer}",
@@ -600,11 +616,10 @@ class KeuanganController extends Controller
     }
 
     /**
-     * Pembatalan jenis Nota Pengganti tidak menggerakkan uang (pembayaran pindah jadi kredit
-     * nota baru), jadi tidak punya baris pembayaran. Baris info Rp 0 ini membuat nota batalnya
-     * tetap tampil di laporan pada tanggal disetujui, atas nama penyetujunya.
+     * Pembatalan jenis Nota Pengganti: nota batal tampil di Kredit sebesar uang yang sudah
+     * diterima (jadi kredit nota pengganti), pada tanggal disetujui, atas nama penyetujunya.
      *
-     * @return Collection<int, array{occurred_at: Carbon, no_nota: string, keterangan: string, user_id: int|null, kasir: string|null}>
+     * @return Collection<int, array{occurred_at: Carbon, no_nota: string, keterangan: string, kredit: float, user_id: int|null, kasir: string|null}>
      */
     private function replacementCancellationRows(string $tanggal, ?int $kasirId = null): Collection
     {
@@ -623,12 +638,46 @@ class KeuanganController extends Controller
                 return [
                     'occurred_at' => $order->cancel_approved_at,
                     'no_nota' => $order->NoOrder,
-                    'keterangan' => 'Pembatalan · Nota Pengganti'.($replacement ? " {$replacement}" : ' (belum dibuat)')
+                    'keterangan' => 'Pembatalan · '.($replacement ? "diganti {$replacement}" : 'Nota Pengganti (belum dibuat)')
                         .' · disetujui '.($order->cancelApprovedBy?->name ?? '-')." - {$customer}",
+                    'kredit' => max(0, (float) $order->jumlah_dibayar),
                     'user_id' => $order->cancel_approved_by,
                     'kasir' => $order->cancelApprovedBy?->name,
                 ];
             })
+            ->values();
+    }
+
+    /**
+     * Nota Pengganti tanpa selisih tidak punya baris pembayaran; Debet-nya tetap dicatat di
+     * tanggal nota pengganti dibayar, atas nama kasir yang memproses.
+     *
+     * @return Collection<int, array{occurred_at: Carbon, no_nota: string, keterangan: string, debet: float, user_id: int|null, kasir: string|null}>
+     */
+    private function replacementWithoutPaymentRows(string $tanggal, ?int $kasirId = null): Collection
+    {
+        return collect(['indoor' => OrderIndoor::class, 'outdoor' => OrderOutdoor::class, 'artwork' => OrderArtwork::class])
+            ->flatMap(fn (string $model, string $type) => $model::query()
+                ->with('customer', 'kasir', 'replaces')
+                ->whereNotNull('replacement_order_id')
+                ->where('status', '!=', 'batal')
+                ->whereDate('dibayar_at', $tanggal)
+                ->when($kasirId, fn ($query) => $query->where('kasir_user_id', $kasirId))
+                ->whereNotExists(fn ($payment) => $payment->selectRaw('1')->from('order_payments')
+                    ->where('order_payments.order_type', $type)
+                    ->whereColumn('order_payments.order_id', (new $model)->getTable().'.id')
+                    ->where('order_payments.jenis', 'nota_pengganti'))
+                ->get())
+            ->filter(fn ($order) => $order->replaces && (float) $order->replacement_credit > 0)
+            ->map(fn ($order) => [
+                'occurred_at' => $order->dibayar_at,
+                'no_nota' => $order->NoOrder,
+                'keterangan' => "Nota Pengganti dari {$order->replaces->NoOrder} - "
+                    .($order->customer?->NmCust ? mb_strtoupper($order->customer->NmCust) : '-'),
+                'debet' => (float) $order->replacement_credit,
+                'user_id' => $order->kasir_user_id,
+                'kasir' => $order->kasir?->name,
+            ])
             ->values();
     }
 
@@ -1365,8 +1414,12 @@ class KeuanganController extends Controller
             ->concat($this->replacementCancellationRows($tanggal, $kasirId)->map(fn (array $row) => [
                 ...$row,
                 'debet' => 0.0,
-                'kredit' => 0.0,
                 'sort' => $row['occurred_at']->format('YmdHis').'-1-c-'.$row['no_nota'],
+            ]))
+            ->concat($this->replacementWithoutPaymentRows($tanggal, $kasirId)->map(fn (array $row) => [
+                ...$row,
+                'kredit' => 0.0,
+                'sort' => $row['occurred_at']->format('YmdHis').'-1-r-'.$row['no_nota'],
             ]));
 
         // Potongan penjualan ditampilkan bersama pembayaran tagihannya (lihat di atas).

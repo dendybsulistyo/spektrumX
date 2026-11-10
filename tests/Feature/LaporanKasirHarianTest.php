@@ -30,6 +30,9 @@ class LaporanKasirHarianTest extends TestCase
                 $t->timestamp('invoice_voided_at')->nullable();
                 $t->unsignedBigInteger('replacement_order_id')->nullable();
                 $t->decimal('replacement_credit', 15, 2)->default(0);
+                $t->decimal('jumlah_dibayar', 15, 2)->default(0);
+                $t->timestamp('dibayar_at')->nullable();
+                $t->unsignedBigInteger('kasir_user_id')->nullable();
                 $t->timestamps();
             });
         }
@@ -128,23 +131,48 @@ class LaporanKasirHarianTest extends TestCase
         $this->assertEquals(150000, $semua['saldoKas']);
     }
 
-    public function test_nota_batal_karena_nota_pengganti_tampil_berpasangan_dengan_nominal_penuh(): void
+    public function test_nota_batal_karena_nota_pengganti_kredit_di_penyetuju_debet_di_kasir(): void
     {
-        $old = DB::table('order_indoor')->insertGetId(['NoOrder' => 'IND.2.261107048', 'KdCust' => 'C1', 'status' => 'batal', 'cancel_approved_by' => 1, 'cancel_approved_at' => '2026-11-09 13:26:49', 'invoice_voided_at' => '2026-11-09 13:26:49']);
-        $new = DB::table('order_indoor')->insertGetId(['NoOrder' => 'IND.2.261109032', 'KdCust' => 'C1', 'status' => 'desain', 'replacement_order_id' => $old, 'replacement_credit' => 1428700]);
+        $old = DB::table('order_indoor')->insertGetId(['NoOrder' => 'IND.2.261107048', 'KdCust' => 'C1', 'status' => 'batal', 'jumlah_dibayar' => 1428700, 'cancel_approved_by' => 1, 'cancel_approved_at' => '2026-11-09 13:26:49', 'invoice_voided_at' => '2026-11-09 13:26:49']);
+        $new = DB::table('order_indoor')->insertGetId(['NoOrder' => 'IND.2.261109032', 'KdCust' => 'C1', 'status' => 'desain', 'replacement_order_id' => $old, 'replacement_credit' => 1428700, 'kasir_user_id' => 2, 'dibayar_at' => '2026-11-09 14:00:00']);
         $this->payment(['order_id' => $new, 'jenis' => 'nota_pengganti', 'cara_bayar' => 'tunai', 'jumlah' => 10500, 'created_at' => '2026-11-09 14:00:00']);
 
         $kasir = $this->report(['tanggal' => '2026-11-09', 'kasir' => 2]);
-        $rows = $kasir['rows']->keyBy('no_nota');
-        $this->assertSame('Pembatalan · diganti IND.2.261109032 · disetujui Yovita - KIKI', $rows['IND.2.261107048']['keterangan']);
-        $this->assertSame([0.0, 1428700.0], [$rows['IND.2.261107048']['debet'], $rows['IND.2.261107048']['kredit']]);
-        $this->assertSame([1439200.0, 0.0], [$rows['IND.2.261109032']['debet'], $rows['IND.2.261109032']['kredit']]);
-        $this->assertEquals(10500, $kasir['saldoKas']);
+        $this->assertSame(['IND.2.261109032'], $kasir['rows']->whereNotNull('no_nota')->pluck('no_nota')->all());
+        $this->assertSame([1439200.0, 0.0], [$kasir['rows'][0]['debet'], $kasir['rows'][0]['kredit']]);
 
-        // Baris info Rp 0 tetap ada atas nama penyetuju (pilihan a).
         $penyetuju = $this->report(['tanggal' => '2026-11-09', 'kasir' => 1]);
-        $info = $penyetuju['rows']->firstWhere('no_nota', 'IND.2.261107048');
-        $this->assertSame([0.0, 0.0], [$info['debet'], $info['kredit']]);
-        $this->assertStringStartsWith('Pembatalan · Nota Pengganti IND.2.261109032', $info['keterangan']);
+        $batal = $penyetuju['rows']->firstWhere('no_nota', 'IND.2.261107048');
+        $this->assertSame('Pembatalan · diganti IND.2.261109032 · disetujui Yovita - KIKI', $batal['keterangan']);
+        $this->assertSame([0.0, 1428700.0], [$batal['debet'], $batal['kredit']]);
+
+        // Total harian semua kasir = uang yang benar-benar masuk (tambahan Rp 10.500).
+        $this->assertEquals(10500, $this->report(['tanggal' => '2026-11-09'])['saldoKas']);
+    }
+
+    public function test_nota_pengganti_tanpa_selisih_tetap_tercatat_di_debet_kasir(): void
+    {
+        $old = DB::table('order_indoor')->insertGetId(['NoOrder' => 'IND.2.001', 'KdCust' => 'C1', 'status' => 'batal', 'jumlah_dibayar' => 50000, 'cancel_approved_by' => 1, 'cancel_approved_at' => '2026-11-09 10:00:00', 'invoice_voided_at' => '2026-11-09 10:00:00']);
+        DB::table('order_indoor')->insert(['NoOrder' => 'IND.2.002', 'KdCust' => 'C1', 'status' => 'desain', 'replacement_order_id' => $old, 'replacement_credit' => 50000, 'kasir_user_id' => 2, 'dibayar_at' => '2026-11-09 11:00:00']);
+
+        $rows = $this->report(['tanggal' => '2026-11-09'])['rows']->keyBy('no_nota');
+
+        $this->assertSame([50000.0, 2], [$rows['IND.2.002']['debet'], $rows['IND.2.002']['user_id']]);
+        $this->assertSame([50000.0, 1], [$rows['IND.2.001']['kredit'], $rows['IND.2.001']['user_id']]);
+    }
+
+    public function test_rekap_per_user_kelompok_kasir_hanya_penerimaan(): void
+    {
+        $order = DB::table('order_indoor')->insertGetId(['NoOrder' => 'IND.2.010', 'KdCust' => 'C1', 'status' => 'desain']);
+        $this->payment(['order_id' => $order, 'jenis' => 'lunas', 'cara_bayar' => 'qris', 'jumlah' => 75000, 'created_at' => '2026-11-10 09:00:00']);
+        $this->payment(['order_id' => $order, 'jenis' => 'lunas', 'cara_bayar' => 'tunai', 'jumlah' => 25000, 'created_at' => '2026-11-10 09:30:00']);
+
+        $data = app(KeuanganController::class)->kasHarian(Request::create('/', 'GET', ['tanggal' => '2026-11-10']))->getData();
+        $groups = collect($data['groups'])->keyBy('label');
+
+        $this->assertSame([100000.0, 0.0], [$groups['Brian']['subtotal_debet'], $groups['Brian']['subtotal_kredit']]);
+        $this->assertSame(75000.0, $groups['Non-Tunai & Penyesuaian']['subtotal_kredit']);
+        $this->assertStringEndsWith('· Brian', $groups['Non-Tunai & Penyesuaian']['rows'][0]['keterangan']);
+        $this->assertEquals(25000, $data['saldoKas'] - (float) ($groups['-']['subtotal_debet'] ?? 0));
     }
 }
