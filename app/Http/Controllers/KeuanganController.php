@@ -181,6 +181,18 @@ class KeuanganController extends Controller
             $jenis = $this->paymentKindLabel($p, $order);
             $baseSort = $p->created_at?->format('His').'-'.str_pad((string) $p->id, 10, '0', STR_PAD_LEFT);
 
+            if ($pair = $this->replacementPairRows($p, $order, $customer)) {
+                return array_map(fn (array $row) => [
+                    'user_id' => $p->user_id,
+                    'kasir' => $p->user?->name ?? '-',
+                    'no_nota' => $row['no_nota'],
+                    'keterangan' => $row['keterangan'],
+                    'debet' => $row['debet'],
+                    'kredit' => $row['kredit'],
+                    'sort' => '2-'.$baseSort.'-'.$row['suffix'],
+                ], $pair);
+            }
+
             if ($jumlah < 0) {
                 // Potongan nota tunai sudah tampil di bawah pembayaran notanya.
                 $jumlah += $cashDiscounts['refund'][$p->id] ?? 0.0;
@@ -525,6 +537,53 @@ class KeuanganController extends Controller
         }
 
         return [$row(OrderPayment::CARA_BAYAR_LABELS[$payment->cara_bayar] ?? ucfirst((string) $payment->cara_bayar))];
+    }
+
+    /**
+     * Nota Pengganti tampil berpasangan (permintaan Yovita 10 Nov 2026): nota batal di Kredit
+     * sebesar kredit yang dipindahkan, nota pengganti di Debet sebesar nilai penuhnya.
+     * Selisih bersihnya = uang yang benar-benar bergerak (tambahan/cashback), jadi saldo kas tetap.
+     *
+     * @return list<array{no_nota: string|null, keterangan: string, debet: float, kredit: float, suffix: string}>|null
+     */
+    private function replacementPairRows(OrderPayment $payment, $order, string $customer): ?array
+    {
+        $replaced = $payment->jenis === 'nota_pengganti' ? $order?->replaces : null;
+        if (! $replaced) {
+            return null;
+        }
+
+        $amount = (float) $payment->jumlah;
+        $credit = (float) $order->replacement_credit;
+        $rows = [
+            [
+                'no_nota' => $replaced->NoOrder,
+                'keterangan' => "Pembatalan · diganti {$order->NoOrder} · disetujui ".($replaced->cancelApprovedBy?->name ?? '-')." - {$customer}",
+                'debet' => 0.0,
+                'kredit' => $credit,
+                'suffix' => '0a',
+            ],
+            [
+                'no_nota' => $order->NoOrder,
+                'keterangan' => "Nota Pengganti dari {$replaced->NoOrder} - {$customer}",
+                'debet' => $credit + $amount,
+                'kredit' => 0.0,
+                'suffix' => '0b',
+            ],
+        ];
+
+        if (in_array($payment->cara_bayar, self::NON_CASH_METHODS, true) && $amount != 0.0) {
+            $method = OrderPayment::CARA_BAYAR_LABELS[$payment->cara_bayar] ?? ucfirst((string) $payment->cara_bayar);
+            $rows[] = [
+                'no_nota' => null,
+                'keterangan' => ($amount > 0 ? "Bayar via {$method}" : "Cashback via {$method} (bukan dari kas)")." - {$customer}",
+                'debet' => $amount < 0 ? abs($amount) : 0.0,
+                'kredit' => $amount > 0 ? $amount : 0.0,
+                'suffix' => '1',
+            ];
+        }
+
+        return $rows;
     }
 
     /**
@@ -1199,6 +1258,19 @@ class KeuanganController extends Controller
             $method = OrderPayment::CARA_BAYAR_LABELS[$payment->cara_bayar] ?? ucfirst($payment->cara_bayar);
             $kind = $this->paymentKindLabel($payment, $order);
             $baseSort = $payment->created_at->format('YmdHis').'-1-'.str_pad((string) $payment->id, 10, '0', STR_PAD_LEFT);
+
+            if ($pair = $this->replacementPairRows($payment, $order, $customer)) {
+                return array_map(fn (array $row) => [
+                    'occurred_at' => $payment->created_at,
+                    'no_nota' => $row['no_nota'],
+                    'keterangan' => $row['keterangan'],
+                    'debet' => $row['debet'],
+                    'kredit' => $row['kredit'],
+                    'kasir' => $payment->user?->name,
+                    'user_id' => $payment->user_id,
+                    'sort' => $baseSort.'-'.$row['suffix'],
+                ], $pair);
+            }
 
             if ($amount < 0) {
                 // Potongan nota tunai sudah tampil di bawah pembayaran notanya.
