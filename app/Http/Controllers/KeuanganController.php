@@ -1885,12 +1885,10 @@ class KeuanganController extends Controller
                     ->where('jumlah_piutang', '>', 0)
                     // Hutang boleh dibayar walau barang belum diambil (belum ber-DO/INV).
                     ->orderBy('TglOrder')->orderBy('NoOrder')->get();
-                // Tanggal nota hutang = tanggal Simpan invoice di Pengambilan (10 Nov 2026);
-                // belum disimpan → tanggal SO. Filter periode laporan ikut tanggal ini.
-                $archivedIds = DB::table('sales_transaction_archives')->where('order_type', $type)
-                    ->whereIn('order_id', $orders->pluck('id'))->pluck('order_id')->flip();
+                // Tanggal nota hutang = tanggal invoice (= tanggal Simpan di Pengambilan bila sudah disimpan,
+                // 10 Nov 2026); belum ber-INV → tanggal SO. Filter periode laporan ikut tanggal ini.
                 $invoiceDates = DB::table('order_documents')->where('kind', 'inv')->where('order_type', $type)
-                    ->whereIn('order_id', $archivedIds->keys())->whereNotNull('issued_at')->orderByDesc('sequence')
+                    ->whereIn('order_id', $orders->pluck('id'))->whereNotNull('issued_at')->orderByDesc('sequence')
                     ->get(['order_id', 'issued_at'])->unique('order_id')->pluck('issued_at', 'order_id');
                 $hutangDate = fn ($order) => isset($invoiceDates[$order->id])
                     ? Carbon::parse($invoiceDates[$order->id]) : $order->TglOrder;
