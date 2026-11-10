@@ -72,7 +72,7 @@ class ReportController extends Controller
                         ->whereIn('order_documents.kind', ['do', 'inv'])
                         ->whereBetween('order_documents.issued_at', [$date.' 00:00:00', $date.' 23:59:59']);
                 })
-                ->where(function ($query) use ($kind): void {
+                ->where(function ($query) use ($kind, $type, $orderTable): void {
                     if ($kind !== 'tagihan') {
                         $query->where('status_bayar', 'lunas');
                     }
