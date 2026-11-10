@@ -8,7 +8,7 @@ use App\Services\OrderPricingService;
 use App\Support\ResolvesOrderType;
 use App\Support\Rupiah;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Carbon;
 use Illuminate\View\View;
 
 /**
@@ -42,7 +42,8 @@ class ProformaInvoiceController extends Controller
 
         $invoice = OrderDocument::query()->where('kind', 'inv')->where('order_type', $type)
             ->where('order_id', $order->id)->orderBy('sequence')->first(['number', 'issued_at']);
-        $archived = DB::table('sales_transaction_archives')->where('order_type', $type)->where('order_id', $order->id)->exists();
+        $firstDeliveryOrder = OrderDocument::query()->where('kind', 'do')->where('order_type', $type)
+            ->where('order_id', $order->id)->orderBy('issued_at')->value('issued_at');
 
         return view('proforma-invoice.show', [
             'type' => $type,
@@ -54,9 +55,9 @@ class ProformaInvoiceController extends Controller
             'paid' => $paid,
             'balance' => $balance,
             'invoiceNumber' => $invoice?->number,
-            // Tanggal tetap (keputusan user 9 Nov 2026): sudah disimpan = tanggal invoice/simpan,
-            // belum disimpan = tanggal order. Bukan hari ini, supaya tidak berubah tiap dibuka.
-            'documentDate' => $archived && $invoice?->issued_at ? $invoice->issued_at : ($order->TglOrder ?? $order->created_at),
+            // Tanggal = DO pertama (keputusan user 10 Nov 2026); belum ber-DO → tanggal order.
+            // Hanya tampilan: tidak mengubah tanggal invoice, laporan, maupun nilai rupiah apa pun.
+            'documentDate' => $firstDeliveryOrder ? Carbon::parse($firstDeliveryOrder) : ($order->TglOrder ?? $order->created_at),
             'pengaturan' => PengaturanKeuangan::current(),
         ]);
     }
