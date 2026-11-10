@@ -77,9 +77,14 @@ class ReportController extends Controller
                         $query->where('status_bayar', 'lunas');
                     }
                     if ($kind !== 'lunas') {
-                        $query->orWhere(function ($vipDebt): void {
+                        // Tagihan VIP masuk setelah disimpan di Pengambilan (10 Nov 2026):
+                        // INV terbit sejak SO, tanggal INV pindah ke tanggal Simpan.
+                        $query->orWhere(function ($vipDebt) use ($type, $orderTable): void {
                             $vipDebt->where('status_bayar', 'hutang')
-                                ->whereHas('customer.limit');
+                                ->whereHas('customer.limit')
+                                ->whereExists(fn ($archive) => $archive->selectRaw('1')->from('sales_transaction_archives')
+                                    ->whereColumn('sales_transaction_archives.order_id', $orderTable.'.id')
+                                    ->where('sales_transaction_archives.order_type', $type));
                         });
                     }
                 })
@@ -560,8 +565,8 @@ class ReportController extends Controller
         $rows = collect();
 
         if ($selectedCustomer) {
-            // Reguler: lunas + sudah ber-INVOICE. VIP (ber-plafon): sudah ber-INVOICE dan DO,
-            // boleh belum lunas (sisa tagihannya tampil di kolom Kredit).
+            // Reguler: lunas + sudah ber-INVOICE. VIP (ber-plafon): sudah ber-INVOICE dan disimpan
+            // di Pengambilan (10 Nov 2026, dulu: ber-DO), boleh belum lunas (sisa tampil di kolom Kredit).
             $isVip = CustomerLimit::query()->where('KdCust', $customerCode)->exists();
             foreach (['indoor' => OrderIndoor::class, 'outdoor' => OrderOutdoor::class, 'artwork' => OrderArtwork::class] as $type => $model) {
                 $relations = $type === 'outdoor' ? ['items.hargaCetak'] : ['items'];
@@ -571,13 +576,16 @@ class ReportController extends Controller
                     ->where('order_documents.order_type', $type)->where('order_documents.kind', $kind);
                 // SO batal selalu ikut tampil (bertanda BATAL), tetapi tidak dihitung di Grand Total.
                 // Tanggal & periode mengikuti tanggal INVOICE (SO batal tanpa invoice: tanggal SO).
+                $archived = fn ($q) => $q->selectRaw('1')->from('sales_transaction_archives')
+                    ->whereColumn('sales_transaction_archives.order_id', $orderTable.'.id')
+                    ->where('sales_transaction_archives.order_type', $type);
                 $invoiceInPeriod = fn ($q) => $hasDocument('inv')($q)
                     ->whereBetween('order_documents.issued_at', [$from.' 00:00:00', $to.' 23:59:59']);
                 $orders = $model::query()->with($relations)->where('KdCust', $customerCode)
                     ->where(fn ($q) => $q->where(fn ($cancelled) => $cancelled->where('status', 'batal')->whereBetween('TglOrder', [$from, $to]))
                         ->orWhere(fn ($active) => $active->where('status', '!=', 'batal')
                             ->whereExists($invoiceInPeriod)
-                            ->when($isVip, fn ($q) => $q->whereExists($hasDocument('do')), fn ($q) => $q->where('status_bayar', 'lunas'))))
+                            ->when($isVip, fn ($q) => $q->whereExists($archived), fn ($q) => $q->where('status_bayar', 'lunas'))))
                     ->orderBy('TglOrder')->orderBy('NoOrder')->get();
                 $invoices = DB::table('order_documents')->where('kind', 'inv')->where('order_type', $type)
                     ->whereIn('order_id', $orders->pluck('id'))->orderByDesc('sequence')
