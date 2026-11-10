@@ -161,18 +161,17 @@ class LaporanKasirHarianTest extends TestCase
         $this->assertSame([50000.0, 1], [$rows['IND.2.001']['kredit'], $rows['IND.2.001']['user_id']]);
     }
 
-    public function test_rekap_per_user_kelompok_kasir_hanya_penerimaan(): void
+    public function test_rekap_per_user_pembatalan_nota_pengganti_di_penyetuju_kasir_hanya_penerimaan(): void
     {
-        $order = DB::table('order_indoor')->insertGetId(['NoOrder' => 'IND.2.010', 'KdCust' => 'C1', 'status' => 'desain']);
-        $this->payment(['order_id' => $order, 'jenis' => 'lunas', 'cara_bayar' => 'qris', 'jumlah' => 75000, 'created_at' => '2026-11-10 09:00:00']);
-        $this->payment(['order_id' => $order, 'jenis' => 'lunas', 'cara_bayar' => 'tunai', 'jumlah' => 25000, 'created_at' => '2026-11-10 09:30:00']);
+        $old = DB::table('order_indoor')->insertGetId(['NoOrder' => 'IND.2.261107048', 'KdCust' => 'C1', 'status' => 'batal', 'jumlah_dibayar' => 1428700, 'cancel_approved_by' => 1, 'cancel_approved_at' => '2026-11-09 13:26:49', 'invoice_voided_at' => '2026-11-09 13:26:49']);
+        $new = DB::table('order_indoor')->insertGetId(['NoOrder' => 'IND.2.261109032', 'KdCust' => 'C1', 'status' => 'desain', 'replacement_order_id' => $old, 'replacement_credit' => 1428700]);
+        $this->payment(['order_id' => $new, 'jenis' => 'nota_pengganti', 'cara_bayar' => 'tunai', 'jumlah' => 10500, 'created_at' => '2026-11-09 14:00:00']);
 
-        $data = app(KeuanganController::class)->kasHarian(Request::create('/', 'GET', ['tanggal' => '2026-11-10']))->getData();
+        $data = app(KeuanganController::class)->kasHarian(Request::create('/', 'GET', ['tanggal' => '2026-11-09']))->getData();
         $groups = collect($data['groups'])->keyBy('label');
 
-        $this->assertSame([100000.0, 0.0], [$groups['Brian']['subtotal_debet'], $groups['Brian']['subtotal_kredit']]);
-        $this->assertSame(75000.0, $groups['Non-Tunai & Penyesuaian']['subtotal_kredit']);
-        $this->assertStringEndsWith('· Brian', $groups['Non-Tunai & Penyesuaian']['rows'][0]['keterangan']);
-        $this->assertEquals(25000, $data['saldoKas'] - (float) ($groups['-']['subtotal_debet'] ?? 0));
+        $this->assertSame([1439200.0, 0.0], [$groups['Brian']['subtotal_debet'], $groups['Brian']['subtotal_kredit']]);
+        $this->assertSame([0.0, 1428700.0], [$groups['Yovita']['subtotal_debet'], $groups['Yovita']['subtotal_kredit']]);
+        $this->assertArrayNotHasKey('Non-Tunai & Penyesuaian', $groups->all());
     }
 }

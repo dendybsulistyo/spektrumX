@@ -207,7 +207,6 @@ class KeuanganController extends Controller
                 return [[
                     'user_id' => $activityUserId,
                     'kasir' => $activityUser ?? '-',
-                    'approval' => $isCancellation,
                     'no_nota' => $order?->NoOrder,
                     'keterangan' => match ($this->refundKind($p, $order, $discountRefunds)) {
                         'potongan' => 'Potongan Penjualan Akhir · By system - ',
@@ -293,7 +292,6 @@ class KeuanganController extends Controller
                 'keterangan' => $row['keterangan'],
                 'debet' => 0,
                 'kredit' => $row['kredit'],
-                'approval' => true,
                 'sort' => '2-'.$row['occurred_at']->format('His').'-c-'.$row['no_nota'],
             ]))
             ->concat($this->replacementWithoutPaymentRows($tanggal)->map(fn (array $row) => [
@@ -351,24 +349,12 @@ class KeuanganController extends Controller
             $groups->push($this->cashGroup('-', $openingRows));
         }
 
-        // Kelompok kasir hanya berisi penerimaan (Debet) dan pembatalan atas nama penyetujunya;
-        // baris Kredit lain (non-tunai, potongan, refund, pengeluaran) dikumpulkan di
-        // "Non-Tunai & Penyesuaian" dengan nama kasirnya (permintaan Yovita 10 Nov 2026).
-        // Hanya pengelompokan: Total & Saldo Kas tetap sama.
-        $isAdjustment = fn (array $row) => (float) $row['kredit'] > 0 && ! ($row['approval'] ?? false);
-        $userRows = $rows->whereNotNull('user_id');
-        $userRows->reject($isAdjustment)->groupBy('user_id')
+        $rows->whereNotNull('user_id')->groupBy('user_id')
             ->sortBy(fn (Collection $group) => mb_strtolower((string) $group->first()['kasir']))
             ->each(fn (Collection $group) => $groups->push($this->cashGroup(
                 ucwords(mb_strtolower((string) $group->first()['kasir'])),
                 $group->values()
             )));
-        $adjustmentRows = $userRows->filter($isAdjustment)
-            ->map(fn (array $row) => [...$row, 'keterangan' => $row['keterangan'].' · '.ucwords(mb_strtolower((string) $row['kasir']))])
-            ->values();
-        if ($adjustmentRows->isNotEmpty()) {
-            $groups->push($this->cashGroup('Non-Tunai & Penyesuaian', $adjustmentRows));
-        }
 
         $totalDebet = (float) $rows->sum('debet');
         $totalKredit = (float) $rows->sum('kredit');
