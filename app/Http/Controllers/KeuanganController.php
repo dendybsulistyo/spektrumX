@@ -1884,9 +1884,21 @@ class KeuanganController extends Controller
                     ->where('status_bayar', 'hutang')
                     ->where('jumlah_piutang', '>', 0)
                     // Hutang boleh dibayar walau barang belum diambil (belum ber-DO/INV).
-                    ->when($dari, fn ($query) => $query->whereDate('TglOrder', '>=', $dari))
-                    ->when($sampai, fn ($query) => $query->whereDate('TglOrder', '<=', $sampai))
                     ->orderBy('TglOrder')->orderBy('NoOrder')->get();
+                // Tanggal nota hutang = tanggal Simpan invoice di Pengambilan (10 Nov 2026);
+                // belum disimpan → tanggal SO. Filter periode laporan ikut tanggal ini.
+                $archivedIds = DB::table('sales_transaction_archives')->where('order_type', $type)
+                    ->whereIn('order_id', $orders->pluck('id'))->pluck('order_id')->flip();
+                $invoiceDates = DB::table('order_documents')->where('kind', 'inv')->where('order_type', $type)
+                    ->whereIn('order_id', $archivedIds->keys())->whereNotNull('issued_at')->orderByDesc('sequence')
+                    ->get(['order_id', 'issued_at'])->unique('order_id')->pluck('issued_at', 'order_id');
+                $hutangDate = fn ($order) => isset($invoiceDates[$order->id])
+                    ? Carbon::parse($invoiceDates[$order->id]) : $order->TglOrder;
+                $orders = $orders->filter(function ($order) use ($hutangDate, $dari, $sampai) {
+                    $date = $hutangDate($order)?->format('Y-m-d');
+
+                    return (! $dari || $date >= $dari) && (! $sampai || $date <= $sampai);
+                })->values();
                 // Menu Pembayaran Piutang juga menampilkan SO DP yang masih bersisa
                 // (belum tentu ber-DO); laporan Piutang per Customer tetap hutang saja.
                 if (! $reportMode) {
@@ -1937,7 +1949,7 @@ class KeuanganController extends Controller
                     $rows->push((object) [
                         'type' => $type,
                         'id' => $order->id,
-                        'date' => $order->TglOrder,
+                        'date' => $hutangDate($order),
                         'order_number' => $order->NoOrder,
                         'invoice_number' => $invoiceNumbers[$order->id] ?? null,
                         'is_dp' => false,

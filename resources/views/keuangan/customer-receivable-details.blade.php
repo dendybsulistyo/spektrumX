@@ -84,7 +84,7 @@
                         </datalist>
                     </label>
                     @if($reportMode)
-                        <label class="text-sm text-gray-700">Dari Tgl. Order
+                        <label class="text-sm text-gray-700">Dari Tanggal
                             <input type="date" name="dari" value="{{ $dari }}" class="mt-1 block rounded-md border-gray-300">
                         </label>
                         <label class="text-sm text-gray-700">Sampai
@@ -122,7 +122,7 @@
 
                     <div class="overflow-x-auto">
                         <table class="pay-table" style="min-width:980px;">
-                            <thead><tr><th>No. Order</th><th>No. Nota</th><th>Tgl. Order</th><th>Piutang</th><th>Sudah Dibayar</th><th>Sisa Piutang</th><th style="width:230px;">Pembayaran</th></tr></thead>
+                            <thead><tr><th>No. Order</th><th>No. Nota</th><th>Tanggal</th><th>Piutang</th><th>Sudah Dibayar</th><th>Sisa Piutang</th><th style="width:230px;">Pembayaran</th></tr></thead>
                             <tbody>
                                 @forelse($rows as $row)
                                     @php($key = $row->type.'-'.$row->id)
@@ -234,7 +234,7 @@
                         <p class="text-sm font-semibold">Posisi per: {{ now()->translatedFormat('d F Y') }} (semua piutang belum lunas)</p>
                         <p class="text-sm font-semibold">Customer: {{ $selectedCustomer?->NmCust ?? 'Pilih customer terlebih dahulu' }}</p>
                         @if($dari || $sampai)
-                            <p class="text-sm font-semibold">Tgl. Order: {{ $dari ? \Carbon\Carbon::parse($dari)->format('d-m-Y') : 'awal' }} s/d {{ $sampai ? \Carbon\Carbon::parse($sampai)->format('d-m-Y') : 'sekarang' }}</p>
+                            <p class="text-sm font-semibold">Tanggal: {{ $dari ? \Carbon\Carbon::parse($dari)->format('d-m-Y') : 'awal' }} s/d {{ $sampai ? \Carbon\Carbon::parse($sampai)->format('d-m-Y') : 'sekarang' }}</p>
                         @endif
                     </div>
                     <div class="overflow-x-auto">
