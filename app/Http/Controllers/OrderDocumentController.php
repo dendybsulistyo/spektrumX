@@ -8,7 +8,6 @@ use App\Models\OrderPickupSignature;
 use App\Models\PengaturanKeuangan;
 use App\Models\SalesOrderPrint;
 use App\Services\OrderDocumentService;
-use App\Services\PlafonInvoiceArchiver;
 use App\Services\ReprintGate;
 use App\Support\CetakUlang;
 use Illuminate\Http\JsonResponse;
@@ -233,7 +232,6 @@ class OrderDocumentController extends Controller
                     'last_printed_by' => auth()->id(),
                     'last_printed_at' => now(),
                 ]);
-                app(PlafonInvoiceArchiver::class)->archiveOnFirstPrint($document);
             } else {
                 $record->update([
                     'print_count' => $record->print_count + 1,

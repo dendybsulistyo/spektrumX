@@ -245,6 +245,40 @@ class OrderDocumentsTest extends TestCase
         $this->assertSame(0, $service->invoiceQuery()->count());
     }
 
+    public function test_dp_invoice_terbit_bersamaan_so_lalu_dilunaskan_dengan_nomor_dan_tanggal_tetap(): void
+    {
+        $this->travelTo(Carbon::parse('2026-11-10 09:00:00'));
+        $order = $this->order(['status_bayar' => 'dp', 'jumlah_dibayar' => 400, 'jumlah_piutang' => 600, 'dibayar_at' => null]);
+        $service = new OrderDocumentService;
+
+        $dp = $service->issueForSalesOrder($order);
+        $this->assertSame('INV.2.26082800001', $dp->number);
+        $this->assertSame([1000.0, 400.0, 600.0, 'sales_order_dp'], [(float) $dp->total, (float) $dp->snapshot['paid'], (float) $dp->snapshot['balance'], $dp->snapshot['origin']]);
+
+        $this->travelTo(Carbon::parse('2026-11-12 15:00:00'));
+        $order->update(['status_bayar' => 'lunas', 'jumlah_dibayar' => 1000, 'jumlah_piutang' => 0, 'dibayar_at' => now()]);
+        $lunas = $service->issueForSalesOrder($order->fresh());
+
+        $this->assertSame($dp->id, $lunas->id);
+        $this->assertDatabaseCount('order_documents', 1);
+        $this->assertSame('2026-11-10 09:00:00', $lunas->issued_at->toDateTimeString());
+        $this->assertSame([1000.0, 1000.0, 0.0, '2026-11-12 15:00:00'], [(float) $lunas->total, (float) $lunas->snapshot['paid'], (float) $lunas->snapshot['balance'], $lunas->snapshot['lunas_at']]);
+    }
+
+    public function test_plafon_vip_dan_lunas_mendapat_invoice_saat_so(): void
+    {
+        DB::table('customers')->insert(['KdCust' => 'VIP', 'NmCust' => 'VIP']);
+        DB::table('customer_limits')->insert(['KdCust' => 'VIP', 'Batas' => 10000, 'Total' => 1000]);
+        $service = new OrderDocumentService;
+
+        $plafon = $service->issueForSalesOrder($this->order(['KdCust' => 'VIP', 'status_bayar' => 'hutang', 'jumlah_piutang' => 1000, 'jumlah_dibayar' => 0]));
+        $this->assertSame([1000.0, 'sales_order'], [(float) $plafon->snapshot['balance'], $plafon->snapshot['origin']]);
+
+        $lunas = $service->issueForSalesOrder($this->order(['NoOrder' => 'IND.2.26082800002']));
+        $this->assertSame(['INV.2.26082800002', 0], [$lunas->number, $lunas->snapshot['balance']]);
+        $this->assertNull($service->issueForSalesOrder($this->order(['NoOrder' => 'IND.2.26082800003', 'status_bayar' => 'belum_bayar'])));
+    }
+
     public function test_vip_credit_can_pick_up_without_invoice_or_ppn(): void
     {
         DB::table('customers')->insert(['KdCust' => 'VIP', 'NmCust' => 'VIP']);

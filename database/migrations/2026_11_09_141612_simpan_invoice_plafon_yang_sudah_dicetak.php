@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\DB;
 /**
  * Sapu sekali: invoice Hutang/Plafon yang sudah dicetak tetapi belum disimpan
  * dipindahkan dari Transaksi Penjualan, sama seperti cetak invoice mulai sekarang
- * (App\Services\PlafonInvoiceArchiver). Tanggal invoice & simpan = saat cetak pertama.
+ * (aturan 9 Nov 2026, dicabut 10 Nov 2026: Plafon kembali disimpan manual). Tanggal = saat cetak pertama.
  */
 return new class extends Migration
 {

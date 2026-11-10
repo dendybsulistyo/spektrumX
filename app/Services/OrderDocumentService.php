@@ -9,6 +9,7 @@ use App\Models\OrderOutdoor;
 use App\Models\PengaturanKeuangan;
 use App\Support\Rupiah;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -99,7 +100,9 @@ class OrderDocumentService
             }
             $key = ['kind' => 'inv', 'order_type' => $type, 'order_id' => $order->id, 'sequence' => 1];
             if ($existing = OrderDocument::where($key)->first()) {
-                return $this->tandaiInvoiceVipLunas($existing, $order, $issuedAt);
+                return ($existing->snapshot['origin'] ?? null) === 'sales_order_dp'
+                    ? $this->lunaskanInvoiceDp($existing, $order, $issuedAt)
+                    : $this->tandaiInvoiceVipLunas($existing, $order, $issuedAt);
             }
             $at = $issuedAt ?? $order->dibayar_at;
             if (! $at) {
@@ -170,6 +173,89 @@ class OrderDocumentService
     }
 
     /**
+     * INV terbit bersamaan SO untuk semua customer (keputusan Yovita 10 Nov 2026):
+     * Lunas → invoice lunas, Hutang Plafon/VIP → invoice tagihan, DP → invoice DP
+     * yang isinya dibuat ulang saat pelunasan (lihat lunaskanInvoiceDp).
+     */
+    public function issueForSalesOrder(Model $order, mixed $issuedAt = null): ?OrderDocument
+    {
+        return match ($order->status_bayar) {
+            'lunas' => $this->issueInvoice($order, $issuedAt),
+            'hutang' => $this->issueCreditInvoice($order, $issuedAt, 'sales_order'),
+            'dp' => $this->issueDpInvoice($order, $issuedAt),
+            default => null,
+        };
+    }
+
+    /** Invoice SO DP: nilai tagihan penuh, sudah dibayar = DP, sisa = belum dibayar. */
+    public function issueDpInvoice(Model $order, mixed $issuedAt = null): ?OrderDocument
+    {
+        if (! $type = $this->type($order)) {
+            return null;
+        }
+
+        return DB::transaction(function () use ($order, $type, $issuedAt) {
+            $order = $order->newQuery()->lockForUpdate()->findOrFail($order->id);
+            if ($order->status_bayar !== 'dp' || $order->status === 'batal' || $order->invoice_voided_at) {
+                return null;
+            }
+            $key = ['kind' => 'inv', 'order_type' => $type, 'order_id' => $order->id, 'sequence' => 1];
+            if ($existing = OrderDocument::where($key)->first()) {
+                return $existing;
+            }
+
+            $total = Rupiah::bulatkan(method_exists($order, 'diskonStatus') && $order->diskonStatus() === 'approved'
+                ? $order->totalSetelahDiskon() : (float) $order->total);
+            $paid = (float) $order->jumlah_dibayar;
+            $company = Schema::hasTable('pengaturan_keuangan') ? PengaturanKeuangan::current() : null;
+
+            return OrderDocument::create($key + [
+                'number' => $this->number($order, 'inv'), 'issued_at' => $issuedAt ?? now(),
+                'issued_by' => auth()->id(),
+                'total' => $total,
+                'snapshot' => array_merge($this->snapshot($order, true), [
+                    'paid' => $paid,
+                    'balance' => max($total - $paid, 0),
+                    'origin' => 'sales_order_dp',
+                    'issued_by_name' => auth()->user()?->name,
+                    'company_name' => $company?->nama_perusahaan,
+                    'company_address' => $company?->alamat_perusahaan,
+                    'company_npwp' => $company?->npwp_perusahaan,
+                ]),
+            ]);
+        });
+    }
+
+    /**
+     * Invoice DP yang kini lunas: nomor & tanggal tetap, isi dibuat ulang persis
+     * seperti invoice yang dulu baru terbit saat pelunasan (order bisa berubah
+     * selama DP). `lunas_at` menjaga PPN / Gunggungan / Omset di tanggal pelunasan.
+     */
+    private function lunaskanInvoiceDp(OrderDocument $invoice, Model $order, mixed $lunasAt = null): OrderDocument
+    {
+        $company = Schema::hasTable('pengaturan_keuangan') ? PengaturanKeuangan::current() : null;
+        $snapshot = $this->snapshot($order, true) + [
+            'paid' => $order->jumlah_dibayar,
+            'balance' => 0,
+            'origin' => 'operational',
+            'lunas_at' => Carbon::parse($lunasAt ?? $order->dibayar_at ?? now())->toDateTimeString(),
+            'issued_by_name' => $invoice->snapshot['issued_by_name'] ?? null,
+            'company_name' => $company?->nama_perusahaan,
+            'company_address' => $company?->alamat_perusahaan,
+            'company_npwp' => $company?->npwp_perusahaan,
+        ];
+        $issuedAt = $invoice->getRawOriginal('issued_at');
+        $invoice->newQuery()->whereKey($invoice->getKey())->update([
+            'total' => $order->jumlah_dibayar,
+            'snapshot' => json_encode($snapshot),
+            'issued_at' => $issuedAt,
+            'updated_at' => now(),
+        ]);
+
+        return $invoice->refresh();
+    }
+
+    /**
      * Invoice VIP (terbit sebelum lunas) yang tagihannya kini lunas: nomor &
      * tanggal tetap, status jadi lunas. `lunas_at` dipakai invoiceQuery agar
      * PPN / Gunggungan / Rekap Omset tetap mencatat di tanggal pelunasan,
@@ -189,7 +275,7 @@ class OrderDocumentService
         $snapshot['balance'] = 0;
         $snapshot['payment_method'] = $order->cara_bayar;
         $snapshot['payment_reference'] = $order->no_referensi;
-        $snapshot['lunas_at'] = \Illuminate\Support\Carbon::parse($lunasAt ?? $order->dibayar_at ?? now())->toDateTimeString();
+        $snapshot['lunas_at'] = Carbon::parse($lunasAt ?? $order->dibayar_at ?? now())->toDateTimeString();
         // issued_at ditulis ulang apa adanya: di MySQL lama kolom TIMESTAMP pertama bisa
         // "ON UPDATE CURRENT_TIMESTAMP" dan tanggal invoice ikut berubah tanpa ini.
         $invoice->forceFill(['snapshot' => $snapshot, 'issued_at' => $invoice->getRawOriginal('issued_at')]);

@@ -38,7 +38,8 @@ class OrderPaymentWorkflow
             }
 
             $result = $action($locked);
-            app(OrderDocumentService::class)->issueInvoice($locked->fresh());
+            // INV terbit bersamaan SO untuk Lunas, DP, dan Plafon (10 Nov 2026).
+            app(OrderDocumentService::class)->issueForSalesOrder($locked->fresh());
             // Order yang tidak punya item untuk Layout (mis. stand banner): status ikut tahap item.
             if (method_exists($locked, 'skipToFirstActiveStage')) {
                 $locked->fresh()->skipToFirstActiveStage();
