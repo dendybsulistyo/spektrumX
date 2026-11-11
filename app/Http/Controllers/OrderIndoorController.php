@@ -206,6 +206,8 @@ class OrderIndoorController extends Controller
         $data = $request->validated();
 
         DB::transaction(function () use ($data, $orderIndoor) {
+            $orderIndoor->forgetSalesOrderPrint();
+
             $orderIndoor->update([
                 'TglOrder' => $data['TglOrder'],
                 'KdCust' => $data['KdCust'],

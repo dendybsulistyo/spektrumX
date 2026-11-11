@@ -144,6 +144,8 @@ class OrderArtworkController extends Controller
         $data = $request->validated();
 
         DB::transaction(function () use ($data, $orderArtwork) {
+            $orderArtwork->forgetSalesOrderPrint();
+
             $orderArtwork->update([
                 'TglOrder' => $data['TglOrder'],
                 'KdCust' => $data['KdCust'],

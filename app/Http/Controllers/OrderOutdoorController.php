@@ -195,6 +195,8 @@ class OrderOutdoorController extends Controller
         $data = $request->validated();
 
         DB::transaction(function () use ($data, $orderOutdoor) {
+            $orderOutdoor->forgetSalesOrderPrint();
+
             $orderOutdoor->update([
                 'TglOrder' => $data['TglOrder'],
                 'KdCust' => $data['KdCust'],
