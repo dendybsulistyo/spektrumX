@@ -93,6 +93,24 @@
         </a>
     </div>
 
+    @if ($tab === 'pending')
+        <div class="mb-4 border border-slate-200 bg-white p-4 shadow-sm">
+            <form method="GET" action="{{ route('customer-service.job-sheets.index') }}" class="flex flex-wrap items-end gap-2">
+                <input type="hidden" name="tab" value="pending">
+                <div class="min-w-[16rem] flex-1">
+                    <label for="pending-q" class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Cari lembar kerja</label>
+                    <input id="pending-q" type="search" name="q" value="{{ $keyword }}"
+                           placeholder="Nama/kode customer, file, PC, OPF, atau keterangan"
+                           class="w-full rounded-sm border-slate-300 text-sm focus:border-blue-500 focus:ring-blue-500">
+                </div>
+                <button type="submit" class="rounded-sm bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700">Cari</button>
+                @if ($keyword !== '')
+                    <a href="{{ route('customer-service.job-sheets.index', ['tab' => 'pending']) }}" class="px-2 py-2.5 text-sm font-semibold text-slate-500 hover:text-slate-800">Reset</a>
+                @endif
+            </form>
+        </div>
+    @endif
+
     @if ($tab === 'claimed')
         <div class="mb-4 border border-slate-200 bg-white p-4 shadow-sm">
             <form method="GET" action="{{ route('customer-service.job-sheets.index') }}" class="job-history-filter">

@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Services\OrderPricingService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -55,9 +56,12 @@ class CustomerServiceController extends Controller
             ->when($tab === 'pending', fn ($query) => $query->whereNull('claimed_at'))
             ->when($tab === 'claimed' && $from, fn ($query) => $query->whereDate('claimed_at', '>=', $from))
             ->when($tab === 'claimed' && $to, fn ($query) => $query->whereDate('claimed_at', '<=', $to))
-            ->when($tab === 'claimed' && $keyword !== '', function ($query) use ($keyword): void {
-                $query->where(function ($search) use ($keyword): void {
+            ->when($keyword !== '', function ($query) use ($keyword): void {
+                // Nama customer juga dicocokkan ke data master (nama terbaru), lewat kode customer.
+                $customerCodes = Customer::query()->where('NmCust', 'like', "%{$keyword}%")->limit(200)->pluck('KdCust');
+                $query->where(function ($search) use ($keyword, $customerCodes): void {
                     $search->where('customer_name', 'like', "%{$keyword}%")
+                        ->when($customerCodes->isNotEmpty(), fn ($query) => $query->orWhereIn('customer_code', $customerCodes))
                         ->orWhere('customer_code', 'like', "%{$keyword}%")
                         ->orWhere('pc', 'like', "%{$keyword}%")
                         ->orWhere('folder_file', 'like', "%{$keyword}%")
@@ -91,7 +95,7 @@ class CustomerServiceController extends Controller
             $sheet->setRelation('claimant', $usersById->get($sheet->claimed_by));
         });
 
-        $pendingCount = $tab === 'pending'
+        $pendingCount = $tab === 'pending' && $keyword === ''
             ? $jobSheets->total()
             : CustomerServiceJobSheet::whereNull('claimed_at')->count();
         $claimedCount = $tab === 'claimed'
@@ -460,7 +464,7 @@ class CustomerServiceController extends Controller
         }
     }
 
-    private function customArtworkItems(OrderIndoor $order): \Illuminate\Support\Collection
+    private function customArtworkItems(OrderIndoor $order): Collection
     {
         return $order->items->filter(fn ($item) => ($item->isArtwork()
             && ($item->produkArtwork === null || (float) $item->produkArtwork->HargaStd <= 0))
