@@ -99,6 +99,37 @@
             .rc-card { max-width: 400px; margin-top: 28px; padding: 28px 22px 24px; }
         }
         .rc-band { display: none; height: 8px; background: linear-gradient(90deg, var(--cyan) 0 25%, var(--magenta) 25% 50%, var(--yellow) 50% 75%, var(--ink) 75% 100%) !important; }
+        .rc-screensaver { position: fixed; inset: 0; width: 100vw; height: 100dvh; max-width: none; max-height: none; margin: 0; padding: 0; border: 0; background: #eaf5fc; overflow: hidden; }
+        .rc-screensaver::backdrop { background: #eaf5fc; }
+        .rc-saver-layout { display: grid; grid-template-columns: minmax(390px, 40%) minmax(0, 1fr); height: 100%; }
+        .rc-saver-promo { display: flex; flex-direction: column; justify-content: space-between; gap: 24px; padding: clamp(28px, 4vw, 72px); color: #fff; background: radial-gradient(ellipse at top left, #234959, transparent 65%), #1b2236; overflow-y: auto; }
+        .rc-saver-promo .rc-headline { font-size: clamp(30px, 3.1vw, 52px); }
+        .rc-saver-promo .rc-eyebrow { font-family: var(--sans); font-size: 10px; letter-spacing: .16em; }
+        .rc-saver-promo .rc-lede { max-width: none; margin-top: 18px; }
+        .rc-saver-promo .rc-tracking { max-width: none; padding: 18px; gap: 18px; }
+        .rc-saver-promo .rc-steps { margin-top: 22px; }
+        .rc-saver-footer { color: #aab2c8; font-size: 9px; letter-spacing: .15em; padding-bottom: 55px; }
+        .rc-saver-art { display: flex; align-items: center; min-width: 0; min-height: 0; background: #eaf5fc; }
+        .rc-screensaver img { display: block; width: 100%; height: 100%; object-fit: contain; }
+        @media (max-width: 760px) {
+            .rc-saver-layout { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr) auto; overflow-y: auto; }
+            .rc-saver-art { grid-row: 1; min-height: 180px; }
+            .rc-saver-promo { padding: 24px 24px 90px; overflow: visible; gap: 18px; }
+            .rc-saver-promo .rc-logo, .rc-saver-footer, .rc-saver-promo .rc-steps { display: none; }
+            .rc-saver-promo .rc-headline { font-size: 28px; }
+            .rc-saver-promo .rc-eyebrow { margin-bottom: 12px; }
+            .rc-saver-promo .rc-tracking { margin-top: 18px; }
+        }
+        @media (max-height: 700px) and (min-width: 761px) {
+            .rc-saver-promo { padding: 24px 30px 80px; gap: 16px; }
+            .rc-saver-promo .rc-headline { font-size: 30px; }
+            .rc-saver-promo .rc-tracking { margin-top: 16px; }
+            .rc-saver-footer { display: none; }
+        }
+        .rc-screensaver-hint { position: absolute; bottom: max(24px, env(safe-area-inset-bottom)); left: 50%; width: max-content; max-width: calc(100% - 32px); transform: translateX(-50%); padding: 12px 20px; border-radius: 999px; background: #1b2236e6; color: #fff; font-size: 13px; text-align: center; }
+        .rc-screensaver[open] { animation: rc-screensaver-enter .3s ease-out; }
+        @keyframes rc-screensaver-enter { from { opacity: 0; } to { opacity: 1; } }
+        @media (prefers-reduced-motion: reduce) { .rc-screensaver[open] { animation: none; } }
     </style>
 </head>
 <body class="rc-login">
@@ -207,5 +238,99 @@
             <div class="rc-note">Kendala masuk? Hubungi admin Spektrum.</div>
         </div>
     </main>
+    <dialog class="rc-screensaver" aria-label="Screensaver Spektrum. Gerakkan mouse atau tekan tombol untuk kembali.">
+        <div class="rc-saver-layout">
+            <section class="rc-saver-promo" aria-label="Pantau pesanan pelanggan">
+        <div class="rc-logo">
+            <div class="rc-mark">S<i class="cmyk"></i></div>
+            <span>Spektrum</span>
+        </div>
+                <div class="rc-saver-message">
+            <div class="rc-eyebrow"><i class="cmyk"></i>Pantau Pesanan Pelanggan</div>
+            <h1 class="rc-headline">Progres pesanan,<br><em>dalam satu scan.</em></h1>
+            <p class="rc-lede">Pantau proses produksi pesanan Anda melalui QR code pada nota Spektrum.</p>
+            <div class="rc-tracking">
+                <figure class="rc-receipt">
+                    <span class="rc-receipt-title">NOTA SPEKTRUM</span>
+                    <svg viewBox="0 0 29 29" role="img" aria-label="Ilustrasi QR code pada nota, bukan kode pelacakan aktif" shape-rendering="crispEdges">
+                        <rect width="29" height="29" fill="#fffdf8"/>
+                        <g fill="none" stroke="#1b2236" stroke-width="1">
+                            <path d="M2.5 2.5h6v6h-6zM20.5 2.5h6v6h-6zM2.5 20.5h6v6h-6z"/>
+                        </g>
+                        <g fill="#1b2236">
+                            <path d="M4 4h3v3H4zM22 4h3v3h-3zM4 22h3v3H4zM11 2h2v3h-2zM15 2h3v1h-3zM14 5h4v2h-4zM11 7h2v4h-2zM15 9h3v3h-3zM20 11h2v3h-2zM24 10h3v2h-3zM2 11h3v2H2zM7 11h2v4H7zM3 15h3v3H3zM10 14h3v2h-3zM14 13h3v4h-3zM18 15h4v2h-4zM24 14h3v4h-3zM10 18h3v3h-3zM15 19h3v2h-3zM20 19h3v3h-3zM25 20h2v3h-2zM11 23h2v4h-2zM14 22h2v2h-2zM16 25h3v2h-3zM19 23h2v2h-2zM22 24h2v3h-2zM25 25h2v2h-2z"/>
+                        </g>
+                    </svg>
+                    <figcaption>Ilustrasi QR pada nota</figcaption>
+                </figure>
+                <div class="rc-tracking-copy">
+                    <strong>Scan nota.<br>Lihat progresnya.</strong>
+                    <p>Buka kamera ponsel, scan QR pada nota Anda, lalu lihat status pesanan hingga siap diambil.</p>
+                    <span class="rc-tracking-tag">Pelacakan pesanan via QR</span>
+                </div>
+            </div>
+            <div class="rc-steps">
+                <span>Layout</span><b>›</b><span>Cetak</span><b>›</b><span>Finishing</span><b>›</b><span>Back Office</span><b>›</b><span>Bungkus</span><b>›</b><span>Ambil</span>
+            </div>
+                </div>
+                <span class="rc-saver-footer">SPEKTRUM GRAPHIC STUDIO · DIGITAL PRINTING</span>
+            </section>
+            <div class="rc-saver-art">
+                <img src="{{ asset('images/login-screensaver.png') }}" alt="Tim studio Spektrum bekerja bersama di ruang percetakan" draggable="false">
+            </div>
+        </div>
+        <span class="rc-screensaver-hint">Gerakkan mouse, tekan tombol, atau sentuh layar untuk kembali</span>
+    </dialog>
+    <script>
+        (() => {
+            const screensaver = document.querySelector('.rc-screensaver');
+            const image = screensaver.querySelector('img');
+            const idleDuration = 120_000;
+            let idleTimer;
+
+            const restartTimer = () => {
+                window.clearTimeout(idleTimer);
+
+                if (!document.hidden) {
+                    idleTimer = window.setTimeout(() => {
+                        if (image.complete && image.naturalWidth > 0 && !screensaver.open) {
+                            screensaver.showModal();
+                        }
+                    }, idleDuration);
+                }
+            };
+
+            const handleActivity = (event) => {
+                if (screensaver.open) {
+                    event.preventDefault();
+                    event.stopImmediatePropagation();
+                    screensaver.close();
+                }
+
+                restartTimer();
+            };
+
+            ['pointermove', 'pointerdown', 'keydown', 'wheel', 'touchstart'].forEach((eventName) => {
+                window.addEventListener(eventName, handleActivity, { capture: true, passive: false });
+            });
+
+            screensaver.addEventListener('cancel', (event) => {
+                event.preventDefault();
+                screensaver.close();
+                restartTimer();
+            });
+
+            document.addEventListener('visibilitychange', () => {
+                if (screensaver.open) {
+                    screensaver.close();
+                }
+
+                restartTimer();
+            });
+
+            image.addEventListener('load', restartTimer);
+            restartTimer();
+        })();
+    </script>
 </body>
 </html>
