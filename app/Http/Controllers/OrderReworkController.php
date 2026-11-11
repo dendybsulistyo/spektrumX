@@ -160,7 +160,16 @@ class OrderReworkController extends Controller
                 $order->customer->setRelation('limit', $order->customer->limit()->lockForUpdate()->first());
             }
             if ($orderReworkRequest->action === 'batal') {
-                $order->update(['status' => $newStatus]);
+                // Batal dari produksi dicatat sebagai pembatalan resmi (pengaju, penyetuju, alasan)
+                // supaya ikut tampil di laporan pembatalan seperti batal lewat Pengajuan Pembatalan.
+                $order->update([
+                    'status' => $newStatus,
+                    'cancel_requested_at' => $order->cancel_requested_at ?? $orderReworkRequest->requested_at,
+                    'cancel_requested_by' => $order->cancel_requested_by ?? $orderReworkRequest->requested_by,
+                    'cancel_reason' => $order->cancel_reason ?: $orderReworkRequest->reason,
+                    'cancel_approved_at' => now(),
+                    'cancel_approved_by' => auth()->id(),
+                ]);
                 $this->refundCancelledOrder($order, $orderReworkRequest->order_type);
             } else {
                 // Header `status` is derived from item-level qty buckets

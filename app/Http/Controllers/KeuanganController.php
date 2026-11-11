@@ -114,6 +114,12 @@ class KeuanganController extends Controller
             ($request->status === 'pending' ? $pending : $history)->push($order);
         }
 
+        // Batal dari produksi kini juga mengisi cancel_approved_at, jadi order yang sama bisa
+        // ikut terambil query riwayat di atas; cukup tampil sekali sebagai baris rework_batal.
+        $reworkKeys = $history->where('central_kind', 'rework_batal')->map(fn ($order) => $order->order_type.':'.$order->id)->all();
+        $history = $history->reject(fn ($order) => $order->central_kind !== 'rework_batal'
+            && in_array($order->order_type.':'.$order->id, $reworkKeys, true))->values();
+
         return view('keuangan.pembatalan-order', [
             'preOrders' => $preOrders->sortByDesc('TglOrder')->values(),
             'pending' => $pending->sortBy('cancel_requested_at')->values(),
