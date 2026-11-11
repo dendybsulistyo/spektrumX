@@ -112,7 +112,7 @@
         </div>
 
         <div>
-            <div class="rc-eyebrow"><i class="cmyk"></i>Pantau Pesanan Spektrum</div>
+            <div class="rc-eyebrow"><i class="cmyk"></i>Pantau Pesanan Pelanggan</div>
             <h1 class="rc-headline">Progres pesanan,<br><em>dalam satu scan.</em></h1>
             <p class="rc-lede">Pantau proses produksi pesanan Anda melalui QR code pada nota Spektrum.</p>
             <div class="rc-tracking">
