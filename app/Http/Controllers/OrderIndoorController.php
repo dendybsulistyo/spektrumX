@@ -41,10 +41,13 @@ class OrderIndoorController extends Controller
             ->with('customer')
             ->when($request->filled('search'), function ($q) use ($request) {
                 $search = $request->string('search');
-                $q->where(function ($searchQuery) use ($search) {
+                // Nama customer dicari dulu di tabel customer (kecil), lalu order difilter per KdCust
+                // supaya tidak ada subquery customer untuk setiap baris order.
+                $customerCodes = Customer::query()->where('NmCust', 'like', "%{$search}%")->limit(200)->pluck('KdCust');
+                $q->where(function ($searchQuery) use ($search, $customerCodes) {
                     $searchQuery->where('NoOrder', 'like', "%{$search}%")
                         ->orWhere('KdCust', 'like', "%{$search}%")
-                        ->orWhereHas('customer', fn ($customer) => $customer->where('NmCust', 'like', "%{$search}%"));
+                        ->when($customerCodes->isNotEmpty(), fn ($query) => $query->orWhereIn('KdCust', $customerCodes));
                 });
             })
             ->when($request->string('status')->toString() === 'batal', fn ($q) => $q->where('status', 'batal'))
