@@ -9,6 +9,7 @@ use App\Models\OrderLateLog;
 use App\Models\OrderOutdoor;
 use App\Models\OrderProof;
 use App\Services\OrderLateLogService;
+use App\Support\HariKerja;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -196,7 +197,7 @@ class QuickSearchController extends Controller
             'status_bayar' => $order->status_bayar,
             'estimate_end' => method_exists($order, 'operatorEstimateEndsAt')
                 ? $order->operatorEstimateEndsAt()
-                : $order->diproses_kasir_at?->copy()->addDay(),
+                : ($order->diproses_kasir_at ? HariKerja::tambah($order->diproses_kasir_at, 1) : null),
             'edit_url' => $canEdit ? route($editRoute, $order->id) : null,
             'nota_url' => $canNota ? route('invoice.show', ['type' => $type, 'id' => $order->id]) : null,
             'proforma_url' => $canProforma && ProformaInvoiceController::isAvailableFor($order) ? route('kasir.proforma', ['type' => $type, 'id' => $order->id]) : null,

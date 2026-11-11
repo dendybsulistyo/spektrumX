@@ -88,13 +88,13 @@ class OrderLateLogTest extends TestCase
 
     public function test_deadline_follows_cashier_time_plus_cs_progress_days(): void
     {
-        $twoDays = DB::table('order_outdoor')->insertGetId(['status' => 'cetak', 'created_at' => '2026-11-01 08:00:00', 'diproses_kasir_at' => '2026-11-01 09:00:00']);
+        $twoDays = DB::table('order_outdoor')->insertGetId(['status' => 'cetak', 'created_at' => '2026-10-31 08:00:00', 'diproses_kasir_at' => '2026-10-31 09:00:00']);
         DB::table('order_outdoor')->insert(['status' => 'cetak', 'created_at' => '2026-11-02 08:00:00', 'diproses_kasir_at' => '2026-11-02 09:00:00']);
         DB::table('customer_service_job_sheets')->insert(['order_type' => 'outdoor', 'order_id' => $twoDays, 'progress_hari' => 2]);
 
         app(OrderLateLogService::class)->record();
 
-        // 2 hari dari 1 Nov 09:00 = 3 Nov 09:00 (telat); 1 hari dari 2 Nov 09:00 = 3 Nov 09:00 (telat).
+        // 2 hari kerja dari Sabtu 31 Okt 09:00 (Minggu 1 Nov libur) = 3 Nov 09:00 (telat); 1 hari dari 2 Nov 09:00 = 3 Nov 09:00 (telat).
         $this->assertSame(['2026-11-03 09:00:00', '2026-11-03 09:00:00'], OrderLateLog::orderBy('order_id')->get()->map(fn ($log) => $log->late_at->format('Y-m-d H:i:s'))->all());
     }
 

@@ -2,6 +2,7 @@
 
 namespace App\Traits;
 
+use App\Support\HariKerja;
 use Illuminate\Support\Carbon;
 
 trait HasOperatorEstimate
@@ -22,7 +23,7 @@ trait HasOperatorEstimate
 
         $start = $start instanceof Carbon ? $start->copy() : Carbon::parse($start);
 
-        return $start->addDays($this->operatorEstimateDays());
+        return HariKerja::tambah($start, $this->operatorEstimateDays());
     }
 
     public function operatorEstimateDays(): int

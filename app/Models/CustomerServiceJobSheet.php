@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\HariKerja;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
@@ -74,7 +75,7 @@ class CustomerServiceJobSheet extends Model
             return null;
         }
 
-        return $this->created_at->copy()->addDays($this->progress_hari);
+        return HariKerja::tambah($this->created_at, (int) $this->progress_hari);
     }
 
     /** Tautan order ke lembar kerja baru tercatat sejak tanggal ini; lembar yang lebih lama tidak bisa dinilai. */
@@ -95,7 +96,7 @@ class CustomerServiceJobSheet extends Model
     }
 
     /** Operator pengambil, atau admin (roles.manage), boleh melanjutkan/mengembalikan lembar yang tersangkut. */
-    public function canBeHandledBy(\App\Models\User $user): bool
+    public function canBeHandledBy(User $user): bool
     {
         return (int) $this->claimed_by === (int) $user->id || $user->hasPermission('roles.manage');
     }

@@ -11,6 +11,7 @@ use App\Models\OrderOutdoor;
 use App\Models\OrderStatusNote;
 use App\Models\Produk;
 use App\Models\User;
+use App\Support\HariKerja;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
@@ -371,7 +372,7 @@ class DashboardStatsService
     {
         $deadline = method_exists($order, 'operatorEstimateEndsAt')
             ? $order->operatorEstimateEndsAt()
-            : $order->diproses_kasir_at?->copy()->addDay();
+            : ($order->diproses_kasir_at ? HariKerja::tambah($order->diproses_kasir_at, 1) : null);
 
         return ! in_array($order->status, self::OVERDUE_EXCLUDED_STATUSES, true)
             && $order->status_bayar !== 'belum_bayar'
@@ -388,8 +389,8 @@ class DashboardStatsService
     {
         return "{$table}.status NOT IN ('baru', 'siap_diambil', 'selesai', 'batal') AND {$table}.status_bayar <> 'belum_bayar' "
             ."AND {$table}.diproses_kasir_at IS NOT NULL "
-            ."AND DATE_ADD({$table}.diproses_kasir_at, INTERVAL COALESCE((SELECT MAX(js.progress_hari) FROM customer_service_job_sheets js "
-            ."WHERE js.order_type = ? AND js.order_id = {$table}.id AND js.progress_hari > 0), NULLIF({$table}.estimasi_hari, 0), 1) DAY) < ?";
+            .'AND '.HariKerja::sql("{$table}.diproses_kasir_at", 'COALESCE((SELECT MAX(js.progress_hari) FROM customer_service_job_sheets js '
+                ."WHERE js.order_type = ? AND js.order_id = {$table}.id AND js.progress_hari > 0), NULLIF({$table}.estimasi_hari, 0), 1)").' < ?';
     }
 
     /** @return array<int, mixed> */

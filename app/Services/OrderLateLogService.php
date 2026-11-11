@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\OrderLateLog;
+use App\Support\HariKerja;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -139,7 +140,7 @@ class OrderLateLogService
             $start = ($order->diproses_kasir_at ?? null) ?? $notes->get($order->id) ?? $order->dibayar_at;
 
             return [$order->id => $start
-                ? Carbon::parse($start)->addDays(max(1, (int) ($progressDays->get($order->id) ?: ($order->estimasi_hari ?? null) ?: 1)))
+                ? HariKerja::tambah(Carbon::parse($start), max(1, (int) ($progressDays->get($order->id) ?: ($order->estimasi_hari ?? null) ?: 1)))
                 : null];
         })->all();
     }

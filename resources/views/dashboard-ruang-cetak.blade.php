@@ -323,6 +323,7 @@
              tipeTab: 'semua',
              search: '',
              historyOpen: false,
+             historyFromOverdue: false,
              historyLoading: false,
              historyData: null,
              lateReasonDraft: '',
@@ -355,7 +356,9 @@
                      .catch(e => { this.lateReasonError = e.response?.data?.message || 'Gagal menyimpan alasan.'; })
                      .finally(() => { this.lateReasonSaving = false; });
              },
-             openHistory(type, id) {
+             // fromOverdue: dibuka dari modal order telat; saat ditutup kembali ke daftar itu.
+             openHistory(type, id, fromOverdue = false) {
+                 this.historyFromOverdue = fromOverdue;
                  this.overdueOpen = false;
                  this.historyOpen = true;
                  this.historyLoading = true;
@@ -366,6 +369,14 @@
                  axios.get(`{{ url('/dashboard/order-progress') }}/${type}/${id}`)
                      .then(r => { this.historyData = r.data; })
                      .finally(() => { this.historyLoading = false; });
+             },
+             closeHistory() {
+                 this.historyOpen = false;
+                 if (this.historyFromOverdue) {
+                     this.historyFromOverdue = false;
+                     // nextTick: Escape juga menutup modal telat di event yang sama.
+                     this.$nextTick(() => { this.overdueOpen = true; });
+                 }
              },
              openOverdue() {
                  this.overdueOpen = true;
@@ -677,7 +688,7 @@
                         <tbody>
                             <template x-for="row in overdueRows" :key="row.type_slug + '-' + row.id">
                                 <tr>
-                                    <td><button type="button" class="rcd-order rcd-order-blink" @click="openHistory(row.type_slug, row.id)" x-text="row.no_order"
+                                    <td><button type="button" class="rcd-order rcd-order-blink" @click="openHistory(row.type_slug, row.id, true)" x-text="row.no_order"
                                                 :style="`animation-duration:${1.2 + (row.id * 7919 % 13) / 10}s;animation-delay:-${(row.id * 104729 % 2000) / 1000}s`"></button></td>
                                     <td class="rcd-customer">
                                         <div x-text="row.customer || '-'"></div>
@@ -704,9 +715,9 @@
         </div>
 
         {{-- ================= Popup riwayat proses ================= --}}
-        <div x-show="historyOpen" x-cloak @keydown.escape.window="historyOpen = false"
+        <div x-show="historyOpen" x-cloak @keydown.escape.window="historyOpen && closeHistory()"
              style="position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; padding: 16px;">
-            <div class="rcd-modal-backdrop" @click="historyOpen = false"></div>
+            <div class="rcd-modal-backdrop" @click="closeHistory()"></div>
             <div class="sheet rcd-modal">
                 <div class="rcd-modal-head">
                     <div>
@@ -716,7 +727,7 @@
                             <a :href="historyData.proof.url" style="color: #c4c9d8; font-size: 12px; text-decoration: underline;" x-text="'Dari proof ' + historyData.proof.no_order"></a>
                         </template>
                     </div>
-                    <button type="button" @click="historyOpen = false">Tutup</button>
+                    <button type="button" @click="closeHistory()">Tutup</button>
                 </div>
                 <div class="rcd-modal-body">
                     <template x-if="historyLoading">
