@@ -2,15 +2,20 @@
 
 namespace App\Services;
 
+use App\Models\BahanCetakOutdoor;
+use App\Models\HargaArtwork;
+use App\Models\Kategori;
 use App\Models\OrderArtwork;
 use App\Models\OrderIndoor;
 use App\Models\OrderOutdoor;
 use App\Models\OrderStatusNote;
+use App\Models\Produk;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class DashboardStatsService
 {
@@ -306,18 +311,60 @@ class DashboardStatsService
             return null;
         }
 
+        // Hanya item yang memang melewati tahap ini: item tanpa proses tidak lewat tahap apa pun,
+        // dan item barang jadi / Potong (mulai di Finishing) tidak lewat Layout & Cetak.
+        $items = $order->items->reject(fn ($item) => (bool) ($item->tanpa_proses ?? false)
+            || (in_array($stage, ['desain', 'cetak'], true) && $this->skipsLayoutCetak($item)));
+
         $laterStages = array_slice(self::BUCKET_STAGES, $index + 1);
-        $total = $order->items->sum('Qty');
+        $total = $items->sum('Qty');
 
         if ($total === 0) {
             return null;
         }
 
-        $done = $order->items->sum(function ($item) use ($laterStages) {
+        $done = $items->sum(function ($item) use ($laterStages) {
             return collect($laterStages)->sum(fn ($s) => (int) $item->{"qty_{$s}"});
         });
 
         return "{$done}/{$total}";
+    }
+
+    /** @var array{divisions: list<string>, bahan: list<string>, indoor: array<string, string>, artwork: array<string, string>}|null */
+    private ?array $skipLayoutCetak = null;
+
+    /**
+     * Item yang dibuat langsung di Finishing (aturan sama dengan saveItems() Order Indoor/Outdoor):
+     * kategori indoor/artwork bertanda lewati_layout_cetak, atau bahan outdoor bertanda sama.
+     */
+    private function skipsLayoutCetak($item): bool
+    {
+        $this->skipLayoutCetak ??= [
+            'divisions' => Schema::hasColumn('kategori_produk_indoor', 'lewati_layout_cetak')
+                ? Kategori::query()->where('lewati_layout_cetak', true)->pluck('KdDivs')->map(fn ($kode) => (string) $kode)->all()
+                : [],
+            'bahan' => Schema::hasColumn('bahan_cetak_outdoor', 'lewati_layout_cetak')
+                ? BahanCetakOutdoor::query()->where('lewati_layout_cetak', true)->whereNotNull('NoCetak')->pluck('NoCetak')->map(fn ($kode) => (string) $kode)->all()
+                : [],
+            'indoor' => [],
+            'artwork' => [],
+        ];
+
+        if (isset($item->KdCtk)) {
+            return in_array(substr((string) $item->KdCtk, 2, 2), $this->skipLayoutCetak['bahan'], true);
+        }
+        if (! isset($item->KdProd) || $this->skipLayoutCetak['divisions'] === []) {
+            return false;
+        }
+
+        $kind = ($item->jenis_produk ?? 'indoor') === 'artwork' ? 'artwork' : 'indoor';
+        $code = (string) $item->KdProd;
+        if (! array_key_exists($code, $this->skipLayoutCetak[$kind])) {
+            $division = ($kind === 'artwork' ? HargaArtwork::query() : Produk::query())->where('KdProd', $code)->value('KdDivs');
+            $this->skipLayoutCetak[$kind][$code] = (string) ($division ?: substr($code, 0, 2));
+        }
+
+        return in_array($this->skipLayoutCetak[$kind][$code], $this->skipLayoutCetak['divisions'], true);
     }
 
     private function isOverdue($order): bool
