@@ -215,6 +215,13 @@ class CustomerController extends Controller
             })
             // ?vip=1: hanya customer VIP (punya plafon), dipakai form Order Proof.
             ->when($request->boolean('vip'), fn ($query) => $query->whereHas('limit'))
+            // Paling relevan dulu: kode/nama persis, nama diawali kata yang dicari, ada kata
+            // di dalam nama yang diawali kata itu, baru sisanya (supaya "RAMA" menemukan
+            // "RAMA JATU" sebelum "ABRAMA ...").
+            ->when($q !== '', fn ($query) => $query->orderByRaw(
+                'CASE WHEN KdCust = ? OR NmCust = ? THEN 0 WHEN NmCust LIKE ? THEN 1 WHEN NmCust LIKE ? THEN 2 ELSE 3 END',
+                [$q, $q, "{$q}%", "% {$q}%"],
+            ))
             ->orderBy('NmCust')
             ->limit(20)
             ->get(['KdCust', 'NmCust', 'Telp']);
