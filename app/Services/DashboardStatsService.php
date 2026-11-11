@@ -387,15 +387,19 @@ class DashboardStatsService
      */
     private function overdueSql(string $table, string $type): string
     {
+        // Ekspresi hari dipakai berulang di HariKerja::sql(), jadi tipe order ditulis langsung
+        // (hanya indoor/outdoor/artwork) supaya jumlah placeholder tetap satu (waktu sekarang).
+        abort_unless(in_array($type, ['indoor', 'outdoor', 'artwork'], true), 500);
+
         return "{$table}.status NOT IN ('baru', 'siap_diambil', 'selesai', 'batal') AND {$table}.status_bayar <> 'belum_bayar' "
             ."AND {$table}.diproses_kasir_at IS NOT NULL "
             .'AND '.HariKerja::sql("{$table}.diproses_kasir_at", 'COALESCE((SELECT MAX(js.progress_hari) FROM customer_service_job_sheets js '
-                ."WHERE js.order_type = ? AND js.order_id = {$table}.id AND js.progress_hari > 0), NULLIF({$table}.estimasi_hari, 0), 1)").' < ?';
+                ."WHERE js.order_type = '{$type}' AND js.order_id = {$table}.id AND js.progress_hari > 0), NULLIF({$table}.estimasi_hari, 0), 1)").' < ?';
     }
 
     /** @return array<int, mixed> */
     private function overdueBindings(string $type): array
     {
-        return [$type, now()];
+        return [now()];
     }
 }
