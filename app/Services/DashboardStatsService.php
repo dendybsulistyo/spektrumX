@@ -296,6 +296,12 @@ class DashboardStatsService
     {
         $index = array_search($stage, self::BUCKET_STAGES, true);
 
+        // Order Baru belum dilepas ke produksi: qty item hanya posisi antrean awal (mis. item
+        // Potong langsung di Finishing), jadi jangan dihitung sudah melewati Layout/Cetak.
+        if ($order->status === 'baru') {
+            return null;
+        }
+
         if ($index === false || ! $order->relationLoaded('items') || $order->items->isEmpty()) {
             return null;
         }
