@@ -1,4 +1,5 @@
-<div x-data="chatWidget()">
+<style>@media print { #chat-widget { display: none !important; } }</style>
+<div id="chat-widget" x-data="chatWidget()">
     <!-- Floating button (draggable) -->
     <button @pointerdown="startDrag($event)"
             :style="`right:${pos.x}px; bottom:${pos.y}px;`"
