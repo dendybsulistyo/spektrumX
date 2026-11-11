@@ -42,7 +42,8 @@ class OrderOutdoorController extends Controller
                 $search = $request->string('search');
                 $q->where(function ($searchQuery) use ($search) {
                     $searchQuery->where('NoOrder', 'like', "%{$search}%")
-                        ->orWhere('KdCust', 'like', "%{$search}%");
+                        ->orWhere('KdCust', 'like', "%{$search}%")
+                        ->orWhereHas('customer', fn ($customer) => $customer->where('NmCust', 'like', "%{$search}%"));
                 });
             })
             ->when($request->string('status')->toString() === 'batal', fn ($q) => $q->where('status', 'batal'))
