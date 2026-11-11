@@ -206,6 +206,9 @@
                 @if ($pageIndex === 0)
                     <div class="print-meta">
                         <div class="meta-line"><span class="key">Operator Kasir</span>: {{ $order->kasir?->name ?? '-' }}</div>
+                        @if ($fileOperatorName = method_exists($order, 'customerServiceJobSheet') ? $order->customerServiceJobSheet?->claimant?->name : null)
+                            <div class="meta-line"><span class="key">Penerima File</span>: {{ $fileOperatorName }}</div>
+                        @endif
                         <div class="meta-line"><span class="key">Tanggal Order</span>: {{ $tanggalOrder ?? '-' }}</div>
                         <p class="storage-warning">Barang jadi yang sudah 1 Bulan dan tidak diambil/rusak/hilang, bukan tanggung jawab Spektrum</p>
                     </div>

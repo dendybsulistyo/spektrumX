@@ -169,6 +169,9 @@ class OrderDocumentController extends Controller
             'void' => $void,
             'signature' => $signature,
             'pengaturan' => PengaturanKeuangan::current(),
+            'fileOperatorName' => $order && method_exists($order, 'customerServiceJobSheet')
+                ? $order->customerServiceJobSheet?->claimant?->name
+                : null,
         ]);
     }
 

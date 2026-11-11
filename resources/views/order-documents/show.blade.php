@@ -266,7 +266,7 @@
         @endif
 
         <footer class="footer">
-            <div>Kasir: {{ \App\Support\TeksTampil::bersih($snapshot['issued_by_name'] ?? $document->issuedBy?->name) ?? '-' }}<span class="reprint-stamp"></span></div>
+            <div>Kasir: {{ \App\Support\TeksTampil::bersih($snapshot['issued_by_name'] ?? $document->issuedBy?->name) ?? '-' }}@if ($fileOperatorName) · Penerima File: {{ \App\Support\TeksTampil::bersih($fileOperatorName) }}@endif<span class="reprint-stamp"></span></div>
             <div style="text-align:right">Terima kasih telah mempercayakan kebutuhan cetak Anda kepada kami.</div>
         </footer>
     </main>
