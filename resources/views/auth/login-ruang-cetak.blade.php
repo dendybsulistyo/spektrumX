@@ -40,6 +40,16 @@
         .rc-headline { margin: 0; font-size: clamp(30px, 3.1vw, 44px); font-weight: 600; line-height: 1.14; letter-spacing: -.01em; }
         .rc-headline em { font-style: normal; color: #7fd0ea; }
         .rc-lede { max-width: 380px; margin: 22px 0 0; font-size: 14px; line-height: 1.65; color: #b9bfd1; }
+        .rc-tracking { display: flex; align-items: center; gap: 22px; max-width: 440px; margin-top: 28px; padding: 22px; border: 1px solid #ffffff24; border-radius: 16px; background: linear-gradient(135deg, #ffffff0d, #ffffff03); }
+        .rc-receipt { flex: 0 0 112px; margin: 0; padding: 12px; color: var(--ink); background: #fffdf8; border-radius: 6px; box-shadow: 0 12px 24px #00000020; transform: rotate(-4deg); }
+        .rc-receipt-title { display: block; padding-bottom: 8px; border-bottom: 1px dashed #cfc7b5; font-size: 9px; font-weight: 700; letter-spacing: .15em; text-align: center; }
+        .rc-receipt svg { display: block; width: 88px; height: 88px; margin-top: 8px; }
+        .rc-receipt figcaption { margin-top: 5px; font-size: 8px; color: #666; text-align: center; }
+        .rc-tracking-copy { min-width: 0; }
+        .rc-tracking-copy strong { display: block; font-size: 17px; font-weight: 600; line-height: 1.4; }
+        .rc-tracking-copy p { margin: 8px 0 12px; font-size: 12px; line-height: 1.65; color: #b9bfd1; }
+        .rc-tracking-tag { display: inline-flex; align-items: center; gap: 7px; color: #7fd0ea; font-size: 10px; font-weight: 600; letter-spacing: .04em; }
+        .rc-tracking-tag::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
         .rc-steps { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 30px; }
         .rc-steps span { padding: 4px 10px; font-family: var(--mono); font-size: 11px; color: #d7dbe7; border: 1px solid rgba(255, 255, 255, .18); border-radius: 999px; }
         .rc-steps b { color: rgba(255, 255, 255, .35); font-weight: 400; }
@@ -102,9 +112,29 @@
         </div>
 
         <div>
-            <div class="rc-eyebrow"><i class="cmyk"></i>Sistem Manajemen Order</div>
-            <h1 class="rc-headline">Kendalikan seluruh<br>alur produksi<br><em>dari satu tempat.</em></h1>
-            <p class="rc-lede">Dari kasir hingga pengambilan barang — setiap order terpantau, setiap tahap tercatat.</p>
+            <div class="rc-eyebrow"><i class="cmyk"></i>Pantau Pesanan Spektrum</div>
+            <h1 class="rc-headline">Progres pesanan,<br><em>dalam satu scan.</em></h1>
+            <p class="rc-lede">Pantau proses produksi pesanan Anda melalui QR code pada nota Spektrum.</p>
+            <div class="rc-tracking">
+                <figure class="rc-receipt">
+                    <span class="rc-receipt-title">NOTA SPEKTRUM</span>
+                    <svg viewBox="0 0 29 29" role="img" aria-label="Ilustrasi QR code pada nota, bukan kode pelacakan aktif" shape-rendering="crispEdges">
+                        <rect width="29" height="29" fill="#fffdf8"/>
+                        <g fill="none" stroke="#1b2236" stroke-width="1">
+                            <path d="M2.5 2.5h6v6h-6zM20.5 2.5h6v6h-6zM2.5 20.5h6v6h-6z"/>
+                        </g>
+                        <g fill="#1b2236">
+                            <path d="M4 4h3v3H4zM22 4h3v3h-3zM4 22h3v3H4zM11 2h2v3h-2zM15 2h3v1h-3zM14 5h4v2h-4zM11 7h2v4h-2zM15 9h3v3h-3zM20 11h2v3h-2zM24 10h3v2h-3zM2 11h3v2H2zM7 11h2v4H7zM3 15h3v3H3zM10 14h3v2h-3zM14 13h3v4h-3zM18 15h4v2h-4zM24 14h3v4h-3zM10 18h3v3h-3zM15 19h3v2h-3zM20 19h3v3h-3zM25 20h2v3h-2zM11 23h2v4h-2zM14 22h2v2h-2zM16 25h3v2h-3zM19 23h2v2h-2zM22 24h2v3h-2zM25 25h2v2h-2z"/>
+                        </g>
+                    </svg>
+                    <figcaption>Ilustrasi QR pada nota</figcaption>
+                </figure>
+                <div class="rc-tracking-copy">
+                    <strong>Scan nota.<br>Lihat progresnya.</strong>
+                    <p>Buka kamera ponsel, scan QR pada nota Anda, lalu lihat status pesanan hingga siap diambil.</p>
+                    <span class="rc-tracking-tag">Pelacakan pesanan via QR</span>
+                </div>
+            </div>
             <div class="rc-steps">
                 <span>Layout</span><b>›</b><span>Cetak</span><b>›</b><span>Finishing</span><b>›</b><span>Back Office</span><b>›</b><span>Bungkus</span><b>›</b><span>Ambil</span>
             </div>
