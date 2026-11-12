@@ -648,6 +648,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/pengambilan/transaksi/simpan-langsung', [PengambilanController::class, 'archiveTransactions'])->name('pengambilan.transaksi.archive-many');
         Route::post('/pengambilan/{type}/{id}', [PengambilanController::class, 'updateItem'])->name('pengambilan.serahkan');
         Route::post('/pengambilan/transaksi/{type}/{id}/simpan', [PengambilanController::class, 'archiveTransaction'])->name('pengambilan.transaksi.archive');
+        Route::post('/pengambilan/transaksi/{type}/{id}/simpan-cetak', [PengambilanController::class, 'archiveAndPrint'])->name('pengambilan.transaksi.archive-print');
     });
 
     Route::prefix('chat')->name('chat.')->group(function () {

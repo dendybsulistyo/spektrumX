@@ -169,6 +169,9 @@ class OrderDocumentController extends Controller
             'void' => $void,
             'signature' => $signature,
             'pengaturan' => PengaturanKeuangan::current(),
+            // Dari tombol Invoice Pengambilan: cetak otomatis lalu kembali ke daftar.
+            'returnUrl' => request()->filled('kembali') ? PengambilanController::pengambilanUrl(request('kembali')) : null,
+            'autoPrint' => request()->boolean('cetak'),
             'fileOperatorName' => $order && method_exists($order, 'customerServiceJobSheet')
                 ? $order->customerServiceJobSheet?->claimant?->name
                 : null,

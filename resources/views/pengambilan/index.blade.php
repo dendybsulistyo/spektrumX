@@ -183,7 +183,15 @@
                                             <a target="_blank" href="{{ route('order-documents.show', $transaction->do_document_id) }}"
                                                class="in-btn" style="text-decoration:none;background:#047857;border-color:#047857;">DO</a>
                                         @endif
-                                        @if ($transaction->invoice_document_id)
+                                        @if ($transaction->invoice_document_id && $directArchivable($transaction))
+                                            {{-- Lunas / Plafon: Invoice = simpan (konfirmasi) lalu cetak; setelah cetak kembali ke daftar ini. --}}
+                                            <form method="POST" action="{{ route('pengambilan.transaksi.archive-print', ['type' => $transaction->order_type, 'id' => $transaction->order_id]) }}" style="display:inline;"
+                                                  onsubmit="return confirm(@js('Simpan transaksi '.$transaction->invoice.' lalu cetak invoice? Tanggal invoice menjadi tanggal hari ini dan transaksi hilang dari daftar.'))">
+                                                @csrf
+                                                <input type="hidden" name="kembali" value="{{ request()->fullUrl() }}">
+                                                <button type="submit" class="in-btn" style="background:#334155;border-color:#334155;" title="Simpan lalu cetak invoice">Invoice</button>
+                                            </form>
+                                        @elseif ($transaction->invoice_document_id)
                                             <a target="_blank" href="{{ route('order-documents.show', $transaction->invoice_document_id) }}"
                                                class="in-btn" style="text-decoration:none;background:#334155;border-color:#334155;">Invoice</a>
                                         @endif

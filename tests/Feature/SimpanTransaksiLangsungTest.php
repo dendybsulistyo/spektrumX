@@ -144,6 +144,30 @@ class SimpanTransaksiLangsungTest extends TestCase
         $this->assertSame('2026-11-02 09:15:00', (string) DB::table('order_documents')->where('id', $document)->value('issued_at'));
     }
 
+    public function test_tombol_invoice_menyimpan_lalu_membuka_invoice_untuk_dicetak_dan_kembali_ke_daftar(): void
+    {
+        $id = $this->paidOrder('IND.2.004', printed: false);
+        $back = route('pengambilan.index', ['tab' => 'transaksi', 'page' => 2, 'q' => 'aldi']);
+
+        $response = app(PengambilanController::class)->archiveAndPrint(Request::create('/', 'POST', ['kembali' => $back]), 'indoor', $id);
+
+        $this->assertSame([$id], DB::table('sales_transaction_archives')->pluck('order_id')->all());
+        $document = DB::table('order_documents')->where('order_id', $id)->value('id');
+        $this->assertSame(route('order-documents.show', ['document' => $document, 'cetak' => 1, 'kembali' => $back]), $response->getTargetUrl());
+
+        // DP ditolak: tidak tersimpan, kembali ke daftar dengan pesan.
+        $dp = DB::table('order_indoor')->insertGetId(['NoOrder' => 'IND.2.005', 'status_bayar' => 'dp', 'jumlah_piutang' => 5000, 'jumlah_dibayar' => 5000]);
+        $response = app(PengambilanController::class)->archiveAndPrint(Request::create('/', 'POST', ['kembali' => $back]), 'indoor', $dp);
+        $this->assertSame($back, $response->getTargetUrl());
+        $this->assertStringContainsString('IND.2.005', session('error'));
+    }
+
+    public function test_url_kembali_hanya_ke_pengambilan(): void
+    {
+        $this->assertSame(route('pengambilan.index', ['tab' => 'transaksi']), PengambilanController::pengambilanUrl('https://contoh.com/pengambilan'));
+        $this->assertSame(route('pengambilan.index').'?tab=transaksi&page=3', PengambilanController::pengambilanUrl(route('pengambilan.index').'?tab=transaksi&page=3'));
+    }
+
     private function paidOrder(string $number, bool $printed): int
     {
         $id = DB::table('order_indoor')->insertGetId(['NoOrder' => $number, 'status_bayar' => 'lunas', 'jumlah_dibayar' => 10000]);

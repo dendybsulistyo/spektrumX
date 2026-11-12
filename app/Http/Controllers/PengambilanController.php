@@ -194,6 +194,34 @@ class PengambilanController extends Controller
     }
 
     /**
+     * Tombol Invoice di Transaksi Penjualan (12 Nov 2026): simpan dulu (dengan konfirmasi di
+     * halaman), lalu buka invoice untuk dicetak; setelah cetak kembali ke daftar Pengambilan.
+     */
+    public function archiveAndPrint(Request $request, string $type, int $id): RedirectResponse
+    {
+        abort_unless(in_array($type, ['indoor', 'outdoor'], true), 404);
+        $back = self::pengambilanUrl($request->input('kembali'));
+
+        if ($error = $this->archiveOne($type, $id)) {
+            return redirect()->to($back)->with('error', $this->orderNumber($type, $id).': '.$error);
+        }
+
+        $invoice = OrderDocument::query()->where('kind', 'inv')->where('order_type', $type)->where('order_id', $id)->latest('id')->first();
+
+        return redirect()->route('order-documents.show', ['document' => $invoice, 'cetak' => 1, 'kembali' => $back]);
+    }
+
+    /** URL kembali hanya boleh ke halaman Pengambilan (bukan alamat luar). */
+    public static function pengambilanUrl(?string $url): string
+    {
+        $base = route('pengambilan.index');
+
+        return is_string($url) && ($url === $base || str_starts_with($url, $base.'?'))
+            ? $url
+            : route('pengambilan.index', ['tab' => 'transaksi']);
+    }
+
+    /**
      * Simpan langsung (satu atau beberapa yang dicentang) tanpa membuka pratinjau.
      * Lunas & Plafon tidak wajib cetak invoice dulu (10 Nov 2026).
      */

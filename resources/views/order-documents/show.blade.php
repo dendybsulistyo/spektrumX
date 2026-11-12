@@ -127,7 +127,11 @@
 
     <div class="toolbar">
         @if (auth()->user()->hasPermission('keuangan.view'))
-            <a href="{{ route('order-documents.index') }}">← Daftar dokumen</a>
+            @if ($returnUrl)
+                <a href="{{ $returnUrl }}">← Kembali ke Pengambilan</a>
+            @else
+                <a href="{{ route('order-documents.index') }}">← Daftar dokumen</a>
+            @endif
         @else
             <a href="{{ route('pengambilan.index', ['tab' => 'transaksi']) }}">← Transaksi Penjualan</a>
         @endif
@@ -299,6 +303,19 @@
         }
 
         window.addEventListener('afterprint', () => document.body.classList.remove('print-authorized'));
+
+        @if ($autoPrint && $returnUrl)
+            // Tombol Invoice Pengambilan: transaksi sudah tersimpan; cetak lalu kembali ke daftar.
+            window.addEventListener('afterprint', () => { window.location.href = @json($returnUrl); });
+            window.addEventListener('load', () => {
+                @if ($reprintState === 'locked')
+                    alert('Transaksi sudah tersimpan. ' + @json(\App\Services\ReprintGate::LOCKED_MESSAGE));
+                    window.location.href = @json($returnUrl);
+                @else
+                    requestDocumentPrint();
+                @endif
+            });
+        @endif
     </script>
 </body>
 </html>
