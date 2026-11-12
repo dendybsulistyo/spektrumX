@@ -11,14 +11,16 @@ use Illuminate\Support\Carbon;
 
 /**
  * Aturan cetak ulang SO / DO / Invoice (printer macet, kertas sobek, dst.):
- * - dalam FREE_MINUTES sejak cetak pertama: boleh berkali-kali, alasan wajib;
- * - Admin Kasir / Akuntansi (CetakUlang::ROLES): kapan pun, alasan wajib;
- * - selain itu: lewat Approval (satu permintaan disetujui = satu kali cetak).
- * Setiap cetak ulang dicatat di reprint_logs dan diberi tanda di kaki nota.
+ * satu pintu, hanya Admin Kasir / Akuntansi (CetakUlang::ROLES), alasan wajib
+ * (permintaan Yovita 12 Nov 2026: cetak ulang di kasir dihilangkan). Pengguna lain
+ * hanya bisa cetak pertama. Setiap cetak ulang dicatat di reprint_logs dan diberi
+ * tanda di kaki nota.
  */
 class ReprintGate
 {
     public const FREE_MINUTES = 15;
+
+    public const LOCKED_MESSAGE = 'Dokumen ini sudah dicetak. Cetak ulang hanya lewat menu Dokumen SO / DO / Invoice oleh '.CetakUlang::LABEL.'.';
 
     public const REASONS = [
         'Printer macet / kertas tersangkut',
@@ -29,7 +31,7 @@ class ReprintGate
     public const KIND_LABELS = ['so' => 'Sales Order', 'do' => 'Delivery Order', 'inv' => 'Invoice'];
 
     /**
-     * Keadaan tombol cetak untuk halaman: first | free | privileged | approved | pending | needs_approval.
+     * Keadaan tombol cetak untuk halaman: first | privileged | locked (sudah dicetak, bukan Admin Kasir/Akuntansi).
      *
      * @param  Model|null  $record  baris sales_order_prints / order_document_prints
      */
@@ -39,19 +41,8 @@ class ReprintGate
         if (! $record) {
             return 'first';
         }
-        if (CetakUlang::boleh($user)) {
-            return 'privileged';
-        }
-        if ($this->withinFreeWindow($record)) {
-            return 'free';
-        }
-        $request = $this->openRequest($kind, $orderType, $orderId, $documentId);
 
-        return match ($request?->status) {
-            'approved' => 'approved',
-            'pending' => 'pending',
-            default => 'needs_approval',
-        };
+        return CetakUlang::boleh($user) ? 'privileged' : 'locked';
     }
 
     public function freeUntil(Model $record): Carbon
@@ -73,26 +64,11 @@ class ReprintGate
         }
 
         $user = auth()->user();
-        $request = null;
-        if (CetakUlang::boleh($user)) {
-            $mode = 'hak_khusus';
-        } elseif ($this->withinFreeWindow($record)) {
-            $mode = 'bebas';
-        } else {
-            $request = ReprintRequest::query()
-                ->where('kind', $kind)->where('order_type', $orderType)->where('order_id', $orderId)
-                ->where('order_document_id', $documentId)->where('status', 'approved')
-                ->lockForUpdate()->oldest('id')->first();
-            if (! $request) {
-                return [
-                    'allowed' => false,
-                    'code' => 'needs_approval',
-                    'message' => 'Batas cetak ulang '.self::FREE_MINUTES.' menit sudah lewat. Ajukan permintaan cetak ulang ke Approval.',
-                ];
-            }
-            $request->update(['status' => 'used', 'used_at' => now()]);
-            $mode = 'approval';
+        if (! CetakUlang::boleh($user)) {
+            return ['allowed' => false, 'code' => 'locked', 'message' => self::LOCKED_MESSAGE];
         }
+        $request = null;
+        $mode = 'hak_khusus';
 
         $printNo = (int) $record->print_count + 1;
         ReprintLog::create([
@@ -134,10 +110,5 @@ class ReprintGate
     public static function pendingCount(): int
     {
         return ReprintRequest::query()->where('status', 'pending')->count();
-    }
-
-    private function withinFreeWindow(Model $record): bool
-    {
-        return $record->first_printed_at && now()->lte($this->freeUntil($record));
     }
 }

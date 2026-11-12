@@ -244,7 +244,9 @@
         @if (request()->boolean('payment_preview') && request('source') === 'pengambilan')
             <a href="{{ route('pengambilan.index', ['tab' => 'transaksi']) }}" class="link-back">← Kembali ke Pengambilan</a>
             <div style="display:flex;align-items:center;gap:10px;">
-                @if ($invoiceReprintState === 'pending')
+                @if ($invoicePrinted && $invoiceReprintState === 'locked')
+                    <span class="print-warning" style="flex:none;margin:0">Invoice sudah dicetak. Cetak ulang lewat Dokumen SO / DO / Invoice ({{ \App\Support\CetakUlang::LABEL }}).</span>
+                @elseif ($invoiceReprintState === 'pending')
                     <span class="print-warning" style="flex:none;margin:0">Permintaan cetak ulang Invoice menunggu approval Admin Kasir.</span>
                 @else
                     <button class="btn" type="button" id="paymentPrintButton" onclick="printPaymentInvoice()">{{ ! $invoicePrinted ? 'Cetak Invoice' : ($invoiceReprintState === 'needs_approval' ? 'Minta Cetak Ulang Invoice' : 'Cetak Ulang Invoice') }}</button>
@@ -262,7 +264,9 @@
         @if (! request()->boolean('payment_preview') && request('source') !== 'pengambilan' && ! request()->boolean('draft') && $soReprintState === 'pending')
             <p class="print-warning">Permintaan cetak ulang SO menunggu approval Admin Kasir.</p>
         @endif
-        @if (! request()->boolean('payment_preview') && request('source') !== 'pengambilan')
+        @if (! request()->boolean('payment_preview') && request('source') !== 'pengambilan' && ! request()->boolean('draft') && $printRecord && $soReprintState === 'locked')
+            <p class="print-warning">Surat Pesanan sudah dicetak. Cetak ulang lewat Dokumen SO / DO / Invoice ({{ \App\Support\CetakUlang::LABEL }}).</p>
+        @elseif (! request()->boolean('payment_preview') && request('source') !== 'pengambilan')
             @if (request()->boolean('draft') || $soReprintState !== 'pending')
                 <button class="btn" type="button" onclick="requestSalesOrderPrint()">{{ request()->boolean('draft') ? 'Cetak Draft SO' : (! $printRecord ? 'Cetak Surat Pesanan' : ($soReprintState === 'needs_approval' ? 'Minta Cetak Ulang SO' : 'Cetak Ulang Surat Pesanan')) }}</button>
             @endif

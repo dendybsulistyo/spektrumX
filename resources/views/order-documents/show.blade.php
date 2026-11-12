@@ -135,7 +135,9 @@
             @if ($document->kind === 'inv' && ! $invoiceBelumLunas && auth()->user()->hasPermission('keuangan.view'))
                 <a class="button" href="{{ route('order-documents.receipt', $document) }}">Kwitansi</a>
             @endif
-            @if ($reprintState === 'pending')
+            @if ($reprintState === 'locked')
+                <span class="print-warning">{{ \App\Services\ReprintGate::LOCKED_MESSAGE }}</span>
+            @elseif ($reprintState === 'pending')
                 <span class="print-warning">Permintaan cetak ulang menunggu approval Admin Kasir.</span>
             @else
                 @if ($reprintState === 'free')
