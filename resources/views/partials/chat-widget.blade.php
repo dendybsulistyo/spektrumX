@@ -222,8 +222,9 @@
                 if (!this.activeUser) return;
                 this.getJson(`/chat/${this.activeUser.id}`)
                     .then(data => {
+                        const hasNewer = data.messages[0]?.id !== this.messages[0]?.id;
                         this.messages = data.messages;
-                        this.$nextTick(() => this.scrollToBottom());
+                        if (hasNewer) this.$nextTick(() => this.scrollToTop());
                     })
                     .catch(() => {});
             },
@@ -243,14 +244,15 @@
                 })
                     .then(r => r.json())
                     .then(msg => {
-                        this.messages.push(msg);
-                        this.$nextTick(() => this.scrollToBottom());
+                        this.messages.unshift(msg);
+                        this.$nextTick(() => this.scrollToTop());
                     });
             },
 
-            scrollToBottom() {
+            // Pesan terbaru ada di paling atas daftar.
+            scrollToTop() {
                 const el = this.$refs.messageList;
-                if (el) el.scrollTop = el.scrollHeight;
+                if (el) el.scrollTop = 0;
             },
 
             isMine(msg) {

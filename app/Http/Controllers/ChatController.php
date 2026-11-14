@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\ChatMessage;
 use App\Models\User;
+use App\Services\ApprovalChatFilter;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -14,8 +15,9 @@ class ChatController extends Controller
     public function index(): JsonResponse
     {
         $me = auth()->id();
+        $pending = ApprovalChatFilter::pendingPatterns();
 
-        $latestMessageColumn = fn (string $column): Builder => ChatMessage::query()
+        $latestMessageColumn = fn (string $column): Builder => ApprovalChatFilter::apply(ChatMessage::query(), $pending)
             ->select($column)
             ->where(function (Builder $query) use ($me): void {
                 $query->where(function (Builder $conversation) use ($me): void {
@@ -35,7 +37,7 @@ class ChatController extends Controller
             ->addSelect([
                 'last_message' => $latestMessageColumn('body'),
                 'last_message_at' => $latestMessageColumn('created_at'),
-                'unread_count' => ChatMessage::query()
+                'unread_count' => ApprovalChatFilter::apply(ChatMessage::query(), $pending)
                     ->selectRaw('count(*)')
                     ->whereColumn('sender_id', 'users.id')
                     ->where('recipient_id', $me)
@@ -66,7 +68,10 @@ class ChatController extends Controller
 
     public function unreadCount(): JsonResponse
     {
-        $count = ChatMessage::where('recipient_id', auth()->id())->whereNull('read_at')->count();
+        $count = ApprovalChatFilter::apply(ChatMessage::query(), ApprovalChatFilter::pendingPatterns())
+            ->where('recipient_id', auth()->id())
+            ->whereNull('read_at')
+            ->count();
 
         return response()->json(['count' => $count]);
     }
@@ -75,7 +80,12 @@ class ChatController extends Controller
     {
         $me = auth()->id();
 
-        $messages = ChatMessage::between($me, $user->id)->latest()->limit(100)->get()->reverse()->values();
+        $messages = ApprovalChatFilter::apply(ChatMessage::query(), ApprovalChatFilter::pendingPatterns())
+            ->where(fn (Builder $query) => $query->between($me, $user->id))
+            ->latest()
+            ->orderByDesc('id')
+            ->limit(100)
+            ->get();
 
         ChatMessage::where('sender_id', $user->id)
             ->where('recipient_id', $me)
