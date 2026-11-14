@@ -106,9 +106,7 @@
                             <tbody><tr><td colspan="15" class="center" style="padding:28px">Belum ada nota lunas atau tagihan customer VIP pada bulan ini.</td></tr></tbody>
                         @endforelse
                         <tbody class="grand-total font-bold"><tr>
-                            <td colspan="10" class="number">Grand Total :</td>
-                            <td class="number">{{ $fmt($totals->subtotal) }}</td>
-                            <td class="number">{{ $fmt($totals->discount) }}</td>
+                            <td colspan="12" class="number">Grand Total :</td>
                             <td class="number">{{ $fmt($totals->total) }}</td>
                             <td class="number">{{ $fmt($totals->cash) }}</td>
                             <td class="number">{{ $fmt($totals->credit) }}</td>
