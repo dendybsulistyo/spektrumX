@@ -285,6 +285,15 @@ class CustomerServiceController extends Controller
         return to_route('customer-service.payment-queue', ['tab' => 'transfer'])->with('status', 'Transfer masuk berhasil dicatat.');
     }
 
+    public function destroyTransferMasuk(CsTransferMasuk $transfer): RedirectResponse
+    {
+        abort_if($transfer->used_at !== null, 422, 'Transfer yang sudah dipakai tidak bisa dihapus.');
+
+        $transfer->delete();
+
+        return to_route('customer-service.payment-queue', ['tab' => 'transfer'])->with('status', "Transfer {$transfer->customer_name} dihapus.");
+    }
+
     public function useTransferMasuk(Request $request, CsTransferMasuk $transfer): RedirectResponse
     {
         $data = $request->validate([

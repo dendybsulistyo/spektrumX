@@ -96,11 +96,17 @@
                         </td>
                         @can('customer-service.manage')
                             <td class="whitespace-nowrap px-3 py-2 text-right">
-                                <form method="POST" action="{{ route('customer-service.transfer-masuk.use', $transfer) }}"
+                                <form method="POST" action="{{ route('customer-service.transfer-masuk.use', $transfer) }}" class="inline"
                                       onsubmit="const no = prompt('Tandai transfer ' + {{ \Illuminate\Support\Js::from($transfer->customer_name) }} + ' sudah dipakai.\nNomor order (opsional):', ''); if (no === null) return false; this.used_order_number.value = no.trim(); return true;">
                                     @csrf
                                     <input type="hidden" name="used_order_number">
                                     <button class="h-8 rounded bg-emerald-600 px-3 text-xs font-semibold text-white hover:bg-emerald-700">Sudah dipakai</button>
+                                </form>
+                                <form method="POST" action="{{ route('customer-service.transfer-masuk.destroy', $transfer) }}" class="inline"
+                                      onsubmit="return confirm('Hapus transfer ' + {{ \Illuminate\Support\Js::from($transfer->customer_name.' Rp '.number_format((float) $transfer->amount, 0, ',', '.')) }} + '?\nData akan dihapus permanen.')">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button class="ml-1 h-8 rounded bg-red-600 px-3 text-xs font-semibold text-white hover:bg-red-700">Hapus</button>
                                 </form>
                             </td>
                         @endcan

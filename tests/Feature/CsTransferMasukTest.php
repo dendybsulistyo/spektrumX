@@ -90,4 +90,17 @@ class CsTransferMasukTest extends TestCase
 
         $this->actingAs(User::find(1))->getJson(route('customers.search', ['q' => 'RAMA']))->assertJsonCount(3);
     }
+
+    public function test_cs_menghapus_transfer_yang_salah_input(): void
+    {
+        $salah = CsTransferMasuk::create(['customer_code' => 'RJT001', 'customer_name' => 'RAMA JATU', 'amount' => 50000, 'transfer_date' => now()->toDateString()]);
+        $dipakai = CsTransferMasuk::create(['customer_code' => 'RJT001', 'customer_name' => 'RAMA JATU', 'amount' => 75000, 'transfer_date' => now()->toDateString(), 'used_at' => now()]);
+
+        $this->actingAs(User::find(2))->delete(route('customer-service.transfer-masuk.destroy', $salah))->assertForbidden();
+        $this->actingAs(User::find(1))->delete(route('customer-service.transfer-masuk.destroy', $dipakai))->assertStatus(422);
+        $this->actingAs(User::find(1))->delete(route('customer-service.transfer-masuk.destroy', $salah))
+            ->assertRedirect(route('customer-service.payment-queue', ['tab' => 'transfer']));
+
+        $this->assertSame([$dipakai->id], CsTransferMasuk::pluck('id')->all());
+    }
 }

@@ -517,6 +517,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/customer-service/job-sheet', [CustomerServiceController::class, 'storeJobSheet'])->name('customer-service.job-sheet.store');
         Route::post('/customer-service/transfer-masuk', [CustomerServiceController::class, 'storeTransferMasuk'])->name('customer-service.transfer-masuk.store');
         Route::post('/customer-service/transfer-masuk/{transfer}/dipakai', [CustomerServiceController::class, 'useTransferMasuk'])->name('customer-service.transfer-masuk.use');
+        Route::delete('/customer-service/transfer-masuk/{transfer}', [CustomerServiceController::class, 'destroyTransferMasuk'])->name('customer-service.transfer-masuk.destroy');
         Route::post('/customer-service/indoor/{id}/artwork-prices', [CustomerServiceController::class, 'saveArtworkPrices'])->name('customer-service.artwork-prices.save');
         Route::post('/customer-service/{type}/{id}/forward', [CustomerServiceController::class, 'forward'])->name('customer-service.forward');
     });
