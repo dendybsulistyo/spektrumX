@@ -9,6 +9,7 @@ use App\Models\OrderIndoor;
 use App\Models\OrderOutdoor;
 use App\Models\OrderStatusNote;
 use App\Models\User;
+use App\Services\CsPendingOrders;
 use App\Services\OrderPricingService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -257,10 +258,11 @@ class CustomerServiceController extends Controller
             ->values();
 
         $transfers = CsTransferMasuk::with('creator:id,name')->belumDipakai()->latest()->latest('id')->get();
+        $transferOrders = CsPendingOrders::forCustomers($transfers->pluck('customer_code')->unique()->values()->all(), perCustomer: 20, flagCustomArtwork: true);
 
         $counts = ['indoor' => $indoor->count(), 'outdoor' => $outdoor->count(), 'transfer' => $transfers->count()];
 
-        return view('customer-service.payment-queue', compact('orders', 'transfers', 'initialTab', 'counts', 'dari', 'sampai'));
+        return view('customer-service.payment-queue', compact('orders', 'transfers', 'transferOrders', 'initialTab', 'counts', 'dari', 'sampai'));
     }
 
     public function storeTransferMasuk(Request $request): RedirectResponse
@@ -294,21 +296,51 @@ class CustomerServiceController extends Controller
         return to_route('customer-service.payment-queue', ['tab' => 'transfer'])->with('status', "Transfer {$transfer->customer_name} dihapus.");
     }
 
+    /**
+     * Tandai transfer sudah dipakai. Bila CS memilih order dari antrean CS, order itu
+     * sekaligus diteruskan ke Kasir dengan nominal transfer ini (aturan sama dengan
+     * tombol di tab Indoor/Outdoor). Tanpa order terpilih, nomor order diketik manual.
+     */
     public function useTransferMasuk(Request $request, CsTransferMasuk $transfer): RedirectResponse
     {
         $data = $request->validate([
+            'order' => ['nullable', 'string', 'regex:/^(indoor|outdoor):\d+$/'],
             'used_order_number' => ['nullable', 'string', 'max:40'],
         ]);
 
-        abort_if($transfer->used_at !== null, 422, 'Transfer ini sudah ditandai dipakai.');
+        $forwarded = DB::transaction(function () use ($transfer, $data): ?string {
+            $transfer = CsTransferMasuk::lockForUpdate()->findOrFail($transfer->id);
+            abort_if($transfer->used_at !== null, 422, 'Transfer ini sudah ditandai dipakai.');
 
-        $transfer->update([
-            'used_at' => now(),
-            'used_order_number' => $data['used_order_number'] ?? null,
-            'used_by' => auth()->id(),
-        ]);
+            $orderNumber = $data['used_order_number'] ?? null;
+            $forwardedNumber = null;
 
-        return to_route('customer-service.payment-queue', ['tab' => 'transfer'])->with('status', "Transfer {$transfer->customer_name} ditandai sudah dipakai.");
+            if (! empty($data['order'])) {
+                [$type, $id] = explode(':', $data['order']);
+                $model = $type === 'indoor' ? OrderIndoor::class : OrderOutdoor::class;
+                $amount = (float) $transfer->amount;
+
+                if (fmod($amount, 100) !== 0.0) {
+                    throw ValidationException::withMessages(['order' => 'Nominal transfer harus kelipatan Rp100 untuk diteruskan ke Kasir.']);
+                }
+                abort_unless(trim((string) $model::whereKey($id)->value('KdCust')) === trim($transfer->customer_code), 422, 'Order tersebut bukan milik customer ini.');
+
+                $order = $this->forwardToKasir($model, (int) $id, $type, ['cs_transfer_amount' => $amount], [], false, requiresFixedPrice: true);
+                $orderNumber = $forwardedNumber = $order->NoOrder;
+            }
+
+            $transfer->update([
+                'used_at' => now(),
+                'used_order_number' => $orderNumber,
+                'used_by' => auth()->id(),
+            ]);
+
+            return $forwardedNumber;
+        });
+
+        return to_route('customer-service.payment-queue', ['tab' => 'transfer'])->with('status', $forwarded
+            ? "Transfer {$transfer->customer_name} dipakai untuk {$forwarded}; order diteruskan ke Kasir."
+            : "Transfer {$transfer->customer_name} ditandai sudah dipakai.");
     }
 
     public function storeJobSheet(Request $request): RedirectResponse
@@ -379,80 +411,98 @@ class CustomerServiceController extends Controller
             default => abort(404),
         };
 
-        DB::transaction(function () use ($model, $id, $type, $data, $artworkPrices, $directToCashier): void {
-            $order = $model::lockForUpdate()->findOrFail($id);
-            abort_unless($order->payment_queue === 'cs' && $order->status_bayar === 'belum_bayar', 422, 'Order ini sudah tidak berada di antrean CS.');
-            $order->loadMissing('customer.limit');
-            if ($type === 'indoor') {
-                $order->loadMissing('items.produkArtwork');
-                if ($this->customArtworkItems($order)->isNotEmpty()) {
-                    $this->applyArtworkPrices($order, $artworkPrices);
-                    $order->refresh()->loadMissing(['customer.limit', 'items']);
-                }
-            }
-            $isCustomArtwork = $type === 'indoor'
-                && $this->customArtworkItems($order)->isNotEmpty();
-
-            if ($directToCashier) {
-                $paymentType = 'bayar_kasir';
-                $transferAmount = null;
-            } elseif (($data['cs_payment_type'] ?? null) === 'hutang') {
-                if (! $order->customer?->isVip) {
-                    throw ValidationException::withMessages([
-                        'cs_payment_type' => 'Hutang hanya dapat dipilih untuk customer VIP.',
-                    ]);
-                }
-
-                $paymentType = 'hutang';
-                $transferAmount = null;
-            } else {
-                $transferAmount = (float) $data['cs_transfer_amount'];
-
-                if (! $isCustomArtwork && $transferAmount > (float) $order->total) {
-                    throw ValidationException::withMessages([
-                        'cs_transfer_amount' => 'Nominal transfer tidak boleh melebihi total order Rp '.number_format((float) $order->total, 0, ',', '.').'.',
-                    ]);
-                }
-
-                $minimumTransfer = (float) (ceil(((float) $order->total * 0.5) / 100) * 100);
-                if ($transferAmount < $minimumTransfer) {
-                    throw ValidationException::withMessages([
-                        'cs_transfer_amount' => 'Nominal transfer minimal 50% dari total order, yaitu Rp '.number_format($minimumTransfer, 0, ',', '.').'.',
-                    ]);
-                }
-
-                $paymentType = $isCustomArtwork && $transferAmount > (float) $order->total
-                    ? 'dp'
-                    : ($transferAmount < (float) $order->total ? 'dp' : 'pelunasan');
-            }
-
-            $order->update([
-                'cs_transfer_amount' => $transferAmount,
-                'cs_order_total' => (float) $order->total,
-                'cs_payment_type' => $paymentType,
-                'cs_processed_by' => auth()->id(),
-                'cs_processed_at' => now(),
-                'payment_queue' => 'kasir',
-            ]);
-
-            OrderStatusNote::create([
-                'order_type' => $type,
-                'order_id' => $order->id,
-                'stage' => 'customer_service',
-                'action' => 'diteruskan_ke_kasir',
-                'catatan' => match ($paymentType) {
-                    'hutang' => 'HUTANG — diajukan oleh Customer Service',
-                    'bayar_kasir' => 'BAYAR DI KASIR — customer membayar langsung di Kasir (tanpa transfer)',
-                    default => strtoupper($paymentType).' — Transfer Rp '.number_format($transferAmount, 0, ',', '.'),
-                },
-                'user_id' => auth()->id(),
-                'created_at' => now(),
-            ]);
-        });
+        DB::transaction(fn () => $this->forwardToKasir($model, $id, $type, $data, $artworkPrices, $directToCashier));
 
         return to_route('customer-service.payment-queue', ['tab' => $type])->with('status', $directToCashier
             ? 'Order diteruskan ke Kasir untuk dibayar langsung di Kasir.'
             : 'Informasi transfer tersimpan dan order diteruskan ke Kasir.');
+    }
+
+    /**
+     * Teruskan order dari antrean CS ke Kasir. Dipakai tombol di tab Indoor/Outdoor
+     * dan tombol "Sudah dipakai" di tab Transfer Masuk; harus dipanggil di dalam transaksi.
+     *
+     * @param  class-string<OrderIndoor|OrderOutdoor>  $model
+     * @param  array{cs_payment_type?: ?string, cs_transfer_amount?: mixed}  $data
+     * @param  array<int, float>  $artworkPrices
+     */
+    private function forwardToKasir(string $model, int $id, string $type, array $data, array $artworkPrices, bool $directToCashier, bool $requiresFixedPrice = false): OrderIndoor|OrderOutdoor
+    {
+        $order = $model::lockForUpdate()->findOrFail($id);
+        abort_unless($order->payment_queue === 'cs' && $order->status_bayar === 'belum_bayar', 422, 'Order ini sudah tidak berada di antrean CS.');
+        $order->loadMissing('customer.limit');
+        if ($type === 'indoor') {
+            $order->loadMissing('items.produkArtwork');
+            if ($requiresFixedPrice && $this->customArtworkItems($order)->isNotEmpty()) {
+                throw ValidationException::withMessages([
+                    'order' => "Order {$order->NoOrder} berisi Artwork custom; isi harganya dan teruskan lewat tab Indoor.",
+                ]);
+            }
+            if ($this->customArtworkItems($order)->isNotEmpty()) {
+                $this->applyArtworkPrices($order, $artworkPrices);
+                $order->refresh()->loadMissing(['customer.limit', 'items']);
+            }
+        }
+        $isCustomArtwork = $type === 'indoor'
+            && $this->customArtworkItems($order)->isNotEmpty();
+
+        if ($directToCashier) {
+            $paymentType = 'bayar_kasir';
+            $transferAmount = null;
+        } elseif (($data['cs_payment_type'] ?? null) === 'hutang') {
+            if (! $order->customer?->isVip) {
+                throw ValidationException::withMessages([
+                    'cs_payment_type' => 'Hutang hanya dapat dipilih untuk customer VIP.',
+                ]);
+            }
+
+            $paymentType = 'hutang';
+            $transferAmount = null;
+        } else {
+            $transferAmount = (float) $data['cs_transfer_amount'];
+
+            if (! $isCustomArtwork && $transferAmount > (float) $order->total) {
+                throw ValidationException::withMessages([
+                    'cs_transfer_amount' => 'Nominal transfer tidak boleh melebihi total order Rp '.number_format((float) $order->total, 0, ',', '.').'.',
+                ]);
+            }
+
+            $minimumTransfer = (float) (ceil(((float) $order->total * 0.5) / 100) * 100);
+            if ($transferAmount < $minimumTransfer) {
+                throw ValidationException::withMessages([
+                    'cs_transfer_amount' => 'Nominal transfer minimal 50% dari total order, yaitu Rp '.number_format($minimumTransfer, 0, ',', '.').'.',
+                ]);
+            }
+
+            $paymentType = $isCustomArtwork && $transferAmount > (float) $order->total
+                ? 'dp'
+                : ($transferAmount < (float) $order->total ? 'dp' : 'pelunasan');
+        }
+
+        $order->update([
+            'cs_transfer_amount' => $transferAmount,
+            'cs_order_total' => (float) $order->total,
+            'cs_payment_type' => $paymentType,
+            'cs_processed_by' => auth()->id(),
+            'cs_processed_at' => now(),
+            'payment_queue' => 'kasir',
+        ]);
+
+        OrderStatusNote::create([
+            'order_type' => $type,
+            'order_id' => $order->id,
+            'stage' => 'customer_service',
+            'action' => 'diteruskan_ke_kasir',
+            'catatan' => match ($paymentType) {
+                'hutang' => 'HUTANG — diajukan oleh Customer Service',
+                'bayar_kasir' => 'BAYAR DI KASIR — customer membayar langsung di Kasir (tanpa transfer)',
+                default => strtoupper($paymentType).' — Transfer Rp '.number_format($transferAmount, 0, ',', '.'),
+            },
+            'user_id' => auth()->id(),
+            'created_at' => now(),
+        ]);
+
+        return $order;
     }
 
     /** @return array<int, float> */
@@ -515,7 +565,7 @@ class CustomerServiceController extends Controller
         }
     }
 
-    private function customArtworkItems(OrderIndoor $order): Collection
+    public static function customArtworkItems(OrderIndoor $order): Collection
     {
         return $order->items->filter(fn ($item) => ($item->isArtwork()
             && ($item->produkArtwork === null || (float) $item->produkArtwork->HargaStd <= 0))

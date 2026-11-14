@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreCustomerRequest;
 use App\Models\Customer;
 use App\Models\CustomerLimit;
+use App\Services\CsPendingOrders;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -230,6 +231,12 @@ class CustomerController extends Controller
             ->orderBy('NmCust')
             ->limit(20)
             ->get(['KdCust', 'NmCust', 'Telp']);
+
+        // Tab Transfer Masuk: sertakan order CS yang belum dibayar agar transfer mudah dicocokkan.
+        if ($request->boolean('cs')) {
+            $orders = CsPendingOrders::forCustomers($customers->map(fn ($customer) => trim((string) $customer->KdCust))->all());
+            $customers->each(fn ($customer) => $customer->setAttribute('cs_orders', $orders->get(trim((string) $customer->KdCust), collect())->values()));
+        }
 
         return response()->json($customers);
     }

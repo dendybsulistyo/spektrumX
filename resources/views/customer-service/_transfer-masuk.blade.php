@@ -42,6 +42,11 @@
                         <button type="button" @click="select(customer)" class="block w-full px-3 py-2 text-left text-slate-700 hover:bg-indigo-50">
                             <span class="font-medium" x-text="customer.NmCust"></span>
                             <span class="ml-1 text-xs text-slate-400" x-text="`(${customer.KdCust})`"></span>
+                            <template x-for="order in customer.cs_orders || []" :key="order.key">
+                                <span class="mt-0.5 block font-mono text-[11px] text-slate-500"
+                                      x-text="`${order.no} · Rp ${Number(order.total).toLocaleString('id-ID')} · ${order.date ? new Date(order.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) : '-'}`"></span>
+                            </template>
+                            <span x-show="!(customer.cs_orders || []).length" class="mt-0.5 block text-[11px] text-slate-400">Tidak ada order CS yang belum dibayar.</span>
                         </button>
                     </template>
                 </div>
@@ -96,12 +101,47 @@
                         </td>
                         @can('customer-service.manage')
                             <td class="whitespace-nowrap px-3 py-2 text-right">
-                                <form method="POST" action="{{ route('customer-service.transfer-masuk.use', $transfer) }}" class="inline"
-                                      onsubmit="const no = prompt('Tandai transfer ' + {{ \Illuminate\Support\Js::from($transfer->customer_name) }} + ' sudah dipakai.\nNomor order (opsional):', ''); if (no === null) return false; this.used_order_number.value = no.trim(); return true;">
-                                    @csrf
-                                    <input type="hidden" name="used_order_number">
-                                    <button class="h-8 rounded bg-emerald-600 px-3 text-xs font-semibold text-white hover:bg-emerald-700">Sudah dipakai</button>
-                                </form>
+                                @php($options = $transferOrders->get(trim($transfer->customer_code), collect()))
+                                <div class="inline" x-data="{ open: false, order: @js(optional($options->firstWhere('custom', false))['key'] ?? '') }">
+                                    <button type="button" @click="open = true" class="h-8 rounded bg-emerald-600 px-3 text-xs font-semibold text-white hover:bg-emerald-700">Sudah dipakai</button>
+                                    <div x-show="open" x-cloak class="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4 text-left" @keydown.escape.window="open = false">
+                                        <form method="POST" action="{{ route('customer-service.transfer-masuk.use', $transfer) }}" @click.outside="open = false"
+                                              class="w-full max-w-md whitespace-normal rounded-lg bg-white shadow-xl">
+                                            @csrf
+                                            <div class="border-b px-5 py-4">
+                                                <h3 class="font-semibold text-slate-900">Transfer dipakai untuk order apa?</h3>
+                                                <p class="text-xs text-slate-500">{{ $transfer->customer_name }} · Rp {{ number_format((float) $transfer->amount, 0, ',', '.') }}</p>
+                                            </div>
+                                            <div class="max-h-72 space-y-1 overflow-y-auto px-5 py-3 text-sm">
+                                                @foreach ($options as $option)
+                                                    <label @class(['flex items-center gap-2 rounded border px-3 py-2', 'cursor-pointer hover:bg-emerald-50' => ! $option['custom'], 'opacity-60' => $option['custom']])>
+                                                        <input type="radio" name="order" value="{{ $option['key'] }}" x-model="order" @disabled($option['custom'])>
+                                                        <span class="flex-1">
+                                                            <span class="font-mono font-semibold">{{ $option['no'] }}</span>
+                                                            <span class="block text-xs text-slate-500">
+                                                                {{ ucfirst($option['type']) }} · total Rp {{ number_format($option['total'], 0, ',', '.') }}
+                                                                · {{ $option['date'] ? \Illuminate\Support\Carbon::parse($option['date'])->translatedFormat('d M') : '-' }}
+                                                                @if ($option['custom'])<span class="text-amber-700">· Artwork custom, teruskan lewat tab Indoor</span>@endif
+                                                            </span>
+                                                        </span>
+                                                    </label>
+                                                @endforeach
+                                                <label class="flex cursor-pointer items-center gap-2 rounded border px-3 py-2 hover:bg-slate-50">
+                                                    <input type="radio" name="order" value="" x-model="order">
+                                                    <span class="flex-1">Order lain / tidak di antrean CS</span>
+                                                </label>
+                                                <input x-show="order === ''" type="text" name="used_order_number" maxlength="40" placeholder="Nomor order (opsional)"
+                                                       class="mt-1 w-full rounded border-slate-300 text-sm">
+                                                <p x-show="order !== ''" class="pt-1 text-xs text-slate-500">Order terpilih langsung diteruskan ke Kasir dengan nominal transfer ini (minimal 50% dari total, tidak melebihi total).</p>
+                                            </div>
+                                            <div class="flex justify-end gap-2 border-t px-5 py-3">
+                                                <button type="button" @click="open = false" class="rounded border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700">Batal</button>
+                                                <button class="rounded bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
+                                                        x-text="order !== '' ? 'Teruskan ke Kasir' : 'Tandai dipakai'"></button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
                                 <form method="POST" action="{{ route('customer-service.transfer-masuk.destroy', $transfer) }}" class="inline"
                                       onsubmit="return confirm('Hapus transfer ' + {{ \Illuminate\Support\Js::from($transfer->customer_name.' Rp '.number_format((float) $transfer->amount, 0, ',', '.')) }} + '?\nData akan dihapus permanen.')">
                                     @csrf
