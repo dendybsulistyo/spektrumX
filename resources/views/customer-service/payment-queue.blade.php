@@ -35,8 +35,12 @@
                     class="rounded-md px-4 py-2 font-medium transition">
                 Outdoor ({{ $counts['outdoor'] }})
             </button>
+            <button type="button" @click="setTab('transfer')" :class="tab === 'transfer' ? 'bg-indigo-100 text-indigo-800' : 'text-gray-500 hover:bg-indigo-50 hover:text-indigo-700'"
+                    class="rounded-md px-4 py-2 font-medium transition">
+                Transfer Masuk ({{ $counts['transfer'] }})
+            </button>
             {{-- Filter tanggal order; kosongkan untuk menampilkan seluruh antrean. --}}
-            <form method="GET" class="ml-auto flex flex-wrap items-center gap-2 px-2 text-xs text-gray-600">
+            <form method="GET" x-show="tab !== 'transfer'" class="ml-auto flex flex-wrap items-center gap-2 px-2 text-xs text-gray-600">
                 <input type="hidden" name="tab" :value="tab">
                 <label class="flex items-center gap-1">Dari <input type="date" name="dari" value="{{ $dari }}" class="h-8 rounded border-gray-300 px-2 text-xs"></label>
                 <label class="flex items-center gap-1">Sampai <input type="date" name="sampai" value="{{ $sampai }}" class="h-8 rounded border-gray-300 px-2 text-xs"></label>
@@ -47,7 +51,8 @@
             </form>
         </div>
         {{-- Area scroll sendiri agar judul kolom & judul tanggal tetap menempel di atas saat di-scroll. --}}
-        <div class="cs-scroll overflow-auto"
+        @include('customer-service._transfer-masuk')
+        <div class="cs-scroll overflow-auto" x-show="tab !== 'transfer'" @if ($initialTab === 'transfer') x-cloak @endif
              x-init="const fit = () => $el.style.setProperty('--cs-head-h', $el.querySelector('thead').offsetHeight + 'px'); fit(); window.addEventListener('resize', fit)">
             <table class="w-full min-w-[980px] text-sm">
                 <thead class="border-b border-slate-200 bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">

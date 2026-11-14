@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\CsTransferMasuk;
 use App\Models\Customer;
 use App\Models\CustomerServiceJobSheet;
 use App\Models\OrderIndoor;
@@ -225,7 +226,7 @@ class CustomerServiceController extends Controller
     public function paymentQueue(Request $request): View
     {
         // Dipisah tab Indoor / Outdoor seperti halaman Kasir.
-        $initialTab = in_array($request->query('tab'), ['indoor', 'outdoor'], true) ? $request->query('tab') : 'indoor';
+        $initialTab = in_array($request->query('tab'), ['indoor', 'outdoor', 'transfer'], true) ? $request->query('tab') : 'indoor';
         // Filter tanggal order opsional; kosong = seluruh antrean (antrean tidak boleh terlewat).
         $dari = $request->date('dari')?->format('Y-m-d');
         $sampai = $request->date('sampai')?->format('Y-m-d');
@@ -255,9 +256,50 @@ class CustomerServiceController extends Controller
             ->sortByDesc(fn ($order) => ($order->TglOrder?->format('Y-m-d') ?? (string) $order->TglOrder).'-'.$order->id)
             ->values();
 
-        $counts = ['indoor' => $indoor->count(), 'outdoor' => $outdoor->count()];
+        $transfers = CsTransferMasuk::with('creator:id,name')->belumDipakai()->latest()->latest('id')->get();
 
-        return view('customer-service.payment-queue', compact('orders', 'initialTab', 'counts', 'dari', 'sampai'));
+        $counts = ['indoor' => $indoor->count(), 'outdoor' => $outdoor->count(), 'transfer' => $transfers->count()];
+
+        return view('customer-service.payment-queue', compact('orders', 'transfers', 'initialTab', 'counts', 'dari', 'sampai'));
+    }
+
+    public function storeTransferMasuk(Request $request): RedirectResponse
+    {
+        $request->merge(['amount' => preg_replace('/\D/', '', (string) $request->input('amount'))]);
+
+        $data = $request->validate([
+            'customer_code' => ['required', 'string', 'exists:customers,KdCust'],
+            'amount' => ['required', 'integer', 'min:1'],
+            'transfer_date' => ['required', 'date', 'before_or_equal:today'],
+            'notes' => ['nullable', 'string', 'max:255'],
+        ], [
+            'customer_code.required' => 'Pilih customer dari hasil pencarian.',
+        ]);
+
+        CsTransferMasuk::create([
+            ...$data,
+            'customer_name' => Customer::where('KdCust', $data['customer_code'])->value('NmCust'),
+            'created_by' => auth()->id(),
+        ]);
+
+        return to_route('customer-service.payment-queue', ['tab' => 'transfer'])->with('status', 'Transfer masuk berhasil dicatat.');
+    }
+
+    public function useTransferMasuk(Request $request, CsTransferMasuk $transfer): RedirectResponse
+    {
+        $data = $request->validate([
+            'used_order_number' => ['nullable', 'string', 'max:40'],
+        ]);
+
+        abort_if($transfer->used_at !== null, 422, 'Transfer ini sudah ditandai dipakai.');
+
+        $transfer->update([
+            'used_at' => now(),
+            'used_order_number' => $data['used_order_number'] ?? null,
+            'used_by' => auth()->id(),
+        ]);
+
+        return to_route('customer-service.payment-queue', ['tab' => 'transfer'])->with('status', "Transfer {$transfer->customer_name} ditandai sudah dipakai.");
     }
 
     public function storeJobSheet(Request $request): RedirectResponse
