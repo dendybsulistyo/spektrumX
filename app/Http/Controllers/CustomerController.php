@@ -215,6 +215,11 @@ class CustomerController extends Controller
             })
             // ?vip=1: hanya customer VIP (punya plafon), dipakai form Order Proof.
             ->when($request->boolean('vip'), fn ($query) => $query->whereHas('limit'))
+            // ?cs=1: hanya customer yang pernah punya order Indoor/Outdoor yang dikirim ke CS
+            // (dipakai tab Transfer Masuk di Customer Service).
+            ->when($request->boolean('cs'), fn ($query) => $query->where(fn ($sub) => $sub
+                ->whereIn('KdCust', DB::table('order_indoor')->select('KdCust')->whereNotNull('sent_to_cs_at'))
+                ->orWhereIn('KdCust', DB::table('order_outdoor')->select('KdCust')->whereNotNull('sent_to_cs_at'))))
             // Paling relevan dulu: kode/nama persis, nama diawali kata yang dicari, ada kata
             // di dalam nama yang diawali kata itu, baru sisanya (supaya "RAMA" menemukan
             // "RAMA JATU" sebelum "ABRAMA ...").

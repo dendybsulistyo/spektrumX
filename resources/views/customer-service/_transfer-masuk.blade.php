@@ -15,7 +15,7 @@
                     clearTimeout(this.timer);
                     if (this.query.trim().length < 2) { this.results = []; this.open = false; return; }
                     this.timer = setTimeout(async () => {
-                        const response = await fetch(`/customers-search?q=${encodeURIComponent(this.query.trim())}`, { headers: { 'Accept': 'application/json' } });
+                        const response = await fetch(`/customers-search?cs=1&q=${encodeURIComponent(this.query.trim())}`, { headers: { 'Accept': 'application/json' } });
                         this.results = response.ok ? await response.json() : [];
                         this.open = true;
                     }, 300);

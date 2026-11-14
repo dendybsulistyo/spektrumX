@@ -68,4 +68,26 @@ class CsTransferMasukTest extends TestCase
 
         $this->assertSame(0, CsTransferMasuk::count());
     }
+
+    public function test_pencarian_customer_cs_hanya_yang_pernah_order_lewat_cs(): void
+    {
+        foreach (['order_indoor', 'order_outdoor'] as $table) {
+            Schema::create($table, fn (Blueprint $t) => [$t->id(), $t->string('KdCust'), $t->timestamp('sent_to_cs_at')->nullable()]);
+        }
+        DB::table('customers')->insert([
+            ['KdCust' => 'RAM002', 'NmCust' => 'RAMA PRINT'],
+            ['KdCust' => 'RAM003', 'NmCust' => 'RAMADHAN'],
+        ]);
+        DB::table('order_indoor')->insert(['KdCust' => 'RAM002', 'sent_to_cs_at' => now()]);
+        DB::table('order_outdoor')->insert([
+            ['KdCust' => 'RJT001', 'sent_to_cs_at' => now()],
+            ['KdCust' => 'RAM003', 'sent_to_cs_at' => null],
+        ]);
+
+        $this->actingAs(User::find(1))->getJson(route('customers.search', ['q' => 'RAMA', 'cs' => 1]))
+            ->assertJsonCount(2)
+            ->assertJsonPath('*.KdCust', ['RJT001', 'RAM002']);
+
+        $this->actingAs(User::find(1))->getJson(route('customers.search', ['q' => 'RAMA']))->assertJsonCount(3);
+    }
 }
